@@ -1,6 +1,6 @@
 # Nyctalus Protocol — Documento di visione
 
-> Versione 0.3 · 27 settembre 2026 · Autore: Daniele Deplano
+> Versione 0.4 · 27 settembre 2026 · Autore: Daniele Deplano
 > Stato: idea consolidata, prima della specifica tecnica.
 > Nome: **Nyctalus Protocol** (in breve *Nyctalus*), dal genere scientifico delle nottole: pipistrelli che volano veloci di notte e si orientano al buio. Dal greco *nyx* (notte). Scelto il 27/09/2026 al posto del nome di lavoro "NyxShift", troppo vicino a "nyx", il monitor dei relay del Tor Project. Prima della pubblicazione va verificato come marchio su EUIPO/WIPO.
 
@@ -152,6 +152,23 @@ Serve un browser dedicato, come per Tor. La rete protegge il **percorso**, ma il
 | Tutti i sistemi operativi | ❌ WebKitGTK di fatto esiste solo su Linux |
 
 In pratica: si usa `nxs_browser` per sviluppare e provare Nyctalus dentro NexusSec. Per il pubblico serve un browser basato su Firefox. L'integrazione in NexusSec resta un ottimo canale di lancio.
+
+### 8.2 Uso da terminale (demone e strumenti CLI)
+
+Il browser è **solo uno** dei client. Il cuore di Nyctalus è un **demone** che gira in background e apre un proxy SOCKS5 locale, come fa `tor`. Il terminale è quindi l'interfaccia principale, e la GUI ci si appoggia sopra. Il parallelo con l'ecosistema di Tor:
+
+| Tor | Nyctalus | A cosa serve |
+|---|---|---|
+| `tor` (demone) | `nyctalus avvia` | Fa girare nodo+client, apre il proxy SOCKS5 locale |
+| file `torrc` | `~/.config/nyctalus/config` | Configurazione (banda ceduta, se fare da uscita, ecc.) |
+| control port | `nyctalus stato`, `nyctalus circuiti` | Interrogare e gestire il demone in esecuzione |
+| `nyx` (monitor) | `nyctalus monitor` | Cruscotto testuale: banda, circuiti, nodi (curses) |
+| `torsocks <prog>` | `nyctalus esec <prog>` | Lanciare un programma qualsiasi dentro la rete |
+| servizi `.onion` | `nyctalus sito ./cartella` | Pubblicare un sito `.nyct` da riga di comando |
+
+Poiché il demone espone un **SOCKS5 standard**, i programmi che già sanno usare un proxy (curl, git, i browser via impostazioni) funzionano subito. `nyctalus esec` serve per i programmi che un proxy non lo prevedono, come fa `torsocks`.
+
+Ordine di lavoro: **prima il SOCKS5** (sblocca sia il terminale sia il browser), poi i sottocomandi `avvia`/`stato`/`sito`, infine `monitor` ed `esec`. I comandi attuali `ricevi`/`invia` restano come strumenti di test.
 
 ---
 
