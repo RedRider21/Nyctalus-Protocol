@@ -208,6 +208,14 @@ Alcuni nodi d'uscita volontari offriranno anche un **ponte verso Tor**: ricevono
 - **Dentro la rete:** Nyctalus trasporta qualunque protocollo (come Tor con qualsiasi TCP). Il nodo d'uscita parla HTTP/HTTPS con il sito di destinazione. HTTP/HTTPS stanno quindi *sopra* la rete, verso il sito finale, non sono il protocollo di trasporto.
 - **Fuori (camuffamento):** ci si traveste da HTTPS/HTTP-3 per non essere distinguibili né bloccati.
 
+### 8.3 VPN: posizione del progetto ❓→decisa
+Una VPN **non** aggiunge anonimato al protocollo: sposta soltanto la fiducia su un'azienda che vede l'IP reale e il fatto che usi Nyctalus. È l'opposto del principio "nessuno conosce insieme origine e destinazione".
+
+- ❌ **Nessuna VPN come componente interno obbligatorio:** creerebbe un punto centrale di fiducia e di log, ridurrebbe l'anonymity set e contraddirebbe la decentralizzazione.
+- ✅ **Opzionale, lato utente, VPN → Nyctalus** (la VPN *prima* del guard): scelta legittima per nascondere al proprio provider persino la connessione al guard, o dove Nyctalus è bloccato. Prezzo: ci si fida della VPN. Va solo documentato, non integrato.
+- ❌ **Nyctalus → VPN** (VPN dopo l'uscita): inutile o dannoso (collo di bottiglia visibile).
+- ✅ **Alternativa nativa migliore** per "nascondere che uso Nyctalus": i **bridge/ponti** (nodi d'ingresso non pubblici) uniti al camuffamento (§8.1), che non concentrano fiducia. Più salti e più nodi indipendenti aumentano l'anonimato più di una VPN.
+
 ---
 
 ## 9. Elenco dei nodi ❓
