@@ -1,6 +1,6 @@
 # Nyctalus Protocol — Specifica tecnica v0
 
-> Versione 0.2 · 27 settembre 2026 · Stato: bozza di lavoro
+> Versione 0.3 · 27 settembre 2026 · Stato: bozza di lavoro
 > Complemento tecnico di [VISIONE.md](VISIONE.md). Legenda:
 > ✅ implementato e testato · 📐 progettato, da implementare · ❓ da decidere
 
@@ -197,9 +197,16 @@ Alcuni nodi d'uscita volontari offriranno anche un **ponte verso Tor**: ricevono
 ---
 
 ## 8. Camuffamento (L0) 📐
-- Il collegamento tra nodi usa QUIC con una stretta di mano TLS 1.3 **indistinguibile da quella dei browser comuni**, e sulla porta 443.
+
+### 8.1 Porta e mimetizzazione
+- **Porta predefinita: UDP 443**, configurabile. Il trasporto è QUIC (UDP), e HTTP/3 vive proprio su UDP 443: il traffico Nyctalus si confonde con un normale sito moderno o una videochiamata. La **porta 80 non si usa**: è HTTP in chiaro su TCP e ci farebbe dare nell'occhio.
+- Il collegamento tra nodi usa QUIC con una stretta di mano TLS 1.3 **indistinguibile da quella dei browser comuni**.
 - Un nodo sondato da un censore risponde come un normale sito web; solo chi presenta un segreto valido accede al protocollo, come fanno WebTunnel e obfs4.
-- In alternativa si può passare su TCP/TLS dove UDP è bloccato.
+- Dove UDP è bloccato, ripiego su **TCP 443** travestito da HTTPS classico.
+
+### 8.2 HTTP e HTTPS: due livelli distinti
+- **Dentro la rete:** Nyctalus trasporta qualunque protocollo (come Tor con qualsiasi TCP). Il nodo d'uscita parla HTTP/HTTPS con il sito di destinazione. HTTP/HTTPS stanno quindi *sopra* la rete, verso il sito finale, non sono il protocollo di trasporto.
+- **Fuori (camuffamento):** ci si traveste da HTTPS/HTTP-3 per non essere distinguibili né bloccati.
 
 ---
 
