@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = ["crates/nyx-core"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+license = "AGPL-3.0-or-later"
+authors = ["Daniele Deplano (RedRider21)"]
+
+# Disco quasi pieno: informazioni di debug ridotte al minimo indispensabile
+# (numeri di riga nei backtrace), dimezza la cartella target/.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
