@@ -15,7 +15,7 @@ pub const LUNGHEZZA_ETICHETTA: usize = 8;
 pub type Etichetta = [u8; LUNGHEZZA_ETICHETTA];
 
 /// Contesto di derivazione BLAKE3: va cambiato se cambia il formato.
-const CONTESTO: &str = "NyxShift v0 2026-09-27 etichette dei frammenti";
+const CONTESTO: &str = "Nyctalus v0 2026-09-27 etichette dei frammenti";
 
 /// Calcola le etichette di un flusso. Lo usano sia il mittente sia il
 /// destinatario, che condividono lo stesso segreto.

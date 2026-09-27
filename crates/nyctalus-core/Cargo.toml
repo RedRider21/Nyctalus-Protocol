@@ -1,6 +1,6 @@
 [package]
-name = "nyx-core"
-description = "Nucleo del protocollo NyxShift: etichette segrete, frammenti, ricomposizione"
+name = "nyctalus-core"
+description = "Nucleo di Nyctalus Protocol: etichette segrete, frammenti, ricomposizione"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

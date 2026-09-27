@@ -1,14 +1,14 @@
-# NyxShift — Documento di visione
+# Nyctalus Protocol — Documento di visione
 
-> Versione 0.1 · 27 settembre 2026 · Autore: Daniele Deplano
+> Versione 0.2 · 27 settembre 2026 · Autore: Daniele Deplano
 > Stato: idea consolidata, prima della specifica tecnica.
-> Nome **provvisorio** (vedi "Problemi aperti").
+> Nome: **Nyctalus Protocol** (in breve *Nyctalus*), dal genere scientifico delle nottole: pipistrelli che volano veloci di notte e si orientano al buio. Dal greco *nyx* (notte). Scelto il 27/09/2026 al posto del nome di lavoro "NyxShift", troppo vicino a "nyx", il monitor dei relay del Tor Project. Prima della pubblicazione va verificato come marchio su EUIPO/WIPO.
 
 ---
 
 ## 1. In una frase
 
-**NyxShift è una rete anonima in cui ogni utente è anche un nodo, il traffico è camuffato da normale navigazione, e i dati viaggiano spezzati in tanti frammenti su molte strade in parallelo ("a ragnatela"), per ricomporsi solo a destinazione.**
+**Nyctalus Protocol è una rete anonima in cui ogni utente è anche un nodo, il traffico è camuffato da normale navigazione, e i dati viaggiano spezzati in tanti frammenti su molte strade in parallelo ("a ragnatela"), per ricomporsi solo a destinazione.**
 
 L'obiettivo è offrire la protezione di Tor con una velocità adatta all'uso quotidiano: navigazione, streaming, chiamate.
 
@@ -31,7 +31,7 @@ Tor funziona, ma è lento per ragioni strutturali:
 ## 3. Principi fondamentali
 
 1. **Crittografia standard, mai inventata.** La sicurezza sta nelle chiavi, non nel segreto dell'algoritmo. Si usano solo algoritmi pubblici e collaudati da anni di attacchi (vedi §9).
-2. **Camuffamento sempre attivo.** Visto da fuori, il traffico NyxShift sembra una normale navigazione HTTPS o una videochiamata.
+2. **Camuffamento sempre attivo.** Visto da fuori, il traffico Nyctalus sembra una normale navigazione HTTPS o una videochiamata.
 3. **Più utenti = più velocità.** Ogni installazione su PC aggiunge capacità alla rete, invece di consumarla soltanto.
 4. **Nessuno sa tutto.** Ogni nodo conosce solo il nodo precedente e quello successivo. Nessun pacchetto contiene l'IP di chi lo ha mandato o di chi lo riceverà.
 5. **Niente log, niente dati su disco.** I nodi tengono tutto in RAM e cancellano le chiavi appena una sessione finisce.
@@ -63,7 +63,7 @@ Due strati:
 - **Dentro:** cifratura standard, che protegge il contenuto.
 - **Fuori:** un "vestito" che rende il traffico indistinguibile da un normale sito HTTPS o da una chiamata.
 
-Il provider vede solo qualcuno che naviga: non può capire che usi NyxShift, quindi non può bloccarlo. In Tor è un'aggiunta opzionale (i "bridge"), in NyxShift è attivo **di serie**.
+Il provider vede solo qualcuno che naviga: non può capire che usi Nyctalus, quindi non può bloccarlo. In Tor è un'aggiunta opzionale (i "bridge"), in Nyctalus è attivo **di serie**.
 
 ### 5.2 Ingresso fisso + ragnatela
 Descritti al §4. La velocità viene dalla ragnatela; l'ingresso fisso impedisce che la ragnatela esponga il tuo IP.
@@ -101,7 +101,7 @@ Come i siti `.onion` di Tor, ma più veloci:
 - L'indirizzo è ricavato dalla chiave crittografica del sito: nessun DNS e nessun registro centrale.
 - Il server resta invisibile e non serve nessun nodo d'uscita.
 - La ragnatela funziona al massimo, perché i frammenti si ricompongono direttamente nel sito.
-- Chi ha già un sito lo pubblica mettendo davanti il demone NyxShift; il web server (Nginx, Apache…) resta quello di sempre.
+- Chi ha già un sito lo pubblica mettendo davanti il demone Nyctalus; il web server (Nginx, Apache…) resta quello di sempre.
 
 ---
 
@@ -146,12 +146,12 @@ Serve un browser dedicato, come per Tor. La rete protegge il **percorso**, ma il
 | Aspetto | Valutazione |
 |---|---|
 | Interfaccia, schede, preferiti, anti-tracciamento, permessi, traduzione | ✅ Ottima base, già pronta |
-| Collegamento alla rete NyxShift | ✅ Facile: WebKit2GTK supporta un proxy (`WebKit2.NetworkProxySettings`), basta puntarlo al demone locale |
+| Collegamento alla rete Nyctalus | ✅ Facile: WebKit2GTK supporta un proxy (`WebKit2.NetworkProxySettings`), basta puntarlo al demone locale |
 | Uso nella **fase 1** (prototipo, test, demo) | ✅ Ideale: si prova subito la rete in un ambiente che conosci già |
 | Anonimato davanti ai siti | ⚠️ Debole. Pochissime persone al mondo usano WebKitGTK su Linux, quindi chi lo usa è **riconoscibile** proprio perché raro. Inoltre WebKit non ha le protezioni anti-fingerprinting di Firefox/Tor Browser |
 | Tutti i sistemi operativi | ❌ WebKitGTK di fatto esiste solo su Linux |
 
-In pratica: si usa `nxs_browser` per sviluppare e provare NyxShift dentro NexusSec. Per il pubblico serve un browser basato su Firefox. L'integrazione in NexusSec resta un ottimo canale di lancio.
+In pratica: si usa `nxs_browser` per sviluppare e provare Nyctalus dentro NexusSec. Per il pubblico serve un browser basato su Firefox. L'integrazione in NexusSec resta un ottimo canale di lancio.
 
 ---
 
@@ -170,14 +170,14 @@ Gli appunti iniziali (`appunti-nuova-rete-tor-progetto-nyxshift-protocol.md`) no
 
 **✅ Da usare**
 
-| Riferimento | Uso in NyxShift |
+| Riferimento | Uso in Nyctalus |
 |---|---|
 | **QUIC** (librerie `quinn` o `s2n-quic`) | Trasporto su UDP: nessun blocco per i pacchetti persi, connessione che sopravvive al passaggio da Wi-Fi a 5G |
 | **Tokio** | Il "motore" che gestisce migliaia di connessioni contemporanee in Rust |
 | **X25519 (Curve25519)** | Scambio di chiavi tra i nodi |
 | **ChaCha20-Poly1305 / AES-GCM** | Cifratura dei dati (standard, veloce, accelerata dall'hardware) |
 | **rustls / ring** | Librerie crittografiche Rust affidabili |
-| **Nginx / Apache** | Per i siti interni: il web server resta quello di sempre, il demone NyxShift sta davanti |
+| **Nginx / Apache** | Per i siti interni: il web server resta quello di sempre, il demone Nyctalus sta davanti |
 | **Tor, I2P, Nym** | Da **studiare**, non da copiare: Tor per ingresso fisso e browser, I2P per "ogni utente è un nodo", Nym per il rumore di fondo |
 
 **➕ Da aggiungere (non c'erano negli appunti, ma sono i più importanti)**
@@ -216,15 +216,15 @@ Gli appunti iniziali (`appunti-nuova-rete-tor-progetto-nyxshift-protocol.md`) no
 
 ## 10. Cosa promettiamo e cosa no
 
-**NyxShift protegge da:**
+**Nyctalus protegge da:**
 - provider Internet, reti pubbliche Wi-Fi, datori di lavoro;
 - tracciamento pubblicitario e profilazione;
 - censura e blocchi (grazie al camuffamento);
 - siti che vogliono conoscere il tuo IP;
 - un singolo nodo malevolo, o un piccolo gruppo di nodi malevoli.
 
-**NyxShift NON promette:**
-- protezione totale contro un'agenzia che sorveglia **contemporaneamente** gran parte di Internet. Contro un avversario del genere nessuna rete veloce può farlo: servirebbero ritardi volutamente lunghi. Sotto questo aspetto NyxShift sarà protetto quanto Tor, non di più;
+**Nyctalus NON promette:**
+- protezione totale contro un'agenzia che sorveglia **contemporaneamente** gran parte di Internet. Contro un avversario del genere nessuna rete veloce può farlo: servirebbero ritardi volutamente lunghi. Sotto questo aspetto Nyctalus sarà protetto quanto Tor, non di più;
 - anonimato se l'utente si identifica da solo (login, dati personali, file scaricati e aperti fuori dal browser).
 
 **Il compromesso onesto:** molto più veloce di Tor, invisibile al provider, stessa robustezza di Tor contro gli avversari più potenti.
@@ -237,7 +237,7 @@ Gli appunti iniziali (`appunti-nuova-rete-tor-progetto-nyxshift-protocol.md`) no
 2. **Router domestici (NAT):** molti PC non accettano connessioni in entrata. Servono tecniche di "attraversamento" o nodi ponte.
 3. **Elenco dei nodi:** chi pubblica la lista dei nodi affidabili? Tor usa 9 "autorità" fidate. Va scelto un modello.
 4. **Responsabilità legale delle uscite:** servono una guida per i gestori e una politica sugli abusi.
-5. **Nome:** "Nyx" è anche il nome del monitor ufficiale dei relay di Tor (nyx.torproject.org). Nello stesso settore potrebbe creare confusione, quindi va valutato un nome definitivo prima della pubblicazione. Da scegliere anche il suffisso dei siti interni.
+5. **Nome e suffisso:** il nome Nyctalus va verificato come marchio su EUIPO/WIPO prima della pubblicazione. Resta da scegliere il suffisso dei siti interni.
 
 ---
 
@@ -246,7 +246,7 @@ Gli appunti iniziali (`appunti-nuova-rete-tor-progetto-nyxshift-protocol.md`) no
 | Fase | Contenuto | Risultato |
 |---|---|---|
 | **0 — Specifica** | Modello di minaccia, formato dei pacchetti, protocolli | Documento tecnico v0 |
-| **1 — Prototipo** | Client + 3 nodi in Rust, QUIC + Noise + Sphinx, accesso tramite proxy SOCKS5 | Si naviga con `nxs_browser` attraverso NyxShift in laboratorio |
+| **1 — Prototipo** | Client + 3 nodi in Rust, QUIC + Noise + Sphinx, accesso tramite proxy SOCKS5 | Si naviga con `nxs_browser` attraverso Nyctalus in laboratorio |
 | **2 — Misure** | Simulazione con Shadow: confronto di velocità con Tor | Numeri reali, non promesse |
 | **3 — Ragnatela** | Frammentazione multipercorso, etichette segrete, rumore di fondo | Il cuore delle prestazioni |
 | **4 — Siti interni** | Punto d'incontro, indirizzi ricavati dalle chiavi | Primi servizi interni |
@@ -257,7 +257,15 @@ Gli appunti iniziali (`appunti-nuova-rete-tor-progetto-nyxshift-protocol.md`) no
 
 ---
 
-## 13. Glossario
+## 13. Rapporto con NexusSec OS
+
+Nyctalus Protocol è un **progetto indipendente** (repository, sito e rilasci propri, multipiattaforma) che ha in **NexusSec OS la sua casa**:
+- **Perché indipendente:** una rete anonima protegge solo se la usano in tanti; se funzionasse solo dentro una distro resterebbe di nicchia.
+- **Perché NexusSec:** è il banco di prova e la vetrina. Nyctalus sarà preinstallato, integrato nella modalità anonima e nel pannello di controllo, e sarà provato per primo con `nxs_browser`.
+
+---
+
+## 14. Glossario
 
 - **Nodo:** un computer che inoltra il traffico degli altri.
 - **Ingresso (guard):** il primo nodo del percorso; è l'unico che vede il tuo IP, ma non sa dove vai.

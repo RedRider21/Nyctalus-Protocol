@@ -1,4 +1,4 @@
-//! Nucleo del protocollo NyxShift.
+//! Nucleo di Nyctalus Protocol.
 //!
 //! Contiene la logica "pura" della rete, senza I/O né socket, così da poterla
 //! verificare con i test prima di collegarla al trasporto QUIC:
