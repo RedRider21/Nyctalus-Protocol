@@ -62,3 +62,8 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
 cd "nyctalus protocol"
 cargo test          # deve dare 29 test superati
 ```
+
+## Pubblicazione (sessione 2)
+- **Repo GitHub:** https://github.com/RedRider21/Nyctalus-Protocol (pubblico, RedRider21, AGPL-3.0, topics, homepage=Pages). Sorgenti su `main`; i prossimi avanzamenti si caricano via via.
+- **Sito/Pages:** https://redrider21.github.io/Nyctalus-Protocol/ — branch `gh-pages` (repo git separato in scratchpad, NON nella cartella progetto). Sito **bilingue IT/EN** + **tema chiaro/scuro** (toggle, persistiti in localStorage), responsivo, con manuale. File: index.html, stile.css, logo.svg, .nojekyll.
+- **Logo:** `logo.svg` (nottola in distintivo circolare, onde ecolocalizzazione, nodi alle ali); nel repo e in cima al README.
