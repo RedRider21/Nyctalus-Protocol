@@ -41,7 +41,7 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
 
 ## Da fare (in ordine)
 
-1. **Decidere l'approccio** per la cipolla (proposta sopra) e aggiornare la SPECIFICA §4.
+1. ✅ **Approccio per la cipolla deciso** (sessione 2): Sphinx solo per aprire i percorsi, poi cifratura a strati simmetrica per pacchetto. Da riportare nella SPECIFICA §4.
 2. **Tappa 1:** apertura dei percorsi (Sphinx) + cifratura a strati simmetrica per pacchetto, nel nucleo, con test.
 3. **Tappa 2:** programma nodo (`nyctalus nodo`) che toglie il suo strato e inoltra.
 4. **Tappa 3:** prova completa sul PC, client → guard → medio → uscita → destinatario, verificando che nessun nodo conosca insieme mittente e destinazione.
