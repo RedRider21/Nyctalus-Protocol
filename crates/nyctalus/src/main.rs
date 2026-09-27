@@ -7,7 +7,7 @@
 //!
 //! ```text
 //! nyctalus ricevi --uscita FILE [--ascolta 0.0.0.0:4433] [--identita FILE]
-//! nyctalus invia  --a IP:PORTA --impronta HEX --destinatario HEX [--corsie 4] FILE
+//! nyctalus invia  --a IP:PORTA --impronta HEX --destinatario INDIRIZZO.nyct [--corsie 4] FILE
 //! ```
 //!
 //! Il segreto del flusso nasce dalla stretta di mano Noise NK con la chiave
@@ -29,7 +29,7 @@ pub const ID_FLUSSO_DATI: u64 = 1;
 const USO: &str = "\
 Uso:
   nyctalus ricevi --uscita FILE [--ascolta 0.0.0.0:4433] [--identita FILE]
-  nyctalus invia  --a IP:PORTA --impronta HEX --destinatario HEX [--corsie 4] FILE
+  nyctalus invia  --a IP:PORTA --impronta HEX --destinatario INDIRIZZO.nyct [--corsie 4] FILE
 
 Avvia prima 'ricevi': stampa il comando 'invia' completo da usare sull'altro computer.
 Con --identita la chiave del ricevitore viene salvata (o riletta) da quel file,
@@ -60,7 +60,7 @@ async fn esegui() -> Risultato<()> {
         "invia" => {
             let destinazione: SocketAddr = obbligatoria(&opzioni, "a")?.parse()?;
             let impronta = da_esadecimale(obbligatoria(&opzioni, "impronta")?)?;
-            let destinatario = da_esadecimale(obbligatoria(&opzioni, "destinatario")?)?;
+            let destinatario = nyctalus_core::indirizzo::in_chiave(obbligatoria(&opzioni, "destinatario")?)?;
             let corsie: usize = opzione(&opzioni, "corsie").unwrap_or("4").parse()?;
             if !(1..=64).contains(&corsie) {
                 return Err("--corsie deve essere tra 1 e 64".into());

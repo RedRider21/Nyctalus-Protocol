@@ -177,10 +177,14 @@ Le chiavi dei singoli salti saranno incorporate nell'intestazione Sphinx: una so
 
 ## 6. Siti interni e punto d'incontro 📐
 
-- **Indirizzo del sito:** codifica base32 della sua chiave pubblica Ed25519, più un suffisso ❓.
+- ✅ **Indirizzo `.nyct`** (`crates/nyctalus-core/src/indirizzo.rs`): `base32(chiave_pubblica[32] ‖ controllo[2] ‖ versione[1]) + ".nyct"`, 56 caratteri più il suffisso, come gli `.onion` v3. Il controllo sono i primi 2 byte di `BLAKE3-derive_key("Nyctalus indirizzi v0 controllo", chiave ‖ versione)` e intercetta gli errori di battitura. La chiave è quella X25519 della stretta di mano NK (§5.1): l'indirizzo **è** la chiave con cui si autentica il servizio. Esempio: `azcmipyj6qnj3sxljokv4wqnljonwrwer5ntsj7tkprjkn4tbu3puwqa.nyct`.
+- 📐 Per firmare i descrittori servirà anche una chiave Ed25519 del sito, legata a quella X25519.
 - Il sito pubblica, firmato, un **descrittore** con i suoi punti d'incontro nella tabella distribuita dei nodi.
 - Il client lascia al punto d'incontro un **segnale** di pochi byte, cifrato per il sito (la "notizia" della VISIONE §5.3). Il sito lo ritira e i due costruiscono i percorsi fino al punto d'incontro.
 - Il web server resta quello di sempre (Nginx, Apache…): il demone Nyctalus gli sta davanti come proxy.
+
+### 6.1 Ponte verso i siti `.onion` di Tor 📐
+Alcuni nodi d'uscita volontari offriranno anche un **ponte verso Tor**: ricevono da Nyctalus le richieste per indirizzi `.onion` e le inoltrano con il client Tor ufficiale in Rust (Arti). Per l'utente i `.onion` si aprono nel browser come i `.nyct`. Dal nodo ponte in poi la protezione è quella di Tor, compresa la sua lentezza.
 
 ---
 
@@ -239,4 +243,4 @@ Misura su un solo PC (loopback, compilazione release, file casuale da 200 MB): c
 
 ## 12. Registro delle modifiche
 - **0.1 (27/09/2026):** prima bozza; il livello L2 è implementato in `nyctalus-core` con 18 test; aggiunti il programma di prova QUIC e il controllo del flusso.
-- **0.2 (27/09/2026):** stretta di mano Noise NK implementata (corretto IK → NK per l'anonimato del mittente); il segreto non si passa più a mano. 23 test.
+- **0.2 (27/09/2026):** stretta di mano Noise NK implementata (corretto IK → NK per l'anonimato del mittente); il segreto non si passa più a mano. Indirizzi `.nyct` implementati; ponte verso `.onion` progettato. 29 test.

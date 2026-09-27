@@ -33,7 +33,7 @@ Sul computer che riceve:
 nyctalus ricevi --uscita ricevuto.bin --identita mia.chiave
 ```
 
-Il comando stampa l'istruzione `nyctalus invia ...` completa da eseguire sull'altro computer. Contiene l'impronta del certificato e la **chiave pubblica** del ricevitore (`--destinatario`), che non è segreta: basta sostituire l'IP e il nome del file.
+Il comando stampa l'istruzione `nyctalus invia ...` completa da eseguire sull'altro computer. Contiene l'impronta del certificato e l'**indirizzo `.nyct`** del ricevitore (`--destinatario`), cioè la sua chiave pubblica: non è segreto: basta sostituire l'IP e il nome del file.
 
 - I due programmi si accordano da soli sul segreto con la stretta di mano **Noise NK**. Il segreto non viaggia mai.
 - `--identita FILE` salva la chiave del ricevitore (permessi 600): così il suo indirizzo resta lo stesso tra un avvio e l'altro. Senza questa opzione, a ogni avvio ne viene generato uno nuovo.

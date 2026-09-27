@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 
 use nyctalus_core::cifratura::lunghezza_pacchetto;
 use nyctalus_core::flusso::{ParametriFlusso, RicevitoreFlusso};
+use nyctalus_core::indirizzo;
 use nyctalus_core::stretta::{self, Identita, LUNGHEZZA_MESSAGGIO};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::mpsc;
@@ -31,7 +32,7 @@ pub async fn ricevi(ascolta: SocketAddr, uscita: PathBuf, file_identita: Option<
         "  nyctalus invia --a <IP-DI-QUESTO-PC>:{} --impronta {} --destinatario {} <FILE>\n",
         ascolta.port(),
         in_esadecimale(&tls.impronta),
-        in_esadecimale(&identita.pubblica()),
+        indirizzo::da_chiave(&identita.pubblica()),
     );
 
     let connessione = endpoint.accept().await.ok_or("endpoint chiuso")?.await?;
