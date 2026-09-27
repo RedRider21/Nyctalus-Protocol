@@ -46,7 +46,7 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
    - ✅ **1a — data-plane a strati simmetrici** (`crates/nyctalus-core/src/cipolla.rs`): `avvolgi`/`sbuccia` con ChaCha20, nonce = numero di sequenza, lunghezza costante, 5 test. Fatto sessione 2.
    - ✅ **1b — apertura del circuito con Sphinx** (`crates/nyctalus-core/src/circuito.rs`): via `sphinx-packet` (Nym), il client concorda una chiave di salto per ogni nodo e consegna a ciascuno solo l'indirizzo del successivo; nessun nodo conosce l'intero percorso. Chiave ChaCha20 derivata (BLAKE3) dal seme per-nodo di Sphinx. Test: client e nodi concordano le chiavi + integrazione con la cipolla (1a). 5 test. Fatto sessione 2.
    - ⏳ **1c — ID di circuito che cambia a ogni tratta** + difesa sul numero di sequenza in chiaro.
-3. **Tappa 2:** programma nodo (`nyctalus nodo`) che toglie il suo strato e inoltra.
+3. ✅ **Tappa 2 — programma nodo FATTO** (sessione 2): `nyctalus nodo` (relè: apre/inoltra circuito Sphinx, toglie/aggiunge strato a cipolla) + `nyctalus prova-circuito` (client). Provato in locale: client→guard→mid→uscita, l'uscita risponde (eco), la risposta torna attraverso gli strati, il nodo intermedio NON vede il testo in chiaro. Collegamenti fra nodi non ancora autenticati (tls::config_client_insicuro, prototipo).
 4. **Tappa 3:** prova completa sul PC, client → guard → medio → uscita → destinatario, verificando che nessun nodo conosca insieme mittente e destinazione.
 5. Ragnatela vera: più percorsi medi paralleli dopo un guard fisso (SPECIFICA §4.2).
 6. **Interfaccia a riga di comando (VISIONE §8.2), prioritaria perché sblocca sia terminale sia browser:**

@@ -76,6 +76,17 @@ fn chiave_da_seme(seme: &[u8; 16]) -> ChiaveSalto {
     blake3::derive_key(CONTESTO_CHIAVE, seme)
 }
 
+/// Chiave pubblica X25519 corrispondente a un segreto: un nodo la pubblica
+/// come propria identità di circuito, il client la usa in [`NodoPercorso`].
+pub fn chiave_pubblica(segreto: &[u8; 32]) -> [u8; 32] {
+    PublicKey::from(&StaticSecret::from(*segreto)).to_bytes()
+}
+
+/// Genera un nuovo segreto X25519 per l'identità di circuito di un nodo.
+pub fn genera_segreto() -> [u8; 32] {
+    StaticSecret::random().to_bytes()
+}
+
 /// Lato client: sceglie le chiavi di salto e costruisce il pacchetto di
 /// apertura per il percorso dato.
 pub fn apri_circuito(percorso: &[NodoPercorso], messaggio: &[u8]) -> Result<CircuitoAperto, ErroreCircuito> {

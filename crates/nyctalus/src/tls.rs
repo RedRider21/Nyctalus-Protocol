@@ -49,6 +49,42 @@ pub fn config_client(impronta_attesa: [u8; 32]) -> Risultato<quinn::ClientConfig
     Ok(quinn::ClientConfig::new(Arc::new(quic)))
 }
 
+/// Config client che accetta QUALSIASI certificato: usata SOLO per i
+/// collegamenti fra nodi del prototipo, dove i nodi non conoscono in anticipo
+/// l'impronta dei vicini. L'anonimato viene dagli strati a cipolla, non da
+/// questo TLS; l'autenticazione fra nodi è una cosa da fare (vedi STATO.md).
+pub fn config_client_insicuro() -> Risultato<quinn::ClientConfig> {
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let verificatore = Arc::new(AccettaTutto { algoritmi: provider.signature_verification_algorithms });
+    let tls = rustls::ClientConfig::builder_with_provider(provider)
+        .with_protocol_versions(&[&rustls::version::TLS13])?
+        .dangerous()
+        .with_custom_certificate_verifier(verificatore)
+        .with_no_client_auth();
+    let quic = quinn::crypto::rustls::QuicClientConfig::try_from(tls)?;
+    Ok(quinn::ClientConfig::new(Arc::new(quic)))
+}
+
+#[derive(Debug)]
+struct AccettaTutto {
+    algoritmi: WebPkiSupportedAlgorithms,
+}
+
+impl ServerCertVerifier for AccettaTutto {
+    fn verify_server_cert(&self, _: &CertificateDer<'_>, _: &[CertificateDer<'_>], _: &ServerName<'_>, _: &[u8], _: UnixTime) -> Result<ServerCertVerified, rustls::Error> {
+        Ok(ServerCertVerified::assertion())
+    }
+    fn verify_tls12_signature(&self, m: &[u8], c: &CertificateDer<'_>, d: &DigitallySignedStruct) -> Result<HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls12_signature(m, c, d, &self.algoritmi)
+    }
+    fn verify_tls13_signature(&self, m: &[u8], c: &CertificateDer<'_>, d: &DigitallySignedStruct) -> Result<HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls13_signature(m, c, d, &self.algoritmi)
+    }
+    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        self.algoritmi.supported_schemes()
+    }
+}
+
 #[derive(Debug)]
 struct VerificaImpronta {
     impronta_attesa: [u8; 32],

@@ -21,6 +21,8 @@
 //! ```text
 //! nyctalus uscita --ascolta 0.0.0.0:4600
 //! nyctalus avvia  --a IP:PORTA --impronta HEX [--socks 127.0.0.1:1080]
+//! nyctalus nodo   --ascolta 0.0.0.0:4601
+//! nyctalus prova-circuito --nodi 'a,pub;b,pub;c,pub' --messaggio "ciao"
 //! ```
 //!
 //! `avvia` apre un proxy SOCKS5 locale che inoltra il traffico a un nodo di
@@ -30,7 +32,10 @@
 //! la cipolla (tappe 1b/1c) trasformeranno questo in un percorso anonimo.
 
 mod avvia;
+mod circuito_rete;
 mod invia;
+mod nodo;
+mod prova_circuito;
 mod ricevi;
 mod tls;
 mod travaso;
@@ -51,10 +56,13 @@ Uso:
   nyctalus invia  --a IP:PORTA --impronta HEX --destinatario INDIRIZZO.nyct [--corsie 4] FILE
   nyctalus uscita --ascolta 0.0.0.0:4600
   nyctalus avvia  --a IP:PORTA --impronta HEX [--socks 127.0.0.1:1080]
+  nyctalus nodo   --ascolta 0.0.0.0:4601 [--segreto HEX]
+  nyctalus prova-circuito --nodi 'addr,pubhex;addr,pubhex;addr,pubhex' [--messaggio TESTO]
 
 'ricevi'/'invia': trasferimento di un file (test del livello L2).
 'uscita'/'avvia': proxy SOCKS5 verso Internet (un solo salto, non ancora anonimo).
-Avvia prima 'uscita' o 'ricevi': stampano il comando completo da usare.";
+'nodo'/'prova-circuito': circuito onion a più nodi (tappa 2).
+Avvia prima i nodi (stampano il pezzo per --nodi), poi 'prova-circuito'.";
 
 #[tokio::main]
 async fn main() {
@@ -100,6 +108,19 @@ async fn esegui() -> Risultato<()> {
             let impronta = da_esadecimale(obbligatoria(&opzioni, "impronta")?)?;
             let socks: SocketAddr = opzione(&opzioni, "socks").unwrap_or("127.0.0.1:1080").parse()?;
             avvia::avvia(destinazione, impronta, socks).await
+        }
+        "nodo" => {
+            let ascolta: SocketAddr = obbligatoria(&opzioni, "ascolta")?.parse()?;
+            let segreto = match opzione(&opzioni, "segreto") {
+                Some(hex) => da_esadecimale(hex)?,
+                None => nyctalus_core::circuito::genera_segreto(),
+            };
+            nodo::nodo(ascolta, segreto).await
+        }
+        "prova-circuito" => {
+            let nodi = leggi_nodi(obbligatoria(&opzioni, "nodi")?)?;
+            let messaggio = opzione(&opzioni, "messaggio").unwrap_or("PING da Nyctalus").to_string();
+            prova_circuito::prova_circuito(nodi, messaggio).await
         }
         "aiuto" | "--help" | "-h" => {
             println!("{USO}");
@@ -149,6 +170,19 @@ pub(crate) fn da_esadecimale(testo: &str) -> Risultato<[u8; 32]> {
             .map_err(|_| format!("carattere non esadecimale in '{coppia}'"))?;
     }
     Ok(risultato)
+}
+
+/// Interpreta la lista dei nodi per `prova-circuito`: voci separate da ';',
+/// ciascuna `indirizzo,chiavepubblica_esadecimale`, nell'ordine guard→uscita.
+fn leggi_nodi(testo: &str) -> Risultato<Vec<(SocketAddr, [u8; 32])>> {
+    testo
+        .split(';')
+        .filter(|v| !v.trim().is_empty())
+        .map(|voce| {
+            let (addr, hex) = voce.split_once(',').ok_or("nodo nel formato indirizzo,chiavehex")?;
+            Ok((addr.trim().parse()?, da_esadecimale(hex.trim())?))
+        })
+        .collect()
 }
 
 /// Velocità leggibile (MB/s) per i riepiloghi.
