@@ -15,10 +15,26 @@
 //!
 //! Il segreto del flusso nasce dalla stretta di mano Noise NK con la chiave
 //! pubblica del destinatario: non viaggia mai e non va copiato a mano.
+//!
+//! Inoltre offre il primo abbozzo dell'uso "da rete" (VISIONE §8.2):
+//!
+//! ```text
+//! nyctalus uscita --ascolta 0.0.0.0:4600
+//! nyctalus avvia  --a IP:PORTA --impronta HEX [--socks 127.0.0.1:1080]
+//! ```
+//!
+//! `avvia` apre un proxy SOCKS5 locale che inoltra il traffico a un nodo di
+//! `uscita`, il quale lo porta su Internet. ATTENZIONE: è ancora un solo
+//! salto (client → uscita), quindi **non è anonimo**: l'uscita vede l'IP del
+//! client. Serve a rendere la CLI usabile fin da subito; i nodi intermedi e
+//! la cipolla (tappe 1b/1c) trasformeranno questo in un percorso anonimo.
 
+mod avvia;
 mod invia;
 mod ricevi;
 mod tls;
+mod travaso;
+mod uscita;
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -33,10 +49,12 @@ const USO: &str = "\
 Uso:
   nyctalus ricevi --uscita FILE [--ascolta 0.0.0.0:4433] [--identita FILE]
   nyctalus invia  --a IP:PORTA --impronta HEX --destinatario INDIRIZZO.nyct [--corsie 4] FILE
+  nyctalus uscita --ascolta 0.0.0.0:4600
+  nyctalus avvia  --a IP:PORTA --impronta HEX [--socks 127.0.0.1:1080]
 
-Avvia prima 'ricevi': stampa il comando 'invia' completo da usare sull'altro computer.
-Con --identita la chiave del ricevitore viene salvata (o riletta) da quel file,
-cosi' il suo indirizzo resta lo stesso tra un avvio e l'altro.";
+'ricevi'/'invia': trasferimento di un file (test del livello L2).
+'uscita'/'avvia': proxy SOCKS5 verso Internet (un solo salto, non ancora anonimo).
+Avvia prima 'uscita' o 'ricevi': stampano il comando completo da usare.";
 
 #[tokio::main]
 async fn main() {
@@ -72,6 +90,16 @@ async fn esegui() -> Risultato<()> {
                 return Err("indicare un solo file da inviare".into());
             };
             invia::invia(destinazione, impronta, destinatario, corsie, PathBuf::from(file)).await
+        }
+        "uscita" => {
+            let ascolta: SocketAddr = opzione(&opzioni, "ascolta").unwrap_or("0.0.0.0:4600").parse()?;
+            uscita::uscita(ascolta).await
+        }
+        "avvia" => {
+            let destinazione: SocketAddr = obbligatoria(&opzioni, "a")?.parse()?;
+            let impronta = da_esadecimale(obbligatoria(&opzioni, "impronta")?)?;
+            let socks: SocketAddr = opzione(&opzioni, "socks").unwrap_or("127.0.0.1:1080").parse()?;
+            avvia::avvia(destinazione, impronta, socks).await
         }
         "aiuto" | "--help" | "-h" => {
             println!("{USO}");
@@ -110,7 +138,7 @@ pub fn in_esadecimale(byte: &[u8]) -> String {
     byte.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-fn da_esadecimale(testo: &str) -> Risultato<[u8; 32]> {
+pub(crate) fn da_esadecimale(testo: &str) -> Risultato<[u8; 32]> {
     if testo.len() != 64 || !testo.is_ascii() {
         return Err("atteso un valore esadecimale di 64 caratteri".into());
     }
