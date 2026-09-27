@@ -11,11 +11,10 @@
 
 use std::collections::HashMap;
 
+use crate::chiavi::{self, CONTESTO_ETICHETTE};
+
 pub const LUNGHEZZA_ETICHETTA: usize = 8;
 pub type Etichetta = [u8; LUNGHEZZA_ETICHETTA];
-
-/// Contesto di derivazione BLAKE3: va cambiato se cambia il formato.
-const CONTESTO: &str = "Nyctalus v0 2026-09-27 etichette dei frammenti";
 
 /// Calcola le etichette di un flusso. Lo usano sia il mittente sia il
 /// destinatario, che condividono lo stesso segreto.
@@ -25,12 +24,7 @@ pub struct GeneratoreEtichette {
 
 impl GeneratoreEtichette {
     pub fn nuovo(segreto_condiviso: &[u8; 32], id_flusso: u64) -> Self {
-        let mut materiale = [0u8; 40];
-        materiale[..32].copy_from_slice(segreto_condiviso);
-        materiale[32..].copy_from_slice(&id_flusso.to_le_bytes());
-        let chiave = blake3::derive_key(CONTESTO, &materiale);
-        azzera(&mut materiale);
-        Self { chiave }
+        Self { chiave: chiavi::deriva(CONTESTO_ETICHETTE, segreto_condiviso, id_flusso) }
     }
 
     pub fn etichetta(&self, indice: u64) -> Etichetta {
@@ -43,16 +37,19 @@ impl GeneratoreEtichette {
 
 impl Drop for GeneratoreEtichette {
     fn drop(&mut self) {
-        azzera(&mut self.chiave);
+        chiavi::azzera(&mut self.chiave);
     }
 }
 
 /// Lato destinatario: riconosce le etichette degli indici nella finestra
 /// `[base, base + finestra)`.
 ///
-/// Un'etichetta riconosciuta viene tolta dalla tabella: se un attaccante
-/// rispedisce lo stesso frammento (replay), la seconda copia non viene più
-/// riconosciuta.
+/// Il riconoscimento è in due tempi: [`cerca`](Self::cerca) trova l'indice,
+/// [`consuma`](Self::consuma) toglie l'etichetta dalla tabella **solo dopo**
+/// che il pacchetto ha superato l'autenticazione. Così:
+/// - un replay (stesso frammento rispedito) non viene più riconosciuto;
+/// - un nodo che ha visto passare un'etichetta non può "bruciarla" mandando
+///   per primo un pacchetto falso con la stessa etichetta.
 pub struct RiconoscitoreEtichette {
     generatore: GeneratoreEtichette,
     finestra: u64,
@@ -76,9 +73,14 @@ impl RiconoscitoreEtichette {
     }
 
     /// Restituisce l'indice del frammento, oppure `None` se l'etichetta non
-    /// appartiene a questo flusso, è fuori finestra o è già stata usata.
-    pub fn riconosci(&mut self, etichetta: &Etichetta) -> Option<u64> {
-        self.attese.remove(etichetta)
+    /// appartiene a questo flusso, è fuori finestra o è già stata consumata.
+    pub fn cerca(&self, etichetta: &Etichetta) -> Option<u64> {
+        self.attese.get(etichetta).copied()
+    }
+
+    /// Segna l'etichetta come usata: da chiamare dopo l'autenticazione.
+    pub fn consuma(&mut self, etichetta: &Etichetta) {
+        self.attese.remove(etichetta);
     }
 
     /// Sposta l'inizio della finestra a `nuova_base` (tipicamente il prossimo
@@ -96,15 +98,6 @@ impl RiconoscitoreEtichette {
         }
         self.fine = nuova_fine;
     }
-}
-
-/// Azzera un buffer in modo che il compilatore non possa eliminare la
-/// scrittura: le chiavi non devono restare in RAM dopo l'uso.
-fn azzera(buffer: &mut [u8]) {
-    for byte in buffer.iter_mut() {
-        unsafe { std::ptr::write_volatile(byte, 0) };
-    }
-    std::sync::atomic::compiler_fence(std::sync::atomic::Ordering::SeqCst);
 }
 
 #[cfg(test)]
@@ -136,8 +129,10 @@ mod test {
         let mut ricevente =
             RiconoscitoreEtichette::nuovo(GeneratoreEtichette::nuovo(&SEGRETO, 1), 16);
         let etichetta = mittente.etichetta(5);
-        assert_eq!(ricevente.riconosci(&etichetta), Some(5));
-        assert_eq!(ricevente.riconosci(&etichetta), None, "replay accettato");
+        assert_eq!(ricevente.cerca(&etichetta), Some(5));
+        assert_eq!(ricevente.cerca(&etichetta), Some(5), "cercare non deve consumare");
+        ricevente.consuma(&etichetta);
+        assert_eq!(ricevente.cerca(&etichetta), None, "replay accettato");
     }
 
     #[test]
@@ -145,10 +140,10 @@ mod test {
         let mittente = GeneratoreEtichette::nuovo(&SEGRETO, 1);
         let mut ricevente =
             RiconoscitoreEtichette::nuovo(GeneratoreEtichette::nuovo(&SEGRETO, 1), 16);
-        assert_eq!(ricevente.riconosci(&mittente.etichetta(16)), None);
-        assert_eq!(ricevente.riconosci(&[0xAA; LUNGHEZZA_ETICHETTA]), None);
+        assert_eq!(ricevente.cerca(&mittente.etichetta(16)), None);
+        assert_eq!(ricevente.cerca(&[0xAA; LUNGHEZZA_ETICHETTA]), None);
         ricevente.avanza(10);
-        assert_eq!(ricevente.riconosci(&mittente.etichetta(16)), Some(16));
-        assert_eq!(ricevente.riconosci(&mittente.etichetta(3)), None);
+        assert_eq!(ricevente.cerca(&mittente.etichetta(16)), Some(16));
+        assert_eq!(ricevente.cerca(&mittente.etichetta(3)), None);
     }
 }

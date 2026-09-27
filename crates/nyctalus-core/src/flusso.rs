@@ -1,24 +1,20 @@
-//! Un flusso di dati spezzato in frammenti e ricomposto a destinazione.
+//! Un flusso di dati spezzato in frammenti cifrati e ricomposto a destinazione.
 //!
-//! Il mittente taglia i dati in frammenti di dimensione fissa, ciascuno con
-//! la sua etichetta segreta; il destinatario riconosce le etichette e
-//! ricompone. Il percorso dei frammenti nella rete (ingresso fisso, poi
-//! ragnatela) e la cifratura a strati arriveranno nei livelli superiori:
-//! qui c'è solo la logica di un flusso tra due estremi.
+//! Il mittente taglia i dati in frammenti, dà a ciascuno la sua etichetta
+//! segreta e lo cifra: sulla rete escono solo pacchetti tutti della stessa
+//! lunghezza, indistinguibili da byte casuali. Il destinatario riconosce
+//! l'etichetta, verifica e decifra, poi ricompone.
 //!
-//! NOTA: il campo `ultimo` dovrà viaggiare **dentro** la parte cifrata del
-//! frammento, altrimenti un nodo intermedio potrebbe vedere dove finisce un
-//! flusso (e quanto è lungo).
+//! Il percorso dei pacchetti nella rete (ingresso fisso, poi ragnatela) e la
+//! cifratura a strati dei nodi arriveranno nei livelli superiori: qui c'è la
+//! parte end-to-end tra i due estremi di un flusso (che va in una sola
+//! direzione: una conversazione usa due flussi con id diversi).
 
-use crate::etichette::{Etichetta, GeneratoreEtichette, RiconoscitoreEtichette};
+use std::fmt;
+
+use crate::cifratura::{CifrarioFlusso, ErroreCifratura};
+use crate::etichette::{Etichetta, GeneratoreEtichette, LUNGHEZZA_ETICHETTA, RiconoscitoreEtichette};
 use crate::ricomposizione::{ErroreRicomposizione, Ricompositore};
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Frammento {
-    pub etichetta: Etichetta,
-    pub dati: Vec<u8>,
-    pub ultimo: bool,
-}
 
 /// Parametri condivisi da mittente e destinatario.
 #[derive(Debug, Clone, Copy)]
@@ -31,25 +27,32 @@ pub struct ParametriFlusso {
 
 impl Default for ParametriFlusso {
     fn default() -> Self {
-        // 1200 byte stanno comodi in un pacchetto UDP senza frammentazione IP.
-        Self { dimensione_frammento: 1200, finestra: 512 }
+        // 1173 byte utili = pacchetto da 1200 byte, la dimensione che QUIC
+        // garantisce su qualunque rete senza frammentazione IP.
+        Self { dimensione_frammento: 1173, finestra: 512 }
     }
 }
 
 pub struct MittenteFlusso {
-    generatore: GeneratoreEtichette,
+    etichette: GeneratoreEtichette,
+    cifrario: CifrarioFlusso,
     parametri: ParametriFlusso,
     prossimo: u64,
 }
 
 impl MittenteFlusso {
     pub fn nuovo(segreto: &[u8; 32], id_flusso: u64, parametri: ParametriFlusso) -> Self {
-        Self { generatore: GeneratoreEtichette::nuovo(segreto, id_flusso), parametri, prossimo: 0 }
+        Self {
+            etichette: GeneratoreEtichette::nuovo(segreto, id_flusso),
+            cifrario: CifrarioFlusso::nuovo(segreto, id_flusso, parametri.dimensione_frammento),
+            parametri,
+            prossimo: 0,
+        }
     }
 
-    /// Spezza `dati` in frammenti. Se `fine` è vero l'ultimo frammento
-    /// chiude il flusso (anche con `dati` vuoti).
-    pub fn spezza(&mut self, dati: &[u8], fine: bool) -> Vec<Frammento> {
+    /// Spezza e cifra `dati`, restituendo i pacchetti da spedire. Se `fine` è
+    /// vero l'ultimo pacchetto chiude il flusso (anche con `dati` vuoti).
+    pub fn spezza(&mut self, dati: &[u8], fine: bool) -> Vec<Vec<u8>> {
         let mut pezzi: Vec<&[u8]> = dati.chunks(self.parametri.dimensione_frammento).collect();
         if pezzi.is_empty() && fine {
             pezzi.push(&[]);
@@ -61,11 +64,8 @@ impl MittenteFlusso {
             .map(|(n, pezzo)| {
                 let indice = self.prossimo;
                 self.prossimo += 1;
-                Frammento {
-                    etichetta: self.generatore.etichetta(indice),
-                    dati: pezzo.to_vec(),
-                    ultimo: fine && n + 1 == quanti,
-                }
+                let etichetta = self.etichette.etichetta(indice);
+                self.cifrario.sigilla(indice, &etichetta, pezzo, fine && n + 1 == quanti)
             })
             .collect()
     }
@@ -73,13 +73,27 @@ impl MittenteFlusso {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErroreRicezione {
-    /// Etichetta sconosciuta: frammento di un altro flusso, replay o rumore.
+    /// Etichetta sconosciuta: pacchetto di un altro flusso, replay o rumore.
     EtichettaSconosciuta,
+    Cifratura(ErroreCifratura),
     Ricomposizione(ErroreRicomposizione),
 }
 
+impl fmt::Display for ErroreRicezione {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::EtichettaSconosciuta => f.write_str("etichetta sconosciuta"),
+            Self::Cifratura(e) => e.fmt(f),
+            Self::Ricomposizione(e) => e.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for ErroreRicezione {}
+
 pub struct RicevitoreFlusso {
     riconoscitore: RiconoscitoreEtichette,
+    cifrario: CifrarioFlusso,
     ricompositore: Ricompositore,
 }
 
@@ -91,18 +105,28 @@ impl RicevitoreFlusso {
                 GeneratoreEtichette::nuovo(segreto, id_flusso),
                 parametri.finestra,
             ),
+            cifrario: CifrarioFlusso::nuovo(segreto, id_flusso, parametri.dimensione_frammento),
             ricompositore: Ricompositore::nuovo(parametri.finestra, max_byte),
         }
     }
 
-    /// Riceve un frammento e restituisce i dati diventati consegnabili.
-    pub fn ricevi(&mut self, frammento: Frammento) -> Result<Vec<u8>, ErroreRicezione> {
+    /// Riceve un pacchetto dalla rete e restituisce i dati diventati
+    /// consegnabili (possono essere vuoti se mancano frammenti precedenti).
+    pub fn ricevi(&mut self, pacchetto: &[u8]) -> Result<Vec<u8>, ErroreRicezione> {
+        let etichetta: Etichetta = pacchetto
+            .get(..LUNGHEZZA_ETICHETTA)
+            .and_then(|e| e.try_into().ok())
+            .ok_or(ErroreRicezione::Cifratura(ErroreCifratura::LunghezzaErrata))?;
         let indice = self
             .riconoscitore
-            .riconosci(&frammento.etichetta)
+            .cerca(&etichetta)
             .ok_or(ErroreRicezione::EtichettaSconosciuta)?;
+        let (dati, ultimo) =
+            self.cifrario.apri(indice, pacchetto).map_err(ErroreRicezione::Cifratura)?;
+        // Solo ora il pacchetto è sicuramente autentico.
+        self.riconoscitore.consuma(&etichetta);
         self.ricompositore
-            .inserisci(indice, frammento.dati, frammento.ultimo)
+            .inserisci(indice, dati, ultimo)
             .map_err(ErroreRicezione::Ricomposizione)?;
         let pronti = self.ricompositore.estrai_pronti();
         self.riconoscitore.avanza(self.ricompositore.prossimo_atteso());
@@ -117,6 +141,7 @@ impl RicevitoreFlusso {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::cifratura::lunghezza_pacchetto;
 
     const SEGRETO: [u8; 32] = [42; 32];
 
@@ -132,10 +157,10 @@ mod test {
         }
     }
 
-    /// Mescola i frammenti a blocchi: simula la ragnatela, dove i frammenti
+    /// Mescola i pacchetti a blocchi: simula la ragnatela, dove i frammenti
     /// arrivano in disordine ma entro la finestra consentita.
-    fn mescola_a_blocchi(frammenti: &mut [Frammento], blocco: usize, rng: &mut Xorshift) {
-        for parte in frammenti.chunks_mut(blocco) {
+    fn mescola_a_blocchi(pacchetti: &mut [Vec<u8>], blocco: usize, rng: &mut Xorshift) {
+        for parte in pacchetti.chunks_mut(blocco) {
             for i in (1..parte.len()).rev() {
                 let j = (rng.prossimo() % (i as u64 + 1)) as usize;
                 parte.swap(i, j);
@@ -144,19 +169,20 @@ mod test {
     }
 
     #[test]
-    fn diecimila_frammenti_in_disordine() {
+    fn diecimila_frammenti_cifrati_in_disordine() {
         let parametri = ParametriFlusso { dimensione_frammento: 100, finestra: 512 };
         let originale: Vec<u8> = (0..1_000_000u32).map(|n| (n * 31 % 251) as u8).collect();
 
         let mut mittente = MittenteFlusso::nuovo(&SEGRETO, 9, parametri);
-        let mut frammenti = mittente.spezza(&originale, true);
-        assert_eq!(frammenti.len(), 10_000);
-        mescola_a_blocchi(&mut frammenti, 256, &mut Xorshift(0x9E37_79B9_7F4A_7C15));
+        let mut pacchetti = mittente.spezza(&originale, true);
+        assert_eq!(pacchetti.len(), 10_000);
+        assert!(pacchetti.iter().all(|p| p.len() == lunghezza_pacchetto(100)));
+        mescola_a_blocchi(&mut pacchetti, 256, &mut Xorshift(0x9E37_79B9_7F4A_7C15));
 
         let mut ricevitore = RicevitoreFlusso::nuovo(&SEGRETO, 9, parametri);
         let mut ricomposto = Vec::with_capacity(originale.len());
-        for frammento in frammenti {
-            ricomposto.extend(ricevitore.ricevi(frammento).unwrap());
+        for pacchetto in &pacchetti {
+            ricomposto.extend(ricevitore.ricevi(pacchetto).unwrap());
         }
         assert!(ricevitore.completo());
         assert_eq!(ricomposto, originale);
@@ -165,24 +191,52 @@ mod test {
     #[test]
     fn le_etichette_non_si_ripetono() {
         let mut mittente = MittenteFlusso::nuovo(&SEGRETO, 1, ParametriFlusso::default());
-        let frammenti = mittente.spezza(&vec![0; 1200 * 1000], true);
+        let pacchetti = mittente.spezza(&vec![0; 1173 * 1000], true);
         let uniche: std::collections::HashSet<_> =
-            frammenti.iter().map(|f| f.etichetta).collect();
-        assert_eq!(uniche.len(), frammenti.len());
+            pacchetti.iter().map(|p| p[..LUNGHEZZA_ETICHETTA].to_vec()).collect();
+        assert_eq!(uniche.len(), pacchetti.len());
     }
 
     #[test]
-    fn rifiuta_replay_e_frammenti_di_altri_flussi() {
+    fn pacchetto_predefinito_da_1200_byte() {
+        let mut mittente = MittenteFlusso::nuovo(&SEGRETO, 1, ParametriFlusso::default());
+        assert_eq!(mittente.spezza(b"x", true)[0].len(), 1200);
+    }
+
+    #[test]
+    fn rifiuta_replay_e_pacchetti_di_altri_flussi() {
         let parametri = ParametriFlusso::default();
         let mut mittente = MittenteFlusso::nuovo(&SEGRETO, 1, parametri);
         let mut estraneo = MittenteFlusso::nuovo(&SEGRETO, 2, parametri);
         let mut ricevitore = RicevitoreFlusso::nuovo(&SEGRETO, 1, parametri);
 
-        let frammento = mittente.spezza(b"ciao", true).remove(0);
-        assert_eq!(ricevitore.ricevi(frammento.clone()).unwrap(), b"ciao");
-        assert_eq!(ricevitore.ricevi(frammento), Err(ErroreRicezione::EtichettaSconosciuta));
+        let pacchetto = mittente.spezza(b"ciao", true).remove(0);
+        assert_eq!(ricevitore.ricevi(&pacchetto).unwrap(), b"ciao");
+        assert_eq!(ricevitore.ricevi(&pacchetto), Err(ErroreRicezione::EtichettaSconosciuta));
 
         let intruso = estraneo.spezza(b"intruso", true).remove(0);
-        assert_eq!(ricevitore.ricevi(intruso), Err(ErroreRicezione::EtichettaSconosciuta));
+        assert_eq!(ricevitore.ricevi(&intruso), Err(ErroreRicezione::EtichettaSconosciuta));
+    }
+
+    /// Un nodo vede passare un'etichetta e prova a "bruciarla" mandando per
+    /// primo un pacchetto falso con la stessa etichetta: il falso viene
+    /// rifiutato e il vero, arrivato dopo, viene accettato lo stesso.
+    #[test]
+    fn un_pacchetto_falso_non_brucia_l_etichetta() {
+        let parametri = ParametriFlusso::default();
+        let mut mittente = MittenteFlusso::nuovo(&SEGRETO, 1, parametri);
+        let mut ricevitore = RicevitoreFlusso::nuovo(&SEGRETO, 1, parametri);
+
+        let vero = mittente.spezza(b"messaggio vero", true).remove(0);
+        let mut falso = vero.clone();
+        for byte in &mut falso[LUNGHEZZA_ETICHETTA..] {
+            *byte = 0xAB;
+        }
+        assert_eq!(
+            ricevitore.ricevi(&falso),
+            Err(ErroreRicezione::Cifratura(ErroreCifratura::AutenticazioneFallita))
+        );
+        assert_eq!(ricevitore.ricevi(&vero).unwrap(), b"messaggio vero");
+        assert!(ricevitore.completo());
     }
 }
