@@ -1,6 +1,6 @@
 # Nyctalus Protocol — Documento di visione
 
-> Versione 0.2 · 27 settembre 2026 · Autore: Daniele Deplano
+> Versione 0.3 · 27 settembre 2026 · Autore: Daniele Deplano
 > Stato: idea consolidata, prima della specifica tecnica.
 > Nome: **Nyctalus Protocol** (in breve *Nyctalus*), dal genere scientifico delle nottole: pipistrelli che volano veloci di notte e si orientano al buio. Dal greco *nyx* (notte). Scelto il 27/09/2026 al posto del nome di lavoro "NyxShift", troppo vicino a "nyx", il monitor dei relay del Tor Project. Prima della pubblicazione va verificato come marchio su EUIPO/WIPO.
 
@@ -265,7 +265,34 @@ Nyctalus Protocol è un **progetto indipendente** (repository, sito e rilasci pr
 
 ---
 
-## 14. Glossario
+## 14. Verso il protocollo di riferimento
+
+**Obiettivo dichiarato:** fare di Nyctalus Protocol il protocollo di riferimento per l'anonimato veloce. Per una rete anonima la velocità non basta: diventa di riferimento quando gli esperti **si fidano** di lei.
+
+### Cosa serve
+1. **Specifica pubblica e completa:** chiunque deve poter scrivere un'implementazione compatibile leggendo solo `SPECIFICA.md`.
+2. **Codice aperto e verificabile:** licenza AGPL e test ci sono già. Mancano build riproducibili (chiunque ricompila e ottiene lo stesso identico programma) e rilasci firmati.
+3. **Revisione indipendente** (il passaggio decisivo):
+   - audit di sicurezza da parte di società specializzate;
+   - pubblicazione accademica (PETS, USENIX Security): se i ricercatori lo attaccano e non lo rompono, diventa credibile;
+   - numeri misurati, non promessi: simulazione con Shadow contro Tor, con risultati pubblicati.
+4. **Utenti e nodi:** più persone usano la rete, più protegge. NexusSec è il primo canale di lancio; poi servono app semplici per tutti i sistemi operativi.
+5. **Una casa neutrale:** col tempo un'associazione o fondazione no-profit che custodisca il protocollo, e la presenza nel gruppo di ricerca sulla privacy di IETF/IRTF.
+6. **Finanziamenti:** in Europa **NLnet / NGI Zero** finanzia progetti open source di privacy e di rete, anche di singoli sviluppatori. Un finanziamento coprirebbe anche l'audit.
+
+### Tappe
+| Quando | Cosa |
+|---|---|
+| Adesso | Prototipo funzionante, specifica completa, misure con Shadow |
+| Con il prototipo in mano | Pubblicazione del repository e domanda a NLnet / NGI Zero |
+| Con i fondi | Audit di sicurezza, articolo scientifico, rete di prova pubblica con NexusSec |
+| Poi | App per tutti, associazione no-profit, standardizzazione |
+
+**Regola:** in questo campo la reputazione si perde in un attimo. Non si promette mai più di quanto il protocollo garantisce: la sezione 10 ("cosa promettiamo e cosa no") va mantenuta onesta anche nella comunicazione pubblica.
+
+---
+
+## 15. Glossario
 
 - **Nodo:** un computer che inoltra il traffico degli altri.
 - **Ingresso (guard):** il primo nodo del percorso; è l'unico che vede il tuo IP, ma non sa dove vai.
