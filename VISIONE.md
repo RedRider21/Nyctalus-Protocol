@@ -166,7 +166,7 @@ Tor stesso sta riscrivendo il suo client in Rust (progetto Arti).
 
 ### Valutazione dei riferimenti citati negli appunti
 
-Gli appunti iniziali (`appunti-nuova-rete-tor-progetto-nyxshift-protocol.md`) nominano molti programmi. Ecco quali servono davvero:
+Gli appunti iniziali (`appunti-nuova-rete-tor-progetto-nyctalus-protocol.md`) nominano molti programmi. Ecco quali servono davvero:
 
 **✅ Da usare**
 
