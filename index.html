@@ -1,121 +1,229 @@
 <!doctype html>
-<html lang="it">
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol. -->
+<html lang="it" data-lang="it">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nyctalus Protocol</title>
-<meta name="description" content="Rete anonima ad alte prestazioni: alternativa veloce a Tor. Progetto open source in Rust.">
-<style>
-  :root{
-    --bg:#0d1017; --sup:#151a23; --bordo:#232b38; --testo:#e6edf3;
-    --tenue:#9aa7b8; --acc:#5ec8d8; --acc2:#7c8cff; --ok:#4ec9a3; --avv:#e0b341;
-  }
-  :root:not([data-theme="dark"]){
-    @media (prefers-color-scheme: light){
-      --bg:#f6f8fb; --sup:#ffffff; --bordo:#e2e8f0; --testo:#111821;
-      --tenue:#5a6675; --acc:#0e7c8c; --acc2:#4453d6; --ok:#0f8f6b; --avv:#9a7514;
-    }
-  }
-  :root[data-theme="light"]{
-    --bg:#f6f8fb; --sup:#ffffff; --bordo:#e2e8f0; --testo:#111821;
-    --tenue:#5a6675; --acc:#0e7c8c; --acc2:#4453d6; --ok:#0f8f6b; --avv:#9a7514;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--testo);
-    font:16px/1.65 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-    -webkit-font-smoothing:antialiased}
-  .wrap{max-width:860px;margin:0 auto;padding:0 16px}
-  header{padding:72px 0 40px;text-align:center}
-  .logo{font-size:0;line-height:0;margin-bottom:22px}
-  h1{font-size:clamp(2.2rem,6vw,3.4rem);margin:0 0 10px;letter-spacing:-.02em}
-  .grad{background:linear-gradient(100deg,var(--acc),var(--acc2));
-    -webkit-background-clip:text;background-clip:text;color:transparent}
-  .sotto{font-size:1.2rem;color:var(--tenue);max-width:620px;margin:0 auto 24px}
-  .avviso{display:inline-flex;gap:8px;align-items:center;font-size:.9rem;
-    color:var(--avv);border:1px solid var(--bordo);background:var(--sup);
-    padding:7px 14px;border-radius:999px}
-  section{padding:34px 0;border-top:1px solid var(--bordo)}
-  h2{font-size:1.5rem;margin:0 0 18px}
-  .griglia{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
-  .carta{background:var(--sup);border:1px solid var(--bordo);border-radius:14px;padding:20px}
-  .carta h3{margin:0 0 8px;font-size:1.05rem;color:var(--acc)}
-  .carta p{margin:0;color:var(--tenue);font-size:.95rem}
-  ul.pro{list-style:none;padding:0;margin:0;display:grid;gap:10px}
-  ul.pro li{padding-left:28px;position:relative;color:var(--tenue)}
-  ul.pro li b{color:var(--testo);font-weight:600}
-  ul.pro li::before{content:"";position:absolute;left:0;top:.55em;width:12px;height:12px;
-    border-radius:50%;background:var(--ok)}
-  footer{padding:40px 0 60px;color:var(--tenue);font-size:.88rem;text-align:center;
-    border-top:1px solid var(--bordo)}
-  a{color:var(--acc2)}
-  code{background:var(--sup);border:1px solid var(--bordo);border-radius:6px;
-    padding:2px 6px;font-size:.9em}
-</style>
+<meta name="description" content="Rete anonima ad alte prestazioni: alternativa veloce a Tor. Open source, in Rust. / High-performance anonymity network: a fast alternative to Tor.">
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="stile.css">
 </head>
 <body>
-<header class="wrap">
-  <div class="logo" aria-hidden="true">
-    <svg width="76" height="76" viewBox="0 0 76 76" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="38" cy="38" r="35" stroke="var(--acc)" stroke-width="2" opacity=".4"/>
-      <path d="M20 46c6-14 12-20 18-20s12 6 18 20" stroke="var(--acc2)" stroke-width="2.5" stroke-linecap="round"/>
-      <path d="M38 26V14M38 14l-7 6M38 14l7 6" stroke="var(--acc)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="20" cy="46" r="3.2" fill="var(--acc)"/>
-      <circle cx="56" cy="46" r="3.2" fill="var(--acc)"/>
-      <circle cx="38" cy="26" r="3.2" fill="var(--acc2)"/>
-    </svg>
-  </div>
+
+<div class="barra"><div class="wrap">
+  <a class="marca" href="#top"><img src="logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link">
+    <a href="#idea"><span class="it">Idea</span><span class="en">Idea</span></a>
+    <a href="#caratteristiche"><span class="it">Caratteristiche</span><span class="en">Features</span></a>
+    <a href="#stato"><span class="it">Stato</span><span class="en">Status</span></a>
+    <a href="#manuale"><span class="it">Manuale</span><span class="en">Manual</span></a>
+    <a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a>
+  </nav>
+  <button class="btn-icona" id="lingua" title="Lingua / Language">🌐 <span id="lingua-et">EN</span></button>
+  <button class="btn-icona" id="tema" title="Tema / Theme">🌓</button>
+</div></div>
+
+<a id="top"></a>
+<header class="hero wrap">
+  <img class="logo" src="logo.svg" alt="Nyctalus Protocol">
   <h1><span class="grad">Nyctalus</span> Protocol</h1>
-  <p class="sotto">Una rete anonima ad alte prestazioni. L'anonimato di Tor, con la velocità adatta all'uso di ogni giorno.</p>
-  <span class="avviso">⚠️ Prototipo in sviluppo — non usare ancora per proteggere dati reali</span>
+  <p class="tag">
+    <span class="it">Una rete anonima ad alte prestazioni. L'anonimato di Tor, con la velocità adatta all'uso di ogni giorno.</span>
+    <span class="en">A high-performance anonymity network. The anonymity of Tor, with the speed for everyday use.</span>
+  </p>
+  <span class="avviso">
+    <span class="it">⚠️ Prototipo in sviluppo — non usare ancora per proteggere dati reali</span>
+    <span class="en">⚠️ Work-in-progress prototype — do not yet use it to protect real data</span>
+  </span>
+  <div class="cta">
+    <a class="bottone pieno" href="#manuale"><span class="it">Leggi il manuale</span><span class="en">Read the manual</span></a>
+    <a class="bottone vuoto" href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a>
+  </div>
 </header>
 
-<main class="wrap">
-  <section>
-    <h2>L'idea</h2>
-    <p style="color:var(--tenue);max-width:680px">
-      Ogni utente è anche un nodo, così la rete diventa più veloce man mano che cresce.
-      Il traffico è camuffato da normale navigazione, e i dati viaggiano spezzati in tanti
-      frammenti su molte strade in parallelo — una <b style="color:var(--testo)">ragnatela</b> —
-      per ricomporsi solo a destinazione.
-    </p>
-  </section>
+<main>
 
-  <section>
-    <h2>Cosa la distingue</h2>
-    <div class="griglia">
-      <div class="carta"><h3>Più utenti, più veloce</h3><p>Ogni PC è anche un nodo: la capacità cresce con la rete, invece di consumarsi.</p></div>
-      <div class="carta"><h3>Ragnatela multipercorso</h3><p>I dati non seguono una sola strada: viaggiano in parallelo su più percorsi.</p></div>
-      <div class="carta"><h3>Trasporto QUIC</h3><p>Su UDP: un pacchetto perso non blocca tutti gli altri, come invece accade con TCP.</p></div>
-      <div class="carta"><h3>Camuffamento di serie</h3><p>Visto da fuori sembra una normale connessione HTTPS: difficile da riconoscere e bloccare.</p></div>
-      <div class="carta"><h3>Siti interni <code>.nyct</code></h3><p>Servizi nascosti nella rete, come i <code>.onion</code>, ma più rapidi.</p></div>
-      <div class="carta"><h3>Scritto in Rust</h3><p>Un linguaggio che previene all'origine i bug di memoria, critici per l'anonimato.</p></div>
-    </div>
-  </section>
+<section id="idea"><div class="wrap">
+  <div class="occhiello"><span class="it">L'idea</span><span class="en">The idea</span></div>
+  <h2><span class="it">In una frase</span><span class="en">In one sentence</span></h2>
+  <p class="intro">
+    <span class="it">Ogni utente è anche un nodo, così la rete diventa più veloce man mano che cresce. Il traffico è camuffato da normale navigazione, e i dati viaggiano spezzati in tanti frammenti su molte strade in parallelo — una <b>ragnatela</b> — per ricomporsi solo a destinazione.</span>
+    <span class="en">Every user is also a node, so the network gets faster as it grows. Traffic is disguised as ordinary browsing, and data travels split into many fragments over many parallel paths — a <b>spider's web</b> — reassembling only at the destination.</span>
+  </p>
+</div></section>
 
-  <section>
-    <h2>A che punto siamo</h2>
-    <ul class="pro">
-      <li><b>Nucleo del protocollo</b> — frammentazione, cifratura end-to-end, ricomposizione, stretta di mano Noise, indirizzi <code>.nyct</code>.</li>
-      <li><b>Livello a cipolla</b> — gli strati simmetrici che ogni pacchetto attraversa.</li>
-      <li><b>Proxy SOCKS5</b> — primo uso da terminale, funzionante.</li>
-      <li style="opacity:.6"><b>In arrivo</b> — nodi intermedi, ragnatela completa, simulazione contro Tor, browser dedicato.</li>
-    </ul>
-  </section>
+<section id="perche"><div class="wrap">
+  <div class="occhiello"><span class="it">Perché</span><span class="en">Why</span></div>
+  <h2><span class="it">Se c'è già Tor</span><span class="en">If Tor already exists</span></h2>
+  <p class="intro">
+    <span class="it">Tor funziona, ma è lento per ragioni strutturali. Nyctalus cambia le scelte di fondo per guadagnare velocità senza rinunciare all'anonimato.</span>
+    <span class="en">Tor works, but it is slow for structural reasons. Nyctalus changes the fundamental choices to gain speed without giving up anonymity.</span>
+  </p>
+  <table>
+    <thead><tr>
+      <th></th><th>Tor</th><th>Nyctalus</th>
+    </tr></thead>
+    <tbody>
+      <tr><td><b><span class="it">Chi fa da nodo</span><span class="en">Who runs a node</span></b></td>
+        <td><span class="it">~7.000 volontari per milioni di utenti</span><span class="en">~7,000 volunteers for millions of users</span></td>
+        <td><span class="it">ogni PC è anche un nodo: più utenti, più capacità</span><span class="en">every PC is also a node: more users, more capacity</span></td></tr>
+      <tr><td><b><span class="it">Strade per i dati</span><span class="en">Paths for data</span></b></td>
+        <td><span class="it">un solo percorso per connessione</span><span class="en">a single path per connection</span></td>
+        <td><span class="it">ragnatela: più percorsi in parallelo</span><span class="en">spider's web: many parallel paths</span></td></tr>
+      <tr><td><b><span class="it">Trasporto</span><span class="en">Transport</span></b></td>
+        <td>TCP <span class="it">(un pacchetto perso blocca gli altri)</span><span class="en">(one lost packet stalls the rest)</span></td>
+        <td>QUIC/UDP <span class="it">(un pacchetto perso non ferma il resto)</span><span class="en">(one lost packet does not stop the rest)</span></td></tr>
+      <tr><td><b><span class="it">Camuffamento</span><span class="en">Camouflage</span></b></td>
+        <td><span class="it">opzionale (bridge)</span><span class="en">optional (bridges)</span></td>
+        <td><span class="it">sempre attivo, di serie</span><span class="en">always on, by default</span></td></tr>
+      <tr><td><b><span class="it">Siti interni</span><span class="en">Hidden sites</span></b></td>
+        <td><code class="in">.onion</code></td>
+        <td><code class="in">.nyct</code><span class="it">, con percorsi paralleli</span><span class="en">, with parallel paths</span></td></tr>
+      <tr><td><b><span class="it">Linguaggio</span><span class="en">Language</span></b></td>
+        <td>C</td>
+        <td>Rust <span class="it">(niente bug di memoria)</span><span class="en">(no memory bugs)</span></td></tr>
+    </tbody>
+  </table>
+</div></section>
 
-  <section>
-    <h2>Onestà prima di tutto</h2>
-    <p style="color:var(--tenue);max-width:680px">
-      Nyctalus protegge da provider, tracciamento, censura e siti curiosi, e da singoli nodi
-      malevoli. Non promette protezione totale contro chi sorveglia contemporaneamente gran
-      parte di Internet: contro un avversario simile nessuna rete veloce può farlo. Su questo
-      punto la protezione sarà pari a quella di Tor, non superiore.
-    </p>
-  </section>
+<section id="viaggio"><div class="wrap">
+  <div class="occhiello"><span class="it">Come funziona</span><span class="en">How it works</span></div>
+  <h2><span class="it">Come viaggia un dato</span><span class="en">How data travels</span></h2>
+  <pre class="diagramma">                       &#9484;&#9472;&#9472;&#9658; nodo &#9472;&#9472;&#9658; nodo &#9472;&#9472;&#9488;
+ <span class="it">Tu</span><span class="en">You</span> &#9472;&#9472;&#9658; [<span class="it">INGRESSO</span><span class="en">ENTRY</span>] &#9472;&#9472;&#9472;&#9472;&#9532;&#9472;&#9472;&#9658; nodo &#9472;&#9472;&#9658; nodo &#9472;&#9472;&#9532;&#9472;&#9472;&#9658; <span class="it">RICOMPOSIZIONE</span><span class="en">REASSEMBLY</span> &#9472;&#9472;&#9658; <span class="it">destinazione</span><span class="en">destination</span>
+        (<span class="it">fisso</span><span class="en">fixed</span>)      &#9500;&#9472;&#9472;&#9658; nodo &#9472;&#9472;&#9658; nodo &#9472;&#9472;&#9508;
+                        &#9492;&#9472;&#9472;&#9658; nodo &#9472;&#9472;&#9658; nodo &#9472;&#9472;&#9496;</pre>
+  <ul class="spunta">
+    <li><b><span class="it">Camuffamento</span><span class="en">Camouflage</span></b> — <span class="it">il traffico sembra una normale connessione HTTPS (QUIC su UDP 443).</span><span class="en">traffic looks like an ordinary HTTPS connection (QUIC over UDP 443).</span></li>
+    <li><b><span class="it">Ingresso fisso</span><span class="en">Fixed entry</span></b> — <span class="it">il primo nodo resta lo stesso per settimane: è l'unico che vede il tuo IP, ma non sa dove vai.</span><span class="en">the first node stays the same for weeks: the only one that sees your IP, but never where you go.</span></li>
+    <li><b><span class="it">Ragnatela</span><span class="en">Spider's web</span></b> — <span class="it">i dati, spezzati in frammenti, viaggiano in parallelo su più strade.</span><span class="en">data, split into fragments, travels in parallel over many paths.</span></li>
+    <li><b><span class="it">Cipolla</span><span class="en">Onion</span></b> — <span class="it">ogni frammento è chiuso in più strati; ogni nodo ne toglie uno e vede solo il successivo.</span><span class="en">each fragment is wrapped in layers; each node peels one and sees only the next hop.</span></li>
+    <li><b><span class="it">Ricomposizione</span><span class="en">Reassembly</span></b> — <span class="it">a destinazione i frammenti tornano in ordine.</span><span class="en">at the destination the fragments are put back in order.</span></li>
+  </ul>
+</div></section>
+
+<section id="caratteristiche"><div class="wrap">
+  <div class="occhiello"><span class="it">Caratteristiche</span><span class="en">Features</span></div>
+  <h2><span class="it">Cosa la distingue</span><span class="en">What sets it apart</span></h2>
+  <div class="griglia">
+    <div class="carta"><h3><span class="it">Più utenti, più veloce</span><span class="en">More users, more speed</span></h3><p><span class="it">Ogni PC è anche un nodo: la capacità cresce con la rete.</span><span class="en">Every PC is also a node: capacity grows with the network.</span></p></div>
+    <div class="carta"><h3><span class="it">Ragnatela multipercorso</span><span class="en">Multipath web</span></h3><p><span class="it">I dati viaggiano in parallelo su più percorsi, non su una sola strada.</span><span class="en">Data travels in parallel over many paths, not a single route.</span></p></div>
+    <div class="carta"><h3><span class="it">Trasporto QUIC</span><span class="en">QUIC transport</span></h3><p><span class="it">Su UDP: un pacchetto perso non blocca tutti gli altri.</span><span class="en">Over UDP: a lost packet does not stall all the others.</span></p></div>
+    <div class="carta"><h3><span class="it">Camuffamento di serie</span><span class="en">Camouflage by default</span></h3><p><span class="it">Da fuori sembra una normale connessione HTTPS.</span><span class="en">From outside it looks like ordinary HTTPS.</span></p></div>
+    <div class="carta"><h3><span class="it">Siti interni .nyct</span><span class="en">.nyct hidden sites</span></h3><p><span class="it">Servizi nascosti nella rete, come i .onion, ma più rapidi.</span><span class="en">Hidden services like .onion, but faster.</span></p></div>
+    <div class="carta"><h3><span class="it">Scritto in Rust</span><span class="en">Written in Rust</span></h3><p><span class="it">Previene all'origine i bug di memoria, critici per l'anonimato.</span><span class="en">Prevents memory bugs at the source, critical for anonymity.</span></p></div>
+  </div>
+</div></section>
+
+<section id="stato"><div class="wrap">
+  <div class="occhiello"><span class="it">Stato</span><span class="en">Status</span></div>
+  <h2><span class="it">A che punto siamo</span><span class="en">Where we are</span></h2>
+  <p class="intro"><span class="it">Fatto e testato (42 test automatici):</span><span class="en">Done and tested (42 automated tests):</span></p>
+  <ul class="spunta">
+    <li><b><span class="it">Nucleo del protocollo (L2)</span><span class="en">Protocol core (L2)</span></b> — <span class="it">frammentazione, etichette segrete, cifratura end-to-end, ricomposizione anti-DoS.</span><span class="en">fragmentation, secret labels, end-to-end encryption, DoS-resistant reassembly.</span></li>
+    <li><b><span class="it">Stretta di mano Noise NK</span><span class="en">Noise NK handshake</span></b> — <span class="it">segreto mai trasmesso, forward secrecy, mittente anonimo.</span><span class="en">secret never transmitted, forward secrecy, anonymous sender.</span></li>
+    <li><b><span class="it">Indirizzi .nyct</span><span class="en">.nyct addresses</span></b> — <span class="it">chiave pubblica in base32, con controllo anti-errori.</span><span class="en">public key in base32, with typo-check.</span></li>
+    <li><b><span class="it">Livello a cipolla (data-plane)</span><span class="en">Onion layer (data-plane)</span></b> — <span class="it">gli strati simmetrici di ogni pacchetto.</span><span class="en">the symmetric layers of every packet.</span></li>
+    <li><b><span class="it">Proxy SOCKS5</span><span class="en">SOCKS5 proxy</span></b> — <span class="it">primo uso da terminale, funzionante.</span><span class="en">first working terminal use.</span></li>
+    <li class="futuro"><b><span class="it">In arrivo</span><span class="en">Coming</span></b> — <span class="it">nodi intermedi, ragnatela completa, confronto con Tor, browser dedicato.</span><span class="en">relay nodes, full web, comparison against Tor, dedicated browser.</span></li>
+  </ul>
+</div></section>
+
+<section id="manuale"><div class="wrap">
+  <div class="occhiello"><span class="it">Manuale</span><span class="en">Manual</span></div>
+  <h2><span class="it">Guida rapida</span><span class="en">Quick guide</span></h2>
+
+  <div class="passo">
+    <h3><span class="it">1. Compilare</span><span class="en">1. Build</span></h3>
+    <p class="intro"><span class="it">Serve <a href="https://rustup.rs">Rust</a> (profilo minimal sufficiente).</span><span class="en">You need <a href="https://rustup.rs">Rust</a> (the minimal profile is enough).</span></p>
+    <pre>git clone https://github.com/RedRider21/Nyctalus-Protocol.git
+cd Nyctalus-Protocol
+cargo test              <span class="c"><span class="it"># 42 test</span><span class="en"># 42 tests</span></span>
+cargo build --release   <span class="c"><span class="it"># produce target/release/nyctalus</span><span class="en"># builds target/release/nyctalus</span></span></pre>
+  </div>
+
+  <div class="passo">
+    <h3><span class="it">2. Proxy SOCKS5 (uso da terminale)</span><span class="en">2. SOCKS5 proxy (terminal use)</span></h3>
+    <p class="intro"><span class="it">Sul nodo di uscita:</span><span class="en">On the exit node:</span></p>
+    <pre>nyctalus uscita --ascolta 0.0.0.0:4600</pre>
+    <p class="intro"><span class="it">Stampa il comando <code class="in">avvia</code> completo, con l'impronta del certificato. Sul client:</span><span class="en">It prints the full <code class="in">avvia</code> command, with the certificate fingerprint. On the client:</span></p>
+    <pre>nyctalus avvia --a IP-USCITA:4600 --impronta &lt;IMPRONTA&gt; --socks 127.0.0.1:1080
+curl --socks5-hostname 127.0.0.1:1080 https://example.com</pre>
+    <div class="nota"><span class="it"><b>Attenzione:</b> è un <b>solo salto</b> (client → uscita): l'uscita vede l'IP del client, quindi <b>non è ancora anonimo</b>. Serve a rendere la CLI usabile subito; i nodi intermedi lo renderanno anonimo.</span><span class="en"><b>Warning:</b> this is a <b>single hop</b> (client → exit): the exit sees the client's IP, so it is <b>not anonymous yet</b>. It makes the CLI usable today; relay nodes will make it anonymous.</span></div>
+  </div>
+
+  <div class="passo">
+    <h3><span class="it">3. Trasferire un file (test del livello L2)</span><span class="en">3. Transfer a file (L2 layer test)</span></h3>
+    <p class="intro"><span class="it">Sul ricevitore:</span><span class="en">On the receiver:</span></p>
+    <pre>nyctalus ricevi --uscita ricevuto.bin --identita mia.chiave</pre>
+    <p class="intro"><span class="it">Stampa il comando <code class="in">invia</code> con l'indirizzo <code class="in">.nyct</code> del ricevitore. Sul mittente:</span><span class="en">It prints the <code class="in">invia</code> command with the receiver's <code class="in">.nyct</code> address. On the sender:</span></p>
+    <pre>nyctalus invia --a IP:4433 --impronta &lt;IMPRONTA&gt; --destinatario &lt;INDIRIZZO&gt;.nyct file</pre>
+  </div>
+
+  <div class="passo">
+    <h3><span class="it">4. Comandi previsti</span><span class="en">4. Planned commands</span></h3>
+    <table>
+      <thead><tr><th>Tor</th><th>Nyctalus</th><th><span class="it">A cosa serve</span><span class="en">Purpose</span></th></tr></thead>
+      <tbody>
+        <tr><td><code class="in">tor</code></td><td><code class="in">nyctalus avvia</code></td><td><span class="it">demone + proxy SOCKS5</span><span class="en">daemon + SOCKS5 proxy</span></td></tr>
+        <tr><td>control port</td><td><code class="in">nyctalus stato</code></td><td><span class="it">interrogare il demone</span><span class="en">query the daemon</span></td></tr>
+        <tr><td><code class="in">nyx</code></td><td><code class="in">nyctalus monitor</code></td><td><span class="it">cruscotto testuale</span><span class="en">text dashboard</span></td></tr>
+        <tr><td><code class="in">torsocks</code></td><td><code class="in">nyctalus esec</code></td><td><span class="it">un programma dentro la rete</span><span class="en">a program inside the network</span></td></tr>
+        <tr><td>.onion</td><td><code class="in">nyctalus sito</code></td><td><span class="it">pubblicare un sito .nyct</span><span class="en">publish a .nyct site</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div></section>
+
+<section id="onesta"><div class="wrap">
+  <div class="occhiello"><span class="it">Onestà</span><span class="en">Honesty</span></div>
+  <h2><span class="it">Cosa promette e cosa no</span><span class="en">What it promises and what it doesn't</span></h2>
+  <p class="intro">
+    <span class="it"><b>Protegge da:</b> provider Internet e reti Wi-Fi, tracciamento e profilazione, censura e blocchi, siti che vogliono il tuo IP, singoli nodi malevoli.</span>
+    <span class="en"><b>Protects against:</b> ISPs and Wi-Fi networks, tracking and profiling, censorship and blocking, sites after your IP, individual malicious nodes.</span>
+  </p>
+  <p class="intro">
+    <span class="it"><b>Non promette:</b> protezione totale contro chi sorveglia contemporaneamente gran parte di Internet — nessuna rete veloce può farlo, e su questo la protezione sarà pari a Tor, non superiore. E non protegge chi si identifica da solo (login, dati personali).</span>
+    <span class="en"><b>Does not promise:</b> full protection against an adversary watching most of the Internet at once — no fast network can, and here protection equals Tor's, not more. And it cannot protect someone who identifies themselves (logins, personal data).</span>
+  </p>
+</div></section>
+
 </main>
 
-<footer class="wrap">
-  <p>Progetto open source · licenza AGPL-3.0-or-later · © 2026 Daniele Deplano (RedRider21)</p>
-  <p>Il nome viene dal genere <i>Nyctalus</i>, le nottole: pipistrelli che volano veloci di notte e si orientano al buio.</p>
-</footer>
+<footer><div class="wrap">
+  <p><span class="it">Progetto open source · licenza <a href="https://github.com/RedRider21/Nyctalus-Protocol/blob/main/LICENSE">AGPL-3.0-or-later</a> · © 2026 Daniele Deplano (RedRider21)</span><span class="en">Open source · <a href="https://github.com/RedRider21/Nyctalus-Protocol/blob/main/LICENSE">AGPL-3.0-or-later</a> license · © 2026 Daniele Deplano (RedRider21)</span></p>
+  <p><span class="it">Il nome viene dal genere <i>Nyctalus</i>, le nottole: pipistrelli che volano veloci di notte e si orientano al buio.</span><span class="en">The name comes from the genus <i>Nyctalus</i>, the noctule bats: they fly fast at night and find their way in the dark.</span></p>
+</div></footer>
+
+<script>
+(function(){
+  var r=document.documentElement;
+  // tema
+  try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+  if(!t) t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';
+  r.setAttribute('data-theme',t);
+  // lingua
+  try{var l=localStorage.getItem('nyct-lingua');}catch(e){}
+  if(!l) l=(navigator.language||'it').toLowerCase().indexOf('it')===0?'it':'en';
+  applicaLingua(l);
+  function applicaLingua(l){
+    r.setAttribute('data-lang',l); r.setAttribute('lang',l);
+    document.getElementById('lingua-et').textContent = l==='it'?'EN':'IT';
+  }
+  document.getElementById('tema').addEventListener('click',function(){
+    var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+    r.setAttribute('data-theme',n);
+    try{localStorage.setItem('nyct-tema',n);}catch(e){}
+  });
+  document.getElementById('lingua').addEventListener('click',function(){
+    var n=r.getAttribute('data-lang')==='it'?'en':'it';
+    applicaLingua(n);
+    try{localStorage.setItem('nyct-lingua',n);}catch(e){}
+  });
+})();
+</script>
 </body>
 </html>

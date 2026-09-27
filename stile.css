@@ -1,0 +1,93 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+   Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol. */
+
+:root{
+  --bg:#0d1017; --sup:#151a23; --sup2:#1b212c; --bordo:#232b38;
+  --testo:#e6edf3; --tenue:#9aa7b8; --acc:#5ec8d8; --acc2:#8a86ff;
+  --ok:#4ec9a3; --avv:#e0b341; --ombra:0 10px 40px rgba(0,0,0,.35);
+}
+:root[data-theme="light"]{
+  --bg:#f5f7fb; --sup:#ffffff; --sup2:#eef2f8; --bordo:#e2e8f0;
+  --testo:#0f1720; --tenue:#54606f; --acc:#0e7c8c; --acc2:#4a44d6;
+  --ok:#0f8f6b; --avv:#8a6410; --ombra:0 10px 30px rgba(20,30,50,.10);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--testo);
+  font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;transition:background .25s,color .25s}
+.wrap{max-width:940px;margin:0 auto;padding:0 16px}
+a{color:var(--acc2);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* lingua */
+:root[data-lang="it"] .en,:root[data-lang="en"] .it{display:none}
+
+/* barra */
+.barra{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--bordo)}
+.barra .wrap{display:flex;align-items:center;gap:14px;height:60px}
+.marca{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.05rem}
+.marca img{width:34px;height:34px}
+.spazio{flex:1}
+.btn-icona{display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  background:var(--sup);border:1px solid var(--bordo);color:var(--testo);
+  border-radius:9px;padding:7px 11px;font-size:.86rem;font-weight:600}
+.btn-icona:hover{border-color:var(--acc)}
+nav.link a{color:var(--tenue);font-size:.9rem;margin-left:16px;font-weight:500}
+nav.link a:hover{color:var(--acc);text-decoration:none}
+@media(max-width:720px){nav.link{display:none}}
+
+/* hero */
+.hero{text-align:center;padding:70px 0 30px}
+.hero img.logo{width:120px;height:120px;filter:drop-shadow(var(--ombra))}
+h1{font-size:clamp(2.3rem,6.5vw,3.6rem);margin:18px 0 8px;letter-spacing:-.02em}
+.grad{background:linear-gradient(100deg,var(--acc),var(--acc2));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{font-size:1.2rem;color:var(--tenue);max-width:640px;margin:0 auto 22px}
+.avviso{display:inline-flex;gap:8px;align-items:center;font-size:.88rem;color:var(--avv);
+  border:1px solid var(--bordo);background:var(--sup);padding:8px 15px;border-radius:999px}
+.cta{margin-top:26px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.bottone{padding:12px 22px;border-radius:11px;font-weight:600;border:1px solid var(--bordo)}
+.bottone.pieno{background:linear-gradient(100deg,var(--acc),var(--acc2));color:#0b0d12;border:0}
+.bottone.pieno:hover{opacity:.92;text-decoration:none}
+.bottone.vuoto{background:var(--sup);color:var(--testo)}
+.bottone.vuoto:hover{border-color:var(--acc);text-decoration:none}
+
+/* sezioni */
+section{padding:44px 0;border-top:1px solid var(--bordo)}
+h2{font-size:1.7rem;margin:0 0 8px;letter-spacing:-.01em}
+.occhiello{color:var(--acc);font-weight:700;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+p.intro{color:var(--tenue);max-width:720px}
+.griglia{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:22px}
+.carta{background:var(--sup);border:1px solid var(--bordo);border-radius:15px;padding:22px;box-shadow:var(--ombra)}
+.carta h3{margin:0 0 8px;font-size:1.05rem;color:var(--acc)}
+.carta p{margin:0;color:var(--tenue);font-size:.95rem}
+table{width:100%;border-collapse:collapse;margin-top:20px;font-size:.94rem;overflow:hidden;
+  border:1px solid var(--bordo);border-radius:12px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--bordo);vertical-align:top}
+th{background:var(--sup2);font-weight:700}
+tr:last-child td{border-bottom:0}
+td b{color:var(--testo)}
+.diagramma{background:var(--sup);border:1px solid var(--bordo);border-radius:12px;padding:18px;
+  overflow-x:auto;color:var(--tenue);font-size:.82rem;line-height:1.5;margin-top:20px}
+ul.spunta{list-style:none;padding:0;margin:20px 0 0;display:grid;gap:11px}
+ul.spunta li{padding-left:28px;position:relative;color:var(--tenue)}
+ul.spunta li b{color:var(--testo)}
+ul.spunta li::before{content:"";position:absolute;left:0;top:.5em;width:12px;height:12px;border-radius:50%;
+  background:var(--ok)}
+ul.spunta li.futuro::before{background:var(--tenue);opacity:.5}
+
+/* manuale */
+.passo{margin-top:22px}
+.passo h3{font-size:1.15rem;margin:0 0 6px}
+pre{background:#0b0e14;border:1px solid var(--bordo);border-radius:11px;padding:15px 17px;overflow-x:auto;
+  color:#cfe3ef;font:13.5px/1.6 ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+:root[data-theme="light"] pre{background:#0f1621;color:#dbe8f2}
+pre .c{color:#6b7a8d}
+code.in{background:var(--sup2);border:1px solid var(--bordo);border-radius:6px;padding:1px 6px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
+.nota{border-left:3px solid var(--avv);background:var(--sup);padding:12px 16px;border-radius:0 10px 10px 0;
+  margin-top:16px;color:var(--tenue);font-size:.92rem}
+footer{padding:44px 0 60px;border-top:1px solid var(--bordo);color:var(--tenue);font-size:.9rem;text-align:center}
+footer a{color:var(--acc)}
