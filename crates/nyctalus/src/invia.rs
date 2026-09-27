@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+
 //! Lato mittente: legge il file a blocchi, lo spezza in frammenti cifrati e
 //! li distribuisce a turno sulle corsie QUIC, senza mai superare la finestra
 //! confermata dal ricevitore.

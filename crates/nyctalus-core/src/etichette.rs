@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+
 //! Etichette segrete rotanti (VISIONE.md §5.4).
 //!
 //! Ogni frammento porta 8 byte di etichetta. Per i nodi che la vedono è rumore

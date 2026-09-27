@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+
 //! Indirizzi `.nyct` dei siti e dei servizi interni (SPECIFICA §6).
 //!
 //! Come gli indirizzi `.onion` v3 di Tor, l'indirizzo **è** la chiave

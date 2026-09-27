@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+
 //! Ricomposizione dei frammenti arrivati in disordine dalla ragnatela.
 //!
 //! Riprende l'idea dello `ShardReassembler` degli appunti, correggendone i

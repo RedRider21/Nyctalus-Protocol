@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+
 //! Stretta di mano Noise tra i due estremi di una conversazione (SPECIFICA §5).
 //!
 //! Schema **Noise_NK_25519_ChaChaPoly_BLAKE2s**:

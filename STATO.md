@@ -42,7 +42,10 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
 ## Da fare (in ordine)
 
 1. ✅ **Approccio per la cipolla deciso** (sessione 2): Sphinx solo per aprire i percorsi, poi cifratura a strati simmetrica per pacchetto. Da riportare nella SPECIFICA §4.
-2. **Tappa 1:** apertura dei percorsi (Sphinx) + cifratura a strati simmetrica per pacchetto, nel nucleo, con test.
+2. **Tappa 1 — in corso:**
+   - ✅ **1a — data-plane a strati simmetrici** (`crates/nyctalus-core/src/cipolla.rs`): `avvolgi`/`sbuccia` con ChaCha20, nonce = numero di sequenza, lunghezza costante, 5 test. Fatto sessione 2.
+   - ⏳ **1b — apertura del circuito con Sphinx:** consegnare a ogni nodo la sua chiave di salto e l'indirizzo del nodo successivo.
+   - ⏳ **1c — ID di circuito che cambia a ogni tratta** + difesa sul numero di sequenza in chiaro.
 3. **Tappa 2:** programma nodo (`nyctalus nodo`) che toglie il suo strato e inoltra.
 4. **Tappa 3:** prova completa sul PC, client → guard → medio → uscita → destinatario, verificando che nessun nodo conosca insieme mittente e destinazione.
 5. Ragnatela vera: più percorsi medi paralleli dopo un guard fisso (SPECIFICA §4.2).

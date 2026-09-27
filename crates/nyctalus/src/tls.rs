@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+
 //! Configurazione TLS/QUIC del collegamento tra due estremi (livello L0).
 //!
 //! Il ricevitore usa un certificato autofirmato generato all'avvio. Il

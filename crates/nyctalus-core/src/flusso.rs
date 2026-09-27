@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+
 //! Un flusso di dati spezzato in frammenti cifrati e ricomposto a destinazione.
 //!
 //! Il mittente taglia i dati in frammenti, dà a ciascuno la sua etichetta

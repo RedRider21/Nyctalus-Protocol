@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+
 //! Derivazione delle chiavi di un flusso.
 //!
 //! Dal segreto condiviso tra mittente e destinatario (che in futuro arriverà

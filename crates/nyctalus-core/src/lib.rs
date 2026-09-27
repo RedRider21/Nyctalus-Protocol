@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+
 //! Nucleo di Nyctalus Protocol.
 //!
 //! Contiene la logica "pura" della rete, senza I/O né socket, così da poterla

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+
 //! Livello a cipolla (L1), parte "data-plane": gli strati simmetrici che
 //! ogni pacchetto attraversa una volta aperto il circuito (SPECIFICA §4).
 //!

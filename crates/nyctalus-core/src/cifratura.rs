@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+
 //! Cifratura end-to-end dei frammenti con ChaCha20-Poly1305.
 //!
 //! Formato del pacchetto sulla rete (tutti i pacchetti di un flusso hanno la

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+
 //! Lato ricevitore: accetta una connessione, risponde alla stretta di mano
 //! Noise, raccoglie i pacchetti da tutte le corsie, li ricompone e conferma
 //! l'avanzamento al mittente.
