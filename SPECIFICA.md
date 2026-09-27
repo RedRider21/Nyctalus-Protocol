@@ -39,7 +39,7 @@
  L3  Applicazione     proxy SOCKS5 locale · siti interni · browser         📐
  L2  Flusso           etichette + cifratura end-to-end + ricomposizione    ✅
  L1  Cipolla          pacchetti Sphinx, un strato per ogni nodo            📐
- L0  Collegamento     QUIC tra nodi adiacenti, camuffato da HTTPS          📐
+ L0  Collegamento     QUIC tra nodi adiacenti, camuffato da HTTPS          ✅ QUIC · 📐 camuffamento
 ```
 
 - **L0** protegge il singolo "salto" tra due nodi vicini e lo fa sembrare traffico web normale.
@@ -142,7 +142,9 @@ Si adotta **Sphinx** (Danezis–Goldberg 2009), il formato usato da Nym e Lightn
 - **Fase 3:** in più, preferenza per percorsi a bassa latenza. Si sceglie **a caso tra i percorsi "abbastanza veloci"**, non sempre il più veloce, e con coordinate di rete verificate.
 
 ### 4.4 Controllo del flusso multipercorso
-Il client misura per ogni percorso RTT e perdite. I frammenti successivi vanno sui percorsi sani, e un percorso degradato viene sostituito. La finestra W limita il disordine massimo.
+✅ **Già nel programma di prova:** il destinatario conferma periodicamente `prossimo_atteso` (8 byte LE, ogni 64 frammenti e alla fine) e il mittente non invia mai l'indice i se i ≥ confermato + W. Così nessun frammento esce dalla finestra.
+
+📐 Il client misurerà per ogni percorso RTT e perdite. I frammenti successivi vanno sui percorsi sani, e un percorso degradato viene sostituito. La finestra W limita il disordine massimo.
 
 ---
 
@@ -206,5 +208,16 @@ Regola: **nessuna primitiva inventata**. Si usano solo costruzioni pubbliche e a
 
 ---
 
-## 11. Registro delle modifiche
-- **0.1 (27/09/2026):** prima bozza; il livello L2 è implementato in `nyctalus-core` con 18 test.
+## 11. Programma di prova ✅
+
+`crates/nyctalus` (eseguibile `nyctalus`) trasferisce un file tra due estremi:
+- **L0:** QUIC (quinn + rustls, backend ring, solo TLS 1.3). Il certificato è autofirmato e il mittente lo accetta solo se la sua impronta BLAKE3 coincide con quella attesa (pinning).
+- **L2:** frammenti cifrati di `nyctalus-core`, distribuiti a turno su k corsie, cioè k stream QUIC unidirezionali in parallelo, con il controllo del flusso di §4.4.
+- **Limite:** il segreto del flusso è generato dal ricevitore e passato a mano (§5 lo sostituirà con Noise). Non ci sono ancora nodi intermedi.
+
+Misura su un solo PC (loopback, compilazione release, file casuale da 200 MB): circa **110 MB/s con 1 corsia e 122 MB/s con 4**. File identici, 0 pacchetti scartati; con 4 corsie circa il 70% dei frammenti arriva in anticipo e viene ricomposto. Su loopback le corsie non hanno percorsi fisici diversi: il guadagno reale del multipercorso andrà misurato con Shadow e su reti vere.
+
+---
+
+## 12. Registro delle modifiche
+- **0.1 (27/09/2026):** prima bozza; il livello L2 è implementato in `nyctalus-core` con 18 test; aggiunti il programma di prova QUIC e il controllo del flusso.

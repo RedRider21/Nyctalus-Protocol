@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/nyctalus-core"]
+members = ["crates/nyctalus","crates/nyctalus-core"]
 
 [workspace.package]
 version = "0.0.1"

@@ -1,0 +1,17 @@
+[package]
+name = "nyctalus"
+description = "Nyctalus Protocol: programma di prova (trasferimento di un file su QUIC con frammenti cifrati)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+nyctalus-core = { path = "../nyctalus-core" }
+blake3 = "1"
+getrandom = "0.3"
+# Solo backend "ring": aws-lc-rs richiederebbe cmake e occuperebbe più disco.
+quinn = { version = "0.11", default-features = false, features = ["runtime-tokio", "rustls-ring"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+rcgen = { version = "0.14", default-features = false, features = ["crypto", "ring"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "io-util", "time"] }

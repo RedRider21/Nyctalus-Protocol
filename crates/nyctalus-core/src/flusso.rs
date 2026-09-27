@@ -136,6 +136,13 @@ impl RicevitoreFlusso {
     pub fn completo(&self) -> bool {
         self.ricompositore.completo()
     }
+
+    /// Indice del prossimo frammento atteso: tutti i precedenti sono stati
+    /// consegnati. È il valore da confermare al mittente per il controllo
+    /// del flusso (il mittente non va oltre `prossimo_atteso + finestra`).
+    pub fn prossimo_atteso(&self) -> u64 {
+        self.ricompositore.prossimo_atteso()
+    }
 }
 
 #[cfg(test)]
