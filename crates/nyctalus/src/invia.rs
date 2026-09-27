@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use nyctalus_core::flusso::{MittenteFlusso, ParametriFlusso};
+use nyctalus_core::stretta::{LUNGHEZZA_MESSAGGIO, Mittente};
 use tokio::io::AsyncReadExt;
 use tokio::sync::{mpsc, watch};
 
@@ -15,7 +16,7 @@ use crate::{ID_FLUSSO_DATI, Risultato, tls, velocita};
 pub async fn invia(
     destinazione: SocketAddr,
     impronta: [u8; 32],
-    segreto: [u8; 32],
+    destinatario: [u8; 32],
     corsie: usize,
     percorso: PathBuf,
 ) -> Risultato<()> {
@@ -25,6 +26,18 @@ pub async fn invia(
     endpoint.set_default_client_config(tls::config_client(impronta)?);
     let connessione = endpoint.connect(destinazione, tls::NOME_SERVER)?.await?;
     println!("Collegato con {destinazione}, {corsie} corsie parallele");
+
+    // Stretta di mano Noise NK: solo chi possiede la chiave privata del
+    // destinatario riesce a rispondere.
+    let (mittente_stretta, primo) = Mittente::inizia(&destinatario)?;
+    let (mut invio_stretta, mut ricezione_stretta) = connessione.open_bi().await?;
+    invio_stretta.write_all(&primo).await?;
+    invio_stretta.finish()?;
+    let mut risposta = [0u8; LUNGHEZZA_MESSAGGIO];
+    ricezione_stretta.read_exact(&mut risposta).await?;
+    let segreti = mittente_stretta.completa(&risposta)?;
+    let segreto = segreti.verso_destinatario;
+    println!("Stretta di mano completata: destinatario autenticato, forward secrecy attiva");
 
     // Conferme dal ricevitore: indice del prossimo frammento che aspetta.
     let mut canale_conferme = connessione.accept_uni().await?;

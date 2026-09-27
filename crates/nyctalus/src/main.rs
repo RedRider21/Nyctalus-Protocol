@@ -6,12 +6,12 @@
 //! ancora senza nodi intermedi.
 //!
 //! ```text
-//! nyctalus ricevi --uscita FILE [--ascolta 0.0.0.0:4433]
-//! nyctalus invia  --a IP:PORTA --impronta HEX --segreto HEX [--corsie 4] FILE
+//! nyctalus ricevi --uscita FILE [--ascolta 0.0.0.0:4433] [--identita FILE]
+//! nyctalus invia  --a IP:PORTA --impronta HEX --destinatario HEX [--corsie 4] FILE
 //! ```
 //!
-//! SOLO PROVA: il segreto del flusso viene generato dal ricevitore e passato
-//! a mano al mittente; nella rete vera arriverà dalla stretta di mano Noise.
+//! Il segreto del flusso nasce dalla stretta di mano Noise NK con la chiave
+//! pubblica del destinatario: non viaggia mai e non va copiato a mano.
 
 mod invia;
 mod ricevi;
@@ -28,10 +28,12 @@ pub const ID_FLUSSO_DATI: u64 = 1;
 
 const USO: &str = "\
 Uso:
-  nyctalus ricevi --uscita FILE [--ascolta 0.0.0.0:4433]
-  nyctalus invia  --a IP:PORTA --impronta HEX --segreto HEX [--corsie 4] FILE
+  nyctalus ricevi --uscita FILE [--ascolta 0.0.0.0:4433] [--identita FILE]
+  nyctalus invia  --a IP:PORTA --impronta HEX --destinatario HEX [--corsie 4] FILE
 
-Avvia prima 'ricevi': stampa il comando 'invia' completo da usare sull'altro computer.";
+Avvia prima 'ricevi': stampa il comando 'invia' completo da usare sull'altro computer.
+Con --identita la chiave del ricevitore viene salvata (o riletta) da quel file,
+cosi' il suo indirizzo resta lo stesso tra un avvio e l'altro.";
 
 #[tokio::main]
 async fn main() {
@@ -52,12 +54,13 @@ async fn esegui() -> Risultato<()> {
         "ricevi" => {
             let ascolta: SocketAddr = opzione(&opzioni, "ascolta").unwrap_or("0.0.0.0:4433").parse()?;
             let uscita = PathBuf::from(obbligatoria(&opzioni, "uscita")?);
-            ricevi::ricevi(ascolta, uscita).await
+            let identita = opzione(&opzioni, "identita").map(PathBuf::from);
+            ricevi::ricevi(ascolta, uscita, identita).await
         }
         "invia" => {
             let destinazione: SocketAddr = obbligatoria(&opzioni, "a")?.parse()?;
             let impronta = da_esadecimale(obbligatoria(&opzioni, "impronta")?)?;
-            let segreto = da_esadecimale(obbligatoria(&opzioni, "segreto")?)?;
+            let destinatario = da_esadecimale(obbligatoria(&opzioni, "destinatario")?)?;
             let corsie: usize = opzione(&opzioni, "corsie").unwrap_or("4").parse()?;
             if !(1..=64).contains(&corsie) {
                 return Err("--corsie deve essere tra 1 e 64".into());
@@ -65,7 +68,7 @@ async fn esegui() -> Risultato<()> {
             let [file] = posizionali.as_slice() else {
                 return Err("indicare un solo file da inviare".into());
             };
-            invia::invia(destinazione, impronta, segreto, corsie, PathBuf::from(file)).await
+            invia::invia(destinazione, impronta, destinatario, corsie, PathBuf::from(file)).await
         }
         "aiuto" | "--help" | "-h" => {
             println!("{USO}");

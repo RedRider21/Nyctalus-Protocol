@@ -1,12 +1,15 @@
-//! Lato ricevitore: accetta una connessione, raccoglie i pacchetti da tutte
-//! le corsie, li ricompone e conferma l'avanzamento al mittente.
+//! Lato ricevitore: accetta una connessione, risponde alla stretta di mano
+//! Noise, raccoglie i pacchetti da tutte le corsie, li ricompone e conferma
+//! l'avanzamento al mittente.
 
+use std::io::Write;
 use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use nyctalus_core::cifratura::lunghezza_pacchetto;
 use nyctalus_core::flusso::{ParametriFlusso, RicevitoreFlusso};
+use nyctalus_core::stretta::{self, Identita, LUNGHEZZA_MESSAGGIO};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::mpsc;
 
@@ -15,22 +18,34 @@ use crate::{ID_FLUSSO_DATI, Risultato, in_esadecimale, tls, velocita};
 /// Ogni quanti frammenti consegnati si manda una conferma al mittente.
 const PASSO_CONFERME: u64 = 64;
 
-pub async fn ricevi(ascolta: SocketAddr, uscita: PathBuf) -> Risultato<()> {
-    let identita = tls::identita_server()?;
-    let mut segreto = [0u8; 32];
-    getrandom::fill(&mut segreto).map_err(|e| format!("generatore casuale non disponibile: {e}"))?;
+pub async fn ricevi(ascolta: SocketAddr, uscita: PathBuf, file_identita: Option<PathBuf>) -> Risultato<()> {
+    let identita = match &file_identita {
+        Some(percorso) => carica_o_crea_identita(percorso)?,
+        None => Identita::genera()?,
+    };
+    let tls = tls::identita_server()?;
 
-    let endpoint = quinn::Endpoint::server(identita.config, ascolta)?;
+    let endpoint = quinn::Endpoint::server(tls.config, ascolta)?;
     println!("In ascolto su {ascolta}. Sull'altro computer esegui:\n");
     println!(
-        "  nyctalus invia --a <IP-DI-QUESTO-PC>:{} --impronta {} --segreto {} <FILE>\n",
+        "  nyctalus invia --a <IP-DI-QUESTO-PC>:{} --impronta {} --destinatario {} <FILE>\n",
         ascolta.port(),
-        in_esadecimale(&identita.impronta),
-        in_esadecimale(&segreto),
+        in_esadecimale(&tls.impronta),
+        in_esadecimale(&identita.pubblica()),
     );
 
     let connessione = endpoint.accept().await.ok_or("endpoint chiuso")?.await?;
     println!("Collegato con {}", connessione.remote_address());
+
+    // Stretta di mano Noise NK sul primo stream bidirezionale.
+    let (mut invio_stretta, mut ricezione_stretta) = connessione.accept_bi().await?;
+    let mut primo = [0u8; LUNGHEZZA_MESSAGGIO];
+    ricezione_stretta.read_exact(&mut primo).await?;
+    let (risposta, segreti) = stretta::rispondi(&identita, &primo)?;
+    invio_stretta.write_all(&risposta).await?;
+    invio_stretta.finish()?;
+    let segreto = segreti.verso_destinatario;
+    println!("Stretta di mano completata: canale cifrato con forward secrecy");
 
     let parametri = ParametriFlusso::default();
     let lunghezza = lunghezza_pacchetto(parametri.dimensione_frammento);
@@ -105,4 +120,20 @@ pub async fn ricevi(ascolta: SocketAddr, uscita: PathBuf) -> Risultato<()> {
     println!("  pacchetti: {pacchetti} (arrivati in anticipo e messi in attesa: {in_anticipo}, scartati: {scartati})");
     println!("  BLAKE3 del file: {}", hash.finalize().to_hex());
     Ok(())
+}
+
+/// Legge l'identità dal file, oppure la crea e la salva leggibile solo dal
+/// proprietario (permessi 600).
+fn carica_o_crea_identita(percorso: &Path) -> Risultato<Identita> {
+    if percorso.exists() {
+        return Ok(Identita::da_byte(&std::fs::read(percorso)?)?);
+    }
+    let identita = Identita::genera()?;
+    let mut opzioni = std::fs::OpenOptions::new();
+    opzioni.write(true).create_new(true);
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(&mut opzioni, 0o600);
+    opzioni.open(percorso)?.write_all(&identita.in_byte())?;
+    println!("Nuova identità salvata in {}", percorso.display());
+    Ok(identita)
 }

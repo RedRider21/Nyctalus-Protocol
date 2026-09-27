@@ -30,10 +30,14 @@ La cartella `target/` può diventare grande: `cargo clean` la svuota.
 Sul computer che riceve:
 
 ```sh
-nyctalus ricevi --uscita ricevuto.bin
+nyctalus ricevi --uscita ricevuto.bin --identita mia.chiave
 ```
 
-Il comando stampa l'istruzione `nyctalus invia ...` completa da eseguire sull'altro computer, con impronta del certificato e segreto. Basta sostituire l'IP e il nome del file. L'opzione `--corsie N` sceglie quante corsie parallele usare (predefinito 4).
+Il comando stampa l'istruzione `nyctalus invia ...` completa da eseguire sull'altro computer. Contiene l'impronta del certificato e la **chiave pubblica** del ricevitore (`--destinatario`), che non è segreta: basta sostituire l'IP e il nome del file.
+
+- I due programmi si accordano da soli sul segreto con la stretta di mano **Noise NK**. Il segreto non viaggia mai.
+- `--identita FILE` salva la chiave del ricevitore (permessi 600): così il suo indirizzo resta lo stesso tra un avvio e l'altro. Senza questa opzione, a ogni avvio ne viene generato uno nuovo.
+- `--corsie N` sceglie quante corsie parallele usare (predefinito 4).
 
 ## Licenza
 

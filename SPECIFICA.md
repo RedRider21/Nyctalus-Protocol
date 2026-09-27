@@ -1,6 +1,6 @@
 # Nyctalus Protocol — Specifica tecnica v0
 
-> Versione 0.1 · 27 settembre 2026 · Stato: bozza di lavoro
+> Versione 0.2 · 27 settembre 2026 · Stato: bozza di lavoro
 > Complemento tecnico di [VISIONE.md](VISIONE.md). Legenda:
 > ✅ implementato e testato · 📐 progettato, da implementare · ❓ da decidere
 
@@ -69,7 +69,7 @@ chiave_cifratura = BLAKE3-derive_key("Nyctalus v0 2026-09-27 cifratura dei framm
 ```
 Contesti diversi producono chiavi indipendenti. Il contesto contiene la versione: ogni cambio di formato cambia le chiavi.
 
-📐 Il `segreto_condiviso` arriverà dalla stretta di mano **Noise** (§5). Per ora i test usano un segreto fisso.
+✅ Il `segreto_condiviso` arriva dalla stretta di mano **Noise NK** (§5.1).
 
 ### 3.3 Etichette ✅
 ```
@@ -110,7 +110,7 @@ Il segnale "ultimo" e la lunghezza reale sono **dentro** la parte cifrata: i nod
 - La fine del flusso è il frammento marcato "ultimo". Un "totale frammenti" dichiarato in chiaro non viene mai accettato.
 
 ### 3.6 Limiti noti di L2
-- **Nessuna forward secrecy di per sé:** la eredita dalla stretta di mano che produce il segreto (§5).
+- **Forward secrecy:** L2 non ce l'ha di per sé, la eredita dalla stretta di mano Noise (§5.1).
 - **Rinnovo delle chiavi:** 📐 un flusso va rinnovato con un nuovo `id_flusso` prima di 2³² frammenti, un margine molto prudente rispetto al limite teorico di 2⁶⁴.
 - ❓ D andrà ricalcolato quando si aggiunge l'intestazione Sphinx (§4), perché il pacchetto finale sulla rete deve restare di dimensione fissa.
 
@@ -148,11 +148,28 @@ Si adotta **Sphinx** (Danezis–Goldberg 2009), il formato usato da Nym e Lightn
 
 ---
 
-## 5. Stretta di mano e chiavi 📐
+## 5. Stretta di mano e chiavi
 
-- **Framework:** Noise Protocol Framework (libreria `snow`) su X25519, ChaCha20-Poly1305, BLAKE2s/BLAKE3 ❓.
-- **Client ↔ nodi del percorso:** le chiavi dei salti sono incorporate nell'intestazione Sphinx: una sola chiave effimera, nessun giro di andata e ritorno.
-- **Client ↔ uscita o sito interno (L2):** Noise **IK** (il client conosce la chiave pubblica statica della destinazione). Il risultato è il `segreto_condiviso` di §3.2, con forward secrecy grazie alle chiavi effimere.
+### 5.1 Tra i due estremi (L2) ✅
+Codice: `crates/nyctalus-core/src/stretta.rs`.
+
+- **Schema:** `Noise_NK_25519_ChaChaPoly_BLAKE2s` (libreria `snow`), con prologo `"Nyctalus v0 2026-09-27 stretta di mano"`.
+  ```text
+    <- s              il mittente conosce la chiave pubblica statica del destinatario
+    ...
+    -> e, es          48 byte
+    <- e, ee          48 byte
+  ```
+- **Perché NK e non IK:** con NK il mittente **non ha chiave statica**, quindi resta anonimo anche verso il destinatario. IK gli farebbe rivelare la sua identità, e la versione 0.1 di questa specifica lo indicava per errore.
+- **Autenticazione:** solo chi possiede la chiave privata del destinatario riesce a leggere il 1° messaggio e a rispondere. La chiave pubblica funziona da **indirizzo** e si può condividere liberamente.
+- **Forward secrecy:** i segreti dipendono da `ee`, cioè da due chiavi effimere buttate subito dopo l'uso.
+- **Risultato:** lo "split" Noise produce due segreti da 32 byte, `verso_destinatario` e `verso_mittente`, che diventano i `segreto_condiviso` (§3.2) dei due flussi della conversazione, uno per direzione.
+- **Identità del destinatario:** 64 byte (privata ‖ pubblica) salvati con permessi 600.
+
+### 5.2 Tra client e nodi del percorso (L1) 📐
+Le chiavi dei singoli salti saranno incorporate nell'intestazione Sphinx: una sola chiave effimera, nessun giro di andata e ritorno.
+
+### 5.3 Varie 📐
 - **0-RTT:** solo per ricollegarsi al proprio guard, mai per dati applicativi sensibili.
 - **Post-quantistico:** in seguito, X25519 + ML-KEM in modalità ibrida.
 
@@ -198,7 +215,7 @@ Da decidere in fase 2 insieme alla difesa dai nodi falsi in massa (attacco Sybil
 |---|---|---|
 | Derivazione chiavi, etichette | BLAKE3 (derive_key, keyed_hash) | ✅ |
 | Cifratura end-to-end | ChaCha20-Poly1305 (RFC 8439) | ✅ |
-| Scambio di chiavi | X25519 via Noise | 📐 |
+| Scambio di chiavi | X25519 via Noise NK (+ BLAKE2s) | ✅ |
 | Identità di nodi e siti | Ed25519 | 📐 |
 | Pacchetti a cipolla | Sphinx | 📐 |
 | Trasporto | QUIC (RFC 9000) + TLS 1.3 | 📐 |
@@ -213,7 +230,8 @@ Regola: **nessuna primitiva inventata**. Si usano solo costruzioni pubbliche e a
 `crates/nyctalus` (eseguibile `nyctalus`) trasferisce un file tra due estremi:
 - **L0:** QUIC (quinn + rustls, backend ring, solo TLS 1.3). Il certificato è autofirmato e il mittente lo accetta solo se la sua impronta BLAKE3 coincide con quella attesa (pinning).
 - **L2:** frammenti cifrati di `nyctalus-core`, distribuiti a turno su k corsie, cioè k stream QUIC unidirezionali in parallelo, con il controllo del flusso di §4.4.
-- **Limite:** il segreto del flusso è generato dal ricevitore e passato a mano (§5 lo sostituirà con Noise). Non ci sono ancora nodi intermedi.
+- **Stretta di mano:** Noise NK su un primo stream bidirezionale QUIC (§5.1). Il ricevitore stampa la sua chiave pubblica (`--destinatario`); con `--identita FILE` la chiave resta la stessa tra un avvio e l'altro.
+- **Limite:** non ci sono ancora nodi intermedi, e le conferme di avanzamento sono protette solo da L0.
 
 Misura su un solo PC (loopback, compilazione release, file casuale da 200 MB): circa **110 MB/s con 1 corsia e 122 MB/s con 4**. File identici, 0 pacchetti scartati; con 4 corsie circa il 70% dei frammenti arriva in anticipo e viene ricomposto. Su loopback le corsie non hanno percorsi fisici diversi: il guadagno reale del multipercorso andrà misurato con Shadow e su reti vere.
 
@@ -221,3 +239,4 @@ Misura su un solo PC (loopback, compilazione release, file casuale da 200 MB): c
 
 ## 12. Registro delle modifiche
 - **0.1 (27/09/2026):** prima bozza; il livello L2 è implementato in `nyctalus-core` con 18 test; aggiunti il programma di prova QUIC e il controllo del flusso.
+- **0.2 (27/09/2026):** stretta di mano Noise NK implementata (corretto IK → NK per l'anonimato del mittente); il segreto non si passa più a mano. 23 test.

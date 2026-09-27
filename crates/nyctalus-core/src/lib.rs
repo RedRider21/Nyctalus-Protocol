@@ -10,10 +10,12 @@
 //! - [`ricomposizione`]: rimette in ordine i frammenti arrivati in disordine
 //!   dalla ragnatela, con limiti di memoria contro gli attacchi DoS;
 //! - [`flusso`]: unisce tutto, lato mittente (spezza e cifra) e lato
-//!   destinatario (riconosce, verifica, decifra e ricompone).
+//!   destinatario (riconosce, verifica, decifra e ricompone);
+//! - [`stretta`]: stretta di mano Noise NK che produce i segreti dei flussi.
 
 mod chiavi;
 pub mod cifratura;
 pub mod etichette;
 pub mod flusso;
 pub mod ricomposizione;
+pub mod stretta;
