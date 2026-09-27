@@ -32,7 +32,7 @@ pub async fn nodo(ascolta: SocketAddr, segreto: [u8; 32]) -> Risultato<()> {
             let Ok(connessione) = in_arrivo.await else { return };
             while let Ok((invio, ricezione)) = connessione.accept_bi().await {
                 tokio::spawn(async move {
-                    if let Err(e) = gestisci_circuito(invio, ricezione, segreto, ascolta).await {
+                    if let Err(e) = gestisci_circuito(invio, ricezione, segreto).await {
                         eprintln!("circuito chiuso: {e}");
                     }
                 });
@@ -46,7 +46,6 @@ async fn gestisci_circuito(
     mut invio_monte: quinn::SendStream,
     mut ricezione_monte: quinn::RecvStream,
     segreto: [u8; 32],
-    ascolta: SocketAddr,
 ) -> Risultato<()> {
     // Primo quadro: apertura Sphinx.
     let Some((seq, pacchetto)) = leggi_quadro(&mut ricezione_monte).await? else {
@@ -87,20 +86,84 @@ async fn gestisci_circuito(
             b?;
         }
         PassoNodo::Finale => {
-            // Uscita del circuito: peso il mio strato → messaggio in chiaro,
-            // poi rispondo (eco), avvolgendo con la mia chiave e sequenza di ritorno.
-            while let Some((seq, mut payload)) = leggi_quadro(&mut ricezione_monte).await? {
-                cipolla::sbuccia(seq, &chiave, &mut payload);
-                let messaggio = String::from_utf8_lossy(&payload);
-                let mut risposta = format!("PONG da uscita :{} ← {messaggio}", ascolta.port()).into_bytes();
-                let seq_ritorno = seq | BIT_RISPOSTA;
-                cipolla::sbuccia(seq_ritorno, &chiave, &mut risposta);
-                scrivi_quadro(&mut invio_monte, seq_ritorno, &risposta).await?;
-            }
-            let _ = invio_monte.finish();
+            uscita_circuito(invio_monte, ricezione_monte, chiave).await?;
         }
     }
     Ok(())
+}
+
+/// Uscita del circuito: il primo quadro dati porta la destinazione
+/// (`host:porta`), poi si fa da tramite fra il circuito e Internet.
+/// Ogni pacchetto in andata viene spogliato del proprio strato, ogni pacchetto
+/// di ritorno ne viene rivestito.
+async fn uscita_circuito(
+    mut invio_monte: quinn::SendStream,
+    mut ricezione_monte: quinn::RecvStream,
+    chiave: [u8; 32],
+) -> Risultato<()> {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    // 1) Primo quadro dati = richiesta di connessione (destinazione).
+    let Some((seq, mut payload)) = leggi_quadro(&mut ricezione_monte).await? else {
+        return Ok(());
+    };
+    cipolla::sbuccia(seq, &chiave, &mut payload);
+    let destinazione = String::from_utf8_lossy(&payload).to_string();
+
+    let tcp = tokio::net::TcpStream::connect(destinazione.trim()).await;
+    // 2) Esito verso il client (quadro di ritorno): "OK" o "NO".
+    let esito_seq = seq | BIT_RISPOSTA;
+    let mut tcp = match tcp {
+        Ok(t) => {
+            invia_ritorno(&mut invio_monte, esito_seq, &chiave, b"OK").await?;
+            t
+        }
+        Err(e) => {
+            invia_ritorno(&mut invio_monte, esito_seq, &chiave, b"NO").await?;
+            let _ = invio_monte.finish();
+            return Err(format!("uscita: connessione a {destinazione} fallita: {e}").into());
+        }
+    };
+    let (mut tcp_lettura, mut tcp_scrittura) = tcp.split();
+
+    // 3) Tramite bidirezionale.
+    let andata = async {
+        while let Some((seq, mut payload)) = leggi_quadro(&mut ricezione_monte).await? {
+            cipolla::sbuccia(seq, &chiave, &mut payload);
+            tcp_scrittura.write_all(&payload).await?;
+        }
+        let _ = tcp_scrittura.shutdown().await;
+        Risultato::Ok(())
+    };
+    let ritorno = async {
+        let mut buffer = vec![0u8; 16 * 1024];
+        let mut contatore: u64 = 1; // 0 è riservato all'esito della connessione
+        loop {
+            let n = tcp_lettura.read(&mut buffer).await?;
+            if n == 0 {
+                break;
+            }
+            invia_ritorno(&mut invio_monte, BIT_RISPOSTA | contatore, &chiave, &buffer[..n]).await?;
+            contatore += 1;
+        }
+        let _ = invio_monte.finish();
+        Risultato::Ok(())
+    };
+    let (a, b) = tokio::join!(andata, ritorno);
+    a?;
+    b?;
+    Ok(())
+}
+
+async fn invia_ritorno(
+    invio: &mut quinn::SendStream,
+    seq: u64,
+    chiave: &[u8; 32],
+    dati: &[u8],
+) -> Risultato<()> {
+    let mut payload = dati.to_vec();
+    cipolla::sbuccia(seq, chiave, &mut payload);
+    scrivi_quadro(invio, seq, &payload).await
 }
 
 async fn collega_valle(

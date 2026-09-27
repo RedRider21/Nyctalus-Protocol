@@ -32,6 +32,7 @@
 //! la cipolla (tappe 1b/1c) trasformeranno questo in un percorso anonimo.
 
 mod avvia;
+mod avvia_circuito;
 mod circuito_rete;
 mod invia;
 mod nodo;
@@ -58,6 +59,7 @@ Uso:
   nyctalus avvia  --a IP:PORTA --impronta HEX [--socks 127.0.0.1:1080]
   nyctalus nodo   --ascolta 0.0.0.0:4601 [--segreto HEX]
   nyctalus prova-circuito --nodi 'addr,pubhex;addr,pubhex;addr,pubhex' [--messaggio TESTO]
+  nyctalus avvia-circuito  --nodi 'addr,pubhex;addr,pubhex;addr,pubhex' [--socks 127.0.0.1:1080]
 
 'ricevi'/'invia': trasferimento di un file (test del livello L2).
 'uscita'/'avvia': proxy SOCKS5 verso Internet (un solo salto, non ancora anonimo).
@@ -121,6 +123,11 @@ async fn esegui() -> Risultato<()> {
             let nodi = leggi_nodi(obbligatoria(&opzioni, "nodi")?)?;
             let messaggio = opzione(&opzioni, "messaggio").unwrap_or("PING da Nyctalus").to_string();
             prova_circuito::prova_circuito(nodi, messaggio).await
+        }
+        "avvia-circuito" => {
+            let nodi = leggi_nodi(obbligatoria(&opzioni, "nodi")?)?;
+            let socks: SocketAddr = opzione(&opzioni, "socks").unwrap_or("127.0.0.1:1080").parse()?;
+            avvia_circuito::avvia_circuito(nodi, socks).await
         }
         "aiuto" | "--help" | "-h" => {
             println!("{USO}");

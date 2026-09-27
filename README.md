@@ -55,9 +55,9 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 
 | Livello | Cosa fa | Stato |
 |---|---|---|
-| **L3 Applicazione** | proxy SOCKS5 locale · siti interni · browser | 🟡 SOCKS5 fatto |
+| **L3 Applicazione** | proxy SOCKS5 locale · siti interni · browser | 🟡 SOCKS5 + circuito a 3 salti |
 | **L2 Flusso** | etichette segrete + cifratura end-to-end + ricomposizione | ✅ |
-| **L1 Cipolla** | strati simmetrici del percorso (data-plane) | 🟡 data-plane fatto |
+| **L1 Cipolla** | apertura circuito (Sphinx) + strati simmetrici | ✅ |
 | **L0 Collegamento** | QUIC tra nodi, camuffato da HTTPS | 🟡 QUIC fatto |
 
 ## A che punto siamo
