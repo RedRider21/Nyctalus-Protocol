@@ -50,7 +50,8 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
 4. **Tappa 3:** prova completa sul PC, client → guard → medio → uscita → destinatario, verificando che nessun nodo conosca insieme mittente e destinazione.
 5. Ragnatela vera: più percorsi medi paralleli dopo un guard fisso (SPECIFICA §4.2).
 6. **Interfaccia a riga di comando (VISIONE §8.2), prioritaria perché sblocca sia terminale sia browser:**
-   - **6a — SOCKS5:** proxy locale standard. Prima il parser/risponditore del protocollo (modulo puro, testabile), poi il collegamento al trasporto.
+   - ✅ **6a-i — protocollo SOCKS5** (`crates/nyctalus-core/src/socks5.rs`): analisi saluto + richiesta CONNECT (IPv4/IPv6/nome), riconoscimento `.nyct`, costruzione risposte; 8 test. Fatto sessione 2.
+   - ⏳ **6a-ii — collegamento SOCKS5 al trasporto** nel demone (server TCP locale che usa questo modulo).
    - **6b — sottocomandi demone:** `nyctalus avvia` (demone + SOCKS5), `nyctalus stato`, `nyctalus sito ./cartella`, file di config `~/.config/nyctalus/config`.
    - **6c — strumenti:** `nyctalus monitor` (curses, stile `nyx`), `nyctalus esec <prog>` (stile `torsocks`).
 7. Elenco dei nodi (SPECIFICA §9) e simulazione con Shadow.

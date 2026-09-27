@@ -16,6 +16,7 @@
 //! - [`flusso`]: unisce tutto, lato mittente (spezza e cifra) e lato
 //!   destinatario (riconosce, verifica, decifra e ricompone);
 //! - [`stretta`]: stretta di mano Noise NK che produce i segreti dei flussi;
+//! - [`socks5`]: protocollo SOCKS5, con cui i programmi entrano nella rete;
 //! - [`indirizzo`]: indirizzi `.nyct` dei servizi interni (la chiave pubblica
 //!   in base32 con controllo anti-errori di battitura).
 
@@ -26,4 +27,5 @@ pub mod etichette;
 pub mod flusso;
 pub mod indirizzo;
 pub mod ricomposizione;
+pub mod socks5;
 pub mod stretta;
