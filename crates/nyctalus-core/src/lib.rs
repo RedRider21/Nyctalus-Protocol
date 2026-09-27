@@ -5,6 +5,7 @@
 //!
 //! - [`etichette`]: etichette segrete rotanti per riconoscere i frammenti
 //!   (VISIONE.md §5.4) senza mai mettere indirizzi IP nei pacchetti;
+//! - [`cipolla`]: strati simmetrici del percorso (livello a cipolla L1);
 //! - [`cifratura`]: cifratura end-to-end dei frammenti (ChaCha20-Poly1305),
 //!   con pacchetti tutti della stessa lunghezza;
 //! - [`ricomposizione`]: rimette in ordine i frammenti arrivati in disordine
@@ -17,6 +18,7 @@
 
 mod chiavi;
 pub mod cifratura;
+pub mod cipolla;
 pub mod etichette;
 pub mod flusso;
 pub mod indirizzo;
