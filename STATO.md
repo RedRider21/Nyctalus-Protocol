@@ -39,23 +39,28 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
 
 È lo stesso principio di Tor e del progetto di ricerca HORNET: anonimato equivalente, velocità di un ordine di grandezza superiore.
 
-## Da fare (in ordine)
+## Scaletta (checklist autorevole)
 
-1. ✅ **Approccio per la cipolla deciso** (sessione 2): Sphinx solo per aprire i percorsi, poi cifratura a strati simmetrica per pacchetto. Da riportare nella SPECIFICA §4.
-2. **Tappa 1 — in corso:**
-   - ✅ **1a — data-plane a strati simmetrici** (`crates/nyctalus-core/src/cipolla.rs`): `avvolgi`/`sbuccia` con ChaCha20, nonce = numero di sequenza, lunghezza costante, 5 test. Fatto sessione 2.
-   - ✅ **1b — apertura del circuito con Sphinx** (`crates/nyctalus-core/src/circuito.rs`): via `sphinx-packet` (Nym), il client concorda una chiave di salto per ogni nodo e consegna a ciascuno solo l'indirizzo del successivo; nessun nodo conosce l'intero percorso. Chiave ChaCha20 derivata (BLAKE3) dal seme per-nodo di Sphinx. Test: client e nodi concordano le chiavi + integrazione con la cipolla (1a). 5 test. Fatto sessione 2.
-   - ⏳ **1c — ID di circuito che cambia a ogni tratta** + difesa sul numero di sequenza in chiaro.
-3. ✅ **Tappa 2 — programma nodo FATTO** (sessione 2): `nyctalus nodo` (relè: apre/inoltra circuito Sphinx, toglie/aggiunge strato a cipolla) + `nyctalus prova-circuito` (client). Provato in locale: client→guard→mid→uscita, l'uscita risponde (eco), la risposta torna attraverso gli strati, il nodo intermedio NON vede il testo in chiaro. Collegamenti fra nodi non ancora autenticati (tls::config_client_insicuro, prototipo).
-4. **Tappa 3:** prova completa sul PC, client → guard → medio → uscita → destinatario, verificando che nessun nodo conosca insieme mittente e destinazione.
-5. Ragnatela vera: più percorsi medi paralleli dopo un guard fisso (SPECIFICA §4.2).
-6. **Interfaccia a riga di comando (VISIONE §8.2), prioritaria perché sblocca sia terminale sia browser:**
-   - ✅ **6a-i — protocollo SOCKS5** (`crates/nyctalus-core/src/socks5.rs`): analisi saluto + richiesta CONNECT (IPv4/IPv6/nome), riconoscimento `.nyct`, costruzione risposte; 8 test. Fatto sessione 2.
-   - ✅ **6a-ii — proxy SOCKS5 funzionante** (`avvia.rs` + `uscita.rs` + `travaso.rs`): `nyctalus avvia` apre SOCKS5 locale → QUIC → `nyctalus uscita` → Internet. Provato con curl. UN SALTO, non ancora anonimo. Fatto sessione 2.
-   - **6b — sottocomandi demone:** `nyctalus avvia` (demone + SOCKS5), `nyctalus stato`, `nyctalus sito ./cartella`, file di config `~/.config/nyctalus/config`.
-   - **6c — strumenti:** `nyctalus monitor` (curses, stile `nyx`), `nyctalus esec <prog>` (stile `torsocks`).
-7. Elenco dei nodi (SPECIFICA §9) e simulazione con Shadow.
-8. Più avanti: camuffamento L0, rumore di fondo, ponte verso i `.onion` di Tor, browser pubblico basato su Firefox ESR.
+### Fatto ✅
+- **1a** data-plane a strati simmetrici (`cipolla.rs`).
+- **1b** apertura circuito con Sphinx (`circuito.rs`).
+- **Tappa 2** programma nodo relè (`nodo.rs`) + `prova-circuito`.
+- **Tappa 3** navigazione anonima a 3 salti: uscita verso Internet + `avvia-circuito` (SOCKS5 onion); provato con curl.
+- **6a** protocollo SOCKS5 (`socks5.rs`) + proxy a un salto (`avvia.rs`/`uscita.rs`).
+- Documenti (VISIONE/SPECIFICA/STATO/README), pubblicazione GitHub + Pages + logo.
+
+### Da fare (in ordine)
+- [ ] **A. Elenco firmato dei nodi (directory).** Toglie il passaggio a mano dei nodi; è il prerequisito per autenticare i relè. Autorità Ed25519 che firma l'elenco; nodi e client lo leggono e verificano.
+- [ ] **B. Autenticazione dei collegamenti.** Usando le impronte dell'elenco: il client pinna il guard, ogni relè pinna il nodo successivo (cerca l'indirizzo nell'elenco → impronta attesa). Chiude il punto debole dei link `insicuro`.
+- [ ] **C. 1c — ID di circuito per tratta** + difesa sul numero di sequenza in chiaro (anti-correlazione).
+- [ ] **D. Circuito condiviso** fra più connessioni (ora uno per connessione).
+- [ ] **E. Ragnatela multipercorso** vera: più percorsi paralleli dopo il guard (SPECIFICA §4.2).
+- [ ] **F. 6b — sottocomandi demone:** `avvia` (demone+SOCKS5 integrato col circuito), `stato`, `sito ./cartella`, config `~/.config/nyctalus/config`.
+- [ ] **G. 6c — strumenti:** `monitor` (curses, stile `nyx`), `esec` (stile `torsocks`).
+- [ ] **H. Camuffamento L0** + rumore di fondo.
+- [ ] **I. Ponte verso i `.onion` di Tor** (uscite volontarie via Arti).
+- [ ] **J. Browser pubblico** basato su Firefox ESR (multipiattaforma).
+- [ ] **K. Simulazione con Shadow** e confronto misurato con Tor.
 
 ## Per ripartire
 ```sh
