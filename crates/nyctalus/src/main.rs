@@ -57,9 +57,11 @@ Uso:
   nyctalus invia  --a IP:PORTA --impronta HEX --destinatario INDIRIZZO.nyct [--corsie 4] FILE
   nyctalus uscita --ascolta 0.0.0.0:4600
   nyctalus avvia  --a IP:PORTA --impronta HEX [--socks 127.0.0.1:1080]
-  nyctalus nodo   --ascolta 0.0.0.0:4601 [--segreto HEX]
-  nyctalus prova-circuito --nodi 'addr,pubhex;addr,pubhex;addr,pubhex' [--messaggio TESTO]
-  nyctalus avvia-circuito  --nodi 'addr,pubhex;addr,pubhex;addr,pubhex' [--socks 127.0.0.1:1080]
+  nyctalus nodo   --ascolta 0.0.0.0:4601 [--segreto HEX] [--elenco FILE --autorita HEX]
+  nyctalus autorita
+  nyctalus elenco --autorita-segreto HEX --voci 'addr,x,fp;addr,x,fp'
+  nyctalus prova-circuito (--elenco FILE --autorita HEX | --nodi 'addr,pub;...') [--messaggio T]
+  nyctalus avvia-circuito (--elenco FILE --autorita HEX | --nodi 'addr,pub;...') [--socks 127.0.0.1:1080]
 
 'ricevi'/'invia': trasferimento di un file (test del livello L2).
 'uscita'/'avvia': proxy SOCKS5 verso Internet (un solo salto, non ancora anonimo).
@@ -117,15 +119,34 @@ async fn esegui() -> Risultato<()> {
                 Some(hex) => da_esadecimale(hex)?,
                 None => nyctalus_core::circuito::genera_segreto(),
             };
-            nodo::nodo(ascolta, segreto).await
+            let auth = match (opzione(&opzioni, "elenco"), opzione(&opzioni, "autorita")) {
+                (Some(e), Some(a)) => {
+                    Some(nodo::Autenticazione { elenco: PathBuf::from(e), autorita: da_esadecimale(a)? })
+                }
+                _ => None,
+            };
+            nodo::nodo(ascolta, segreto, auth).await
+        }
+        "autorita" => {
+            let (segreto, pubblica) = nyctalus_core::elenco::genera_autorita();
+            println!("Autorità dell'elenco (custodire il segreto):");
+            println!("  segreto:  {}", in_esadecimale(&segreto));
+            println!("  pubblica: {}", in_esadecimale(&pubblica));
+            Ok(())
+        }
+        "elenco" => {
+            let segreto = da_esadecimale(obbligatoria(&opzioni, "autorita-segreto")?)?;
+            let voci = leggi_voci_elenco(obbligatoria(&opzioni, "voci")?)?;
+            print!("{}", nyctalus_core::elenco::firma_elenco(&voci, &segreto));
+            Ok(())
         }
         "prova-circuito" => {
-            let nodi = leggi_nodi(obbligatoria(&opzioni, "nodi")?)?;
+            let nodi = carica_nodi(&opzioni)?;
             let messaggio = opzione(&opzioni, "messaggio").unwrap_or("PING da Nyctalus").to_string();
             prova_circuito::prova_circuito(nodi, messaggio).await
         }
         "avvia-circuito" => {
-            let nodi = leggi_nodi(obbligatoria(&opzioni, "nodi")?)?;
+            let nodi = carica_nodi(&opzioni)?;
             let socks: SocketAddr = opzione(&opzioni, "socks").unwrap_or("127.0.0.1:1080").parse()?;
             avvia_circuito::avvia_circuito(nodi, socks).await
         }
@@ -179,15 +200,45 @@ pub(crate) fn da_esadecimale(testo: &str) -> Risultato<[u8; 32]> {
     Ok(risultato)
 }
 
-/// Interpreta la lista dei nodi per `prova-circuito`: voci separate da ';',
-/// ciascuna `indirizzo,chiavepubblica_esadecimale`, nell'ordine guard→uscita.
-fn leggi_nodi(testo: &str) -> Risultato<Vec<(SocketAddr, [u8; 32])>> {
-    testo
+/// Carica i nodi del percorso: da elenco firmato (`--elenco` + `--autorita`,
+/// con impronte TLS per autenticare) oppure da `--nodi` (prototipo, senza
+/// autenticazione). Ordine: guard → … → uscita.
+fn carica_nodi(opzioni: &Opzioni) -> Risultato<Vec<avvia_circuito::NodoRete>> {
+    if let Some(percorso) = opzione(opzioni, "elenco") {
+        let autorita = da_esadecimale(obbligatoria(opzioni, "autorita")?)?;
+        let testo = std::fs::read_to_string(percorso)?;
+        let voci = nyctalus_core::elenco::verifica_elenco(&testo, &autorita)?;
+        return voci
+            .into_iter()
+            .map(|v| Ok((v.indirizzo.parse()?, v.x25519, Some(v.impronta_tls))))
+            .collect();
+    }
+    let nodi = obbligatoria(opzioni, "nodi")?;
+    nodi
         .split(';')
         .filter(|v| !v.trim().is_empty())
         .map(|voce| {
             let (addr, hex) = voce.split_once(',').ok_or("nodo nel formato indirizzo,chiavehex")?;
-            Ok((addr.trim().parse()?, da_esadecimale(hex.trim())?))
+            Ok((addr.trim().parse()?, da_esadecimale(hex.trim())?, None))
+        })
+        .collect()
+}
+
+/// Voci per il comando `elenco`: `indirizzo,x25519hex,improntahex` separate da ';'.
+fn leggi_voci_elenco(testo: &str) -> Risultato<Vec<nyctalus_core::elenco::VoceElenco>> {
+    testo
+        .split(';')
+        .filter(|v| !v.trim().is_empty())
+        .map(|voce| {
+            let campi: Vec<&str> = voce.split(',').map(str::trim).collect();
+            let [addr, x, fp] = campi.as_slice() else {
+                return Err("voce nel formato indirizzo,x25519hex,improntahex".into());
+            };
+            Ok(nyctalus_core::elenco::VoceElenco {
+                indirizzo: (*addr).to_string(),
+                x25519: da_esadecimale(x)?,
+                impronta_tls: da_esadecimale(fp)?,
+            })
         })
         .collect()
 }

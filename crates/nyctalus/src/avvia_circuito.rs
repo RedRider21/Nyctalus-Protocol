@@ -22,12 +22,13 @@ use tokio::net::{TcpListener, TcpStream};
 use crate::circuito_rete::{SEQ_APERTURA, codifica_indirizzo, leggi_quadro, scrivi_quadro};
 use crate::Risultato;
 
-pub async fn avvia_circuito(
-    percorso_rete: Vec<(SocketAddr, [u8; 32])>,
-    socks: SocketAddr,
-) -> Risultato<()> {
+/// Un nodo del percorso: indirizzo, chiave X25519 e, se noto dall'elenco
+/// firmato, l'impronta TLS da pinnare.
+pub type NodoRete = (SocketAddr, [u8; 32], Option<[u8; 32]>);
+
+pub async fn avvia_circuito(percorso_rete: Vec<NodoRete>, socks: SocketAddr) -> Risultato<()> {
     if percorso_rete.is_empty() {
-        return Err("indicare i nodi del circuito con --nodi".into());
+        return Err("indicare i nodi del circuito con --nodi o --elenco".into());
     }
     let ascoltatore = TcpListener::bind(socks).await?;
     println!("Proxy SOCKS5 (circuito a {} nodi) in ascolto su {socks}", percorso_rete.len());
@@ -44,7 +45,7 @@ pub async fn avvia_circuito(
     }
 }
 
-async fn gestisci(mut cliente: TcpStream, percorso_rete: Vec<(SocketAddr, [u8; 32])>) -> Risultato<()> {
+async fn gestisci(mut cliente: TcpStream, percorso_rete: Vec<NodoRete>) -> Risultato<()> {
     // SOCKS5: saluto + richiesta.
     let saluto = leggi_socks(&mut cliente, Saluto::analizza).await?;
     if !saluto.offre_senza_autenticazione() {
@@ -63,15 +64,19 @@ async fn gestisci(mut cliente: TcpStream, percorso_rete: Vec<(SocketAddr, [u8; 3
     // Apertura del circuito.
     let percorso: Vec<NodoPercorso> = percorso_rete
         .iter()
-        .map(|(a, p)| Ok(NodoPercorso { indirizzo: codifica_indirizzo(*a)?, pubblica: *p }))
+        .map(|(a, p, _)| Ok(NodoPercorso { indirizzo: codifica_indirizzo(*a)?, pubblica: *p }))
         .collect::<Risultato<_>>()?;
     let circuito = apri_circuito(&percorso, b"apertura")?;
     let chiavi = circuito.chiavi_salto;
 
-    let guardiano = percorso_rete[0].0;
+    let (guardiano, _, impronta_guard) = percorso_rete[0];
     let locale: SocketAddr = if guardiano.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
     let mut endpoint = quinn::Endpoint::client(locale)?;
-    endpoint.set_default_client_config(crate::tls::config_client_insicuro()?);
+    let config = match impronta_guard {
+        Some(fp) => crate::tls::config_client(fp)?,
+        None => crate::tls::config_client_insicuro()?,
+    };
+    endpoint.set_default_client_config(config);
     let connessione = endpoint.connect(guardiano, "nyctalus.invalid")?.await?;
     let (mut invio, mut ricezione) = connessione.open_bi().await?;
 

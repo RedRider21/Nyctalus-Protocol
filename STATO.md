@@ -50,8 +50,8 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
 - Documenti (VISIONE/SPECIFICA/STATO/README), pubblicazione GitHub + Pages + logo.
 
 ### Da fare (in ordine)
-- [ ] **A. Elenco firmato dei nodi (directory).** Toglie il passaggio a mano dei nodi; è il prerequisito per autenticare i relè. Autorità Ed25519 che firma l'elenco; nodi e client lo leggono e verificano.
-- [ ] **B. Autenticazione dei collegamenti.** Usando le impronte dell'elenco: il client pinna il guard, ogni relè pinna il nodo successivo (cerca l'indirizzo nell'elenco → impronta attesa). Chiude il punto debole dei link `insicuro`.
+- [x] **A. Elenco firmato dei nodi (directory).** ✅ `elenco.rs` (core, autorità Ed25519, firma/verifica, 4 test) + comandi `nyctalus autorita` / `nyctalus elenco`. Client e nodi leggono l'elenco con `--elenco FILE --autorita HEX`; elenco di autorità non fidata/manomesso rifiutato.
+- [x] **B. Autenticazione dei collegamenti.** ✅ Con l'elenco: il client pinna il guard (impronta TLS), ogni relè pinna il nodo a valle (cerca l'indirizzo nell'elenco firmato → impronta attesa, `tls::config_client`). Provato a 3 salti: traffico OK e nodo con «autenticazione a valle ATTIVA». Senza elenco resta il fallback `insicuro` (prototipo).
 - [ ] **C. 1c — ID di circuito per tratta** + difesa sul numero di sequenza in chiaro (anti-correlazione).
 - [ ] **D. Circuito condiviso** fra più connessioni (ora uno per connessione).
 - [ ] **E. Ragnatela multipercorso** vera: più percorsi paralleli dopo il guard (SPECIFICA §4.2).

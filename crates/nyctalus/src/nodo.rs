@@ -12,6 +12,8 @@
 //! (vedi `tls::config_client_insicuro`) e l'uscita si limita a fare da eco.
 
 use std::net::SocketAddr;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use nyctalus_core::circuito::{self, PassoNodo};
 use nyctalus_core::cipolla;
@@ -19,20 +21,36 @@ use nyctalus_core::cipolla;
 use crate::circuito_rete::{BIT_RISPOSTA, SEQ_APERTURA, leggi_quadro, scrivi_quadro};
 use crate::{Risultato, in_esadecimale};
 
-pub async fn nodo(ascolta: SocketAddr, segreto: [u8; 32]) -> Risultato<()> {
+/// Come il nodo autentica il collegamento verso il nodo a valle.
+#[derive(Clone)]
+pub struct Autenticazione {
+    pub elenco: PathBuf,
+    pub autorita: [u8; 32],
+}
+
+pub async fn nodo(ascolta: SocketAddr, segreto: [u8; 32], auth: Option<Autenticazione>) -> Risultato<()> {
     let pubblica = circuito::chiave_pubblica(&segreto);
     let identita = crate::tls::identita_server()?;
-    let endpoint = quinn::Endpoint::server(identita.config, ascolta)?;
     println!("Nodo in ascolto su {ascolta}");
-    println!("  chiave pubblica: {}", in_esadecimale(&pubblica));
-    println!("  nel percorso del client:  {ascolta},{}", in_esadecimale(&pubblica));
+    println!("  chiave pubblica X25519: {}", in_esadecimale(&pubblica));
+    println!("  impronta TLS:           {}", in_esadecimale(&identita.impronta));
+    println!("  riga per l'elenco:  {ascolta},{},{}", in_esadecimale(&pubblica), in_esadecimale(&identita.impronta));
+    if auth.is_some() {
+        println!("  autenticazione dei collegamenti a valle: ATTIVA (via elenco firmato)");
+    } else {
+        println!("  autenticazione dei collegamenti a valle: assente (prototipo, link non verificati)");
+    }
 
+    let endpoint = quinn::Endpoint::server(identita.config, ascolta)?;
+    let auth = Arc::new(auth);
     while let Some(in_arrivo) = endpoint.accept().await {
+        let auth = auth.clone();
         tokio::spawn(async move {
             let Ok(connessione) = in_arrivo.await else { return };
             while let Ok((invio, ricezione)) = connessione.accept_bi().await {
+                let auth = auth.clone();
                 tokio::spawn(async move {
-                    if let Err(e) = gestisci_circuito(invio, ricezione, segreto).await {
+                    if let Err(e) = gestisci_circuito(invio, ricezione, segreto, &auth).await {
                         eprintln!("circuito chiuso: {e}");
                     }
                 });
@@ -42,10 +60,23 @@ pub async fn nodo(ascolta: SocketAddr, segreto: [u8; 32]) -> Risultato<()> {
     Ok(())
 }
 
+/// Cerca nell'elenco firmato l'impronta TLS del nodo a quell'indirizzo.
+fn impronta_attesa(auth: &Autenticazione, indirizzo: SocketAddr) -> Risultato<[u8; 32]> {
+    let testo = std::fs::read_to_string(&auth.elenco)?;
+    let voci = nyctalus_core::elenco::verifica_elenco(&testo, &auth.autorita)?;
+    let cercato = indirizzo.to_string();
+    voci
+        .into_iter()
+        .find(|v| v.indirizzo == cercato)
+        .map(|v| v.impronta_tls)
+        .ok_or_else(|| format!("nodo {indirizzo} non presente nell'elenco firmato").into())
+}
+
 async fn gestisci_circuito(
     mut invio_monte: quinn::SendStream,
     mut ricezione_monte: quinn::RecvStream,
     segreto: [u8; 32],
+    auth: &Option<Autenticazione>,
 ) -> Risultato<()> {
     // Primo quadro: apertura Sphinx.
     let Some((seq, pacchetto)) = leggi_quadro(&mut ricezione_monte).await? else {
@@ -60,8 +91,13 @@ async fn gestisci_circuito(
     match elaborazione.passo {
         PassoNodo::Inoltra { prossimo_indirizzo, pacchetto } => {
             let prossimo = crate::circuito_rete::decodifica_indirizzo(&prossimo_indirizzo)?;
+            // Autentica il nodo a valle se abbiamo un elenco firmato.
+            let impronta = match auth {
+                Some(a) => Some(impronta_attesa(a, prossimo)?),
+                None => None,
+            };
             // `_endpoint` va tenuto in vita per tutta la durata del circuito.
-            let (_endpoint, mut invio_valle, mut ricezione_valle) = collega_valle(prossimo, pacchetto).await?;
+            let (_endpoint, mut invio_valle, mut ricezione_valle) = collega_valle(prossimo, pacchetto, impronta).await?;
 
             // Andata: togli il tuo strato e inoltra a valle.
             let andata = async {
@@ -169,10 +205,15 @@ async fn invia_ritorno(
 async fn collega_valle(
     prossimo: SocketAddr,
     pacchetto_apertura: Vec<u8>,
+    impronta: Option<[u8; 32]>,
 ) -> Risultato<(quinn::Endpoint, quinn::SendStream, quinn::RecvStream)> {
     let locale: SocketAddr = if prossimo.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
     let mut endpoint = quinn::Endpoint::client(locale)?;
-    endpoint.set_default_client_config(crate::tls::config_client_insicuro()?);
+    let config = match impronta {
+        Some(fp) => crate::tls::config_client(fp)?,
+        None => crate::tls::config_client_insicuro()?,
+    };
+    endpoint.set_default_client_config(config);
     let connessione = endpoint.connect(prossimo, "nyctalus.invalid")?.await?;
     let (mut invio, ricezione) = connessione.open_bi().await?;
     scrivi_quadro(&mut invio, SEQ_APERTURA, &pacchetto_apertura).await?;

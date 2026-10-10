@@ -14,23 +14,27 @@ use nyctalus_core::cipolla;
 use crate::circuito_rete::{SEQ_APERTURA, codifica_indirizzo, leggi_quadro, scrivi_quadro};
 use crate::Risultato;
 
-pub async fn prova_circuito(percorso_rete: Vec<(SocketAddr, [u8; 32])>, messaggio: String) -> Risultato<()> {
+pub async fn prova_circuito(percorso_rete: Vec<crate::avvia_circuito::NodoRete>, messaggio: String) -> Risultato<()> {
     if percorso_rete.is_empty() {
-        return Err("indicare almeno un nodo con --nodi".into());
+        return Err("indicare almeno un nodo con --nodi o --elenco".into());
     }
     let percorso: Vec<NodoPercorso> = percorso_rete
         .iter()
-        .map(|(addr, pubblica)| Ok(NodoPercorso { indirizzo: codifica_indirizzo(*addr)?, pubblica: *pubblica }))
+        .map(|(addr, pubblica, _)| Ok(NodoPercorso { indirizzo: codifica_indirizzo(*addr)?, pubblica: *pubblica }))
         .collect::<Risultato<_>>()?;
 
     let circuito = apri_circuito(&percorso, b"apertura nyctalus")?;
     println!("Circuito a {} nodi aperto.", percorso.len());
 
-    // Collegamento al primo nodo (guard).
-    let guardiano = percorso_rete[0].0;
+    // Collegamento al primo nodo (guard), autenticato se l'impronta è nota.
+    let (guardiano, _, impronta_guard) = percorso_rete[0];
     let locale: SocketAddr = if guardiano.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
     let mut endpoint = quinn::Endpoint::client(locale)?;
-    endpoint.set_default_client_config(crate::tls::config_client_insicuro()?);
+    let config = match impronta_guard {
+        Some(fp) => crate::tls::config_client(fp)?,
+        None => crate::tls::config_client_insicuro()?,
+    };
+    endpoint.set_default_client_config(config);
     let connessione = endpoint.connect(guardiano, "nyctalus.invalid")?.await?;
     let (mut invio, mut ricezione) = connessione.open_bi().await?;
 
