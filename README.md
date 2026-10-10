@@ -67,7 +67,8 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 - **Stretta di mano Noise NK:** i due estremi si accordano sul segreto senza farlo mai viaggiare; forward secrecy; il mittente resta anonimo.
 - **Indirizzi `.nyct`:** la chiave pubblica di un servizio in base32, con controllo anti-errori di battitura.
 - **L1 — livello a cipolla (data-plane):** gli strati simmetrici che ogni pacchetto attraversa.
-- **CLI:** proxy SOCKS5 funzionante (`nyctalus avvia`) verso un nodo di uscita (`nyctalus uscita`), un salto, provato con `curl`.
+- **CLI:** proxy SOCKS5 funzionante (`nyctalus avvia`) a un salto, e **circuito anonimo a 3 salti** (`nyctalus avvia-circuito`), provati con `curl`.
+- **Elenco firmato dei nodi** (directory, autorità Ed25519) e **autenticazione dei collegamenti**: il client pinna il guard, ogni relè pinna il nodo a valle con l'impronta presa dall'elenco firmato.
 
 **In arrivo** (vedi [STATO.md](STATO.md)): apertura del circuito con Sphinx, ID di circuito per tratta, nodi intermedi, ragnatela completa, simulazione contro Tor con Shadow, camuffamento, browser dedicato.
 
@@ -103,6 +104,29 @@ curl --socks5-hostname 127.0.0.1:1080 https://example.com
 > Questo è un **solo salto** (client → uscita): serve a rendere la CLI usabile
 > subito. L'uscita vede l'IP del client: **non è ancora anonimo**. I nodi
 > intermedi e la cipolla lo trasformeranno in un percorso anonimo.
+
+### Circuito anonimo a 3 salti (autenticato)
+
+```sh
+# 1) crea un'autorità per firmare l'elenco dei nodi
+nyctalus autorita                      # stampa segreto + pubblica
+
+# 2) avvia i nodi (stampano la loro riga per l'elenco)
+nyctalus nodo --ascolta 0.0.0.0:4601 --elenco elenco.txt --autorita <PUB>
+nyctalus nodo --ascolta 0.0.0.0:4602 --elenco elenco.txt --autorita <PUB>
+nyctalus nodo --ascolta 0.0.0.0:4603 --elenco elenco.txt --autorita <PUB>
+
+# 3) firma l'elenco con le righe stampate dai nodi
+nyctalus elenco --autorita-segreto <SEGRETO> \
+  --voci 'addr,x,fp;addr,x,fp;addr,x,fp' > elenco.txt
+
+# 4) proxy SOCKS5 attraverso il circuito a 3 salti
+nyctalus avvia-circuito --elenco elenco.txt --autorita <PUB> --socks 127.0.0.1:1080
+curl --socks5-hostname 127.0.0.1:1080 http://example.com
+```
+
+Con l'elenco firmato ogni collegamento è autenticato: un elenco manomesso o
+firmato da un'autorità diversa viene rifiutato.
 
 ### Trasferimento di un file (test del livello L2)
 

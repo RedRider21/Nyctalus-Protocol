@@ -218,7 +218,11 @@ Una VPN **non** aggiunge anonimato al protocollo: sposta soltanto la fiducia su 
 
 ---
 
-## 9. Elenco dei nodi ❓
+## 9. Elenco dei nodi ✅ (prototipo) / ❓ (governance)
+
+✅ **Implementato** (`crates/nyctalus-core/src/elenco.rs`): elenco testuale firmato da un'**autorità Ed25519**; ogni voce = `indirizzo, chiave X25519, impronta TLS`. Client e nodi verificano la firma e ne ricavano le identità. È il meccanismo che rende possibile l'**autenticazione dei collegamenti** (§3-bis): il client pinna il guard, ogni relè pinna il nodo a valle cercandone l'impronta nell'elenco. Comandi: `nyctalus autorita`, `nyctalus elenco`, e `--elenco/--autorita` su nodi e client.
+
+❓ **Da decidere (governance):** chi gestisce l'autorità e come si aggiorna l'elenco. Opzioni:
 Chi pubblica l'elenco firmato dei nodi e delle loro chiavi. Opzioni:
 - (a) autorità fidate in votazione, come Tor;
 - (b) tabella distribuita con verifica incrociata;
