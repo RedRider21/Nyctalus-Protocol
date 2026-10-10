@@ -127,8 +127,9 @@
     <li><b><span class="it">Stretta di mano Noise NK</span><span class="en">Noise NK handshake</span></b> — <span class="it">segreto mai trasmesso, forward secrecy, mittente anonimo.</span><span class="en">secret never transmitted, forward secrecy, anonymous sender.</span></li>
     <li><b><span class="it">Indirizzi .nyct</span><span class="en">.nyct addresses</span></b> — <span class="it">chiave pubblica in base32, con controllo anti-errori.</span><span class="en">public key in base32, with typo-check.</span></li>
     <li><b><span class="it">Livello a cipolla (data-plane)</span><span class="en">Onion layer (data-plane)</span></b> — <span class="it">gli strati simmetrici di ogni pacchetto.</span><span class="en">the symmetric layers of every packet.</span></li>
-    <li><b><span class="it">Proxy SOCKS5</span><span class="en">SOCKS5 proxy</span></b> — <span class="it">primo uso da terminale, funzionante.</span><span class="en">first working terminal use.</span></li>
-    <li class="futuro"><b><span class="it">In arrivo</span><span class="en">Coming</span></b> — <span class="it">nodi intermedi, ragnatela completa, confronto con Tor, browser dedicato.</span><span class="en">relay nodes, full web, comparison against Tor, dedicated browser.</span></li>
+    <li><b><span class="it">Circuito anonimo a 3 salti</span><span class="en">Anonymous 3-hop circuit</span></b> — <span class="it">nodi intermedi + proxy SOCKS5 attraverso il circuito; il mid non vede il contenuto.</span><span class="en">relay nodes + SOCKS5 proxy through the circuit; the mid node is blind to the content.</span></li>
+    <li><b><span class="it">Elenco firmato + collegamenti autenticati</span><span class="en">Signed directory + authenticated links</span></b> — <span class="it">autorità Ed25519; il client pinna il guard, ogni relè il nodo a valle.</span><span class="en">Ed25519 authority; the client pins the guard, each relay its next hop.</span></li>
+    <li class="futuro"><b><span class="it">In arrivo</span><span class="en">Coming</span></b> — <span class="it">ragnatela multipercorso, ID di circuito per tratta, confronto con Tor, browser dedicato.</span><span class="en">multipath web, per-hop circuit ID, comparison against Tor, dedicated browser.</span></li>
   </ul>
 </div></section>
 
@@ -156,7 +157,27 @@ curl --socks5-hostname 127.0.0.1:1080 https://example.com</pre>
   </div>
 
   <div class="passo">
-    <h3><span class="it">3. Trasferire un file (test del livello L2)</span><span class="en">3. Transfer a file (L2 layer test)</span></h3>
+    <h3><span class="it">3. Circuito anonimo a 3 salti (autenticato)</span><span class="en">3. Anonymous 3-hop circuit (authenticated)</span></h3>
+    <p class="intro"><span class="it">Un'<b>autorità</b> firma l'elenco dei nodi; client e relè lo verificano e autenticano ogni collegamento.</span><span class="en">An <b>authority</b> signs the node directory; client and relays verify it and authenticate every link.</span></p>
+    <pre><span class="c"><span class="it"># 1) autorità che firma l'elenco</span><span class="en"># 1) authority that signs the directory</span></span>
+nyctalus autorita
+
+<span class="c"><span class="it"># 2) avvia i nodi (stampano la loro riga per l'elenco)</span><span class="en"># 2) start the nodes (they print their directory line)</span></span>
+nyctalus nodo --ascolta 0.0.0.0:4601 --elenco elenco.txt --autorita &lt;PUB&gt;
+nyctalus nodo --ascolta 0.0.0.0:4602 --elenco elenco.txt --autorita &lt;PUB&gt;
+nyctalus nodo --ascolta 0.0.0.0:4603 --elenco elenco.txt --autorita &lt;PUB&gt;
+
+<span class="c"><span class="it"># 3) firma l'elenco con le righe stampate</span><span class="en"># 3) sign the directory with the printed lines</span></span>
+nyctalus elenco --autorita-segreto &lt;SEGRETO&gt; --voci 'a,x,fp;a,x,fp;a,x,fp' &gt; elenco.txt
+
+<span class="c"><span class="it"># 4) proxy SOCKS5 attraverso il circuito a 3 salti</span><span class="en"># 4) SOCKS5 proxy through the 3-hop circuit</span></span>
+nyctalus avvia-circuito --elenco elenco.txt --autorita &lt;PUB&gt; --socks 127.0.0.1:1080
+curl --socks5-hostname 127.0.0.1:1080 http://example.com</pre>
+    <div class="nota"><span class="it">Con l'elenco firmato ogni collegamento è autenticato: un elenco manomesso o firmato da un'autorità diversa viene <b>rifiutato</b>. Il nodo intermedio non vede né il contenuto né la destinazione.</span><span class="en">With the signed directory every link is authenticated: a tampered directory, or one signed by a different authority, is <b>rejected</b>. The middle node sees neither the content nor the destination.</span></div>
+  </div>
+
+  <div class="passo">
+    <h3><span class="it">4. Trasferire un file (test del livello L2)</span><span class="en">4. Transfer a file (L2 layer test)</span></h3>
     <p class="intro"><span class="it">Sul ricevitore:</span><span class="en">On the receiver:</span></p>
     <pre>nyctalus ricevi --uscita ricevuto.bin --identita mia.chiave</pre>
     <p class="intro"><span class="it">Stampa il comando <code class="in">invia</code> con l'indirizzo <code class="in">.nyct</code> del ricevitore. Sul mittente:</span><span class="en">It prints the <code class="in">invia</code> command with the receiver's <code class="in">.nyct</code> address. On the sender:</span></p>
@@ -164,7 +185,7 @@ curl --socks5-hostname 127.0.0.1:1080 https://example.com</pre>
   </div>
 
   <div class="passo">
-    <h3><span class="it">4. Comandi previsti</span><span class="en">4. Planned commands</span></h3>
+    <h3><span class="it">5. Comandi previsti</span><span class="en">5. Planned commands</span></h3>
     <table>
       <thead><tr><th>Tor</th><th>Nyctalus</th><th><span class="it">A cosa serve</span><span class="en">Purpose</span></th></tr></thead>
       <tbody>
