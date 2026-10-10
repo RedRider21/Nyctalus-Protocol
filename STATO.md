@@ -52,7 +52,7 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
 ### Da fare (in ordine)
 - [x] **A. Elenco firmato dei nodi (directory).** ✅ `elenco.rs` (core, autorità Ed25519, firma/verifica, 4 test) + comandi `nyctalus autorita` / `nyctalus elenco`. Client e nodi leggono l'elenco con `--elenco FILE --autorita HEX`; elenco di autorità non fidata/manomesso rifiutato.
 - [x] **B. Autenticazione dei collegamenti.** ✅ Con l'elenco: il client pinna il guard (impronta TLS), ogni relè pinna il nodo a valle (cerca l'indirizzo nell'elenco firmato → impronta attesa, `tls::config_client`). Provato a 3 salti: traffico OK e nodo con «autenticazione a valle ATTIVA». Senza elenco resta il fallback `insicuro` (prototipo).
-- [ ] **C. 1c — ID di circuito per tratta** + difesa sul numero di sequenza in chiaro (anti-correlazione).
+- [x] **C. Anti-correlazione (1c).** ✅ Rimosso il numero di sequenza dal filo: il nonce degli strati a cipolla è un **contatore locale** per direzione (lo stream QUIC è ordinato), così lo stesso pacchetto non mostra valori comuni fra le tratte. Formato quadro ora `[len][payload]`, 1º quadro = apertura Sphinx. Provato: 300 KB integri su circuito autenticato a 3 salti. L'**ID di circuito esplicito per tratta** arriverà con la multiplazione (punto D).
 - [ ] **D. Circuito condiviso** fra più connessioni (ora uno per connessione).
 - [ ] **E. Ragnatela multipercorso** vera: più percorsi paralleli dopo il guard (SPECIFICA §4.2).
 - [ ] **F. 6b — sottocomandi demone:** `avvia` (demone+SOCKS5 integrato col circuito), `stato`, `sito ./cartella`, config `~/.config/nyctalus/config`.

@@ -142,7 +142,7 @@ async fn esegui() -> Risultato<()> {
         }
         "prova-circuito" => {
             let nodi = carica_nodi(&opzioni)?;
-            let messaggio = opzione(&opzioni, "messaggio").unwrap_or("PING da Nyctalus").to_string();
+            let messaggio = opzione(&opzioni, "messaggio").unwrap_or("example.com:80").to_string();
             prova_circuito::prova_circuito(nodi, messaggio).await
         }
         "avvia-circuito" => {

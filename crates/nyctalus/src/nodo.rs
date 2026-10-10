@@ -18,7 +18,7 @@ use std::sync::Arc;
 use nyctalus_core::circuito::{self, PassoNodo};
 use nyctalus_core::cipolla;
 
-use crate::circuito_rete::{BIT_RISPOSTA, SEQ_APERTURA, leggi_quadro, scrivi_quadro};
+use crate::circuito_rete::{BIT_RISPOSTA, leggi_quadro, scrivi_quadro};
 use crate::{Risultato, in_esadecimale};
 
 /// Come il nodo autentica il collegamento verso il nodo a valle.
@@ -78,13 +78,10 @@ async fn gestisci_circuito(
     segreto: [u8; 32],
     auth: &Option<Autenticazione>,
 ) -> Risultato<()> {
-    // Primo quadro: apertura Sphinx.
-    let Some((seq, pacchetto)) = leggi_quadro(&mut ricezione_monte).await? else {
+    // Primo quadro dello stream = pacchetto di apertura Sphinx.
+    let Some(pacchetto) = leggi_quadro(&mut ricezione_monte).await? else {
         return Ok(());
     };
-    if seq != SEQ_APERTURA {
-        return Err("atteso il pacchetto di apertura del circuito".into());
-    }
     let elaborazione = circuito::elabora_nodo(&pacchetto, &segreto)?;
     let chiave = elaborazione.chiave_salto;
 
@@ -99,20 +96,26 @@ async fn gestisci_circuito(
             // `_endpoint` va tenuto in vita per tutta la durata del circuito.
             let (_endpoint, mut invio_valle, mut ricezione_valle) = collega_valle(prossimo, pacchetto, impronta).await?;
 
-            // Andata: togli il tuo strato e inoltra a valle.
+            // Andata: togli il tuo strato e inoltra a valle. Il nonce è un
+            // contatore locale (non viaggia sul filo): stessa posizione, stesso
+            // nonce su ogni nodo, grazie all'ordine garantito dallo stream.
             let andata = async {
-                while let Some((seq, mut payload)) = leggi_quadro(&mut ricezione_monte).await? {
-                    cipolla::sbuccia(seq, &chiave, &mut payload);
-                    scrivi_quadro(&mut invio_valle, seq, &payload).await?;
+                let mut n: u64 = 0;
+                while let Some(mut payload) = leggi_quadro(&mut ricezione_monte).await? {
+                    cipolla::sbuccia(n, &chiave, &mut payload);
+                    scrivi_quadro(&mut invio_valle, &payload).await?;
+                    n += 1;
                 }
                 let _ = invio_valle.finish();
                 Risultato::Ok(())
             };
             // Ritorno: aggiungi il tuo strato e rimanda a monte.
             let ritorno = async {
-                while let Some((seq, mut payload)) = leggi_quadro(&mut ricezione_valle).await? {
-                    cipolla::sbuccia(seq, &chiave, &mut payload);
-                    scrivi_quadro(&mut invio_monte, seq, &payload).await?;
+                let mut n: u64 = 0;
+                while let Some(mut payload) = leggi_quadro(&mut ricezione_valle).await? {
+                    cipolla::sbuccia(BIT_RISPOSTA | n, &chiave, &mut payload);
+                    scrivi_quadro(&mut invio_monte, &payload).await?;
+                    n += 1;
                 }
                 let _ = invio_monte.finish();
                 Risultato::Ok(())
@@ -139,48 +142,49 @@ async fn uscita_circuito(
 ) -> Risultato<()> {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-    // 1) Primo quadro dati = richiesta di connessione (destinazione).
-    let Some((seq, mut payload)) = leggi_quadro(&mut ricezione_monte).await? else {
+    // 1) Primo quadro dati = richiesta di connessione (andata #0).
+    let Some(mut payload) = leggi_quadro(&mut ricezione_monte).await? else {
         return Ok(());
     };
-    cipolla::sbuccia(seq, &chiave, &mut payload);
+    cipolla::sbuccia(0, &chiave, &mut payload);
     let destinazione = String::from_utf8_lossy(&payload).to_string();
 
     let tcp = tokio::net::TcpStream::connect(destinazione.trim()).await;
-    // 2) Esito verso il client (quadro di ritorno): "OK" o "NO".
-    let esito_seq = seq | BIT_RISPOSTA;
+    // 2) Esito verso il client (ritorno #0): "OK" o "NO".
     let mut tcp = match tcp {
         Ok(t) => {
-            invia_ritorno(&mut invio_monte, esito_seq, &chiave, b"OK").await?;
+            invia_ritorno(&mut invio_monte, BIT_RISPOSTA, &chiave, b"OK").await?;
             t
         }
         Err(e) => {
-            invia_ritorno(&mut invio_monte, esito_seq, &chiave, b"NO").await?;
+            invia_ritorno(&mut invio_monte, BIT_RISPOSTA, &chiave, b"NO").await?;
             let _ = invio_monte.finish();
             return Err(format!("uscita: connessione a {destinazione} fallita: {e}").into());
         }
     };
     let (mut tcp_lettura, mut tcp_scrittura) = tcp.split();
 
-    // 3) Tramite bidirezionale.
+    // 3) Tramite bidirezionale, con contatori locali (andata da 1, ritorno da 1).
     let andata = async {
-        while let Some((seq, mut payload)) = leggi_quadro(&mut ricezione_monte).await? {
-            cipolla::sbuccia(seq, &chiave, &mut payload);
+        let mut n: u64 = 1; // 0 era la richiesta di connessione
+        while let Some(mut payload) = leggi_quadro(&mut ricezione_monte).await? {
+            cipolla::sbuccia(n, &chiave, &mut payload);
             tcp_scrittura.write_all(&payload).await?;
+            n += 1;
         }
         let _ = tcp_scrittura.shutdown().await;
         Risultato::Ok(())
     };
     let ritorno = async {
         let mut buffer = vec![0u8; 16 * 1024];
-        let mut contatore: u64 = 1; // 0 è riservato all'esito della connessione
+        let mut n: u64 = 1; // 0 era l'esito della connessione
         loop {
-            let n = tcp_lettura.read(&mut buffer).await?;
-            if n == 0 {
+            let letti = tcp_lettura.read(&mut buffer).await?;
+            if letti == 0 {
                 break;
             }
-            invia_ritorno(&mut invio_monte, BIT_RISPOSTA | contatore, &chiave, &buffer[..n]).await?;
-            contatore += 1;
+            invia_ritorno(&mut invio_monte, BIT_RISPOSTA | n, &chiave, &buffer[..letti]).await?;
+            n += 1;
         }
         let _ = invio_monte.finish();
         Risultato::Ok(())
@@ -193,13 +197,13 @@ async fn uscita_circuito(
 
 async fn invia_ritorno(
     invio: &mut quinn::SendStream,
-    seq: u64,
+    nonce: u64,
     chiave: &[u8; 32],
     dati: &[u8],
 ) -> Risultato<()> {
     let mut payload = dati.to_vec();
-    cipolla::sbuccia(seq, chiave, &mut payload);
-    scrivi_quadro(invio, seq, &payload).await
+    cipolla::sbuccia(nonce, chiave, &mut payload);
+    scrivi_quadro(invio, &payload).await
 }
 
 async fn collega_valle(
@@ -216,6 +220,6 @@ async fn collega_valle(
     endpoint.set_default_client_config(config);
     let connessione = endpoint.connect(prossimo, "nyctalus.invalid")?.await?;
     let (mut invio, ricezione) = connessione.open_bi().await?;
-    scrivi_quadro(&mut invio, SEQ_APERTURA, &pacchetto_apertura).await?;
+    scrivi_quadro(&mut invio, &pacchetto_apertura).await?;
     Ok((endpoint, invio, ricezione))
 }

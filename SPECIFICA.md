@@ -82,6 +82,9 @@ etichetta(i) = primi 8 byte di BLAKE3-keyed(chiave_etichette, i_LE64)
 - La finestra avanza quando il ricompositore consegna i dati.
 - Con 8 byte e W = 512, la probabilità che un pacchetto estraneo venga scambiato per uno del flusso è circa 512 / 2⁶⁴ ≈ 3 · 10⁻¹⁷. In quel caso comunque l'autenticazione lo scarta.
 
+### 3.3-bis Anti-correlazione del nonce ✅
+Nel circuito (stream QUIC ordinato) il numero di sequenza usato come nonce **non viaggia in chiaro**: ogni nodo lo ricostruisce con un contatore locale per direzione (bit alto = ritorno). Così lo stesso pacchetto non espone alcun valore comune fra una tratta e l'altra. L'ID di circuito esplicito per tratta arriverà con la multiplazione (§ multiplexing, punto D).
+
 ### 3.4 Formato del pacchetto ✅
 ```
  0        8                                                  8+3+D     8+3+D+16

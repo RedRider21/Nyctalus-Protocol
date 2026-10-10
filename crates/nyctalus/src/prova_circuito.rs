@@ -11,7 +11,7 @@ use std::net::SocketAddr;
 use nyctalus_core::circuito::{apri_circuito, NodoPercorso};
 use nyctalus_core::cipolla;
 
-use crate::circuito_rete::{SEQ_APERTURA, codifica_indirizzo, leggi_quadro, scrivi_quadro};
+use crate::circuito_rete::{BIT_RISPOSTA, codifica_indirizzo, leggi_quadro, scrivi_quadro};
 use crate::Risultato;
 
 pub async fn prova_circuito(percorso_rete: Vec<crate::avvia_circuito::NodoRete>, messaggio: String) -> Risultato<()> {
@@ -38,23 +38,23 @@ pub async fn prova_circuito(percorso_rete: Vec<crate::avvia_circuito::NodoRete>,
     let connessione = endpoint.connect(guardiano, "nyctalus.invalid")?.await?;
     let (mut invio, mut ricezione) = connessione.open_bi().await?;
 
-    // 1) Apertura del circuito.
-    scrivi_quadro(&mut invio, SEQ_APERTURA, &circuito.pacchetto).await?;
+    // 1) Apertura del circuito (1º quadro).
+    scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
 
-    // 2) Dato avvolto in tutti gli strati e spedito.
-    let seq = 0u64;
-    let mut avvolto = cipolla::avvolgi(seq, messaggio.as_bytes(), &circuito.chiavi_salto);
-    scrivi_quadro(&mut invio, seq, &avvolto).await?;
-    println!("Inviato: {messaggio:?}");
-    avvolto.clear();
+    // 2) Richiesta di connessione (andata #0): la destinazione "host:porta".
+    let destinazione = messaggio; // qui è la destinazione da raggiungere
+    let avvolto = cipolla::avvolgi(0, destinazione.as_bytes(), &circuito.chiavi_salto);
+    scrivi_quadro(&mut invio, &avvolto).await?;
+    println!("Richiesta connessione a {destinazione:?} attraverso il circuito");
 
-    // 3) Risposta dall'uscita: si tolgono tutti gli strati.
+    // 3) Esito dall'uscita (ritorno #0): si tolgono tutti gli strati.
     match leggi_quadro(&mut ricezione).await? {
-        Some((seq_risposta, mut payload)) => {
+        Some(mut payload) => {
             for chiave in &circuito.chiavi_salto {
-                cipolla::sbuccia(seq_risposta, chiave, &mut payload);
+                cipolla::sbuccia(BIT_RISPOSTA, chiave, &mut payload);
             }
-            println!("Risposta: {:?}", String::from_utf8_lossy(&payload));
+            let esito = String::from_utf8_lossy(&payload);
+            println!("Esito dall'uscita: {esito:?} (OK = connessione aperta)");
         }
         None => return Err("nessuna risposta dall'uscita".into()),
     }

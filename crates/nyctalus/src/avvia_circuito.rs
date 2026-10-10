@@ -19,7 +19,7 @@ use nyctalus_core::socks5::{self, Destinazione, Esito, Richiesta, Saluto};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
-use crate::circuito_rete::{SEQ_APERTURA, codifica_indirizzo, leggi_quadro, scrivi_quadro};
+use crate::circuito_rete::{BIT_RISPOSTA, codifica_indirizzo, leggi_quadro, scrivi_quadro};
 use crate::Risultato;
 
 /// Un nodo del percorso: indirizzo, chiave X25519 e, se noto dall'elenco
@@ -80,16 +80,14 @@ async fn gestisci(mut cliente: TcpStream, percorso_rete: Vec<NodoRete>) -> Risul
     let connessione = endpoint.connect(guardiano, "nyctalus.invalid")?.await?;
     let (mut invio, mut ricezione) = connessione.open_bi().await?;
 
-    // Apertura + richiesta di connessione (primo quadro dati, seq 0).
-    scrivi_quadro(&mut invio, SEQ_APERTURA, &circuito.pacchetto).await?;
+    // Apertura (1º quadro) + richiesta di connessione (andata #0).
+    scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
     invia_avvolto(&mut invio, 0, &chiavi, destinazione.as_bytes()).await?;
 
-    // Esito dall'uscita.
+    // Esito dall'uscita (ritorno #0).
     let esito = match leggi_quadro(&mut ricezione).await? {
-        Some((seq, mut payload)) => {
-            for k in &chiavi {
-                cipolla::sbuccia(seq, k, &mut payload);
-            }
+        Some(mut payload) => {
+            svolgi(BIT_RISPOSTA, &chiavi, &mut payload);
             payload == b"OK"
         }
         None => false,
@@ -100,28 +98,28 @@ async fn gestisci(mut cliente: TcpStream, percorso_rete: Vec<NodoRete>) -> Risul
         return Err(format!("l'uscita non ha raggiunto {destinazione}").into());
     }
 
-    // Tramite bidirezionale attraverso il circuito.
+    // Tramite bidirezionale; contatori locali (andata da 1, ritorno da 1).
     let (mut app_lettura, mut app_scrittura) = cliente.into_split();
     let andata = async {
         let mut buffer = vec![0u8; 16 * 1024];
-        let mut seq: u64 = 1; // 0 usato per la richiesta di connessione
+        let mut n: u64 = 1; // 0 = richiesta di connessione
         loop {
-            let n = app_lettura.read(&mut buffer).await?;
-            if n == 0 {
+            let letti = app_lettura.read(&mut buffer).await?;
+            if letti == 0 {
                 break;
             }
-            invia_avvolto(&mut invio, seq, &chiavi, &buffer[..n]).await?;
-            seq += 1;
+            invia_avvolto(&mut invio, n, &chiavi, &buffer[..letti]).await?;
+            n += 1;
         }
         let _ = invio.finish();
         Risultato::Ok(())
     };
     let ritorno = async {
-        while let Some((seq, mut payload)) = leggi_quadro(&mut ricezione).await? {
-            for k in &chiavi {
-                cipolla::sbuccia(seq, k, &mut payload);
-            }
+        let mut n: u64 = 1; // 0 = esito della connessione
+        while let Some(mut payload) = leggi_quadro(&mut ricezione).await? {
+            svolgi(BIT_RISPOSTA | n, &chiavi, &mut payload);
             app_scrittura.write_all(&payload).await?;
+            n += 1;
         }
         let _ = app_scrittura.shutdown().await;
         Risultato::Ok(())
@@ -132,14 +130,21 @@ async fn gestisci(mut cliente: TcpStream, percorso_rete: Vec<NodoRete>) -> Risul
     Ok(())
 }
 
+/// Toglie tutti gli strati dal pacchetto (lato client, ritorno).
+fn svolgi(nonce: u64, chiavi: &[[u8; 32]], payload: &mut [u8]) {
+    for k in chiavi {
+        cipolla::sbuccia(nonce, k, payload);
+    }
+}
+
 async fn invia_avvolto(
     invio: &mut quinn::SendStream,
-    seq: u64,
+    nonce: u64,
     chiavi: &[[u8; 32]],
     dati: &[u8],
 ) -> Risultato<()> {
-    let avvolto = cipolla::avvolgi(seq, dati, chiavi);
-    scrivi_quadro(invio, seq, &avvolto).await
+    let avvolto = cipolla::avvolgi(nonce, dati, chiavi);
+    scrivi_quadro(invio, &avvolto).await
 }
 
 async fn leggi_socks<T>(
