@@ -150,6 +150,19 @@ nyctalus status     # mostra la configurazione e valida l'elenco
 nyctalus start      # avvia il proxy SOCKS5 attraverso la ragnatela conflux
 ```
 
+### Programmi e monitoraggio
+
+```sh
+# lancia un programma instradandone il traffico nella rete (stile torsocks)
+nyctalus exec -- curl https://example.com
+nyctalus exec --socks 127.0.0.1:1080 -- git clone https://…
+
+# cruscotto testuale con le metriche del demone (stile nyx), aggiornato ogni secondo
+nyctalus monitor --control 127.0.0.1:1090
+```
+
+`exec` funziona con i programmi che rispettano le variabili `ALL_PROXY`/`http_proxy` (curl, git, wget…); il demone pubblica le metriche sulla porta di controllo (`--control`, default `127.0.0.1:1090`).
+
 **Impostazioni del percorso:**
 - `--circuits N` (o `circuits` nel config) — strade parallele usate contemporaneamente. **Minimo 1, massimo 8**, default **2**.
 - `--hops N` (o `hops`) — nodi per percorso (guard + intermedi + uscita). **Minimo 1, massimo 5** (limite di Sphinx), default **3**. Sotto i 3 salti non c'è vero anonimato.
