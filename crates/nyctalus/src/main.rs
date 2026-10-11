@@ -33,6 +33,7 @@
 
 mod avvia;
 mod avvia_circuito;
+mod cella;
 mod circuito_rete;
 mod invia;
 mod nodo;

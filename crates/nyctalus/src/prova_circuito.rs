@@ -11,6 +11,7 @@ use std::net::SocketAddr;
 use nyctalus_core::circuito::{apri_circuito, NodoPercorso};
 use nyctalus_core::cipolla;
 
+use crate::cella::{cmd, Cella};
 use crate::circuito_rete::{BIT_RISPOSTA, codifica_indirizzo, leggi_quadro, scrivi_quadro};
 use crate::Risultato;
 
@@ -41,9 +42,10 @@ pub async fn prova_circuito(percorso_rete: Vec<crate::avvia_circuito::NodoRete>,
     // 1) Apertura del circuito (1º quadro).
     scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
 
-    // 2) Richiesta di connessione (andata #0): la destinazione "host:porta".
+    // 2) Cella APRI (flusso 0, andata #0): la destinazione "host:porta".
     let destinazione = messaggio; // qui è la destinazione da raggiungere
-    let avvolto = cipolla::avvolgi(0, destinazione.as_bytes(), &circuito.chiavi_salto);
+    let cella = Cella::nuova(0, cmd::APRI, destinazione.clone().into_bytes()).in_byte();
+    let avvolto = cipolla::avvolgi(0, &cella, &circuito.chiavi_salto);
     scrivi_quadro(&mut invio, &avvolto).await?;
     println!("Richiesta connessione a {destinazione:?} attraverso il circuito");
 
@@ -53,8 +55,12 @@ pub async fn prova_circuito(percorso_rete: Vec<crate::avvia_circuito::NodoRete>,
             for chiave in &circuito.chiavi_salto {
                 cipolla::sbuccia(BIT_RISPOSTA, chiave, &mut payload);
             }
-            let esito = String::from_utf8_lossy(&payload);
-            println!("Esito dall'uscita: {esito:?} (OK = connessione aperta)");
+            let esito = match Cella::da_byte(&payload).map(|c| c.comando) {
+                Some(cmd::APERTO) => "APERTO (connessione riuscita)",
+                Some(cmd::RIFIUTATO) => "RIFIUTATO (connessione fallita)",
+                _ => "risposta non riconosciuta",
+            };
+            println!("Esito dall'uscita: {esito}");
         }
         None => return Err("nessuna risposta dall'uscita".into()),
     }

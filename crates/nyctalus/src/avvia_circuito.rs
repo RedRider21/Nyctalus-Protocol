@@ -1,24 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 
-//! `nyctalus avvia-circuito`: proxy SOCKS5 locale che instrada ogni
-//! connessione attraverso un circuito onion a più nodi (tappa 3).
+//! `nyctalus avvia-circuito`: proxy SOCKS5 locale che instrada **tutte** le
+//! connessioni attraverso un **unico circuito condiviso** a più nodi (punto D).
 //!
-//! A differenza di `avvia` (un solo salto), qui il traffico passa per
-//! guard → nodi intermedi → uscita, e **nessun nodo conosce insieme origine e
-//! destinazione**. Per ogni connessione SOCKS si apre un circuito dedicato.
+//! Il circuito (e la sua apertura Sphinx) viene creato una sola volta; ogni
+//! connessione SOCKS diventa un *flusso* multiplexato dentro gli strati a
+//! cipolla ([`crate::cella`]). I nodi intermedi non distinguono i flussi: per
+//! loro è un unico canale di byte cifrati.
 //!
-//! Prototipo: i collegamenti fra nodi non sono ancora autenticati, e c'è un
-//! circuito per connessione (non condiviso). Vedi STATO.md.
+//! Un task scrittore serializza le celle in andata (contatore nonce unico) e un
+//! task lettore smista le celle di ritorno al flusso giusto. Prototipo: i link
+//! fra nodi sono autenticati solo con l'elenco firmato; c'è un solo circuito
+//! (nessuna rotazione), e i flussi condividono lo stesso percorso.
 
+use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::sync::{Arc, Mutex};
 
 use nyctalus_core::circuito::{apri_circuito, NodoPercorso};
 use nyctalus_core::cipolla;
 use nyctalus_core::socks5::{self, Destinazione, Esito, Richiesta, Saluto};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::mpsc;
 
+use crate::cella::{cmd, Cella};
 use crate::circuito_rete::{BIT_RISPOSTA, codifica_indirizzo, leggi_quadro, scrivi_quadro};
 use crate::Risultato;
 
@@ -26,26 +33,92 @@ use crate::Risultato;
 /// firmato, l'impronta TLS da pinnare.
 pub type NodoRete = (SocketAddr, [u8; 32], Option<[u8; 32]>);
 
+type MappaFlussi = Arc<Mutex<HashMap<u16, mpsc::Sender<Cella>>>>;
+
 pub async fn avvia_circuito(percorso_rete: Vec<NodoRete>, socks: SocketAddr) -> Risultato<()> {
     if percorso_rete.is_empty() {
         return Err("indicare i nodi del circuito con --nodi o --elenco".into());
     }
+
+    // Apertura dell'unico circuito condiviso.
+    let percorso: Vec<NodoPercorso> = percorso_rete
+        .iter()
+        .map(|(a, p, _)| Ok(NodoPercorso { indirizzo: codifica_indirizzo(*a)?, pubblica: *p }))
+        .collect::<Risultato<_>>()?;
+    let circuito = apri_circuito(&percorso, b"apertura")?;
+    let chiavi = Arc::new(circuito.chiavi_salto);
+
+    let (guardiano, _, impronta_guard) = percorso_rete[0];
+    let locale: SocketAddr = if guardiano.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
+    let mut endpoint = quinn::Endpoint::client(locale)?;
+    endpoint.set_default_client_config(match impronta_guard {
+        Some(fp) => crate::tls::config_client(fp)?,
+        None => crate::tls::config_client_insicuro()?,
+    });
+    let connessione = endpoint.connect(guardiano, "nyctalus.invalid")?.await?;
+    let (mut invio, mut ricezione) = connessione.open_bi().await?;
+    scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
+
+    // Scrittore: serializza le celle in andata, con contatore nonce unico.
+    let (tx_cella, mut rx_cella) = mpsc::channel::<Vec<u8>>(256);
+    let chiavi_s = chiavi.clone();
+    tokio::spawn(async move {
+        let mut n: u64 = 0;
+        while let Some(cella) = rx_cella.recv().await {
+            let avvolto = cipolla::avvolgi(n, &cella, &chiavi_s);
+            if scrivi_quadro(&mut invio, &avvolto).await.is_err() {
+                break;
+            }
+            n += 1;
+        }
+    });
+
+    // Lettore: smista le celle di ritorno al flusso di competenza.
+    let flussi: MappaFlussi = Arc::new(Mutex::new(HashMap::new()));
+    let flussi_l = flussi.clone();
+    let chiavi_l = chiavi.clone();
+    tokio::spawn(async move {
+        let mut n: u64 = 0;
+        while let Ok(Some(mut payload)) = leggi_quadro(&mut ricezione).await {
+            svolgi(BIT_RISPOSTA | n, &chiavi_l, &mut payload);
+            n += 1;
+            if let Some(cella) = Cella::da_byte(&payload) {
+                let inbox = flussi_l.lock().unwrap().get(&cella.flusso).cloned();
+                if let Some(inbox) = inbox {
+                    let _ = inbox.send(cella).await;
+                }
+            }
+        }
+    });
+
     let ascoltatore = TcpListener::bind(socks).await?;
-    println!("Proxy SOCKS5 (circuito a {} nodi) in ascolto su {socks}", percorso_rete.len());
+    println!("Proxy SOCKS5 su {socks} — circuito condiviso a {} nodi", percorso.len());
     println!("Prova:  curl --socks5-hostname {socks} http://example.com\n");
 
+    let mut prossimo_flusso: u16 = 0;
     loop {
         let (cliente, _) = ascoltatore.accept().await?;
-        let percorso = percorso_rete.clone();
+        let flusso = prossimo_flusso;
+        prossimo_flusso = prossimo_flusso.wrapping_add(1);
+        let (tx_in, rx_in) = mpsc::channel::<Cella>(64);
+        flussi.lock().unwrap().insert(flusso, tx_in);
+        let tx_cella = tx_cella.clone();
+        let flussi = flussi.clone();
         tokio::spawn(async move {
-            if let Err(e) = gestisci(cliente, percorso).await {
-                eprintln!("connessione chiusa: {e}");
+            if let Err(e) = gestisci_flusso(cliente, flusso, &tx_cella, rx_in).await {
+                eprintln!("flusso {flusso} chiuso: {e}");
             }
+            flussi.lock().unwrap().remove(&flusso);
         });
     }
 }
 
-async fn gestisci(mut cliente: TcpStream, percorso_rete: Vec<NodoRete>) -> Risultato<()> {
+async fn gestisci_flusso(
+    mut cliente: TcpStream,
+    flusso: u16,
+    tx_cella: &mpsc::Sender<Vec<u8>>,
+    mut rx_in: mpsc::Receiver<Cella>,
+) -> Risultato<()> {
     // SOCKS5: saluto + richiesta.
     let saluto = leggi_socks(&mut cliente, Saluto::analizza).await?;
     if !saluto.offre_senza_autenticazione() {
@@ -61,65 +134,39 @@ async fn gestisci(mut cliente: TcpStream, percorso_rete: Vec<NodoRete>) -> Risul
     };
     let destinazione = format!("{host}:{}", richiesta.porta);
 
-    // Apertura del circuito.
-    let percorso: Vec<NodoPercorso> = percorso_rete
-        .iter()
-        .map(|(a, p, _)| Ok(NodoPercorso { indirizzo: codifica_indirizzo(*a)?, pubblica: *p }))
-        .collect::<Risultato<_>>()?;
-    let circuito = apri_circuito(&percorso, b"apertura")?;
-    let chiavi = circuito.chiavi_salto;
-
-    let (guardiano, _, impronta_guard) = percorso_rete[0];
-    let locale: SocketAddr = if guardiano.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
-    let mut endpoint = quinn::Endpoint::client(locale)?;
-    let config = match impronta_guard {
-        Some(fp) => crate::tls::config_client(fp)?,
-        None => crate::tls::config_client_insicuro()?,
-    };
-    endpoint.set_default_client_config(config);
-    let connessione = endpoint.connect(guardiano, "nyctalus.invalid")?.await?;
-    let (mut invio, mut ricezione) = connessione.open_bi().await?;
-
-    // Apertura (1º quadro) + richiesta di connessione (andata #0).
-    scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
-    invia_avvolto(&mut invio, 0, &chiavi, destinazione.as_bytes()).await?;
-
-    // Esito dall'uscita (ritorno #0).
-    let esito = match leggi_quadro(&mut ricezione).await? {
-        Some(mut payload) => {
-            svolgi(BIT_RISPOSTA, &chiavi, &mut payload);
-            payload == b"OK"
-        }
-        None => false,
-    };
-    let codice = if esito { Esito::Riuscito } else { Esito::ConnessioneRifiutata };
+    // Apri il flusso verso l'uscita e attendi l'esito.
+    tx_cella.send(Cella::nuova(flusso, cmd::APRI, destinazione.into_bytes()).in_byte()).await?;
+    let aperto = matches!(rx_in.recv().await, Some(c) if c.comando == cmd::APERTO);
+    let codice = if aperto { Esito::Riuscito } else { Esito::ConnessioneRifiutata };
     cliente.write_all(&socks5::risposta_richiesta(codice)).await?;
-    if !esito {
-        return Err(format!("l'uscita non ha raggiunto {destinazione}").into());
+    if !aperto {
+        return Ok(());
     }
 
-    // Tramite bidirezionale; contatori locali (andata da 1, ritorno da 1).
+    // Tramite bidirezionale, multiplexato sul circuito condiviso.
     let (mut app_lettura, mut app_scrittura) = cliente.into_split();
     let andata = async {
         let mut buffer = vec![0u8; 16 * 1024];
-        let mut n: u64 = 1; // 0 = richiesta di connessione
         loop {
             let letti = app_lettura.read(&mut buffer).await?;
             if letti == 0 {
                 break;
             }
-            invia_avvolto(&mut invio, n, &chiavi, &buffer[..letti]).await?;
-            n += 1;
+            tx_cella
+                .send(Cella::nuova(flusso, cmd::DATI, buffer[..letti].to_vec()).in_byte())
+                .await
+                .map_err(|_| "circuito chiuso")?;
         }
-        let _ = invio.finish();
+        let _ = tx_cella.send(Cella::controllo(flusso, cmd::CHIUDI).in_byte()).await;
         Risultato::Ok(())
     };
     let ritorno = async {
-        let mut n: u64 = 1; // 0 = esito della connessione
-        while let Some(mut payload) = leggi_quadro(&mut ricezione).await? {
-            svolgi(BIT_RISPOSTA | n, &chiavi, &mut payload);
-            app_scrittura.write_all(&payload).await?;
-            n += 1;
+        while let Some(cella) = rx_in.recv().await {
+            match cella.comando {
+                cmd::DATI => app_scrittura.write_all(&cella.dati).await?,
+                cmd::CHIUDI => break,
+                _ => {}
+            }
         }
         let _ = app_scrittura.shutdown().await;
         Risultato::Ok(())
@@ -135,16 +182,6 @@ fn svolgi(nonce: u64, chiavi: &[[u8; 32]], payload: &mut [u8]) {
     for k in chiavi {
         cipolla::sbuccia(nonce, k, payload);
     }
-}
-
-async fn invia_avvolto(
-    invio: &mut quinn::SendStream,
-    nonce: u64,
-    chiavi: &[[u8; 32]],
-    dati: &[u8],
-) -> Risultato<()> {
-    let avvolto = cipolla::avvolgi(nonce, dati, chiavi);
-    scrivi_quadro(invio, &avvolto).await
 }
 
 async fn leggi_socks<T>(

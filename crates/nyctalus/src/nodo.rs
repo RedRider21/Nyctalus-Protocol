@@ -131,79 +131,100 @@ async fn gestisci_circuito(
     Ok(())
 }
 
-/// Uscita del circuito: il primo quadro dati porta la destinazione
-/// (`host:porta`), poi si fa da tramite fra il circuito e Internet.
-/// Ogni pacchetto in andata viene spogliato del proprio strato, ogni pacchetto
-/// di ritorno ne viene rivestito.
+/// Uscita del circuito condiviso (punto D): smista le **celle** multiplexate.
+/// Ogni cella `APRI` apre una connessione TCP verso Internet; le celle `DATI`
+/// vi scorrono; `CHIUDI` la termina. I pacchetti in andata vengono spogliati
+/// del proprio strato, quelli di ritorno rivestiti. Un solo task scrittore
+/// serializza il ritorno con un contatore nonce unico.
 async fn uscita_circuito(
     mut invio_monte: quinn::SendStream,
     mut ricezione_monte: quinn::RecvStream,
     chiave: [u8; 32],
 ) -> Risultato<()> {
+    use crate::cella::{cmd, Cella};
+    use std::collections::HashMap;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::sync::mpsc;
 
-    // 1) Primo quadro dati = richiesta di connessione (andata #0).
-    let Some(mut payload) = leggi_quadro(&mut ricezione_monte).await? else {
-        return Ok(());
-    };
-    cipolla::sbuccia(0, &chiave, &mut payload);
-    let destinazione = String::from_utf8_lossy(&payload).to_string();
-
-    let tcp = tokio::net::TcpStream::connect(destinazione.trim()).await;
-    // 2) Esito verso il client (ritorno #0): "OK" o "NO".
-    let mut tcp = match tcp {
-        Ok(t) => {
-            invia_ritorno(&mut invio_monte, BIT_RISPOSTA, &chiave, b"OK").await?;
-            t
-        }
-        Err(e) => {
-            invia_ritorno(&mut invio_monte, BIT_RISPOSTA, &chiave, b"NO").await?;
-            let _ = invio_monte.finish();
-            return Err(format!("uscita: connessione a {destinazione} fallita: {e}").into());
-        }
-    };
-    let (mut tcp_lettura, mut tcp_scrittura) = tcp.split();
-
-    // 3) Tramite bidirezionale, con contatori locali (andata da 1, ritorno da 1).
-    let andata = async {
-        let mut n: u64 = 1; // 0 era la richiesta di connessione
-        while let Some(mut payload) = leggi_quadro(&mut ricezione_monte).await? {
-            cipolla::sbuccia(n, &chiave, &mut payload);
-            tcp_scrittura.write_all(&payload).await?;
+    // Scrittore unico del ritorno.
+    let (tx_ritorno, mut rx_ritorno) = mpsc::channel::<Vec<u8>>(256);
+    let scrittore = tokio::spawn(async move {
+        let mut n: u64 = 0;
+        while let Some(mut payload) = rx_ritorno.recv().await {
+            cipolla::sbuccia(BIT_RISPOSTA | n, &chiave, &mut payload);
             n += 1;
-        }
-        let _ = tcp_scrittura.shutdown().await;
-        Risultato::Ok(())
-    };
-    let ritorno = async {
-        let mut buffer = vec![0u8; 16 * 1024];
-        let mut n: u64 = 1; // 0 era l'esito della connessione
-        loop {
-            let letti = tcp_lettura.read(&mut buffer).await?;
-            if letti == 0 {
+            if scrivi_quadro(&mut invio_monte, &payload).await.is_err() {
                 break;
             }
-            invia_ritorno(&mut invio_monte, BIT_RISPOSTA | n, &chiave, &buffer[..letti]).await?;
-            n += 1;
         }
         let _ = invio_monte.finish();
-        Risultato::Ok(())
-    };
-    let (a, b) = tokio::join!(andata, ritorno);
-    a?;
-    b?;
-    Ok(())
-}
+    });
 
-async fn invia_ritorno(
-    invio: &mut quinn::SendStream,
-    nonce: u64,
-    chiave: &[u8; 32],
-    dati: &[u8],
-) -> Risultato<()> {
-    let mut payload = dati.to_vec();
-    cipolla::sbuccia(nonce, chiave, &mut payload);
-    scrivi_quadro(invio, &payload).await
+    // Per ogni flusso aperto: canale verso il task che scrive sul suo TCP.
+    let mut verso_tcp: HashMap<u16, mpsc::Sender<Vec<u8>>> = HashMap::new();
+    let mut n: u64 = 0;
+    while let Some(mut payload) = leggi_quadro(&mut ricezione_monte).await? {
+        cipolla::sbuccia(n, &chiave, &mut payload);
+        n += 1;
+        let Some(cella) = Cella::da_byte(&payload) else { continue };
+        match cella.comando {
+            cmd::APRI => {
+                let flusso = cella.flusso;
+                let destinazione = String::from_utf8_lossy(&cella.dati).to_string();
+                match tokio::net::TcpStream::connect(destinazione.trim()).await {
+                    Ok(tcp) => {
+                        let (mut tcp_lettura, mut tcp_scrittura) = tcp.into_split();
+                        let (tx_dati, mut rx_dati) = mpsc::channel::<Vec<u8>>(64);
+                        verso_tcp.insert(flusso, tx_dati);
+                        // Prima l'esito, così arriva sempre prima dei dati.
+                        let _ = tx_ritorno.send(Cella::controllo(flusso, cmd::APERTO).in_byte()).await;
+                        // TCP → client (celle DATI), poi CHIUDI a fine connessione.
+                        let tx_ritorno2 = tx_ritorno.clone();
+                        tokio::spawn(async move {
+                            let mut buffer = vec![0u8; 16 * 1024];
+                            loop {
+                                match tcp_lettura.read(&mut buffer).await {
+                                    Ok(0) | Err(_) => break,
+                                    Ok(k) => {
+                                        let cella = Cella::nuova(flusso, cmd::DATI, buffer[..k].to_vec());
+                                        if tx_ritorno2.send(cella.in_byte()).await.is_err() {
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            let _ = tx_ritorno2.send(Cella::controllo(flusso, cmd::CHIUDI).in_byte()).await;
+                        });
+                        // client → TCP.
+                        tokio::spawn(async move {
+                            while let Some(dati) = rx_dati.recv().await {
+                                if tcp_scrittura.write_all(&dati).await.is_err() {
+                                    break;
+                                }
+                            }
+                            let _ = tcp_scrittura.shutdown().await;
+                        });
+                    }
+                    Err(_) => {
+                        let _ = tx_ritorno.send(Cella::controllo(flusso, cmd::RIFIUTATO).in_byte()).await;
+                    }
+                }
+            }
+            cmd::DATI => {
+                if let Some(tx) = verso_tcp.get(&cella.flusso) {
+                    let _ = tx.send(cella.dati).await;
+                }
+            }
+            cmd::CHIUDI => {
+                verso_tcp.remove(&cella.flusso);
+            }
+            _ => {}
+        }
+    }
+    drop(verso_tcp);
+    drop(tx_ritorno);
+    let _ = scrittore.await;
+    Ok(())
 }
 
 async fn collega_valle(
