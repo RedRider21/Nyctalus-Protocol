@@ -237,9 +237,9 @@ async fn collettore_uscita(mut rx: mpsc::Receiver<(u64, Vec<u8>)>, tx_return: mp
                 cmd::APRI => {
                     let flusso = cella.flusso;
                     let dest = String::from_utf8_lossy(&cella.dati).to_string();
-                    match tokio::net::TcpStream::connect(dest.trim()).await {
-                        Ok(tcp) => {
-                            let (mut lettura, mut scrittura) = tcp.into_split();
+                    match crate::ponte::connetti(dest.trim()).await {
+                        Ok(flusso_uscita) => {
+                            let (mut lettura, mut scrittura) = tokio::io::split(flusso_uscita);
                             let (tx_w, mut rx_w) = mpsc::channel::<Vec<u8>>(64);
                             verso_tcp.insert(flusso, tx_w);
                             let _ = tx_return.send(Cella::controllo(flusso, cmd::APERTO).in_byte()).await;

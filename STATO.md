@@ -63,7 +63,7 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
 - [~] **H. Camuffamento + rumore di fondo.**
   - [x] **H1 — offuscamento del trasporto** ✅: ogni datagramma UDP è avvolto con ChaCha20 e una chiave di rete condivisa (`offuscamento.rs` nel core; `trasporto.rs` avvolge il socket UDP di quinn). Sul filo i byte appaiono casuali: nessuna firma QUIC per il DPI. Opzione `--obfuscation HEX` (nodi, start, circuit) o `obfuscation` nel config. Provato: con la chiave giusta funziona, senza fallisce. Limiti: niente resistenza al probing attivo né shaping dei tempi.
   - [ ] **H2 — rumore di fondo (cover traffic):** pacchetti fittizi per nascondere i tempi; va progettato con cura (costo in banda vs beneficio).
-- [ ] **I. Ponte verso i `.onion` di Tor** (uscite volontarie via Arti).
+- [x] **I. Ponte verso i `.onion` di Tor.** ✅ L'uscita riconosce gli indirizzi `.onion` e li raggiunge tramite il **Tor già presente sul sistema** (proxy SOCKS, default 127.0.0.1:9050, opzione `--tor-socks`), con un tunnel SOCKS5 — niente dipendenza pesante (no Arti incorporato), build leggera, riusa il Tor di NexusSec. `ponte.rs`: e_onion + tunnel_tor. Provato con un finto Tor: `.onion` instradato, siti normali in TCP diretto.
 - [ ] **J. Browser pubblico** basato su Firefox ESR (multipiattaforma).
 - [ ] **K. Simulazione con Shadow** e confronto misurato con Tor.
 - [~] **Distribuzione (eseguibili multi-SO).** CI GitHub Actions pronta e **verificata** (compila Linux x86_64/arm64, Windows x86_64, macOS Intel/Apple Silicon); su un tag `v*` produce i binari come Release. **Pubblicazione rimandata**: non si distribuisce un binario di anonimato non ancora verificato.

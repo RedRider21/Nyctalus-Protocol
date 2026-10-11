@@ -28,6 +28,7 @@ mod invia;
 mod metriche;
 mod monitor;
 mod nodo;
+mod ponte;
 mod prova_circuito;
 mod ricevi;
 mod tls;
@@ -50,7 +51,7 @@ Usage:
   nyctalus status  [--config FILE]
   nyctalus exec    [--socks ADDR] [--config FILE] -- PROGRAM [ARG...]
   nyctalus monitor [--control 127.0.0.1:1090]
-  nyctalus node    --listen 0.0.0.0:4601 [--secret HEX] [--directory FILE --authority HEX]
+  nyctalus node    --listen 0.0.0.0:4601 [--secret HEX] [--directory FILE --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050]
   nyctalus authority
   nyctalus directory --authority-secret HEX --entries 'addr,x,fp;addr,x,fp'
   nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)]
@@ -143,6 +144,9 @@ async fn esegui() -> Risultato<()> {
                 _ => None,
             };
             let offusca = da_esadecimale_opt(opzione(&opzioni, "obfuscation"))?;
+            if let Some(ts) = opzione(&opzioni, "tor-socks") {
+                ponte::imposta_tor_socks(ts.parse()?);
+            }
             nodo::nodo(ascolta, segreto, auth, offusca).await
         }
         "authority" => {
