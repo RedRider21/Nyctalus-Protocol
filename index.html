@@ -132,7 +132,8 @@
     <li><b><span class="it">Circuito condiviso</span><span class="en">Shared circuit</span></b> — <span class="it">un solo circuito trasporta più connessioni (celle multiplexate dentro l'onion); i relè restano ciechi ai flussi.</span><span class="en">one circuit carries many connections (cells multiplexed inside the onion); relays stay blind to the flows.</span></li>
     <li><b><span class="it">Anti-correlazione</span><span class="en">Anti-correlation</span></b> — <span class="it">il numero di sequenza non viaggia in chiaro (nonce da contatore locale).</span><span class="en">the sequence number never travels in the clear (nonce from a local counter).</span></li>
     <li><b><span class="it">Ragnatela (conflux)</span><span class="en">Spider's web (conflux)</span></b> — <span class="it">un singolo scaricamento viene spezzato su più circuiti (guard e uscita condivisi) e ricomposto a destinazione: usa la banda di più strade.</span><span class="en">a single download is split across several circuits (shared guard and exit) and reassembled at the destination: it uses the bandwidth of many roads.</span></li>
-    <li class="futuro"><b><span class="it">In arrivo</span><span class="en">Coming</span></b> — <span class="it">demone da configurazione, eseguibili per tutti i SO, confronto con Tor, browser dedicato.</span><span class="en">config-driven daemon, builds for every OS, comparison against Tor, dedicated browser.</span></li>
+    <li><b><span class="it">Strumenti da terminale</span><span class="en">Terminal tools</span></b> — <span class="it">demone da configurazione (<code class="in">start</code>/<code class="in">status</code>), <code class="in">exec</code> (stile torsocks) e <code class="in">monitor</code> (cruscotto delle metriche).</span><span class="en">config-driven daemon (<code class="in">start</code>/<code class="in">status</code>), <code class="in">exec</code> (torsocks-style) and <code class="in">monitor</code> (metrics dashboard).</span></li>
+    <li class="futuro"><b><span class="it">In arrivo</span><span class="en">Coming</span></b> — <span class="it">camuffamento del traffico, servizi <code class="in">.nyct</code> nascosti, ponte verso i <code class="in">.onion</code>, confronto con Tor, browser dedicato.</span><span class="en">traffic camouflage, hidden <code class="in">.nyct</code> services, bridge to <code class="in">.onion</code>, comparison against Tor, dedicated browser.</span></li>
   </ul>
 </div></section>
 
@@ -189,7 +190,7 @@ curl --socks5-hostname 127.0.0.1:1080 http://example.com</pre>
   </div>
 
   <div class="passo">
-    <h3><span class="it">5. Comandi previsti</span><span class="en">5. Planned commands</span></h3>
+    <h3><span class="it">5. Comandi</span><span class="en">5. Commands</span></h3>
     <table>
       <thead><tr><th>Tor</th><th>Nyctalus</th><th><span class="it">A cosa serve</span><span class="en">Purpose</span></th></tr></thead>
       <tbody>
