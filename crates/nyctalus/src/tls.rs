@@ -46,7 +46,19 @@ pub fn config_client(impronta_attesa: [u8; 32]) -> Risultato<quinn::ClientConfig
         .with_custom_certificate_verifier(verificatore)
         .with_no_client_auth();
     let quic = quinn::crypto::rustls::QuicClientConfig::try_from(tls)?;
-    Ok(quinn::ClientConfig::new(Arc::new(quic)))
+    let mut config = quinn::ClientConfig::new(Arc::new(quic));
+    config.transport_config(trasporto_client());
+    Ok(config)
+}
+
+/// Transport config dei collegamenti client: tiene vivi i circuiti inattivi
+/// (es. un servizio `.nyct` registrato in attesa di un visitatore) con un ping
+/// periodico, così non vengono chiusi dal timeout di inattività di QUIC.
+fn trasporto_client() -> Arc<quinn::TransportConfig> {
+    let mut t = quinn::TransportConfig::default();
+    t.keep_alive_interval(Some(std::time::Duration::from_secs(8)));
+    t.max_idle_timeout(Some(std::time::Duration::from_secs(30).try_into().expect("30s valido")));
+    Arc::new(t)
 }
 
 /// Config client che accetta QUALSIASI certificato: usata SOLO per i
@@ -62,7 +74,9 @@ pub fn config_client_insicuro() -> Risultato<quinn::ClientConfig> {
         .with_custom_certificate_verifier(verificatore)
         .with_no_client_auth();
     let quic = quinn::crypto::rustls::QuicClientConfig::try_from(tls)?;
-    Ok(quinn::ClientConfig::new(Arc::new(quic)))
+    let mut config = quinn::ClientConfig::new(Arc::new(quic));
+    config.transport_config(trasporto_client());
+    Ok(config)
 }
 
 #[derive(Debug)]

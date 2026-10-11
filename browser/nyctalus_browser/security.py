@@ -48,7 +48,10 @@ def _esente(host: str) -> bool:
     host = (host or "").strip("[]").lower()
     if not host or "." not in host:
         return True                                  # localhost, nomi di rete
-    if host.endswith((".local", ".onion", ".lan", ".home", ".internal", ".test")):
+    # .nyct e .onion sono servizi nascosti: parlano HTTP in chiaro solo dentro
+    # un tunnel già cifrato end-to-end (l'indirizzo è la chiave), quindi NON si
+    # forzano a HTTPS — come fa Tor Browser con gli .onion.
+    if host.endswith((".nyct", ".local", ".onion", ".lan", ".home", ".internal", ".test")):
         return True
     try:
         ipaddress.ip_address(host)

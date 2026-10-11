@@ -72,7 +72,9 @@ APP_NAME = "Nyctalus Browser"
 # Default 127.0.0.1:1080, modificabile da config (socks_host/socks_port).
 TOR_HOST = config.get("socks_host", "127.0.0.1")
 TOR_PORT = int(config.get("socks_port", 1080))
-TOR_SOCKS = "socks://%s:%d" % (TOR_HOST, TOR_PORT)
+# Schema "socks5://": così WebKit/GLib usa SOCKS5 (non SOCKS4) e manda il nome
+# host al proxy (DNS remoto), necessario per risolvere i .nyct nel demone.
+TOR_SOCKS = "socks5://%s:%d" % (TOR_HOST, TOR_PORT)
 # UA di Firefox: il browser e' un clone di Firefox e si confonde nella massa.
 STEALTH_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) "
               "Gecko/20100101 Firefox/128.0")
