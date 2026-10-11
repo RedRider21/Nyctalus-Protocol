@@ -144,7 +144,17 @@ async fn gestisci_circuito(
             b?;
         }
         PassoNodo::Finale => {
-            uscita_conflux(invio_monte, ricezione_monte, chiave).await?;
+            // 1º quadro onion dell'uscita: tolto il nostro strato, è il controllo
+            // del punto d'incontro (marca MAGIA) oppure il LINK del gruppo conflux.
+            let Some(mut primo) = leggi_quadro(&mut ricezione_monte).await? else {
+                return Ok(());
+            };
+            cipolla::sbuccia(0, &chiave, &mut primo);
+            if primo.starts_with(crate::incontro::MAGIA) {
+                crate::incontro::uscita_rendezvous(invio_monte, ricezione_monte, chiave, primo).await?;
+            } else {
+                uscita_conflux(invio_monte, ricezione_monte, chiave, primo).await?;
+            }
         }
     }
     Ok(())
@@ -188,17 +198,14 @@ async fn uscita_conflux(
     mut invio_monte: quinn::SendStream,
     mut ricezione_monte: quinn::RecvStream,
     chiave: [u8; 32],
+    link: Vec<u8>,
 ) -> Risultato<()> {
-    // 1º quadro onion = LINK (set_id del gruppo).
-    let Some(mut payload) = leggi_quadro(&mut ricezione_monte).await? else {
-        return Ok(());
-    };
-    cipolla::sbuccia(0, &chiave, &mut payload);
-    if payload.len() < 16 {
+    // `link` = 1º quadro onion già sbucciato (LINK con il set_id del gruppo).
+    if link.len() < 16 {
         return Err("missing conflux group LINK".into());
     }
     let mut set_id = [0u8; 16];
-    set_id.copy_from_slice(&payload[..16]);
+    set_id.copy_from_slice(&link[..16]);
     let set = ottieni_set(set_id);
 
     // Scrittore di ritorno di QUESTO circuito.

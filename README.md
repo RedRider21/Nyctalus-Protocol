@@ -62,7 +62,7 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 
 ## A che punto siamo
 
-**Fatto e testato** (72 test automatici):
+**Fatto e testato** (74 test automatici):
 - **L2 — nucleo del protocollo:** frammentazione, etichette segrete rotanti (BLAKE3), cifratura end-to-end (ChaCha20-Poly1305) con pacchetti di lunghezza fissa, ricomposizione con limiti anti-DoS.
 - **Stretta di mano Noise NK:** i due estremi si accordano sul segreto senza farlo mai viaggiare; forward secrecy; il mittente resta anonimo.
 - **Indirizzi `.nyct`:** la chiave pubblica di un servizio in base32, con controllo anti-errori di battitura.
@@ -74,7 +74,7 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 - **Camuffamento del trasporto**: con una chiave di rete, ogni datagramma UDP è offuscato (ChaCha20): sul filo appare rumore casuale, senza la firma di QUIC riconoscibile da un DPI. Opzione `--obfuscation` / `obfuscation` nel config.
 - **Ragnatela (conflux)**: un singolo scaricamento viene **spezzato su più circuiti** (guard e uscita condivisi, intermedi diversi) e **ricomposto a destinazione** grazie a una sequenza end-to-end dentro l'onion — così sfrutta la banda di più strade.
 - **Anti-correlazione**: il numero di sequenza non viaggia in chiaro (nonce da contatore locale per direzione).
-- **Siti interni `.nyct` (prima versione)**: `site` ospita una cartella come sito `.nyct`, `browse` lo visita. Servizio e client si incontrano a un **nodo punto d'incontro** che fa solo da ponte opaco; fra loro c'è una sessione **Noise NK end-to-end** (l'indirizzo `.nyct` *è* la chiave del servizio) con HTTP sopra. Il client non conosce l'IP del servizio e viceversa. *Prototipo*: il punto d'incontro si indica a mano e lo si raggiunge a salto singolo (quel nodo vede gli IP); i circuiti a più salti e la scelta automatica del punto d'incontro sono i passi successivi.
+- **Siti interni `.nyct`**: `site` ospita una cartella come sito `.nyct`, `browse` lo visita, e il **browser** li apre dal proxy SOCKS. Servizio e client si incontrano a un **nodo punto d'incontro** che fa solo da ponte opaco; fra loro c'è una sessione **Noise NK end-to-end** (l'indirizzo `.nyct` *è* la chiave del servizio) con HTTP sopra. Il punto d'incontro si **sceglie da solo** (deterministico dall'indirizzo e dall'elenco firmato, con rotazione) e lo si raggiunge con un **circuito a più salti**: così nemmeno quel nodo conosce gli IP di sito e visitatore — vede solo l'ultimo relè.
 
 **In arrivo** (vedi [STATO.md](STATO.md)): apertura del circuito con Sphinx, ID di circuito per tratta, nodi intermedi, ragnatela completa, simulazione contro Tor con Shadow, camuffamento, browser dedicato.
 
@@ -83,7 +83,7 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 Serve [Rust](https://rustup.rs) (profilo minimal sufficiente):
 
 ```sh
-cargo test              # 72 test
+cargo test              # 74 test
 cargo build --release   # produce target/release/nyctalus
 ```
 
@@ -205,9 +205,12 @@ nyctalus browse <ADDR>.nyct --directory directory.txt --authority <PUB>
 nyctalus browse <ADDR>.nyct --path /pagina.html --directory directory.txt --authority <PUB>
 ```
 
-Il punto d'incontro **ruota nel tempo** (cambia con il giorno), così un nodo non
-resta legato per sempre a un servizio. Lo si può ancora forzare a mano con
-`--rendezvous IP:PORT --fingerprint <FP>` (utile per prove con un solo nodo).
+Sito e visitatore raggiungono il punto d'incontro con un **circuito a più salti**
+(`--hops`, default 3), come l'uscita verso Internet: così nemmeno quel nodo
+conosce gli IP di sito e visitatore — vede solo l'ultimo relè. Il punto
+d'incontro **ruota nel tempo** (cambia con il giorno). Lo si può forzare a mano,
+in modo diretto a salto singolo, con `--rendezvous IP:PORT --fingerprint <FP>`
+(utile per prove con un solo nodo).
 
 I siti `.nyct` sono normali pagine **HTML5 + JavaScript**: una cartella di file
 servita dal sito.
@@ -220,9 +223,6 @@ li instrada al punto d'incontro invece che all'uscita: basta puntare il browser
 nyctalus circuit --directory directory.txt --authority <PUB> --socks 127.0.0.1:1080 --hops 3
 curl --socks5-hostname 127.0.0.1:1080 http://<ADDR>.nyct/
 ```
-
-Passo successivo: raggiungere il punto d'incontro con circuiti a più salti, così
-nemmeno quel nodo vede gli IP di sito e visitatore (oggi è a salto singolo).
 
 ### Trasferimento di un file (test del livello L2)
 

@@ -116,10 +116,10 @@ pub async fn avvia_circuito(
     println!("Monitor:  nyctalus monitor --control {controllo}");
     println!("Try:  curl --socks5-hostname {socks} http://example.com\n");
 
-    // Nodi utilizzabili come punto d'incontro per i siti `.nyct` (indirizzo +
-    // impronta TLS): è lo stesso elenco firmato che alimenta i circuiti.
-    let punti_incontro: Arc<Vec<crate::incontro::Punto>> =
-        Arc::new(nodi.iter().filter_map(|(a, _, fp)| fp.map(|f| (*a, f))).collect());
+    // Nodi utilizzabili come punto d'incontro (e come tappe del circuito verso
+    // di esso) per i siti `.nyct`: lo stesso elenco firmato che alimenta i
+    // circuiti d'uscita.
+    let punti_incontro: Arc<Vec<crate::incontro::Punto>> = Arc::new(nodi.clone());
 
     let mut prossimo_flusso: u16 = 0;
     loop {
@@ -133,7 +133,7 @@ pub async fn avvia_circuito(
         let metriche = metriche.clone();
         let punti_incontro = punti_incontro.clone();
         tokio::spawn(async move {
-            if let Err(e) = gestisci_flusso(cliente, flusso, &tx_out, rx_in, &metriche, &punti_incontro, offusca).await {
+            if let Err(e) = gestisci_flusso(cliente, flusso, &tx_out, rx_in, &metriche, &punti_incontro, offusca, salti).await {
                 eprintln!("flow {flusso} closed: {e}");
             }
             flussi.lock().unwrap().remove(&flusso);
@@ -271,6 +271,7 @@ async fn gestisci_flusso(
     metriche: &Arc<crate::metriche::Metriche>,
     punti_incontro: &Arc<Vec<crate::incontro::Punto>>,
     offusca: Option<[u8; 32]>,
+    salti: usize,
 ) -> Risultato<()> {
     use std::sync::atomic::Ordering::Relaxed;
     let saluto = leggi_socks(&mut cliente, Saluto::analizza).await?;
@@ -287,7 +288,7 @@ async fn gestisci_flusso(
         if let Destinazione::Nome(nome) = &richiesta.destinazione {
             metriche.flussi.fetch_add(1, Relaxed);
             let _guardia = GuardiaFlusso(metriche);
-            return crate::incontro::tunnel_socks(cliente, nome, (**punti_incontro).clone(), offusca).await;
+            return crate::incontro::tunnel_socks(cliente, nome, (**punti_incontro).clone(), offusca, salti).await;
         }
     }
 
