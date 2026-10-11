@@ -61,8 +61,9 @@ pub async fn nodo(
             let Ok(connessione) = in_arrivo.await else { return };
             while let Ok((invio, ricezione)) = connessione.accept_bi().await {
                 let auth = auth.clone();
+                let connessione = connessione.clone();
                 tokio::spawn(async move {
-                    if let Err(e) = gestisci_circuito(invio, ricezione, segreto, &auth, offusca).await {
+                    if let Err(e) = gestisci_circuito(connessione, invio, ricezione, segreto, &auth, offusca).await {
                         eprintln!("circuit closed: {e}");
                     }
                 });
@@ -85,16 +86,21 @@ fn impronta_attesa(auth: &Autenticazione, indirizzo: SocketAddr) -> Risultato<[u
 }
 
 async fn gestisci_circuito(
+    connessione: quinn::Connection,
     mut invio_monte: quinn::SendStream,
     mut ricezione_monte: quinn::RecvStream,
     segreto: [u8; 32],
     auth: &Option<Autenticazione>,
     offusca: Option<[u8; 32]>,
 ) -> Risultato<()> {
-    // Primo quadro dello stream = pacchetto di apertura Sphinx.
+    // Primo quadro dello stream: controllo del punto d'incontro (`.nyct`) se
+    // inizia con la marca, altrimenti pacchetto di apertura Sphinx del circuito.
     let Some(pacchetto) = leggi_quadro(&mut ricezione_monte).await? else {
         return Ok(());
     };
+    if pacchetto.starts_with(crate::incontro::MAGIA) {
+        return crate::incontro::gestisci(connessione, invio_monte, ricezione_monte, pacchetto).await;
+    }
     let elaborazione = circuito::elabora_nodo(&pacchetto, &segreto)?;
     let chiave = elaborazione.chiave_salto;
 

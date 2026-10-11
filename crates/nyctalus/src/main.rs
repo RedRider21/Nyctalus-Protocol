@@ -25,6 +25,7 @@ mod cella;
 mod conflux;
 mod circuito_rete;
 mod invia;
+mod incontro;
 mod metriche;
 mod monitor;
 mod nodi_online;
@@ -58,6 +59,8 @@ Usage:
   nyctalus directory --authority-secret HEX --entries 'addr,x,fp;addr,x,fp'
   nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)]
   nyctalus test-circuit (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--message DEST]
+  nyctalus site    --dir ./folder --rendezvous IP:PORT --fingerprint HEX [--identity FILE] [--obfuscation HEX]
+  nyctalus browse  ADDRESS.nyct --rendezvous IP:PORT --fingerprint HEX [--path /] [--obfuscation HEX]
   nyctalus receive --out FILE [--listen 0.0.0.0:4433] [--identity FILE]
   nyctalus send    --to IP:PORT --fingerprint HEX --recipient ADDRESS.nyct [--lanes 4] FILE
   nyctalus single-hop --to IP:PORT --fingerprint HEX [--socks 127.0.0.1:1080]
@@ -67,6 +70,7 @@ Usage:
 'nodes': list the signed directory; with --probe, test which nodes are reachable now (and their RTT).
 'node'/'authority'/'directory': nodes and the signed directory.
 'circuit': like 'start' but with nodes given explicitly (testing).
+'site'/'browse': host and visit an internal .nyct site through a rendezvous node (a node reached with --rendezvous/--fingerprint).
 'receive'/'send': file transfer (L2 test). 'single-hop'/'exit': 1-hop proxy (test).";
 
 #[tokio::main]
@@ -143,6 +147,25 @@ async fn esegui() -> Risultato<()> {
         "monitor" => {
             let controllo: SocketAddr = opzione(&opzioni, "control").unwrap_or("127.0.0.1:1090").parse()?;
             monitor::monitor(controllo).await
+        }
+        "site" => {
+            let dir = PathBuf::from(obbligatoria(&opzioni, "dir")?);
+            let identita = opzione(&opzioni, "identity").map(PathBuf::from);
+            let punto: SocketAddr = obbligatoria(&opzioni, "rendezvous")?.parse()?;
+            let impronta = da_esadecimale(obbligatoria(&opzioni, "fingerprint")?)?;
+            let offusca = da_esadecimale_opt(opzione(&opzioni, "obfuscation"))?;
+            incontro::site(dir, identita, punto, impronta, offusca).await
+        }
+        "browse" => {
+            let indirizzo_nyct = match opzione(&opzioni, "address") {
+                Some(a) => a,
+                None => posizionali.first().map(String::as_str).ok_or("missing .nyct address")?,
+            };
+            let percorso = opzione(&opzioni, "path").unwrap_or("/");
+            let punto: SocketAddr = obbligatoria(&opzioni, "rendezvous")?.parse()?;
+            let impronta = da_esadecimale(obbligatoria(&opzioni, "fingerprint")?)?;
+            let offusca = da_esadecimale_opt(opzione(&opzioni, "obfuscation"))?;
+            incontro::browse(indirizzo_nyct, percorso, punto, impronta, offusca).await
         }
         "single-hop" => {
             let destinazione: SocketAddr = obbligatoria(&opzioni, "to")?.parse()?;

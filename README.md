@@ -62,7 +62,7 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 
 ## A che punto siamo
 
-**Fatto e testato** (53 test automatici):
+**Fatto e testato** (67 test automatici):
 - **L2 — nucleo del protocollo:** frammentazione, etichette segrete rotanti (BLAKE3), cifratura end-to-end (ChaCha20-Poly1305) con pacchetti di lunghezza fissa, ricomposizione con limiti anti-DoS.
 - **Stretta di mano Noise NK:** i due estremi si accordano sul segreto senza farlo mai viaggiare; forward secrecy; il mittente resta anonimo.
 - **Indirizzi `.nyct`:** la chiave pubblica di un servizio in base32, con controllo anti-errori di battitura.
@@ -74,6 +74,7 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 - **Camuffamento del trasporto**: con una chiave di rete, ogni datagramma UDP è offuscato (ChaCha20): sul filo appare rumore casuale, senza la firma di QUIC riconoscibile da un DPI. Opzione `--obfuscation` / `obfuscation` nel config.
 - **Ragnatela (conflux)**: un singolo scaricamento viene **spezzato su più circuiti** (guard e uscita condivisi, intermedi diversi) e **ricomposto a destinazione** grazie a una sequenza end-to-end dentro l'onion — così sfrutta la banda di più strade.
 - **Anti-correlazione**: il numero di sequenza non viaggia in chiaro (nonce da contatore locale per direzione).
+- **Siti interni `.nyct` (prima versione)**: `site` ospita una cartella come sito `.nyct`, `browse` lo visita. Servizio e client si incontrano a un **nodo punto d'incontro** che fa solo da ponte opaco; fra loro c'è una sessione **Noise NK end-to-end** (l'indirizzo `.nyct` *è* la chiave del servizio) con HTTP sopra. Il client non conosce l'IP del servizio e viceversa. *Prototipo*: il punto d'incontro si indica a mano e lo si raggiunge a salto singolo (quel nodo vede gli IP); i circuiti a più salti e la scelta automatica del punto d'incontro sono i passi successivi.
 
 **In arrivo** (vedi [STATO.md](STATO.md)): apertura del circuito con Sphinx, ID di circuito per tratta, nodi intermedi, ragnatela completa, simulazione contro Tor con Shadow, camuffamento, browser dedicato.
 
@@ -82,7 +83,7 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 Serve [Rust](https://rustup.rs) (profilo minimal sufficiente):
 
 ```sh
-cargo test              # 42 test
+cargo test              # 67 test
 cargo build --release   # produce target/release/nyctalus
 ```
 
@@ -184,6 +185,30 @@ nyctalus monitor --control 127.0.0.1:1090
 - `--hops N` (o `hops`) — nodi per percorso (guard + intermedi + uscita). **Minimo 1, massimo 5** (limite di Sphinx), default **3**. Sotto i 3 salti non c'è vero anonimato.
 
 **Affidabilità:** il trasporto è QUIC (su UDP), che **recupera da solo i pacchetti persi** e li riconsegna in ordine; un pacchetto perso non blocca gli altri flussi (niente head-of-line blocking fra flussi).
+
+### Siti interni `.nyct` (prima versione)
+
+Un nodo fa da **punto d'incontro**; il sito vi si registra e il visitatore vi si
+collega. Il nodo fa solo da ponte: fra sito e visitatore c'è una sessione
+cifrata end-to-end, e nessuno dei due conosce l'IP dell'altro.
+
+```sh
+# 1) un nodo punto d'incontro (stampa la sua impronta TLS)
+nyctalus node --listen 127.0.0.1:4700
+
+# 2) pubblica una cartella come sito .nyct (stampa l'indirizzo <ADDR>.nyct)
+nyctalus site --dir ./mio-sito --identity sito.key \
+  --rendezvous 127.0.0.1:4700 --fingerprint <FINGERPRINT>
+
+# 3) visita il sito (HTML, CSS, JS, immagini…)
+nyctalus browse <ADDR>.nyct --rendezvous 127.0.0.1:4700 --fingerprint <FINGERPRINT>
+nyctalus browse <ADDR>.nyct --path /pagina.html --rendezvous 127.0.0.1:4700 --fingerprint <FINGERPRINT>
+```
+
+I siti `.nyct` sono normali pagine **HTML5 + JavaScript**: una cartella di file
+servita dal sito. Oggi il punto d'incontro si indica a mano (`--rendezvous`); la
+scelta automatica dall'elenco firmato, i circuiti a più salti e l'apertura di
+`http://<ADDR>.nyct` dal browser sono i passi successivi.
 
 ### Trasferimento di un file (test del livello L2)
 
