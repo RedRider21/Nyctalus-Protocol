@@ -209,6 +209,7 @@ Alcuni nodi d'uscita volontari offriranno anche un **ponte verso Tor**: ricevono
 
 ### 8.1 Porta e mimetizzazione
 - **Porta predefinita: UDP 443**, configurabile. Il trasporto è QUIC (UDP), e HTTP/3 vive proprio su UDP 443: il traffico Nyctalus si confonde con un normale sito moderno o una videochiamata. La **porta 80 non si usa**: è HTTP in chiaro su TCP e ci farebbe dare nell'occhio.
+- ✅ **Offuscamento implementato** (`crates/nyctalus-core/src/offuscamento.rs`, `crates/nyctalus/src/trasporto.rs`): con una chiave di rete condivisa, ogni datagramma UDP è avvolto con ChaCha20 (nonce casuale per datagramma); sul filo è indistinguibile da rumore, quindi niente firma QUIC per il DPI. Attivabile con `--obfuscation`/`obfuscation`. Limiti attuali: niente resistenza al probing attivo né shaping dei tempi (rumore di fondo), che restano da fare.
 - Il collegamento tra nodi usa QUIC con una stretta di mano TLS 1.3 **indistinguibile da quella dei browser comuni**.
 - Un nodo sondato da un censore risponde come un normale sito web; solo chi presenta un segreto valido accede al protocollo, come fanno WebTunnel e obfs4.
 - Dove UDP è bloccato, ripiego su **TCP 443** travestito da HTTPS classico.
