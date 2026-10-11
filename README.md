@@ -70,6 +70,7 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 - **CLI:** proxy SOCKS5 funzionante (`nyctalus avvia`) a un salto, e **circuito anonimo a 3 salti** (`nyctalus avvia-circuito`), provati con `curl`.
 - **Elenco firmato dei nodi** (directory, autorità Ed25519) e **autenticazione dei collegamenti**: il client pinna il guard, ogni relè pinna il nodo a valle con l'impronta presa dall'elenco firmato.
 - **Circuito condiviso**: un solo circuito trasporta più connessioni, multiplexate con celle dentro gli strati a cipolla (i relè restano ciechi ai singoli flussi).
+- **Ragnatela a più circuiti**: più circuiti paralleli (guard condiviso, percorsi diversi); le connessioni vengono distribuite sulle diverse strade.
 - **Anti-correlazione**: il numero di sequenza non viaggia in chiaro (nonce da contatore locale per direzione).
 
 **In arrivo** (vedi [STATO.md](STATO.md)): apertura del circuito con Sphinx, ID di circuito per tratta, nodi intermedi, ragnatela completa, simulazione contro Tor con Shadow, camuffamento, browser dedicato.
@@ -123,12 +124,19 @@ nyctalus elenco --autorita-segreto <SEGRETO> \
   --voci 'addr,x,fp;addr,x,fp;addr,x,fp' > elenco.txt
 
 # 4) proxy SOCKS5 attraverso il circuito a 3 salti
-nyctalus avvia-circuito --elenco elenco.txt --autorita <PUB> --socks 127.0.0.1:1080
+nyctalus avvia-circuito --elenco elenco.txt --autorita <PUB> --socks 127.0.0.1:1080 \
+  --circuiti 2 --salti 3
 curl --socks5-hostname 127.0.0.1:1080 http://example.com
 ```
 
 Con l'elenco firmato ogni collegamento è autenticato: un elenco manomesso o
 firmato da un'autorità diversa viene rifiutato.
+
+**Impostazioni del percorso** (in futuro anche nel file di configurazione, punto F):
+- `--circuiti N` — strade parallele usate contemporaneamente. **Minimo 1, massimo 8**, default **2**.
+- `--salti N` — nodi per percorso (guard + intermedi + uscita). **Minimo 1, massimo 5** (limite di Sphinx), default **3**. Sotto i 3 salti non c'è vero anonimato.
+
+**Affidabilità:** il trasporto è QUIC (su UDP), che **recupera da solo i pacchetti persi** e li riconsegna in ordine; un pacchetto perso non blocca gli altri flussi (niente head-of-line blocking fra flussi).
 
 ### Trasferimento di un file (test del livello L2)
 

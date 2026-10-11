@@ -62,7 +62,7 @@ Uso:
   nyctalus autorita
   nyctalus elenco --autorita-segreto HEX --voci 'addr,x,fp;addr,x,fp'
   nyctalus prova-circuito (--elenco FILE --autorita HEX | --nodi 'addr,pub;...') [--messaggio T]
-  nyctalus avvia-circuito (--elenco FILE --autorita HEX | --nodi 'addr,pub;...') [--socks 127.0.0.1:1080]
+  nyctalus avvia-circuito (--elenco FILE --autorita HEX | --nodi 'addr,pub;...') [--socks 127.0.0.1:1080] [--circuiti 2 (1-8)] [--salti 3 (1-5)]
 
 'ricevi'/'invia': trasferimento di un file (test del livello L2).
 'uscita'/'avvia': proxy SOCKS5 verso Internet (un solo salto, non ancora anonimo).
@@ -149,7 +149,9 @@ async fn esegui() -> Risultato<()> {
         "avvia-circuito" => {
             let nodi = carica_nodi(&opzioni)?;
             let socks: SocketAddr = opzione(&opzioni, "socks").unwrap_or("127.0.0.1:1080").parse()?;
-            avvia_circuito::avvia_circuito(nodi, socks).await
+            let circuiti: usize = opzione(&opzioni, "circuiti").map(str::parse).transpose()?.unwrap_or(2);
+            let salti: usize = opzione(&opzioni, "salti").map(str::parse).transpose()?.unwrap_or(3);
+            avvia_circuito::avvia_circuito(nodi, circuiti, salti, socks).await
         }
         "aiuto" | "--help" | "-h" => {
             println!("{USO}");
