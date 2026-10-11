@@ -152,9 +152,9 @@ cargo build --release   <span class="c"><span class="it"># produce target/releas
   <div class="passo">
     <h3><span class="it">2. Proxy SOCKS5 (uso da terminale)</span><span class="en">2. SOCKS5 proxy (terminal use)</span></h3>
     <p class="intro"><span class="it">Sul nodo di uscita:</span><span class="en">On the exit node:</span></p>
-    <pre>nyctalus uscita --ascolta 0.0.0.0:4600</pre>
-    <p class="intro"><span class="it">Stampa il comando <code class="in">avvia</code> completo, con l'impronta del certificato. Sul client:</span><span class="en">It prints the full <code class="in">avvia</code> command, with the certificate fingerprint. On the client:</span></p>
-    <pre>nyctalus avvia --a IP-USCITA:4600 --impronta &lt;IMPRONTA&gt; --socks 127.0.0.1:1080
+    <pre>nyctalus exit --listen 0.0.0.0:4600</pre>
+    <p class="intro"><span class="it">Stampa il comando <code class="in">single-hop</code> completo, con l'impronta del certificato. Sul client:</span><span class="en">It prints the full <code class="in">single-hop</code> command, with the certificate fingerprint. On the client:</span></p>
+    <pre>nyctalus single-hop --to EXIT-IP:4600 --fingerprint &lt;FINGERPRINT&gt; --socks 127.0.0.1:1080
 curl --socks5-hostname 127.0.0.1:1080 https://example.com</pre>
     <div class="nota"><span class="it"><b>Attenzione:</b> è un <b>solo salto</b> (client → uscita): l'uscita vede l'IP del client, quindi <b>non è ancora anonimo</b>. Serve a rendere la CLI usabile subito; i nodi intermedi lo renderanno anonimo.</span><span class="en"><b>Warning:</b> this is a <b>single hop</b> (client → exit): the exit sees the client's IP, so it is <b>not anonymous yet</b>. It makes the CLI usable today; relay nodes will make it anonymous.</span></div>
   </div>
@@ -163,29 +163,29 @@ curl --socks5-hostname 127.0.0.1:1080 https://example.com</pre>
     <h3><span class="it">3. Circuito anonimo a 3 salti (autenticato)</span><span class="en">3. Anonymous 3-hop circuit (authenticated)</span></h3>
     <p class="intro"><span class="it">Un'<b>autorità</b> firma l'elenco dei nodi; client e relè lo verificano e autenticano ogni collegamento.</span><span class="en">An <b>authority</b> signs the node directory; client and relays verify it and authenticate every link.</span></p>
     <pre><span class="c"><span class="it"># 1) autorità che firma l'elenco</span><span class="en"># 1) authority that signs the directory</span></span>
-nyctalus autorita
+nyctalus authority
 
 <span class="c"><span class="it"># 2) avvia i nodi (stampano la loro riga per l'elenco)</span><span class="en"># 2) start the nodes (they print their directory line)</span></span>
-nyctalus nodo --ascolta 0.0.0.0:4601 --elenco elenco.txt --autorita &lt;PUB&gt;
-nyctalus nodo --ascolta 0.0.0.0:4602 --elenco elenco.txt --autorita &lt;PUB&gt;
-nyctalus nodo --ascolta 0.0.0.0:4603 --elenco elenco.txt --autorita &lt;PUB&gt;
+nyctalus node --listen 0.0.0.0:4601 --directory directory.txt --authority &lt;PUB&gt;
+nyctalus node --listen 0.0.0.0:4602 --directory directory.txt --authority &lt;PUB&gt;
+nyctalus node --listen 0.0.0.0:4603 --directory directory.txt --authority &lt;PUB&gt;
 
 <span class="c"><span class="it"># 3) firma l'elenco con le righe stampate</span><span class="en"># 3) sign the directory with the printed lines</span></span>
-nyctalus elenco --autorita-segreto &lt;SEGRETO&gt; --voci 'a,x,fp;a,x,fp;a,x,fp' &gt; elenco.txt
+nyctalus directory --authority-secret &lt;SECRET&gt; --entries 'a,x,fp;a,x,fp;a,x,fp' &gt; directory.txt
 
 <span class="c"><span class="it"># 4) proxy SOCKS5 attraverso la ragnatela a più circuiti</span><span class="en"># 4) SOCKS5 proxy through the multi-circuit web</span></span>
-nyctalus avvia-circuito --elenco elenco.txt --autorita &lt;PUB&gt; --socks 127.0.0.1:1080 --circuiti 2 --salti 3
+nyctalus circuit --directory directory.txt --authority &lt;PUB&gt; --socks 127.0.0.1:1080 --circuits 2 --hops 3
 curl --socks5-hostname 127.0.0.1:1080 http://example.com</pre>
     <div class="nota"><span class="it">Con l'elenco firmato ogni collegamento è autenticato: un elenco manomesso o firmato da un'autorità diversa viene <b>rifiutato</b>. Il nodo intermedio non vede né il contenuto né la destinazione.</span><span class="en">With the signed directory every link is authenticated: a tampered directory, or one signed by a different authority, is <b>rejected</b>. The middle node sees neither the content nor the destination.</span></div>
-    <div class="nota"><span class="it"><b>Impostazioni del percorso:</b> <code class="in">--circuiti N</code> = strade parallele (min 1, max 8, default 2); <code class="in">--salti N</code> = nodi per percorso (min 1, max 5, default 3; sotto 3 niente vero anonimato). Il trasporto è QUIC: i pacchetti persi si recuperano da soli e un flusso non blocca gli altri.</span><span class="en"><b>Path settings:</b> <code class="in">--circuiti N</code> = parallel roads (min 1, max 8, default 2); <code class="in">--salti N</code> = nodes per path (min 1, max 5, default 3; below 3 there is no real anonymity). Transport is QUIC: lost packets recover on their own and one flow never stalls the others.</span></div>
+    <div class="nota"><span class="it"><b>Impostazioni del percorso:</b> <code class="in">--circuits N</code> = strade parallele (min 1, max 8, default 2); <code class="in">--hops N</code> = nodi per percorso (min 1, max 5, default 3; sotto 3 niente vero anonimato). Il trasporto è QUIC: i pacchetti persi si recuperano da soli e un flusso non blocca gli altri.</span><span class="en"><b>Path settings:</b> <code class="in">--circuits N</code> = parallel roads (min 1, max 8, default 2); <code class="in">--hops N</code> = nodes per path (min 1, max 5, default 3; below 3 there is no real anonymity). Transport is QUIC: lost packets recover on their own and one flow never stalls the others.</span></div>
   </div>
 
   <div class="passo">
     <h3><span class="it">4. Trasferire un file (test del livello L2)</span><span class="en">4. Transfer a file (L2 layer test)</span></h3>
     <p class="intro"><span class="it">Sul ricevitore:</span><span class="en">On the receiver:</span></p>
-    <pre>nyctalus ricevi --uscita ricevuto.bin --identita mia.chiave</pre>
+    <pre>nyctalus receive --out received.bin --identity my.key</pre>
     <p class="intro"><span class="it">Stampa il comando <code class="in">invia</code> con l'indirizzo <code class="in">.nyct</code> del ricevitore. Sul mittente:</span><span class="en">It prints the <code class="in">invia</code> command with the receiver's <code class="in">.nyct</code> address. On the sender:</span></p>
-    <pre>nyctalus invia --a IP:4433 --impronta &lt;IMPRONTA&gt; --destinatario &lt;INDIRIZZO&gt;.nyct file</pre>
+    <pre>nyctalus send --to IP:4433 --fingerprint &lt;FINGERPRINT&gt; --recipient &lt;ADDRESS&gt;.nyct file</pre>
   </div>
 
   <div class="passo">
@@ -193,7 +193,7 @@ curl --socks5-hostname 127.0.0.1:1080 http://example.com</pre>
     <table>
       <thead><tr><th>Tor</th><th>Nyctalus</th><th><span class="it">A cosa serve</span><span class="en">Purpose</span></th></tr></thead>
       <tbody>
-        <tr><td><code class="in">tor</code></td><td><code class="in">nyctalus avvia</code></td><td><span class="it">demone + proxy SOCKS5</span><span class="en">daemon + SOCKS5 proxy</span></td></tr>
+        <tr><td><code class="in">tor</code></td><td><code class="in">nyctalus start</code></td><td><span class="it">demone + proxy SOCKS5</span><span class="en">daemon + SOCKS5 proxy</span></td></tr>
         <tr><td>control port</td><td><code class="in">nyctalus stato</code></td><td><span class="it">interrogare il demone</span><span class="en">query the daemon</span></td></tr>
         <tr><td><code class="in">nyx</code></td><td><code class="in">nyctalus monitor</code></td><td><span class="it">cruscotto testuale</span><span class="en">text dashboard</span></td></tr>
         <tr><td><code class="in">torsocks</code></td><td><code class="in">nyctalus esec</code></td><td><span class="it">un programma dentro la rete</span><span class="en">a program inside the network</span></td></tr>
