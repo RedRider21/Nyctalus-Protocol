@@ -1,0 +1,76 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+#
+# Compila l'eseguibile `nyctalus` per i principali sistemi operativi.
+# - Su un tag `v*`  -> pubblica i binari come Release di GitHub.
+# - Su avvio manuale -> carica solo gli artefatti (per verificare la build).
+
+name: Eseguibili
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            cross: aarch64-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain
+        run: |
+          rustup update stable
+          rustup default stable
+          rustup target add ${{ matrix.target }}
+
+      - name: Toolchain di cross per aarch64 Linux
+        if: matrix.cross
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-${{ matrix.cross }}
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=${{ matrix.cross }}-gcc" >> "$GITHUB_ENV"
+          echo "CC_aarch64_unknown_linux_gnu=${{ matrix.cross }}-gcc" >> "$GITHUB_ENV"
+          echo "AR_aarch64_unknown_linux_gnu=${{ matrix.cross }}-ar" >> "$GITHUB_ENV"
+
+      - name: Compila
+        run: cargo build --release --locked --target ${{ matrix.target }} -p nyctalus
+
+      - name: Prepara il binario
+        shell: bash
+        run: |
+          mkdir -p dist
+          ext=""
+          [[ "${{ matrix.target }}" == *windows* ]] && ext=".exe"
+          cp "target/${{ matrix.target }}/release/nyctalus${ext}" "dist/nyctalus-${{ matrix.target }}${ext}"
+
+      - name: Carica artefatto (verifica)
+        uses: actions/upload-artifact@v4
+        with:
+          name: nyctalus-${{ matrix.target }}
+          path: dist/*
+
+      - name: Pubblica nella Release (solo sui tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
