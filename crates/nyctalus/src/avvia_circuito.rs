@@ -45,6 +45,7 @@ pub async fn avvia_circuito(
     circuiti: usize,
     salti: usize,
     socks: SocketAddr,
+    controllo: SocketAddr,
 ) -> Risultato<()> {
     if !(SALTI_MIN..=SALTI_MAX).contains(&salti) {
         return Err(format!("--hops must be between {SALTI_MIN} and {SALTI_MAX}").into());
@@ -101,11 +102,17 @@ pub async fn avvia_circuito(
     tokio::spawn(schedulatore(rx_out, inbox_circuiti));
     tokio::spawn(collettore_ritorno(rx_ret, flussi.clone()));
 
+    // Metriche + porta di controllo per `monitor`.
+    let metriche = Arc::new(crate::metriche::Metriche::nuovo());
+    metriche.circuiti.store(percorsi.len() as u64, std::sync::atomic::Ordering::Relaxed);
+    avvia_controllo(controllo, metriche.clone());
+
     let ascoltatore = TcpListener::bind(socks).await?;
     println!(
         "SOCKS5 proxy on {socks} — conflux over {} circuits (shared guard and exit, {salti} hops)",
         percorsi.len()
     );
+    println!("Monitor:  nyctalus monitor --control {controllo}");
     println!("Try:  curl --socks5-hostname {socks} http://example.com\n");
 
     let mut prossimo_flusso: u16 = 0;
@@ -117,13 +124,33 @@ pub async fn avvia_circuito(
         flussi.lock().unwrap().insert(flusso, tx_in);
         let tx_out = tx_out.clone();
         let flussi = flussi.clone();
+        let metriche = metriche.clone();
         tokio::spawn(async move {
-            if let Err(e) = gestisci_flusso(cliente, flusso, &tx_out, rx_in).await {
+            if let Err(e) = gestisci_flusso(cliente, flusso, &tx_out, rx_in, &metriche).await {
                 eprintln!("flow {flusso} closed: {e}");
             }
             flussi.lock().unwrap().remove(&flusso);
         });
     }
+}
+
+/// Porta di controllo locale: a ogni connessione invia un'istantanea delle
+/// metriche e chiude. Se non riesce a mettersi in ascolto avvisa e prosegue.
+fn avvia_controllo(indirizzo: SocketAddr, metriche: Arc<crate::metriche::Metriche>) {
+    tokio::spawn(async move {
+        let ascoltatore = match TcpListener::bind(indirizzo).await {
+            Ok(a) => a,
+            Err(e) => {
+                eprintln!("control port {indirizzo} unavailable: {e} (monitor disabled)");
+                return;
+            }
+        };
+        while let Ok((mut cliente, _)) = ascoltatore.accept().await {
+            let snapshot = metriche.snapshot();
+            let _ = cliente.write_all(snapshot.as_bytes()).await;
+            let _ = cliente.shutdown().await;
+        }
+    });
 }
 
 /// Scrittore di un circuito: prima il LINK (set_id) poi le unità conflux, ognuna
@@ -234,7 +261,9 @@ async fn gestisci_flusso(
     flusso: u16,
     tx_out: &mpsc::Sender<Vec<u8>>,
     mut rx_in: mpsc::Receiver<Cella>,
+    metriche: &Arc<crate::metriche::Metriche>,
 ) -> Risultato<()> {
+    use std::sync::atomic::Ordering::Relaxed;
     let saluto = leggi_socks(&mut cliente, Saluto::analizza).await?;
     if !saluto.offre_senza_autenticazione() {
         cliente.write_all(&socks5::risposta_saluto(socks5::METODO_NESSUNO_ACCETTABILE)).await?;
@@ -257,6 +286,9 @@ async fn gestisci_flusso(
         return Ok(());
     }
 
+    metriche.flussi.fetch_add(1, Relaxed);
+    let _guardia = GuardiaFlusso(metriche);
+
     let (mut app_lettura, mut app_scrittura) = cliente.into_split();
     let andata = async {
         let mut buffer = vec![0u8; 16 * 1024];
@@ -265,6 +297,7 @@ async fn gestisci_flusso(
             if letti == 0 {
                 break;
             }
+            metriche.su.fetch_add(letti as u64, Relaxed);
             tx_out
                 .send(Cella::nuova(flusso, cmd::DATI, buffer[..letti].to_vec()).in_byte())
                 .await
@@ -276,7 +309,10 @@ async fn gestisci_flusso(
     let ritorno = async {
         while let Some(cella) = rx_in.recv().await {
             match cella.comando {
-                cmd::DATI => app_scrittura.write_all(&cella.dati).await?,
+                cmd::DATI => {
+                    metriche.giu.fetch_add(cella.dati.len() as u64, Relaxed);
+                    app_scrittura.write_all(&cella.dati).await?;
+                }
                 cmd::CHIUDI => break,
                 _ => {}
             }
@@ -288,6 +324,14 @@ async fn gestisci_flusso(
     a?;
     b?;
     Ok(())
+}
+
+/// Decrementa il contatore dei flussi aperti quando la connessione termina.
+struct GuardiaFlusso<'a>(&'a Arc<crate::metriche::Metriche>);
+impl Drop for GuardiaFlusso<'_> {
+    fn drop(&mut self) {
+        self.0.flussi.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+    }
 }
 
 /// Toglie tutti gli strati dal pacchetto (lato client).

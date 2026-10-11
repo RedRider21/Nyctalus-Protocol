@@ -25,6 +25,8 @@ mod cella;
 mod conflux;
 mod circuito_rete;
 mod invia;
+mod metriche;
+mod monitor;
 mod nodo;
 mod prova_circuito;
 mod ricevi;
@@ -45,6 +47,8 @@ const USO: &str = "\
 Usage:
   nyctalus start   [--config FILE] [--directory FILE] [--authority HEX] [--socks 127.0.0.1:1080] [--circuits 2] [--hops 3]
   nyctalus status  [--config FILE]
+  nyctalus exec    [--socks ADDR] [--config FILE] -- PROGRAM [ARG...]
+  nyctalus monitor [--control 127.0.0.1:1090]
   nyctalus node    --listen 0.0.0.0:4601 [--secret HEX] [--directory FILE --authority HEX]
   nyctalus authority
   nyctalus directory --authority-secret HEX --entries 'addr,x,fp;addr,x,fp'
@@ -74,6 +78,11 @@ async fn esegui() -> Risultato<()> {
         println!("{USO}");
         return Ok(());
     };
+    // `exec` prende gli argomenti grezzi (le opzioni del programma lanciato non
+    // devono essere interpretate da noi): gestito prima dell'analisi generica.
+    if comando == "exec" {
+        return esegui_exec(resto);
+    }
     let (opzioni, posizionali) = leggi_opzioni(resto)?;
     match comando.as_str() {
         "receive" => {
@@ -103,12 +112,16 @@ async fn esegui() -> Risultato<()> {
             let cfg = Config::carica(&opzioni)?;
             println!("Configuration: {}", cfg.percorso.display());
             let nodi = nodi_da_elenco(&cfg.elenco, cfg.autorita)?;
-            avvia_circuito::avvia_circuito(nodi, cfg.circuiti, cfg.salti, cfg.socks).await
+            avvia_circuito::avvia_circuito(nodi, cfg.circuiti, cfg.salti, cfg.socks, cfg.controllo).await
         }
         "status" => {
             let cfg = Config::carica(&opzioni)?;
             cfg.stampa();
             Ok(())
+        }
+        "monitor" => {
+            let controllo: SocketAddr = opzione(&opzioni, "control").unwrap_or("127.0.0.1:1090").parse()?;
+            monitor::monitor(controllo).await
         }
         "single-hop" => {
             let destinazione: SocketAddr = obbligatoria(&opzioni, "to")?.parse()?;
@@ -153,7 +166,8 @@ async fn esegui() -> Risultato<()> {
             let socks: SocketAddr = opzione(&opzioni, "socks").unwrap_or("127.0.0.1:1080").parse()?;
             let circuiti: usize = opzione(&opzioni, "circuits").map(str::parse).transpose()?.unwrap_or(2);
             let salti: usize = opzione(&opzioni, "hops").map(str::parse).transpose()?.unwrap_or(3);
-            avvia_circuito::avvia_circuito(nodi, circuiti, salti, socks).await
+            let controllo: SocketAddr = opzione(&opzioni, "control").unwrap_or("127.0.0.1:1090").parse()?;
+            avvia_circuito::avvia_circuito(nodi, circuiti, salti, socks, controllo).await
         }
         "help" | "--help" | "-h" => {
             println!("{USO}");
@@ -221,16 +235,14 @@ struct Config {
     socks: SocketAddr,
     circuiti: usize,
     salti: usize,
+    controllo: SocketAddr,
 }
 
 impl Config {
     fn carica(opzioni: &Opzioni) -> Risultato<Self> {
         let percorso = match opzione(opzioni, "config") {
             Some(p) => PathBuf::from(p),
-            None => {
-                let base = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-                PathBuf::from(base).join(".config/nyctalus/config")
-            }
+            None => percorso_config_predefinito(),
         };
         let file = leggi_file_config(&percorso);
         let val = |k: &str| opzione(opzioni, k).map(String::from).or_else(|| file.get(k).cloned());
@@ -239,7 +251,8 @@ impl Config {
         let socks: SocketAddr = val("socks").unwrap_or_else(|| "127.0.0.1:1080".into()).parse()?;
         let circuiti: usize = val("circuits").map(|s| s.parse()).transpose()?.unwrap_or(2);
         let salti: usize = val("hops").map(|s| s.parse()).transpose()?.unwrap_or(3);
-        Ok(Self { percorso, elenco, autorita, socks, circuiti, salti })
+        let controllo: SocketAddr = val("control").unwrap_or_else(|| "127.0.0.1:1090".into()).parse()?;
+        Ok(Self { percorso, elenco, autorita, socks, circuiti, salti, controllo })
     }
 
     fn stampa(&self) {
@@ -254,6 +267,67 @@ impl Config {
             Err(e) => println!("  directory INVALID: {e}"),
         }
     }
+}
+
+/// Percorso predefinito del file di configurazione.
+fn percorso_config_predefinito() -> PathBuf {
+    let base = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+    PathBuf::from(base).join(".config/nyctalus/config")
+}
+
+/// `exec` (stile torsocks): esegue un programma instradandone il traffico sul
+/// proxy SOCKS tramite le variabili d'ambiente proxy. Funziona con i programmi
+/// che rispettano `ALL_PROXY`/`http_proxy` (curl, git, wget…); l'intercettazione
+/// totale via LD_PRELOAD è un possibile sviluppo futuro.
+/// Uso: `nyctalus exec [--socks ADDR] [--config FILE] -- PROGRAMMA [ARG…]`.
+fn esegui_exec(resto: &[String]) -> Risultato<()> {
+    let mut socks: Option<String> = None;
+    let mut config: Option<String> = None;
+    let mut i = 0;
+    while i < resto.len() {
+        match resto[i].as_str() {
+            "--socks" => {
+                socks = resto.get(i + 1).cloned();
+                i += 2;
+            }
+            "--config" => {
+                config = resto.get(i + 1).cloned();
+                i += 2;
+            }
+            "--" => {
+                i += 1;
+                break;
+            }
+            s if s.starts_with("--") => {
+                return Err(format!("unknown option for exec: {s}; put -- before the program").into());
+            }
+            _ => break,
+        }
+    }
+    let comando = &resto[i..];
+    let [programma, argomenti @ ..] = comando else {
+        return Err("exec: specify the program to run (e.g. exec -- curl https://example.com)".into());
+    };
+
+    let socks = socks.unwrap_or_else(|| {
+        let percorso = config.map(PathBuf::from).unwrap_or_else(percorso_config_predefinito);
+        leggi_file_config(&percorso).get("socks").cloned().unwrap_or_else(|| "127.0.0.1:1080".into())
+    });
+    let proxy = format!("socks5h://{socks}");
+
+    let stato = std::process::Command::new(programma)
+        .args(argomenti)
+        .envs([
+            ("ALL_PROXY", proxy.as_str()),
+            ("all_proxy", proxy.as_str()),
+            ("http_proxy", proxy.as_str()),
+            ("https_proxy", proxy.as_str()),
+            ("HTTP_PROXY", proxy.as_str()),
+            ("HTTPS_PROXY", proxy.as_str()),
+        ])
+        .status()
+        .map_err(|e| format!("exec: cannot run {programma}: {e}"))?;
+    std::process::exit(stato.code().unwrap_or(1));
 }
 
 /// Legge un file `chiave = valore` (righe vuote e `#` ignorate). Vuoto se assente.
