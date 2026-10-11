@@ -60,7 +60,9 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
 - [~] **F. 6b — demone da configurazione.** ✅ `start` (demone SOCKS5 conflux da config), `status` (mostra config + valida l'elenco), file `~/.config/nyctalus/config` (chiave=valore, flag che sovrascrivono). Fatto. ⏳ Resta `sito ./cartella` (pubblicare un `.nyct`): richiede i servizi nascosti/rendezvous (SPECIFICA §6), non ancora implementati.
 - [x] **CLI in inglese.** Comandi e opzioni rinominati in inglese (start, status, node, authority, directory, exit, send, receive, circuit, test-circuit, single-hop; --listen, --hops, --circuits, --directory, --authority, --to, --fingerprint, --recipient, --out, --identity, --lanes, --entries). Commenti del codice in italiano, sito bilingue.
 - [x] **G. 6c — strumenti.** ✅ `exec` (stile torsocks: imposta le variabili proxy e lancia un programma; provato con curl) e `monitor` (cruscotto testuale che legge una porta di controllo del demone con metriche circuits/flows/up/down/uptime; aggiornato ogni secondo). Il demone `start` espone la porta di controllo (`--control`, default 127.0.0.1:1090).
-- [ ] **H. Camuffamento L0** + rumore di fondo.
+- [~] **H. Camuffamento + rumore di fondo.**
+  - [x] **H1 — offuscamento del trasporto** ✅: ogni datagramma UDP è avvolto con ChaCha20 e una chiave di rete condivisa (`offuscamento.rs` nel core; `trasporto.rs` avvolge il socket UDP di quinn). Sul filo i byte appaiono casuali: nessuna firma QUIC per il DPI. Opzione `--obfuscation HEX` (nodi, start, circuit) o `obfuscation` nel config. Provato: con la chiave giusta funziona, senza fallisce. Limiti: niente resistenza al probing attivo né shaping dei tempi.
+  - [ ] **H2 — rumore di fondo (cover traffic):** pacchetti fittizi per nascondere i tempi; va progettato con cura (costo in banda vs beneficio).
 - [ ] **I. Ponte verso i `.onion` di Tor** (uscite volontarie via Arti).
 - [ ] **J. Browser pubblico** basato su Firefox ESR (multipiattaforma).
 - [ ] **K. Simulazione con Shadow** e confronto misurato con Tor.

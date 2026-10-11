@@ -32,7 +32,12 @@ pub struct Autenticazione {
     pub autorita: [u8; 32],
 }
 
-pub async fn nodo(ascolta: SocketAddr, segreto: [u8; 32], auth: Option<Autenticazione>) -> Risultato<()> {
+pub async fn nodo(
+    ascolta: SocketAddr,
+    segreto: [u8; 32],
+    auth: Option<Autenticazione>,
+    offusca: Option<[u8; 32]>,
+) -> Risultato<()> {
     let pubblica = circuito::chiave_pubblica(&segreto);
     let identita = crate::tls::identita_server()?;
     println!("Node listening on {ascolta}");
@@ -44,8 +49,11 @@ pub async fn nodo(ascolta: SocketAddr, segreto: [u8; 32], auth: Option<Autentica
     } else {
         println!("  downstream link authentication: off (prototype, unverified links)");
     }
+    if offusca.is_some() {
+        println!("  transport camouflage: ON");
+    }
 
-    let endpoint = quinn::Endpoint::server(identita.config, ascolta)?;
+    let endpoint = crate::trasporto::endpoint_server(identita.config, ascolta, offusca)?;
     let auth = Arc::new(auth);
     while let Some(in_arrivo) = endpoint.accept().await {
         let auth = auth.clone();
@@ -54,7 +62,7 @@ pub async fn nodo(ascolta: SocketAddr, segreto: [u8; 32], auth: Option<Autentica
             while let Ok((invio, ricezione)) = connessione.accept_bi().await {
                 let auth = auth.clone();
                 tokio::spawn(async move {
-                    if let Err(e) = gestisci_circuito(invio, ricezione, segreto, &auth).await {
+                    if let Err(e) = gestisci_circuito(invio, ricezione, segreto, &auth, offusca).await {
                         eprintln!("circuit closed: {e}");
                     }
                 });
@@ -81,6 +89,7 @@ async fn gestisci_circuito(
     mut ricezione_monte: quinn::RecvStream,
     segreto: [u8; 32],
     auth: &Option<Autenticazione>,
+    offusca: Option<[u8; 32]>,
 ) -> Risultato<()> {
     // Primo quadro dello stream = pacchetto di apertura Sphinx.
     let Some(pacchetto) = leggi_quadro(&mut ricezione_monte).await? else {
@@ -98,7 +107,7 @@ async fn gestisci_circuito(
                 None => None,
             };
             // `_endpoint` va tenuto in vita per tutta la durata del circuito.
-            let (_endpoint, mut invio_valle, mut ricezione_valle) = collega_valle(prossimo, pacchetto, impronta).await?;
+            let (_endpoint, mut invio_valle, mut ricezione_valle) = collega_valle(prossimo, pacchetto, impronta, offusca).await?;
 
             // Andata: togli il tuo strato e inoltra a valle. Il nonce è un
             // contatore locale (non viaggia sul filo): stessa posizione, stesso
@@ -306,9 +315,10 @@ async fn collega_valle(
     prossimo: SocketAddr,
     pacchetto_apertura: Vec<u8>,
     impronta: Option<[u8; 32]>,
+    offusca: Option<[u8; 32]>,
 ) -> Risultato<(quinn::Endpoint, quinn::SendStream, quinn::RecvStream)> {
     let locale: SocketAddr = if prossimo.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
-    let mut endpoint = quinn::Endpoint::client(locale)?;
+    let mut endpoint = crate::trasporto::endpoint_client(locale, offusca)?;
     let config = match impronta {
         Some(fp) => crate::tls::config_client(fp)?,
         None => crate::tls::config_client_insicuro()?,

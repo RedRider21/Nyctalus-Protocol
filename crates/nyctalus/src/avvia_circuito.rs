@@ -46,6 +46,7 @@ pub async fn avvia_circuito(
     salti: usize,
     socks: SocketAddr,
     controllo: SocketAddr,
+    offusca: Option<[u8; 32]>,
 ) -> Risultato<()> {
     if !(SALTI_MIN..=SALTI_MAX).contains(&salti) {
         return Err(format!("--hops must be between {SALTI_MIN} and {SALTI_MAX}").into());
@@ -69,7 +70,7 @@ pub async fn avvia_circuito(
     // Un solo collegamento QUIC verso il guard condiviso.
     let (guardiano, _, impronta_guard) = percorsi[0][0];
     let locale: SocketAddr = if guardiano.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
-    let mut endpoint = quinn::Endpoint::client(locale)?;
+    let mut endpoint = crate::trasporto::endpoint_client(locale, offusca)?;
     endpoint.set_default_client_config(match impronta_guard {
         Some(fp) => crate::tls::config_client(fp)?,
         None => crate::tls::config_client_insicuro()?,

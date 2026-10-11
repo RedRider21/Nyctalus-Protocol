@@ -31,6 +31,7 @@ mod nodo;
 mod prova_circuito;
 mod ricevi;
 mod tls;
+mod trasporto;
 mod travaso;
 mod uscita;
 
@@ -112,7 +113,7 @@ async fn esegui() -> Risultato<()> {
             let cfg = Config::carica(&opzioni)?;
             println!("Configuration: {}", cfg.percorso.display());
             let nodi = nodi_da_elenco(&cfg.elenco, cfg.autorita)?;
-            avvia_circuito::avvia_circuito(nodi, cfg.circuiti, cfg.salti, cfg.socks, cfg.controllo).await
+            avvia_circuito::avvia_circuito(nodi, cfg.circuiti, cfg.salti, cfg.socks, cfg.controllo, cfg.offuscamento).await
         }
         "status" => {
             let cfg = Config::carica(&opzioni)?;
@@ -141,7 +142,8 @@ async fn esegui() -> Risultato<()> {
                 }
                 _ => None,
             };
-            nodo::nodo(ascolta, segreto, auth).await
+            let offusca = da_esadecimale_opt(opzione(&opzioni, "obfuscation"))?;
+            nodo::nodo(ascolta, segreto, auth, offusca).await
         }
         "authority" => {
             let (segreto, pubblica) = nyctalus_core::elenco::genera_autorita();
@@ -167,7 +169,8 @@ async fn esegui() -> Risultato<()> {
             let circuiti: usize = opzione(&opzioni, "circuits").map(str::parse).transpose()?.unwrap_or(2);
             let salti: usize = opzione(&opzioni, "hops").map(str::parse).transpose()?.unwrap_or(3);
             let controllo: SocketAddr = opzione(&opzioni, "control").unwrap_or("127.0.0.1:1090").parse()?;
-            avvia_circuito::avvia_circuito(nodi, circuiti, salti, socks, controllo).await
+            let offusca = da_esadecimale_opt(opzione(&opzioni, "obfuscation"))?;
+            avvia_circuito::avvia_circuito(nodi, circuiti, salti, socks, controllo, offusca).await
         }
         "help" | "--help" | "-h" => {
             println!("{USO}");
@@ -236,6 +239,7 @@ struct Config {
     circuiti: usize,
     salti: usize,
     controllo: SocketAddr,
+    offuscamento: Option<[u8; 32]>,
 }
 
 impl Config {
@@ -252,7 +256,8 @@ impl Config {
         let circuiti: usize = val("circuits").map(|s| s.parse()).transpose()?.unwrap_or(2);
         let salti: usize = val("hops").map(|s| s.parse()).transpose()?.unwrap_or(3);
         let controllo: SocketAddr = val("control").unwrap_or_else(|| "127.0.0.1:1090".into()).parse()?;
-        Ok(Self { percorso, elenco, autorita, socks, circuiti, salti, controllo })
+        let offuscamento = da_esadecimale_opt(val("obfuscation").as_deref())?;
+        Ok(Self { percorso, elenco, autorita, socks, circuiti, salti, controllo, offuscamento })
     }
 
     fn stampa(&self) {
@@ -380,6 +385,11 @@ fn leggi_voci_elenco(testo: &str) -> Risultato<Vec<nyctalus_core::elenco::VoceEl
             })
         })
         .collect()
+}
+
+/// Chiave esadecimale opzionale (32 byte / 64 caratteri).
+fn da_esadecimale_opt(hex: Option<&str>) -> Risultato<Option<[u8; 32]>> {
+    hex.map(da_esadecimale).transpose()
 }
 
 /// Velocità leggibile (MB/s) per i riepiloghi.
