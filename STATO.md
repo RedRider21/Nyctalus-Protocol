@@ -63,6 +63,7 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
 - [ ] **I. Ponte verso i `.onion` di Tor** (uscite volontarie via Arti).
 - [ ] **J. Browser pubblico** basato su Firefox ESR (multipiattaforma).
 - [ ] **K. Simulazione con Shadow** e confronto misurato con Tor.
+- [~] **Distribuzione (eseguibili multi-SO).** CI GitHub Actions pronta e **verificata** (compila Linux x86_64/arm64, Windows x86_64, macOS Intel/Apple Silicon); su un tag `v*` produce i binari come Release. **Pubblicazione rimandata**: non si distribuisce un binario di anonimato non ancora verificato.
 
 ## Per ripartire
 ```sh
