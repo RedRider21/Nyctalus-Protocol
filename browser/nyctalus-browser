@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+#
+# Avvio del Nyctalus Browser (clone di Firefox con modalità stealth).
+# Mette questa cartella (browser/) nel PYTHONPATH così trova sia il pacchetto
+# nyctalus_browser sia nxs_i18n, poi lancia il modulo. Ogni argomento (un URL
+# o un file) viene passato così com'è.
+#
+# Uso:
+#   ./nyctalus-browser                 # pagina iniziale
+#   ./nyctalus-browser example.com     # apre un sito
+#   ./nyctalus-browser pagina.html     # apre un file locale
+set -eu
+QUI="$(cd "$(dirname "$0")" && pwd)"
+export PYTHONPATH="$QUI${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m nyctalus_browser "$@"
