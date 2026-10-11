@@ -1,35 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 
-//! `nyctalus`: programma di prova di Nyctalus Protocol.
+//! `nyctalus`: eseguibile di Nyctalus Protocol.
 //!
-//! Trasferisce un file tra due computer su QUIC, spezzato in frammenti
-//! cifrati end-to-end (livello L2 di `nyctalus-core`) e distribuito su più
-//! "corsie" parallele: è la ragnatela in miniatura, tra due soli estremi e
-//! ancora senza nodi intermedi.
-//!
-//! ```text
-//! nyctalus ricevi --uscita FILE [--ascolta 0.0.0.0:4433] [--identita FILE]
-//! nyctalus invia  --a IP:PORTA --impronta HEX --destinatario INDIRIZZO.nyct [--corsie 4] FILE
-//! ```
-//!
-//! Il segreto del flusso nasce dalla stretta di mano Noise NK con la chiave
-//! pubblica del destinatario: non viaggia mai e non va copiato a mano.
-//!
-//! Inoltre offre il primo abbozzo dell'uso "da rete" (VISIONE §8.2):
+//! I **nomi di comandi e opzioni sono in inglese** (interfaccia pubblica,
+//! pronta per un pubblico internazionale); i commenti del codice restano in
+//! italiano. Esempio d'uso "da rete":
 //!
 //! ```text
-//! nyctalus uscita --ascolta 0.0.0.0:4600
-//! nyctalus avvia  --a IP:PORTA --impronta HEX [--socks 127.0.0.1:1080]
-//! nyctalus nodo   --ascolta 0.0.0.0:4601
-//! nyctalus prova-circuito --nodi 'a,pub;b,pub;c,pub' --messaggio "ciao"
+//! nyctalus authority                         # crea l'autorità dell'elenco
+//! nyctalus node --listen 0.0.0.0:4601 --directory dir.txt --authority HEX
+//! nyctalus directory --authority-secret HEX --entries 'addr,x,fp;...' > dir.txt
+//! nyctalus start --directory dir.txt --authority HEX --socks 127.0.0.1:1080
 //! ```
 //!
-//! `avvia` apre un proxy SOCKS5 locale che inoltra il traffico a un nodo di
-//! `uscita`, il quale lo porta su Internet. ATTENZIONE: è ancora un solo
-//! salto (client → uscita), quindi **non è anonimo**: l'uscita vede l'IP del
-//! client. Serve a rendere la CLI usabile fin da subito; i nodi intermedi e
-//! la cipolla (tappe 1b/1c) trasformeranno questo in un percorso anonimo.
+//! `start` legge la configurazione (`~/.config/nyctalus/config` o `--config`)
+//! e apre un proxy SOCKS5 che instrada il traffico attraverso la ragnatela
+//! conflux (più circuiti, guard e uscita condivisi). `status` ne mostra la
+//! configurazione effettiva.
 
 mod avvia;
 mod avvia_circuito;
@@ -54,21 +42,23 @@ pub type Risultato<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub const ID_FLUSSO_DATI: u64 = 1;
 
 const USO: &str = "\
-Uso:
-  nyctalus ricevi --uscita FILE [--ascolta 0.0.0.0:4433] [--identita FILE]
-  nyctalus invia  --a IP:PORTA --impronta HEX --destinatario INDIRIZZO.nyct [--corsie 4] FILE
-  nyctalus uscita --ascolta 0.0.0.0:4600
-  nyctalus avvia  --a IP:PORTA --impronta HEX [--socks 127.0.0.1:1080]
-  nyctalus nodo   --ascolta 0.0.0.0:4601 [--segreto HEX] [--elenco FILE --autorita HEX]
-  nyctalus autorita
-  nyctalus elenco --autorita-segreto HEX --voci 'addr,x,fp;addr,x,fp'
-  nyctalus prova-circuito (--elenco FILE --autorita HEX | --nodi 'addr,pub;...') [--messaggio T]
-  nyctalus avvia-circuito (--elenco FILE --autorita HEX | --nodi 'addr,pub;...') [--socks 127.0.0.1:1080] [--circuiti 2 (1-8)] [--salti 3 (1-5)]
+Usage:
+  nyctalus start   [--config FILE] [--directory FILE] [--authority HEX] [--socks 127.0.0.1:1080] [--circuits 2] [--hops 3]
+  nyctalus status  [--config FILE]
+  nyctalus node    --listen 0.0.0.0:4601 [--secret HEX] [--directory FILE --authority HEX]
+  nyctalus authority
+  nyctalus directory --authority-secret HEX --entries 'addr,x,fp;addr,x,fp'
+  nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)]
+  nyctalus test-circuit (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--message DEST]
+  nyctalus receive --out FILE [--listen 0.0.0.0:4433] [--identity FILE]
+  nyctalus send    --to IP:PORT --fingerprint HEX --recipient ADDRESS.nyct [--lanes 4] FILE
+  nyctalus single-hop --to IP:PORT --fingerprint HEX [--socks 127.0.0.1:1080]
+  nyctalus exit    --listen 0.0.0.0:4600
 
-'ricevi'/'invia': trasferimento di un file (test del livello L2).
-'uscita'/'avvia': proxy SOCKS5 verso Internet (un solo salto, non ancora anonimo).
-'nodo'/'prova-circuito': circuito onion a più nodi (tappa 2).
-Avvia prima i nodi (stampano il pezzo per --nodi), poi 'prova-circuito'.";
+'start'/'status': SOCKS5 daemon driven by config (~/.config/nyctalus/config) and its status.
+'node'/'authority'/'directory': nodes and the signed directory.
+'circuit': like 'start' but with nodes given explicitly (testing).
+'receive'/'send': file transfer (L2 test). 'single-hop'/'exit': 1-hop proxy (test).";
 
 #[tokio::main]
 async fn main() {
@@ -86,17 +76,17 @@ async fn esegui() -> Risultato<()> {
     };
     let (opzioni, posizionali) = leggi_opzioni(resto)?;
     match comando.as_str() {
-        "ricevi" => {
-            let ascolta: SocketAddr = opzione(&opzioni, "ascolta").unwrap_or("0.0.0.0:4433").parse()?;
-            let uscita = PathBuf::from(obbligatoria(&opzioni, "uscita")?);
-            let identita = opzione(&opzioni, "identita").map(PathBuf::from);
+        "receive" => {
+            let ascolta: SocketAddr = opzione(&opzioni, "listen").unwrap_or("0.0.0.0:4433").parse()?;
+            let uscita = PathBuf::from(obbligatoria(&opzioni, "out")?);
+            let identita = opzione(&opzioni, "identity").map(PathBuf::from);
             ricevi::ricevi(ascolta, uscita, identita).await
         }
-        "invia" => {
-            let destinazione: SocketAddr = obbligatoria(&opzioni, "a")?.parse()?;
-            let impronta = da_esadecimale(obbligatoria(&opzioni, "impronta")?)?;
-            let destinatario = nyctalus_core::indirizzo::in_chiave(obbligatoria(&opzioni, "destinatario")?)?;
-            let corsie: usize = opzione(&opzioni, "corsie").unwrap_or("4").parse()?;
+        "send" => {
+            let destinazione: SocketAddr = obbligatoria(&opzioni, "to")?.parse()?;
+            let impronta = da_esadecimale(obbligatoria(&opzioni, "fingerprint")?)?;
+            let destinatario = nyctalus_core::indirizzo::in_chiave(obbligatoria(&opzioni, "recipient")?)?;
+            let corsie: usize = opzione(&opzioni, "lanes").unwrap_or("4").parse()?;
             if !(1..=64).contains(&corsie) {
                 return Err("--corsie deve essere tra 1 e 64".into());
             }
@@ -105,23 +95,34 @@ async fn esegui() -> Risultato<()> {
             };
             invia::invia(destinazione, impronta, destinatario, corsie, PathBuf::from(file)).await
         }
-        "uscita" => {
-            let ascolta: SocketAddr = opzione(&opzioni, "ascolta").unwrap_or("0.0.0.0:4600").parse()?;
+        "exit" => {
+            let ascolta: SocketAddr = opzione(&opzioni, "listen").unwrap_or("0.0.0.0:4600").parse()?;
             uscita::uscita(ascolta).await
         }
-        "avvia" => {
-            let destinazione: SocketAddr = obbligatoria(&opzioni, "a")?.parse()?;
-            let impronta = da_esadecimale(obbligatoria(&opzioni, "impronta")?)?;
+        "start" => {
+            let cfg = Config::carica(&opzioni)?;
+            println!("Configurazione: {}", cfg.percorso.display());
+            let nodi = nodi_da_elenco(&cfg.elenco, cfg.autorita)?;
+            avvia_circuito::avvia_circuito(nodi, cfg.circuiti, cfg.salti, cfg.socks).await
+        }
+        "status" => {
+            let cfg = Config::carica(&opzioni)?;
+            cfg.stampa();
+            Ok(())
+        }
+        "single-hop" => {
+            let destinazione: SocketAddr = obbligatoria(&opzioni, "to")?.parse()?;
+            let impronta = da_esadecimale(obbligatoria(&opzioni, "fingerprint")?)?;
             let socks: SocketAddr = opzione(&opzioni, "socks").unwrap_or("127.0.0.1:1080").parse()?;
             avvia::avvia(destinazione, impronta, socks).await
         }
-        "nodo" => {
-            let ascolta: SocketAddr = obbligatoria(&opzioni, "ascolta")?.parse()?;
-            let segreto = match opzione(&opzioni, "segreto") {
+        "node" => {
+            let ascolta: SocketAddr = obbligatoria(&opzioni, "listen")?.parse()?;
+            let segreto = match opzione(&opzioni, "secret") {
                 Some(hex) => da_esadecimale(hex)?,
                 None => nyctalus_core::circuito::genera_segreto(),
             };
-            let auth = match (opzione(&opzioni, "elenco"), opzione(&opzioni, "autorita")) {
+            let auth = match (opzione(&opzioni, "directory"), opzione(&opzioni, "authority")) {
                 (Some(e), Some(a)) => {
                     Some(nodo::Autenticazione { elenco: PathBuf::from(e), autorita: da_esadecimale(a)? })
                 }
@@ -129,32 +130,32 @@ async fn esegui() -> Risultato<()> {
             };
             nodo::nodo(ascolta, segreto, auth).await
         }
-        "autorita" => {
+        "authority" => {
             let (segreto, pubblica) = nyctalus_core::elenco::genera_autorita();
             println!("Autorità dell'elenco (custodire il segreto):");
             println!("  segreto:  {}", in_esadecimale(&segreto));
             println!("  pubblica: {}", in_esadecimale(&pubblica));
             Ok(())
         }
-        "elenco" => {
-            let segreto = da_esadecimale(obbligatoria(&opzioni, "autorita-segreto")?)?;
-            let voci = leggi_voci_elenco(obbligatoria(&opzioni, "voci")?)?;
+        "directory" => {
+            let segreto = da_esadecimale(obbligatoria(&opzioni, "authority-secret")?)?;
+            let voci = leggi_voci_elenco(obbligatoria(&opzioni, "entries")?)?;
             print!("{}", nyctalus_core::elenco::firma_elenco(&voci, &segreto));
             Ok(())
         }
-        "prova-circuito" => {
+        "test-circuit" => {
             let nodi = carica_nodi(&opzioni)?;
-            let messaggio = opzione(&opzioni, "messaggio").unwrap_or("example.com:80").to_string();
+            let messaggio = opzione(&opzioni, "message").unwrap_or("example.com:80").to_string();
             prova_circuito::prova_circuito(nodi, messaggio).await
         }
-        "avvia-circuito" => {
+        "circuit" => {
             let nodi = carica_nodi(&opzioni)?;
             let socks: SocketAddr = opzione(&opzioni, "socks").unwrap_or("127.0.0.1:1080").parse()?;
-            let circuiti: usize = opzione(&opzioni, "circuiti").map(str::parse).transpose()?.unwrap_or(2);
-            let salti: usize = opzione(&opzioni, "salti").map(str::parse).transpose()?.unwrap_or(3);
+            let circuiti: usize = opzione(&opzioni, "circuits").map(str::parse).transpose()?.unwrap_or(2);
+            let salti: usize = opzione(&opzioni, "hops").map(str::parse).transpose()?.unwrap_or(3);
             avvia_circuito::avvia_circuito(nodi, circuiti, salti, socks).await
         }
-        "aiuto" | "--help" | "-h" => {
+        "help" | "--help" | "-h" => {
             println!("{USO}");
             Ok(())
         }
@@ -204,20 +205,80 @@ pub(crate) fn da_esadecimale(testo: &str) -> Risultato<[u8; 32]> {
     Ok(risultato)
 }
 
+/// Carica i nodi da un elenco firmato (file + chiave pubblica dell'autorità).
+fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_circuito::NodoRete>> {
+    let testo = std::fs::read_to_string(percorso)?;
+    let voci = nyctalus_core::elenco::verifica_elenco(&testo, &autorita)?;
+    voci.into_iter().map(|v| Ok((v.indirizzo.parse()?, v.x25519, Some(v.impronta_tls)))).collect()
+}
+
+/// Configurazione del demone: valori da riga di comando, poi dal file
+/// `~/.config/nyctalus/config` (chiave = valore), infine i default.
+struct Config {
+    percorso: PathBuf,
+    elenco: String,
+    autorita: [u8; 32],
+    socks: SocketAddr,
+    circuiti: usize,
+    salti: usize,
+}
+
+impl Config {
+    fn carica(opzioni: &Opzioni) -> Risultato<Self> {
+        let percorso = match opzione(opzioni, "config") {
+            Some(p) => PathBuf::from(p),
+            None => {
+                let base = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+                PathBuf::from(base).join(".config/nyctalus/config")
+            }
+        };
+        let file = leggi_file_config(&percorso);
+        let val = |k: &str| opzione(opzioni, k).map(String::from).or_else(|| file.get(k).cloned());
+        let elenco = val("directory").ok_or("manca 'directory' (nel config o --directory)")?;
+        let autorita = da_esadecimale(&val("authority").ok_or("manca 'authority' (nel config o --authority)")?)?;
+        let socks: SocketAddr = val("socks").unwrap_or_else(|| "127.0.0.1:1080".into()).parse()?;
+        let circuiti: usize = val("circuits").map(|s| s.parse()).transpose()?.unwrap_or(2);
+        let salti: usize = val("hops").map(|s| s.parse()).transpose()?.unwrap_or(3);
+        Ok(Self { percorso, elenco, autorita, socks, circuiti, salti })
+    }
+
+    fn stampa(&self) {
+        println!("Stato della configurazione ({}):", self.percorso.display());
+        println!("  elenco:   {}", self.elenco);
+        println!("  autorità: {}", in_esadecimale(&self.autorita));
+        println!("  socks:    {}", self.socks);
+        println!("  circuiti: {}", self.circuiti);
+        println!("  salti:    {}", self.salti);
+        match nodi_da_elenco(&self.elenco, self.autorita) {
+            Ok(nodi) => println!("  elenco valido: {} nodi", nodi.len()),
+            Err(e) => println!("  elenco NON valido: {e}"),
+        }
+    }
+}
+
+/// Legge un file `chiave = valore` (righe vuote e `#` ignorate). Vuoto se assente.
+fn leggi_file_config(percorso: &std::path::Path) -> HashMap<String, String> {
+    let mut mappa = HashMap::new();
+    if let Ok(testo) = std::fs::read_to_string(percorso) {
+        for riga in testo.lines() {
+            let riga = riga.split('#').next().unwrap_or("").trim();
+            if let Some((k, v)) = riga.split_once('=') {
+                mappa.insert(k.trim().to_string(), v.trim().to_string());
+            }
+        }
+    }
+    mappa
+}
+
 /// Carica i nodi del percorso: da elenco firmato (`--elenco` + `--autorita`,
 /// con impronte TLS per autenticare) oppure da `--nodi` (prototipo, senza
 /// autenticazione). Ordine: guard → … → uscita.
 fn carica_nodi(opzioni: &Opzioni) -> Risultato<Vec<avvia_circuito::NodoRete>> {
-    if let Some(percorso) = opzione(opzioni, "elenco") {
-        let autorita = da_esadecimale(obbligatoria(opzioni, "autorita")?)?;
-        let testo = std::fs::read_to_string(percorso)?;
-        let voci = nyctalus_core::elenco::verifica_elenco(&testo, &autorita)?;
-        return voci
-            .into_iter()
-            .map(|v| Ok((v.indirizzo.parse()?, v.x25519, Some(v.impronta_tls))))
-            .collect();
+    if let Some(percorso) = opzione(opzioni, "directory") {
+        let autorita = da_esadecimale(obbligatoria(opzioni, "authority")?)?;
+        return nodi_da_elenco(percorso, autorita);
     }
-    let nodi = obbligatoria(opzioni, "nodi")?;
+    let nodi = obbligatoria(opzioni, "nodes")?;
     nodi
         .split(';')
         .filter(|v| !v.trim().is_empty())

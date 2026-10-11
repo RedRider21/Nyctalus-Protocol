@@ -23,7 +23,7 @@ pub async fn uscita(ascolta: SocketAddr) -> Risultato<()> {
     let endpoint = quinn::Endpoint::server(identita.config, ascolta)?;
     println!("Nodo di uscita in ascolto su {ascolta}. Sull'altro computer esegui:\n");
     println!(
-        "  nyctalus avvia --a <IP-DI-QUESTO-NODO>:{} --impronta {}\n",
+        "  nyctalus single-hop --to <IP-DI-QUESTO-NODO>:{} --fingerprint {}\n",
         ascolta.port(),
         crate::in_esadecimale(&identita.impronta),
     );

@@ -67,7 +67,7 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 - **Stretta di mano Noise NK:** i due estremi si accordano sul segreto senza farlo mai viaggiare; forward secrecy; il mittente resta anonimo.
 - **Indirizzi `.nyct`:** la chiave pubblica di un servizio in base32, con controllo anti-errori di battitura.
 - **L1 — livello a cipolla (data-plane):** gli strati simmetrici che ogni pacchetto attraversa.
-- **CLI:** proxy SOCKS5 funzionante (`nyctalus avvia`) a un salto, e **circuito anonimo a 3 salti** (`nyctalus avvia-circuito`), provati con `curl`.
+- **CLI (comandi in inglese):** demone `nyctalus start` (SOCKS5 da configurazione, ragnatela conflux) e `nyctalus status`; comandi di test `circuit`, `node`, `directory`, `authority`.
 - **Elenco firmato dei nodi** (directory, autorità Ed25519) e **autenticazione dei collegamenti**: il client pinna il guard, ogni relè pinna il nodo a valle con l'impronta presa dall'elenco firmato.
 - **Circuito condiviso**: un solo circuito trasporta più connessioni, multiplexate con celle dentro gli strati a cipolla (i relè restano ciechi ai singoli flussi).
 - **Ragnatela (conflux)**: un singolo scaricamento viene **spezzato su più circuiti** (guard e uscita condivisi, intermedi diversi) e **ricomposto a destinazione** grazie a una sequenza end-to-end dentro l'onion — così sfrutta la banda di più strade.
@@ -96,11 +96,11 @@ Nyctalus è, come Tor, un demone con interfaccia a riga di comando; il browser
 
 Sul nodo di uscita:
 ```sh
-nyctalus uscita --ascolta 0.0.0.0:4600
+nyctalus exit --listen 0.0.0.0:4600
 ```
 Stampa il comando `avvia` completo, con l'impronta del certificato. Sul client:
 ```sh
-nyctalus avvia --a IP-USCITA:4600 --impronta <IMPRONTA> --socks 127.0.0.1:1080
+nyctalus single-hop --to IP-USCITA:4600 --fingerprint <FINGERPRINT> --socks 127.0.0.1:1080
 curl --socks5-hostname 127.0.0.1:1080 https://example.com
 ```
 
@@ -112,29 +112,47 @@ curl --socks5-hostname 127.0.0.1:1080 https://example.com
 
 ```sh
 # 1) crea un'autorità per firmare l'elenco dei nodi
-nyctalus autorita                      # stampa segreto + pubblica
+nyctalus authority                      # stampa segreto + pubblica
 
 # 2) avvia i nodi (stampano la loro riga per l'elenco)
-nyctalus nodo --ascolta 0.0.0.0:4601 --elenco elenco.txt --autorita <PUB>
-nyctalus nodo --ascolta 0.0.0.0:4602 --elenco elenco.txt --autorita <PUB>
-nyctalus nodo --ascolta 0.0.0.0:4603 --elenco elenco.txt --autorita <PUB>
+nyctalus node --listen 0.0.0.0:4601 --directory directory.txt --authority <PUB>
+nyctalus node --listen 0.0.0.0:4602 --directory directory.txt --authority <PUB>
+nyctalus node --listen 0.0.0.0:4603 --directory directory.txt --authority <PUB>
 
 # 3) firma l'elenco con le righe stampate dai nodi
-nyctalus elenco --autorita-segreto <SEGRETO> \
-  --voci 'addr,x,fp;addr,x,fp;addr,x,fp' > elenco.txt
+nyctalus directory --authority-secret <SECRET> \
+  --entries 'addr,x,fp;addr,x,fp;addr,x,fp' > directory.txt
 
 # 4) proxy SOCKS5 attraverso il circuito a 3 salti
-nyctalus avvia-circuito --elenco elenco.txt --autorita <PUB> --socks 127.0.0.1:1080 \
-  --circuiti 2 --salti 3
+nyctalus circuit --directory directory.txt --authority <PUB> --socks 127.0.0.1:1080 \
+  --circuits 2 --hops 3
 curl --socks5-hostname 127.0.0.1:1080 http://example.com
 ```
 
 Con l'elenco firmato ogni collegamento è autenticato: un elenco manomesso o
 firmato da un'autorità diversa viene rifiutato.
 
-**Impostazioni del percorso** (in futuro anche nel file di configurazione, punto F):
-- `--circuiti N` — strade parallele usate contemporaneamente. **Minimo 1, massimo 8**, default **2**.
-- `--salti N` — nodi per percorso (guard + intermedi + uscita). **Minimo 1, massimo 5** (limite di Sphinx), default **3**. Sotto i 3 salti non c'è vero anonimato.
+### Demone da configurazione
+
+Invece di passare tutto a riga di comando, si può usare un file
+`~/.config/nyctalus/config`:
+
+```ini
+directory = /percorso/directory.txt
+authority = <PUB>
+socks     = 127.0.0.1:1080
+circuits  = 2
+hops      = 3
+```
+
+```sh
+nyctalus status     # mostra la configurazione e valida l'elenco
+nyctalus start      # avvia il proxy SOCKS5 attraverso la ragnatela conflux
+```
+
+**Impostazioni del percorso:**
+- `--circuits N` (o `circuits` nel config) — strade parallele usate contemporaneamente. **Minimo 1, massimo 8**, default **2**.
+- `--hops N` (o `hops`) — nodi per percorso (guard + intermedi + uscita). **Minimo 1, massimo 5** (limite di Sphinx), default **3**. Sotto i 3 salti non c'è vero anonimato.
 
 **Affidabilità:** il trasporto è QUIC (su UDP), che **recupera da solo i pacchetti persi** e li riconsegna in ordine; un pacchetto perso non blocca gli altri flussi (niente head-of-line blocking fra flussi).
 
@@ -142,11 +160,11 @@ firmato da un'autorità diversa viene rifiutato.
 
 Sul ricevitore:
 ```sh
-nyctalus ricevi --uscita ricevuto.bin --identita mia.chiave
+nyctalus receive --out received.bin --identity my.key
 ```
 Stampa il comando `invia` con l'indirizzo `.nyct` del ricevitore. Sul mittente:
 ```sh
-nyctalus invia --a IP:4433 --impronta <IMPRONTA> --destinatario <INDIRIZZO>.nyct file
+nyctalus send --to IP:4433 --fingerprint <FINGERPRINT> --recipient <ADDRESS>.nyct file
 ```
 
 ## Cosa promette e cosa no

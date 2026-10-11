@@ -17,7 +17,7 @@ use crate::Risultato;
 
 pub async fn prova_circuito(percorso_rete: Vec<crate::avvia_circuito::NodoRete>, messaggio: String) -> Risultato<()> {
     if percorso_rete.is_empty() {
-        return Err("indicare almeno un nodo con --nodi o --elenco".into());
+        return Err("indicare almeno un nodo con --nodes o --directory".into());
     }
     let percorso: Vec<NodoPercorso> = percorso_rete
         .iter()

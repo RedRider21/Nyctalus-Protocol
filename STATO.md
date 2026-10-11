@@ -57,7 +57,8 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
 - [x] **E. Ragnatela multipercorso.**
   - [x] **E1 — più circuiti paralleli** (guard condiviso, percorsi diversi) con assegnazione delle connessioni a rotazione: connessioni concorrenti su strade diverse. Opzioni `--circuiti N` (1–8, default 2) e `--salti N` (1–5, default 3). Provato: 4 download paralleli su 2 circuiti con percorsi diversi, tutti integri.
   - [x] **E2 — conflux** (fatto): circuiti con **guard e uscita condivisi** (intermedi diversi); le celle di ogni flusso sono numerate con una sequenza end-to-end dentro l'onion e spezzate sui circuiti; l'uscita le **ricompone** (conflux.rs + registro dei gruppi all'uscita, LINK=set_id). Provato: un download da 600 KB spezzato su 2 circuiti torna integro; 2 download paralleli integri.
-- [ ] **F. 6b — sottocomandi demone:** `avvia` (demone+SOCKS5 integrato col circuito), `stato`, `sito ./cartella`, config `~/.config/nyctalus/config`.
+- [~] **F. 6b — demone da configurazione.** ✅ `start` (demone SOCKS5 conflux da config), `status` (mostra config + valida l'elenco), file `~/.config/nyctalus/config` (chiave=valore, flag che sovrascrivono). Fatto. ⏳ Resta `sito ./cartella` (pubblicare un `.nyct`): richiede i servizi nascosti/rendezvous (SPECIFICA §6), non ancora implementati.
+- [x] **CLI in inglese.** Comandi e opzioni rinominati in inglese (start, status, node, authority, directory, exit, send, receive, circuit, test-circuit, single-hop; --listen, --hops, --circuits, --directory, --authority, --to, --fingerprint, --recipient, --out, --identity, --lanes, --entries). Commenti del codice in italiano, sito bilingue.
 - [ ] **G. 6c — strumenti:** `monitor` (curses, stile `nyx`), `esec` (stile `torsocks`).
 - [ ] **H. Camuffamento L0** + rumore di fondo.
 - [ ] **I. Ponte verso i `.onion` di Tor** (uscite volontarie via Arti).

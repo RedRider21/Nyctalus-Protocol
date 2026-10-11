@@ -32,7 +32,7 @@ pub async fn ricevi(ascolta: SocketAddr, uscita: PathBuf, file_identita: Option<
     let endpoint = quinn::Endpoint::server(tls.config, ascolta)?;
     println!("In ascolto su {ascolta}. Sull'altro computer esegui:\n");
     println!(
-        "  nyctalus invia --a <IP-DI-QUESTO-PC>:{} --impronta {} --destinatario {} <FILE>\n",
+        "  nyctalus send --to <IP-DI-QUESTO-PC>:{} --fingerprint {} --recipient {} <FILE>\n",
         ascolta.port(),
         in_esadecimale(&tls.impronta),
         indirizzo::da_chiave(&identita.pubblica()),
