@@ -73,4 +73,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          prerelease: true
+          body: |
+            **Prototipo** di Nyctalus Protocol — non usare ancora per proteggere dati reali.
+
+            Eseguibili `nyctalus` per: Linux (x86_64, arm64), Windows (x86_64), macOS (Intel, Apple Silicon).
+            Scaricare il file adatto al proprio sistema, renderlo eseguibile ed eseguire `nyctalus` senza argomenti per l'elenco dei comandi.
           files: dist/*
