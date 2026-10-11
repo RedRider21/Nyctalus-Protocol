@@ -28,7 +28,7 @@ pub async fn invia(
     let mut endpoint = quinn::Endpoint::client(locale)?;
     endpoint.set_default_client_config(tls::config_client(impronta)?);
     let connessione = endpoint.connect(destinazione, tls::NOME_SERVER)?.await?;
-    println!("Collegato con {destinazione}, {corsie} corsie parallele");
+    println!("Connected with {destinazione}, {corsie} parallel lanes");
 
     // Stretta di mano Noise NK: solo chi possiede la chiave privata del
     // destinatario riesce a rispondere.
@@ -40,7 +40,7 @@ pub async fn invia(
     ricezione_stretta.read_exact(&mut risposta).await?;
     let segreti = mittente_stretta.completa(&risposta)?;
     let segreto = segreti.verso_destinatario;
-    println!("Stretta di mano completata: destinatario autenticato, forward secrecy attiva");
+    println!("Handshake complete: recipient authenticated, forward secrecy on");
 
     // Conferme dal ricevitore: indice del prossimo frammento che aspetta.
     let mut canale_conferme = connessione.accept_uni().await?;
@@ -86,11 +86,11 @@ pub async fn invia(
             conferme
                 .wait_for(|&confermato| indice < confermato + parametri.finestra)
                 .await
-                .map_err(|_| "il ricevitore ha chiuso il canale delle conferme")?;
+                .map_err(|_| "the receiver closed the acks channel")?;
             code[(indice % corsie as u64) as usize]
                 .send(pacchetto)
                 .await
-                .map_err(|_| "una corsia si è chiusa durante l'invio")?;
+                .map_err(|_| "a lane closed during sending")?;
             indice += 1;
         }
         if fine {
@@ -106,14 +106,14 @@ pub async fn invia(
     conferme
         .wait_for(|&confermato| confermato >= totale)
         .await
-        .map_err(|_| "il ricevitore non ha confermato la fine del trasferimento")?;
+        .map_err(|_| "the receiver did not confirm the end of transfer")?;
     let secondi = inizio.elapsed().as_secs_f64();
     connessione.close(0u32.into(), b"fine");
     endpoint.wait_idle().await;
 
-    println!("Inviato {} ({byte} byte) in {secondi:.2} s, {}", percorso.display(), velocita(byte, secondi));
-    println!("  pacchetti: {totale}");
-    println!("  BLAKE3 del file: {}", hash.finalize().to_hex());
+    println!("Sent {} ({byte} bytes) in {secondi:.2} s, {}", percorso.display(), velocita(byte, secondi));
+    println!("  packets: {totale}");
+    println!("  file BLAKE3: {}", hash.finalize().to_hex());
     Ok(())
 }
 

@@ -47,13 +47,13 @@ pub async fn avvia_circuito(
     socks: SocketAddr,
 ) -> Risultato<()> {
     if !(SALTI_MIN..=SALTI_MAX).contains(&salti) {
-        return Err(format!("--salti deve essere fra {SALTI_MIN} e {SALTI_MAX}").into());
+        return Err(format!("--hops must be between {SALTI_MIN} and {SALTI_MAX}").into());
     }
     if !(CIRCUITI_MIN..=CIRCUITI_MAX).contains(&circuiti) {
-        return Err(format!("--circuiti deve essere fra {CIRCUITI_MIN} e {CIRCUITI_MAX}").into());
+        return Err(format!("--circuits must be between {CIRCUITI_MIN} and {CIRCUITI_MAX}").into());
     }
     if nodi.len() < salti {
-        return Err(format!("servono almeno {salti} nodi nell'elenco").into());
+        return Err(format!("need at least {salti} nodes in the directory").into());
     }
 
     // Identificativo del gruppo conflux e percorsi (guard + uscita condivisi).
@@ -62,7 +62,7 @@ pub async fn avvia_circuito(
     let percorsi = seleziona_conflux(&nodi, circuiti, salti)?;
     for (i, p) in percorsi.iter().enumerate() {
         let strada: Vec<String> = p.iter().map(|n| n.0.to_string()).collect();
-        println!("  circuito {i}: {}", strada.join(" → "));
+        println!("  circuit {i}: {}", strada.join(" → "));
     }
 
     // Un solo collegamento QUIC verso il guard condiviso.
@@ -103,10 +103,10 @@ pub async fn avvia_circuito(
 
     let ascoltatore = TcpListener::bind(socks).await?;
     println!(
-        "Proxy SOCKS5 su {socks} — conflux su {} circuiti (guard e uscita condivisi, {salti} salti)",
+        "SOCKS5 proxy on {socks} — conflux over {} circuits (shared guard and exit, {salti} hops)",
         percorsi.len()
     );
-    println!("Prova:  curl --socks5-hostname {socks} http://example.com\n");
+    println!("Try:  curl --socks5-hostname {socks} http://example.com\n");
 
     let mut prossimo_flusso: u16 = 0;
     loop {
@@ -119,7 +119,7 @@ pub async fn avvia_circuito(
         let flussi = flussi.clone();
         tokio::spawn(async move {
             if let Err(e) = gestisci_flusso(cliente, flusso, &tx_out, rx_in).await {
-                eprintln!("flusso {flusso} chiuso: {e}");
+                eprintln!("flow {flusso} closed: {e}");
             }
             flussi.lock().unwrap().remove(&flusso);
         });
@@ -198,7 +198,7 @@ fn seleziona_conflux(nodi: &[NodoRete], circuiti: usize, salti: usize) -> Risult
     let interni = salti - 2;
     let mut candidati: Vec<usize> = (2..nodi.len()).collect();
     if interni > 0 && candidati.is_empty() {
-        return Err("servono nodi intermedi oltre a guard e uscita".into());
+        return Err("need middle nodes besides guard and exit".into());
     }
     mescola(&mut candidati);
 
@@ -238,7 +238,7 @@ async fn gestisci_flusso(
     let saluto = leggi_socks(&mut cliente, Saluto::analizza).await?;
     if !saluto.offre_senza_autenticazione() {
         cliente.write_all(&socks5::risposta_saluto(socks5::METODO_NESSUNO_ACCETTABILE)).await?;
-        return Err("il client SOCKS non offre 'nessuna autenticazione'".into());
+        return Err("the SOCKS client offers no 'no authentication' method".into());
     }
     cliente.write_all(&socks5::risposta_saluto(socks5::METODO_SENZA_AUTENTICAZIONE)).await?;
     let richiesta = leggi_socks(&mut cliente, Richiesta::analizza).await?;
@@ -268,7 +268,7 @@ async fn gestisci_flusso(
             tx_out
                 .send(Cella::nuova(flusso, cmd::DATI, buffer[..letti].to_vec()).in_byte())
                 .await
-                .map_err(|_| "circuito chiuso")?;
+                .map_err(|_| "circuit closed")?;
         }
         let _ = tx_out.send(Cella::controllo(flusso, cmd::CHIUDI).in_byte()).await;
         Risultato::Ok(())
@@ -311,7 +311,7 @@ async fn leggi_socks<T>(
         let mut pezzo = [0u8; 262];
         let n = cliente.read(&mut pezzo).await?;
         if n == 0 {
-            return Err("il client SOCKS ha chiuso durante la negoziazione".into());
+            return Err("the SOCKS client closed during negotiation".into());
         }
         buffer.extend_from_slice(&pezzo[..n]);
     }

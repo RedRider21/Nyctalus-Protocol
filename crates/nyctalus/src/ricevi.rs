@@ -30,7 +30,7 @@ pub async fn ricevi(ascolta: SocketAddr, uscita: PathBuf, file_identita: Option<
     let tls = tls::identita_server()?;
 
     let endpoint = quinn::Endpoint::server(tls.config, ascolta)?;
-    println!("In ascolto su {ascolta}. Sull'altro computer esegui:\n");
+    println!("Listening on {ascolta}. On the other computer run:\n");
     println!(
         "  nyctalus send --to <IP-DI-QUESTO-PC>:{} --fingerprint {} --recipient {} <FILE>\n",
         ascolta.port(),
@@ -39,7 +39,7 @@ pub async fn ricevi(ascolta: SocketAddr, uscita: PathBuf, file_identita: Option<
     );
 
     let connessione = endpoint.accept().await.ok_or("endpoint chiuso")?.await?;
-    println!("Collegato con {}", connessione.remote_address());
+    println!("Connected with {}", connessione.remote_address());
 
     // Stretta di mano Noise NK sul primo stream bidirezionale.
     let (mut invio_stretta, mut ricezione_stretta) = connessione.accept_bi().await?;
@@ -49,7 +49,7 @@ pub async fn ricevi(ascolta: SocketAddr, uscita: PathBuf, file_identita: Option<
     invio_stretta.write_all(&risposta).await?;
     invio_stretta.finish()?;
     let segreto = segreti.verso_destinatario;
-    println!("Stretta di mano completata: canale cifrato con forward secrecy");
+    println!("Handshake complete: encrypted channel with forward secrecy");
 
     let parametri = ParametriFlusso::default();
     let lunghezza = lunghezza_pacchetto(parametri.dimensione_frammento);
@@ -98,7 +98,7 @@ pub async fn ricevi(ascolta: SocketAddr, uscita: PathBuf, file_identita: Option<
             }
             Err(errore) => {
                 scartati += 1;
-                eprintln!("pacchetto scartato: {errore}");
+                eprintln!("packet dropped: {errore}");
             }
         }
         let prossimo = ricevitore.prossimo_atteso();
@@ -114,15 +114,15 @@ pub async fn ricevi(ascolta: SocketAddr, uscita: PathBuf, file_identita: Option<
     let secondi = inizio.map_or(0.0, |i| i.elapsed().as_secs_f64());
 
     if !ricevitore.completo() {
-        return Err("il mittente si è disconnesso prima della fine: file incompleto".into());
+        return Err("the sender disconnected before the end: incomplete file".into());
     }
     conferme.finish()?;
     // Lascia al mittente il tempo di leggere l'ultima conferma e chiudere.
     let _ = tokio::time::timeout(Duration::from_secs(5), connessione.closed()).await;
 
-    println!("\nRicevuto {} ({byte} byte) in {secondi:.2} s, {}", uscita.display(), velocita(byte, secondi));
-    println!("  pacchetti: {pacchetti} (arrivati in anticipo e messi in attesa: {in_anticipo}, scartati: {scartati})");
-    println!("  BLAKE3 del file: {}", hash.finalize().to_hex());
+    println!("\nReceived {} ({byte} bytes) in {secondi:.2} s, {}", uscita.display(), velocita(byte, secondi));
+    println!("  packets: {pacchetti} (arrived early and buffered: {in_anticipo}, dropped: {scartati})");
+    println!("  file BLAKE3: {}", hash.finalize().to_hex());
     Ok(())
 }
 
@@ -138,6 +138,6 @@ fn carica_o_crea_identita(percorso: &Path) -> Risultato<Identita> {
     #[cfg(unix)]
     std::os::unix::fs::OpenOptionsExt::mode(&mut opzioni, 0o600);
     opzioni.open(percorso)?.write_all(&identita.in_byte())?;
-    println!("Nuova identità salvata in {}", percorso.display());
+    println!("New identity saved to {}", percorso.display());
     Ok(identita)
 }

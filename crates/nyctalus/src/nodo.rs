@@ -35,14 +35,14 @@ pub struct Autenticazione {
 pub async fn nodo(ascolta: SocketAddr, segreto: [u8; 32], auth: Option<Autenticazione>) -> Risultato<()> {
     let pubblica = circuito::chiave_pubblica(&segreto);
     let identita = crate::tls::identita_server()?;
-    println!("Nodo in ascolto su {ascolta}");
-    println!("  chiave pubblica X25519: {}", in_esadecimale(&pubblica));
-    println!("  impronta TLS:           {}", in_esadecimale(&identita.impronta));
-    println!("  riga per l'elenco:  {ascolta},{},{}", in_esadecimale(&pubblica), in_esadecimale(&identita.impronta));
+    println!("Node listening on {ascolta}");
+    println!("  X25519 public key: {}", in_esadecimale(&pubblica));
+    println!("  TLS fingerprint:   {}", in_esadecimale(&identita.impronta));
+    println!("  directory entry:   {ascolta},{},{}", in_esadecimale(&pubblica), in_esadecimale(&identita.impronta));
     if auth.is_some() {
-        println!("  autenticazione dei collegamenti a valle: ATTIVA (via elenco firmato)");
+        println!("  downstream link authentication: ON (via signed directory)");
     } else {
-        println!("  autenticazione dei collegamenti a valle: assente (prototipo, link non verificati)");
+        println!("  downstream link authentication: off (prototype, unverified links)");
     }
 
     let endpoint = quinn::Endpoint::server(identita.config, ascolta)?;
@@ -55,7 +55,7 @@ pub async fn nodo(ascolta: SocketAddr, segreto: [u8; 32], auth: Option<Autentica
                 let auth = auth.clone();
                 tokio::spawn(async move {
                     if let Err(e) = gestisci_circuito(invio, ricezione, segreto, &auth).await {
-                        eprintln!("circuito chiuso: {e}");
+                        eprintln!("circuit closed: {e}");
                     }
                 });
             }
@@ -73,7 +73,7 @@ fn impronta_attesa(auth: &Autenticazione, indirizzo: SocketAddr) -> Risultato<[u
         .into_iter()
         .find(|v| v.indirizzo == cercato)
         .map(|v| v.impronta_tls)
-        .ok_or_else(|| format!("nodo {indirizzo} non presente nell'elenco firmato").into())
+        .ok_or_else(|| format!("node {indirizzo} not in the signed directory").into())
 }
 
 async fn gestisci_circuito(
@@ -180,7 +180,7 @@ async fn uscita_conflux(
     };
     cipolla::sbuccia(0, &chiave, &mut payload);
     if payload.len() < 16 {
-        return Err("LINK del gruppo conflux mancante".into());
+        return Err("missing conflux group LINK".into());
     }
     let mut set_id = [0u8; 16];
     set_id.copy_from_slice(&payload[..16]);

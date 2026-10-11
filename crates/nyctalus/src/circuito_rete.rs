@@ -30,7 +30,7 @@ pub const BIT_RISPOSTA: u64 = 1 << 63;
 /// nodo: `[4][octetti(4)][porta(2 BE)][0…]`.
 pub fn codifica_indirizzo(indirizzo: SocketAddr) -> Risultato<[u8; 32]> {
     let IpAddr::V4(ip) = indirizzo.ip() else {
-        return Err("il prototipo del circuito supporta solo IPv4".into());
+        return Err("the circuit prototype only supports IPv4".into());
     };
     let mut byte = [0u8; 32];
     byte[0] = 4;
@@ -42,7 +42,7 @@ pub fn codifica_indirizzo(indirizzo: SocketAddr) -> Risultato<[u8; 32]> {
 /// Decodifica l'indirizzo prodotto da [`codifica_indirizzo`].
 pub fn decodifica_indirizzo(byte: &[u8; 32]) -> Risultato<SocketAddr> {
     if byte[0] != 4 {
-        return Err("indirizzo di nodo non IPv4".into());
+        return Err("node address is not IPv4".into());
     }
     let ip = Ipv4Addr::new(byte[1], byte[2], byte[3], byte[4]);
     let porta = u16::from_be_bytes([byte[5], byte[6]]);
@@ -57,7 +57,7 @@ pub async fn leggi_quadro<R: AsyncRead + Unpin>(stream: &mut R) -> Risultato<Opt
         Err(e) => return Err(e.into()),
     };
     if lunghezza > 1 << 20 {
-        return Err("quadro troppo grande".into());
+        return Err("frame too large".into());
     }
     let mut payload = vec![0u8; lunghezza];
     stream.read_exact(&mut payload).await?;

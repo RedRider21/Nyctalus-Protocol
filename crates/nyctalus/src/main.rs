@@ -63,7 +63,7 @@ Usage:
 #[tokio::main]
 async fn main() {
     if let Err(errore) = esegui().await {
-        eprintln!("errore: {errore}");
+        eprintln!("error: {errore}");
         std::process::exit(1);
     }
 }
@@ -88,10 +88,10 @@ async fn esegui() -> Risultato<()> {
             let destinatario = nyctalus_core::indirizzo::in_chiave(obbligatoria(&opzioni, "recipient")?)?;
             let corsie: usize = opzione(&opzioni, "lanes").unwrap_or("4").parse()?;
             if !(1..=64).contains(&corsie) {
-                return Err("--corsie deve essere tra 1 e 64".into());
+                return Err("--lanes must be between 1 and 64".into());
             }
             let [file] = posizionali.as_slice() else {
-                return Err("indicare un solo file da inviare".into());
+                return Err("specify a single file to send".into());
             };
             invia::invia(destinazione, impronta, destinatario, corsie, PathBuf::from(file)).await
         }
@@ -101,7 +101,7 @@ async fn esegui() -> Risultato<()> {
         }
         "start" => {
             let cfg = Config::carica(&opzioni)?;
-            println!("Configurazione: {}", cfg.percorso.display());
+            println!("Configuration: {}", cfg.percorso.display());
             let nodi = nodi_da_elenco(&cfg.elenco, cfg.autorita)?;
             avvia_circuito::avvia_circuito(nodi, cfg.circuiti, cfg.salti, cfg.socks).await
         }
@@ -132,9 +132,9 @@ async fn esegui() -> Risultato<()> {
         }
         "authority" => {
             let (segreto, pubblica) = nyctalus_core::elenco::genera_autorita();
-            println!("Autorità dell'elenco (custodire il segreto):");
-            println!("  segreto:  {}", in_esadecimale(&segreto));
-            println!("  pubblica: {}", in_esadecimale(&pubblica));
+            println!("Directory authority (keep the secret safe):");
+            println!("  secret:   {}", in_esadecimale(&segreto));
+            println!("  public:   {}", in_esadecimale(&pubblica));
             Ok(())
         }
         "directory" => {
@@ -159,7 +159,7 @@ async fn esegui() -> Risultato<()> {
             println!("{USO}");
             Ok(())
         }
-        altro => Err(format!("comando sconosciuto: {altro}\n\n{USO}").into()),
+        altro => Err(format!("unknown command: {altro}\n\n{USO}").into()),
     }
 }
 
@@ -171,7 +171,7 @@ fn leggi_opzioni(argomenti: &[String]) -> Risultato<(Opzioni, Vec<String>)> {
     let mut iter = argomenti.iter();
     while let Some(argomento) = iter.next() {
         if let Some(nome) = argomento.strip_prefix("--") {
-            let valore = iter.next().ok_or_else(|| format!("manca il valore di --{nome}"))?;
+            let valore = iter.next().ok_or_else(|| format!("missing value for --{nome}"))?;
             opzioni.insert(nome.to_string(), valore.clone());
         } else {
             posizionali.push(argomento.clone());
@@ -185,7 +185,7 @@ fn opzione<'a>(opzioni: &'a Opzioni, nome: &str) -> Option<&'a str> {
 }
 
 fn obbligatoria<'a>(opzioni: &'a Opzioni, nome: &str) -> Risultato<&'a str> {
-    opzione(opzioni, nome).ok_or_else(|| format!("manca l'opzione obbligatoria --{nome}").into())
+    opzione(opzioni, nome).ok_or_else(|| format!("missing required option --{nome}").into())
 }
 
 pub fn in_esadecimale(byte: &[u8]) -> String {
@@ -194,13 +194,13 @@ pub fn in_esadecimale(byte: &[u8]) -> String {
 
 pub(crate) fn da_esadecimale(testo: &str) -> Risultato<[u8; 32]> {
     if testo.len() != 64 || !testo.is_ascii() {
-        return Err("atteso un valore esadecimale di 64 caratteri".into());
+        return Err("expected a 64-character hex value".into());
     }
     let mut risultato = [0u8; 32];
     for (i, coppia) in testo.as_bytes().chunks(2).enumerate() {
         let coppia = std::str::from_utf8(coppia)?;
         risultato[i] = u8::from_str_radix(coppia, 16)
-            .map_err(|_| format!("carattere non esadecimale in '{coppia}'"))?;
+            .map_err(|_| format!("non-hex character in '{coppia}'"))?;
     }
     Ok(risultato)
 }
@@ -234,8 +234,8 @@ impl Config {
         };
         let file = leggi_file_config(&percorso);
         let val = |k: &str| opzione(opzioni, k).map(String::from).or_else(|| file.get(k).cloned());
-        let elenco = val("directory").ok_or("manca 'directory' (nel config o --directory)")?;
-        let autorita = da_esadecimale(&val("authority").ok_or("manca 'authority' (nel config o --authority)")?)?;
+        let elenco = val("directory").ok_or("missing 'directory' (in config or --directory)")?;
+        let autorita = da_esadecimale(&val("authority").ok_or("missing 'authority' (in config or --authority)")?)?;
         let socks: SocketAddr = val("socks").unwrap_or_else(|| "127.0.0.1:1080".into()).parse()?;
         let circuiti: usize = val("circuits").map(|s| s.parse()).transpose()?.unwrap_or(2);
         let salti: usize = val("hops").map(|s| s.parse()).transpose()?.unwrap_or(3);
@@ -243,15 +243,15 @@ impl Config {
     }
 
     fn stampa(&self) {
-        println!("Stato della configurazione ({}):", self.percorso.display());
-        println!("  elenco:   {}", self.elenco);
-        println!("  autorità: {}", in_esadecimale(&self.autorita));
-        println!("  socks:    {}", self.socks);
-        println!("  circuiti: {}", self.circuiti);
-        println!("  salti:    {}", self.salti);
+        println!("Configuration status ({}):", self.percorso.display());
+        println!("  directory: {}", self.elenco);
+        println!("  authority: {}", in_esadecimale(&self.autorita));
+        println!("  socks:     {}", self.socks);
+        println!("  circuits:  {}", self.circuiti);
+        println!("  hops:      {}", self.salti);
         match nodi_da_elenco(&self.elenco, self.autorita) {
-            Ok(nodi) => println!("  elenco valido: {} nodi", nodi.len()),
-            Err(e) => println!("  elenco NON valido: {e}"),
+            Ok(nodi) => println!("  directory valid: {} nodes", nodi.len()),
+            Err(e) => println!("  directory INVALID: {e}"),
         }
     }
 }
@@ -283,7 +283,7 @@ fn carica_nodi(opzioni: &Opzioni) -> Risultato<Vec<avvia_circuito::NodoRete>> {
         .split(';')
         .filter(|v| !v.trim().is_empty())
         .map(|voce| {
-            let (addr, hex) = voce.split_once(',').ok_or("nodo nel formato indirizzo,chiavehex")?;
+            let (addr, hex) = voce.split_once(',').ok_or("node in the form address,pubkeyhex")?;
             Ok((addr.trim().parse()?, da_esadecimale(hex.trim())?, None))
         })
         .collect()
@@ -297,7 +297,7 @@ fn leggi_voci_elenco(testo: &str) -> Risultato<Vec<nyctalus_core::elenco::VoceEl
         .map(|voce| {
             let campi: Vec<&str> = voce.split(',').map(str::trim).collect();
             let [addr, x, fp] = campi.as_slice() else {
-                return Err("voce nel formato indirizzo,x25519hex,improntahex".into());
+                return Err("entry in the form address,x25519hex,fingerprinthex".into());
             };
             Ok(nyctalus_core::elenco::VoceElenco {
                 indirizzo: (*addr).to_string(),

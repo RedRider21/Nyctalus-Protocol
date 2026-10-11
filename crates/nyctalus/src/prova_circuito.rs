@@ -17,7 +17,7 @@ use crate::Risultato;
 
 pub async fn prova_circuito(percorso_rete: Vec<crate::avvia_circuito::NodoRete>, messaggio: String) -> Risultato<()> {
     if percorso_rete.is_empty() {
-        return Err("indicare almeno un nodo con --nodes o --directory".into());
+        return Err("specify at least one node with --nodes or --directory".into());
     }
     let percorso: Vec<NodoPercorso> = percorso_rete
         .iter()
@@ -25,7 +25,7 @@ pub async fn prova_circuito(percorso_rete: Vec<crate::avvia_circuito::NodoRete>,
         .collect::<Risultato<_>>()?;
 
     let circuito = apri_circuito(&percorso, b"apertura nyctalus")?;
-    println!("Circuito a {} nodi aperto.", percorso.len());
+    println!("Circuit with {} nodes opened.", percorso.len());
 
     // Collegamento al primo nodo (guard), autenticato se l'impronta è nota.
     let (guardiano, _, impronta_guard) = percorso_rete[0];
@@ -54,7 +54,7 @@ pub async fn prova_circuito(percorso_rete: Vec<crate::avvia_circuito::NodoRete>,
     let unita = crate::conflux::impacchetta(0, &cella);
     let avvolto = cipolla::avvolgi(1, &unita, &circuito.chiavi_salto);
     scrivi_quadro(&mut invio, &avvolto).await?;
-    println!("Richiesta connessione a {destinazione:?} attraverso il circuito");
+    println!("Connection request to {destinazione:?} through the circuit");
 
     // 4) Esito dall'uscita (ritorno #0): si tolgono gli strati e si ricompone.
     match leggi_quadro(&mut ricezione).await? {
@@ -64,13 +64,13 @@ pub async fn prova_circuito(percorso_rete: Vec<crate::avvia_circuito::NodoRete>,
             }
             let cella = crate::conflux::spacchetta(&payload).and_then(|(_, c)| Cella::da_byte(&c));
             let esito = match cella.map(|c| c.comando) {
-                Some(cmd::APERTO) => "APERTO (connessione riuscita)",
-                Some(cmd::RIFIUTATO) => "RIFIUTATO (connessione fallita)",
-                _ => "risposta non riconosciuta",
+                Some(cmd::APERTO) => "OPENED (connection succeeded)",
+                Some(cmd::RIFIUTATO) => "REFUSED (connection failed)",
+                _ => "unrecognized reply",
             };
-            println!("Esito dall'uscita: {esito}");
+            println!("Outcome from the exit: {esito}");
         }
-        None => return Err("nessuna risposta dall'uscita".into()),
+        None => return Err("no reply from the exit".into()),
     }
     connessione.close(0u32.into(), b"fine");
     endpoint.wait_idle().await;

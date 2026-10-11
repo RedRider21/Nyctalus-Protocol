@@ -20,18 +20,18 @@ pub async fn avvia(uscita: SocketAddr, impronta: [u8; 32], socks: SocketAddr) ->
     let mut endpoint = quinn::Endpoint::client(locale)?;
     endpoint.set_default_client_config(crate::tls::config_client(impronta)?);
     let connessione = endpoint.connect(uscita, crate::tls::NOME_SERVER)?.await?;
-    println!("Collegato al nodo di uscita {uscita}");
+    println!("Connected to exit node {uscita}");
 
     let ascoltatore = TcpListener::bind(socks).await?;
-    println!("Proxy SOCKS5 in ascolto su {socks}");
-    println!("Prova:  curl --socks5-hostname {socks} https://example.com\n");
+    println!("SOCKS5 proxy listening on {socks}");
+    println!("Try:  curl --socks5-hostname {socks} https://example.com\n");
 
     loop {
         let (cliente, _) = ascoltatore.accept().await?;
         let connessione = connessione.clone();
         tokio::spawn(async move {
             if let Err(errore) = gestisci_cliente(cliente, connessione).await {
-                eprintln!("connessione SOCKS chiusa: {errore}");
+                eprintln!("SOCKS connection closed: {errore}");
             }
         });
     }
@@ -42,7 +42,7 @@ async fn gestisci_cliente(mut cliente: TcpStream, connessione: quinn::Connection
     let saluto = leggi(&mut cliente, Saluto::analizza).await?;
     if !saluto.offre_senza_autenticazione() {
         cliente.write_all(&socks5::risposta_saluto(socks5::METODO_NESSUNO_ACCETTABILE)).await?;
-        return Err("il client SOCKS non offre 'nessuna autenticazione'".into());
+        return Err("the SOCKS client offers no 'no authentication' method".into());
     }
     cliente.write_all(&socks5::risposta_saluto(socks5::METODO_SENZA_AUTENTICAZIONE)).await?;
 
@@ -69,7 +69,7 @@ async fn gestisci_cliente(mut cliente: TcpStream, connessione: quinn::Connection
     };
     cliente.write_all(&socks5::risposta_richiesta(codice)).await?;
     if !ok {
-        return Err(format!("l'uscita non ha raggiunto {host}:{}", richiesta.porta).into());
+        return Err(format!("the exit did not reach {host}:{}", richiesta.porta).into());
     }
 
     // 5. Travaso bidirezionale.
@@ -93,7 +93,7 @@ async fn leggi<T>(
         let mut pezzo = [0u8; 262];
         let n = cliente.read(&mut pezzo).await?;
         if n == 0 {
-            return Err("il client SOCKS ha chiuso durante la negoziazione".into());
+            return Err("the SOCKS client closed during negotiation".into());
         }
         buffer.extend_from_slice(&pezzo[..n]);
     }

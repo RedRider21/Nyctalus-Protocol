@@ -21,7 +21,7 @@ use crate::travaso::collega;
 pub async fn uscita(ascolta: SocketAddr) -> Risultato<()> {
     let identita = crate::tls::identita_server()?;
     let endpoint = quinn::Endpoint::server(identita.config, ascolta)?;
-    println!("Nodo di uscita in ascolto su {ascolta}. Sull'altro computer esegui:\n");
+    println!("Exit node listening on {ascolta}. On the other computer run:\n");
     println!(
         "  nyctalus single-hop --to <IP-DI-QUESTO-NODO>:{} --fingerprint {}\n",
         ascolta.port(),
@@ -35,7 +35,7 @@ pub async fn uscita(ascolta: SocketAddr) -> Risultato<()> {
             while let Ok((invio, ricezione)) = connessione.accept_bi().await {
                 tokio::spawn(async move {
                     if let Err(errore) = servi_stream(invio, ricezione).await {
-                        eprintln!("[{remoto}] stream chiuso: {errore}");
+                        eprintln!("[{remoto}] stream closed: {errore}");
                     }
                 });
             }
@@ -64,7 +64,7 @@ async fn servi_stream(
         Err(errore) => {
             invio.write_u8(1).await?; // esito: fallita
             let _ = invio.finish();
-            Err(format!("connessione a {host}:{porta} fallita: {errore}").into())
+            Err(format!("connection to {host}:{porta} failed: {errore}").into())
         }
     }
 }
