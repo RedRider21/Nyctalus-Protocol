@@ -70,7 +70,7 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 - **CLI:** proxy SOCKS5 funzionante (`nyctalus avvia`) a un salto, e **circuito anonimo a 3 salti** (`nyctalus avvia-circuito`), provati con `curl`.
 - **Elenco firmato dei nodi** (directory, autorità Ed25519) e **autenticazione dei collegamenti**: il client pinna il guard, ogni relè pinna il nodo a valle con l'impronta presa dall'elenco firmato.
 - **Circuito condiviso**: un solo circuito trasporta più connessioni, multiplexate con celle dentro gli strati a cipolla (i relè restano ciechi ai singoli flussi).
-- **Ragnatela a più circuiti**: più circuiti paralleli (guard condiviso, percorsi diversi); le connessioni vengono distribuite sulle diverse strade.
+- **Ragnatela (conflux)**: un singolo scaricamento viene **spezzato su più circuiti** (guard e uscita condivisi, intermedi diversi) e **ricomposto a destinazione** grazie a una sequenza end-to-end dentro l'onion — così sfrutta la banda di più strade.
 - **Anti-correlazione**: il numero di sequenza non viaggia in chiaro (nonce da contatore locale per direzione).
 
 **In arrivo** (vedi [STATO.md](STATO.md)): apertura del circuito con Sphinx, ID di circuito per tratta, nodi intermedi, ragnatela completa, simulazione contro Tor con Shadow, camuffamento, browser dedicato.

@@ -88,6 +88,9 @@ Nel circuito (stream QUIC ordinato) il numero di sequenza usato come nonce **non
 ### 3.3-ter Multiplazione dei flussi (punto D) ✅
 Un **solo circuito** trasporta più connessioni dell'applicazione. Dentro gli strati a cipolla viaggiano **celle** `[flusso u16][comando u8][dati]` (`crates/nyctalus/src/cella.rs`): `APRI host:porta`, `DATI`, `CHIUDI`, e in ritorno `APERTO`/`RIFIUTATO`. Solo client e uscita interpretano le celle; i relè vedono un unico canale di byte cifrati e non distinguono i flussi. Lato client un task scrittore serializza l'andata (nonce unico) e un lettore smista il ritorno al flusso giusto; l'uscita apre una connessione TCP per flusso.
 
+### 3.3-quater Conflux: splitting su più strade (punto E2) ✅
+Più circuiti che condividono **guard e uscita** (intermedi diversi) formano un *gruppo* identificato da un `set_id` da 16 byte, comunicato all'uscita nel primo quadro (LINK, dentro l'onion). Ogni cella riceve una **sequenza end-to-end** a 8 byte (dentro l'onion, invisibile ai relè) e viene spezzata sui circuiti a rotazione; il ricevitore la **ricompone** nell'ordine originale (`crates/nyctalus/src/conflux.rs`, `Riordina`). Così un singolo flusso usa la banda di più strade. Limiti del prototipo: guard/uscita fissi per la sessione, nessuna gestione della morte di un circuito.
+
 ### 3.4 Formato del pacchetto ✅
 ```
  0        8                                                  8+3+D     8+3+D+16
