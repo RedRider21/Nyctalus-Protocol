@@ -192,8 +192,8 @@ Le chiavi dei singoli salti saranno incorporate nell'intestazione Sphinx: una so
 - Il client lascia al punto d'incontro un **segnale** di pochi byte, cifrato per il sito (la "notizia" della VISIONE §5.3). Il sito lo ritira e i due costruiscono i percorsi fino al punto d'incontro.
 - Il web server resta quello di sempre (Nginx, Apache…): il demone Nyctalus gli sta davanti come proxy.
 
-### 6.1 Ponte verso i siti `.onion` di Tor 📐
-Alcuni nodi d'uscita volontari offriranno anche un **ponte verso Tor**: ricevono da Nyctalus le richieste per indirizzi `.onion` e le inoltrano con il client Tor ufficiale in Rust (Arti). Per l'utente i `.onion` si aprono nel browser come i `.nyct`. Dal nodo ponte in poi la protezione è quella di Tor, compresa la sua lentezza.
+### 6.1 Ponte verso i siti `.onion` di Tor ✅ (via Tor di sistema)
+✅ **Implementato** (`crates/nyctalus/src/ponte.rs`): l'uscita riconosce gli indirizzi `.onion` e li raggiunge tramite **un Tor già presente sul sistema**, aprendo un tunnel al suo proxy SOCKS5 (default `127.0.0.1:9050`, opzione `--tor-socks`). Scelta volutamente **leggera**: non si incorpora il client Tor Arti (enorme e da bootstrappare), si riusa il Tor del sistema (es. quello di NexusSec). Dal nodo ponte in poi valgono le regole e la lentezza di Tor. Incorporare Arti come alternativa resta un possibile sviluppo futuro.
 
 ---
 
