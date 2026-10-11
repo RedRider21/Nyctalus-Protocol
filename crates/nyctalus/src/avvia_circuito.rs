@@ -1,20 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 
-//! `nyctalus avvia-circuito`: proxy SOCKS5 locale con **ragnatela a più
-//! circuiti** (punto E, stadio 1).
+//! `nyctalus avvia-circuito`: proxy SOCKS5 con **ragnatela conflux** (punto E2).
 //!
-//! Il demone apre più circuiti in parallelo che condividono il **guard** ma
-//! prendono percorsi diversi (nodi intermedi e uscita diversi). Ogni nuova
-//! connessione SOCKS viene assegnata a un circuito a rotazione: connessioni
-//! concorrenti viaggiano quindi su **strade diverse**. Dentro ciascun circuito
-//! le connessioni restano multiplexate con celle ([`crate::cella`], punto D).
+//! Il demone apre più circuiti che condividono **guard e uscita** ma passano
+//! per nodi intermedi diversi. Le celle di **tutte** le connessioni vengono
+//! numerate con una sequenza end-to-end e **spezzate** sui vari circuiti; la
+//! destinazione le **ricompone** nell'ordine originale ([`crate::conflux`]).
+//! Il numero di sequenza viaggia dentro gli strati a cipolla: i relè non lo
+//! vedono. Così un singolo scaricamento sfrutta la banda di più strade.
 //!
-//! Lo splitting di un **singolo** flusso su più strade (conflux, con
-//! ricomposizione a destinazione) è lo stadio successivo (E2).
-//!
-//! Prototipo: guard fisso e condiviso fra i circuiti; percorsi scelti a caso
-//! dall'elenco firmato; link autenticati solo tramite l'elenco.
+//! Prototipo: guard e uscita fissi per la sessione; nessuna gestione della
+//! morte di un circuito (un circuito perso blocca la ricomposizione).
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -29,80 +26,19 @@ use tokio::sync::mpsc;
 
 use crate::cella::{cmd, Cella};
 use crate::circuito_rete::{BIT_RISPOSTA, codifica_indirizzo, leggi_quadro, scrivi_quadro};
+use crate::conflux::{self, Riordina};
 use crate::Risultato;
 
-/// Un nodo del percorso: indirizzo, chiave X25519 e, se noto dall'elenco
-/// firmato, l'impronta TLS da pinnare.
+/// Un nodo del percorso: indirizzo, chiave X25519 e, se noto, l'impronta TLS.
 pub type NodoRete = (SocketAddr, [u8; 32], Option<[u8; 32]>);
 
+type Chiavi = Arc<Vec<[u8; 32]>>;
 type MappaFlussi = Arc<Mutex<HashMap<u16, mpsc::Sender<Cella>>>>;
 
-/// Un circuito attivo del demone: dove mandare le celle in andata e la tabella
-/// dei flussi aperti su di esso.
-struct Circuito {
-    tx_cella: mpsc::Sender<Vec<u8>>,
-    flussi: MappaFlussi,
-    prossimo_flusso: Mutex<u16>,
-}
-
-impl Circuito {
-    /// Apre un circuito sul collegamento QUIC verso il guard e avvia i task
-    /// scrittore (andata) e lettore (ritorno).
-    async fn apri(connessione: &quinn::Connection, percorso: &[NodoRete]) -> Risultato<Arc<Self>> {
-        let nodi: Vec<NodoPercorso> = percorso
-            .iter()
-            .map(|(a, p, _)| Ok(NodoPercorso { indirizzo: codifica_indirizzo(*a)?, pubblica: *p }))
-            .collect::<Risultato<_>>()?;
-        let circuito = apri_circuito(&nodi, b"apertura")?;
-        let chiavi = Arc::new(circuito.chiavi_salto);
-
-        let (mut invio, mut ricezione) = connessione.open_bi().await?;
-        scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
-
-        // Scrittore: serializza le celle in andata, nonce = contatore locale.
-        let (tx_cella, mut rx_cella) = mpsc::channel::<Vec<u8>>(256);
-        let chiavi_s = chiavi.clone();
-        tokio::spawn(async move {
-            let mut n: u64 = 0;
-            while let Some(cella) = rx_cella.recv().await {
-                let avvolto = cipolla::avvolgi(n, &cella, &chiavi_s);
-                if scrivi_quadro(&mut invio, &avvolto).await.is_err() {
-                    break;
-                }
-                n += 1;
-            }
-        });
-
-        // Lettore: smista le celle di ritorno al flusso di competenza.
-        let flussi: MappaFlussi = Arc::new(Mutex::new(HashMap::new()));
-        let flussi_l = flussi.clone();
-        tokio::spawn(async move {
-            let mut n: u64 = 0;
-            while let Ok(Some(mut payload)) = leggi_quadro(&mut ricezione).await {
-                svolgi(BIT_RISPOSTA | n, &chiavi, &mut payload);
-                n += 1;
-                if let Some(cella) = Cella::da_byte(&payload) {
-                    let inbox = flussi_l.lock().unwrap().get(&cella.flusso).cloned();
-                    if let Some(inbox) = inbox {
-                        let _ = inbox.send(cella).await;
-                    }
-                }
-            }
-        });
-
-        Ok(Arc::new(Self { tx_cella, flussi, prossimo_flusso: Mutex::new(0) }))
-    }
-
-    /// Registra un nuovo flusso e restituisce (id, casella di ricezione).
-    fn registra_flusso(&self) -> (u16, mpsc::Receiver<Cella>) {
-        let mut p = self.prossimo_flusso.lock().unwrap();
-        let flusso = *p;
-        *p = p.wrapping_add(1);
-        let (tx, rx) = mpsc::channel::<Cella>(64);
-        self.flussi.lock().unwrap().insert(flusso, tx);
-        (flusso, rx)
-    }
-}
+pub const SALTI_MIN: usize = 1;
+pub const SALTI_MAX: usize = nyctalus_core::circuito::MAX_NODI; // 5
+pub const CIRCUITI_MIN: usize = 1;
+pub const CIRCUITI_MAX: usize = 8;
 
 pub async fn avvia_circuito(
     nodi: Vec<NodoRete>,
@@ -120,8 +56,17 @@ pub async fn avvia_circuito(
         return Err(format!("servono almeno {salti} nodi nell'elenco").into());
     }
 
-    // Guard fisso e condiviso: tutti i circuiti partono da qui.
-    let (guardiano, _, impronta_guard) = nodi[0];
+    // Identificativo del gruppo conflux e percorsi (guard + uscita condivisi).
+    let mut set_id = [0u8; 16];
+    getrandom::fill(&mut set_id).expect("generatore casuale di sistema");
+    let percorsi = seleziona_conflux(&nodi, circuiti, salti)?;
+    for (i, p) in percorsi.iter().enumerate() {
+        let strada: Vec<String> = p.iter().map(|n| n.0.to_string()).collect();
+        println!("  circuito {i}: {}", strada.join(" → "));
+    }
+
+    // Un solo collegamento QUIC verso il guard condiviso.
+    let (guardiano, _, impronta_guard) = percorsi[0][0];
     let locale: SocketAddr = if guardiano.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
     let mut endpoint = quinn::Endpoint::client(locale)?;
     endpoint.set_default_client_config(match impronta_guard {
@@ -130,56 +75,130 @@ pub async fn avvia_circuito(
     });
     let connessione = endpoint.connect(guardiano, "nyctalus.invalid")?.await?;
 
-    let percorsi = seleziona_percorsi(&nodi, circuiti, salti)?;
-    for (i, p) in percorsi.iter().enumerate() {
-        let strada: Vec<String> = p.iter().map(|n| n.0.to_string()).collect();
-        println!("  circuito {i}: {}", strada.join(" → "));
-    }
-    let mut circuiti_attivi = Vec::with_capacity(percorsi.len());
+    // Canali condivisi: scrittore(i) in andata, ritorno riordinato.
+    let flussi: MappaFlussi = Arc::new(Mutex::new(HashMap::new()));
+    let (tx_out, rx_out) = mpsc::channel::<Vec<u8>>(256); // celle in uscita (senza seq)
+    let (tx_ret, rx_ret) = mpsc::channel::<(u64, Vec<u8>)>(256); // unità di ritorno
+
+    // Apre i circuiti e raccoglie le caselle dei loro scrittori.
+    let mut inbox_circuiti = Vec::with_capacity(percorsi.len());
     for percorso in &percorsi {
-        circuiti_attivi.push(Circuito::apri(&connessione, percorso).await?);
+        let nodi_sphinx: Vec<NodoPercorso> = percorso
+            .iter()
+            .map(|(a, p, _)| Ok(NodoPercorso { indirizzo: codifica_indirizzo(*a)?, pubblica: *p }))
+            .collect::<Risultato<_>>()?;
+        let circuito = apri_circuito(&nodi_sphinx, b"nyctalus")?;
+        let chiavi: Chiavi = Arc::new(circuito.chiavi_salto);
+        let (mut invio, ricezione) = connessione.open_bi().await?;
+        scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
+
+        let (tx_unit, rx_unit) = mpsc::channel::<Vec<u8>>(256);
+        tokio::spawn(scrittore_circuito(invio, chiavi.clone(), set_id, rx_unit));
+        tokio::spawn(lettore_circuito(ricezione, chiavi, tx_ret.clone()));
+        inbox_circuiti.push(tx_unit);
     }
+
+    tokio::spawn(schedulatore(rx_out, inbox_circuiti));
+    tokio::spawn(collettore_ritorno(rx_ret, flussi.clone()));
 
     let ascoltatore = TcpListener::bind(socks).await?;
     println!(
-        "Proxy SOCKS5 su {socks} — ragnatela a {} circuiti (guard condiviso, {salti} salti)",
-        circuiti_attivi.len()
+        "Proxy SOCKS5 su {socks} — conflux su {} circuiti (guard e uscita condivisi, {salti} salti)",
+        percorsi.len()
     );
     println!("Prova:  curl --socks5-hostname {socks} http://example.com\n");
 
-    let mut rotazione = 0usize;
+    let mut prossimo_flusso: u16 = 0;
     loop {
         let (cliente, _) = ascoltatore.accept().await?;
-        let circuito = circuiti_attivi[rotazione % circuiti_attivi.len()].clone();
-        rotazione = rotazione.wrapping_add(1);
+        let flusso = prossimo_flusso;
+        prossimo_flusso = prossimo_flusso.wrapping_add(1);
+        let (tx_in, rx_in) = mpsc::channel::<Cella>(64);
+        flussi.lock().unwrap().insert(flusso, tx_in);
+        let tx_out = tx_out.clone();
+        let flussi = flussi.clone();
         tokio::spawn(async move {
-            let (flusso, rx_in) = circuito.registra_flusso();
-            if let Err(e) = gestisci_flusso(cliente, flusso, &circuito.tx_cella, rx_in).await {
+            if let Err(e) = gestisci_flusso(cliente, flusso, &tx_out, rx_in).await {
                 eprintln!("flusso {flusso} chiuso: {e}");
             }
-            circuito.flussi.lock().unwrap().remove(&flusso);
+            flussi.lock().unwrap().remove(&flusso);
         });
     }
 }
 
-/// Numero di salti (nodi nel percorso): minimo e massimo consentiti.
-/// Il massimo è il limite di Sphinx; sotto i 3 salti non c'è vero anonimato.
-pub const SALTI_MIN: usize = 1;
-pub const SALTI_MAX: usize = nyctalus_core::circuito::MAX_NODI; // 5
-/// Numero di circuiti (strade parallele): minimo e massimo consentiti.
-pub const CIRCUITI_MIN: usize = 1;
-pub const CIRCUITI_MAX: usize = 8;
+/// Scrittore di un circuito: prima il LINK (set_id) poi le unità conflux, ognuna
+/// avvolta negli strati a cipolla con nonce = contatore locale.
+async fn scrittore_circuito(mut invio: quinn::SendStream, chiavi: Chiavi, set_id: [u8; 16], mut rx: mpsc::Receiver<Vec<u8>>) {
+    let mut n: u64 = 0;
+    let link = cipolla::avvolgi(n, &set_id, &chiavi);
+    if scrivi_quadro(&mut invio, &link).await.is_err() {
+        return;
+    }
+    n += 1;
+    while let Some(unita) = rx.recv().await {
+        let avvolto = cipolla::avvolgi(n, &unita, &chiavi);
+        if scrivi_quadro(&mut invio, &avvolto).await.is_err() {
+            break;
+        }
+        n += 1;
+    }
+}
 
-/// Sceglie `circuiti` percorsi che partono tutti dal guard (nodi[0]). I nodi
-/// non-guard vengono distribuiti fra i circuiti in modo che prendano **strade
-/// diverse** finché ci sono nodi a sufficienza; esauriti, si rimescola e si
-/// riusa.
-fn seleziona_percorsi(nodi: &[NodoRete], circuiti: usize, salti: usize) -> Risultato<Vec<Vec<NodoRete>>> {
+/// Lettore di un circuito: toglie gli strati e passa (seq, cella) al collettore.
+async fn lettore_circuito(mut ricezione: quinn::RecvStream, chiavi: Chiavi, tx_ret: mpsc::Sender<(u64, Vec<u8>)>) {
+    let mut n: u64 = 0;
+    while let Ok(Some(mut payload)) = leggi_quadro(&mut ricezione).await {
+        svolgi(BIT_RISPOSTA | n, &chiavi, &mut payload);
+        n += 1;
+        if let Some((seq, cella)) = conflux::spacchetta(&payload)
+            && tx_ret.send((seq, cella)).await.is_err()
+        {
+            break;
+        }
+    }
+}
+
+/// Assegna la sequenza end-to-end e spezza le celle sui circuiti a rotazione.
+async fn schedulatore(mut rx_out: mpsc::Receiver<Vec<u8>>, inbox: Vec<mpsc::Sender<Vec<u8>>>) {
+    let mut seq: u64 = 0;
+    while let Some(cella) = rx_out.recv().await {
+        let unita = conflux::impacchetta(seq, &cella);
+        let i = (seq as usize) % inbox.len();
+        if inbox[i].send(unita).await.is_err() {
+            break;
+        }
+        seq += 1;
+    }
+}
+
+/// Ricompone le unità di ritorno e consegna le celle al flusso giusto.
+async fn collettore_ritorno(mut rx_ret: mpsc::Receiver<(u64, Vec<u8>)>, flussi: MappaFlussi) {
+    let mut riordina = Riordina::nuovo();
+    while let Some((seq, cella_bytes)) = rx_ret.recv().await {
+        for cb in riordina.inserisci(seq, cella_bytes) {
+            if let Some(cella) = Cella::da_byte(&cb) {
+                let inbox = flussi.lock().unwrap().get(&cella.flusso).cloned();
+                if let Some(inbox) = inbox {
+                    let _ = inbox.send(cella).await;
+                }
+            }
+        }
+    }
+}
+
+/// Sceglie `circuiti` percorsi con **guard e uscita condivisi** e nodi
+/// intermedi diversi.
+fn seleziona_conflux(nodi: &[NodoRete], circuiti: usize, salti: usize) -> Risultato<Vec<Vec<NodoRete>>> {
     let guard = nodi[0];
-    let per_circuito = salti - 1; // salti oltre il guard
-    let mut candidati: Vec<usize> = (1..nodi.len()).collect();
-    if per_circuito > 0 && candidati.is_empty() {
-        return Err("servono più nodi oltre al guard".into());
+    if salti == 1 {
+        // Guard = uscita: nessun anonimato, ma valido.
+        return Ok(vec![vec![guard]; circuiti]);
+    }
+    let uscita = nodi[1];
+    let interni = salti - 2;
+    let mut candidati: Vec<usize> = (2..nodi.len()).collect();
+    if interni > 0 && candidati.is_empty() {
+        return Err("servono nodi intermedi oltre a guard e uscita".into());
     }
     mescola(&mut candidati);
 
@@ -187,7 +206,7 @@ fn seleziona_percorsi(nodi: &[NodoRete], circuiti: usize, salti: usize) -> Risul
     let mut i = 0usize;
     for _ in 0..circuiti {
         let mut percorso = vec![guard];
-        for _ in 0..per_circuito {
+        for _ in 0..interni {
             if i >= candidati.len() {
                 mescola(&mut candidati);
                 i = 0;
@@ -195,12 +214,12 @@ fn seleziona_percorsi(nodi: &[NodoRete], circuiti: usize, salti: usize) -> Risul
             percorso.push(nodi[candidati[i]]);
             i += 1;
         }
+        percorso.push(uscita);
         percorsi.push(percorso);
     }
     Ok(percorsi)
 }
 
-/// Mescolamento Fisher-Yates con sorgente casuale di sistema.
 fn mescola<T>(v: &mut [T]) {
     for i in (1..v.len()).rev() {
         let mut b = [0u8; 8];
@@ -213,10 +232,9 @@ fn mescola<T>(v: &mut [T]) {
 async fn gestisci_flusso(
     mut cliente: TcpStream,
     flusso: u16,
-    tx_cella: &mpsc::Sender<Vec<u8>>,
+    tx_out: &mpsc::Sender<Vec<u8>>,
     mut rx_in: mpsc::Receiver<Cella>,
 ) -> Risultato<()> {
-    // SOCKS5: saluto + richiesta.
     let saluto = leggi_socks(&mut cliente, Saluto::analizza).await?;
     if !saluto.offre_senza_autenticazione() {
         cliente.write_all(&socks5::risposta_saluto(socks5::METODO_NESSUNO_ACCETTABILE)).await?;
@@ -231,8 +249,7 @@ async fn gestisci_flusso(
     };
     let destinazione = format!("{host}:{}", richiesta.porta);
 
-    // Apri il flusso verso l'uscita e attendi l'esito.
-    tx_cella.send(Cella::nuova(flusso, cmd::APRI, destinazione.into_bytes()).in_byte()).await?;
+    tx_out.send(Cella::nuova(flusso, cmd::APRI, destinazione.into_bytes()).in_byte()).await?;
     let aperto = matches!(rx_in.recv().await, Some(c) if c.comando == cmd::APERTO);
     let codice = if aperto { Esito::Riuscito } else { Esito::ConnessioneRifiutata };
     cliente.write_all(&socks5::risposta_richiesta(codice)).await?;
@@ -240,7 +257,6 @@ async fn gestisci_flusso(
         return Ok(());
     }
 
-    // Tramite bidirezionale, multiplexato sul circuito.
     let (mut app_lettura, mut app_scrittura) = cliente.into_split();
     let andata = async {
         let mut buffer = vec![0u8; 16 * 1024];
@@ -249,12 +265,12 @@ async fn gestisci_flusso(
             if letti == 0 {
                 break;
             }
-            tx_cella
+            tx_out
                 .send(Cella::nuova(flusso, cmd::DATI, buffer[..letti].to_vec()).in_byte())
                 .await
                 .map_err(|_| "circuito chiuso")?;
         }
-        let _ = tx_cella.send(Cella::controllo(flusso, cmd::CHIUDI).in_byte()).await;
+        let _ = tx_out.send(Cella::controllo(flusso, cmd::CHIUDI).in_byte()).await;
         Risultato::Ok(())
     };
     let ritorno = async {
@@ -274,7 +290,7 @@ async fn gestisci_flusso(
     Ok(())
 }
 
-/// Toglie tutti gli strati dal pacchetto (lato client, ritorno).
+/// Toglie tutti gli strati dal pacchetto (lato client).
 fn svolgi(nonce: u64, chiavi: &[[u8; 32]], payload: &mut [u8]) {
     for k in chiavi {
         cipolla::sbuccia(nonce, k, payload);

@@ -11,14 +11,18 @@
 //! percorso. In questo prototipo i collegamenti fra nodi non sono autenticati
 //! (vedi `tls::config_client_insicuro`) e l'uscita si limita a fare da eco.
 
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, OnceLock};
 
 use nyctalus_core::circuito::{self, PassoNodo};
 use nyctalus_core::cipolla;
+use tokio::sync::mpsc;
 
+use crate::cella::{cmd, Cella};
 use crate::circuito_rete::{BIT_RISPOSTA, leggi_quadro, scrivi_quadro};
+use crate::conflux::{self, Riordina};
 use crate::{Risultato, in_esadecimale};
 
 /// Come il nodo autentica il collegamento verso il nodo a valle.
@@ -125,106 +129,177 @@ async fn gestisci_circuito(
             b?;
         }
         PassoNodo::Finale => {
-            uscita_circuito(invio_monte, ricezione_monte, chiave).await?;
+            uscita_conflux(invio_monte, ricezione_monte, chiave).await?;
         }
     }
     Ok(())
 }
 
-/// Uscita del circuito condiviso (punto D): smista le **celle** multiplexate.
-/// Ogni cella `APRI` apre una connessione TCP verso Internet; le celle `DATI`
-/// vi scorrono; `CHIUDI` la termina. I pacchetti in andata vengono spogliati
-/// del proprio strato, quelli di ritorno rivestiti. Un solo task scrittore
-/// serializza il ritorno con un contatore nonce unico.
-async fn uscita_circuito(
+/// Stato condiviso, nel processo, di un gruppo conflux all'uscita: raccoglie
+/// le unità in andata dai vari circuiti e tiene le caselle di ritorno di ognuno.
+struct ConfluxUscita {
+    tx_collect: mpsc::Sender<(u64, Vec<u8>)>,
+    circuiti_ritorno: Arc<Mutex<Vec<mpsc::Sender<Vec<u8>>>>>,
+}
+
+fn registro() -> &'static Mutex<HashMap<[u8; 16], Arc<ConfluxUscita>>> {
+    static R: OnceLock<Mutex<HashMap<[u8; 16], Arc<ConfluxUscita>>>> = OnceLock::new();
+    R.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Trova o crea lo stato del gruppo conflux con quel set_id, avviando (alla
+/// creazione) il collettore che ricompone l'andata e lo schedulatore del ritorno.
+fn ottieni_set(set_id: [u8; 16]) -> Arc<ConfluxUscita> {
+    let mut reg = registro().lock().unwrap();
+    if let Some(s) = reg.get(&set_id) {
+        return s.clone();
+    }
+    let (tx_collect, rx_collect) = mpsc::channel::<(u64, Vec<u8>)>(256);
+    let (tx_return, rx_return) = mpsc::channel::<Vec<u8>>(256);
+    let circuiti_ritorno = Arc::new(Mutex::new(Vec::new()));
+    let set = Arc::new(ConfluxUscita { tx_collect, circuiti_ritorno: circuiti_ritorno.clone() });
+    reg.insert(set_id, set.clone());
+    drop(reg);
+    tokio::spawn(collettore_uscita(rx_collect, tx_return));
+    tokio::spawn(schedulatore_ritorno(rx_return, circuiti_ritorno));
+    set
+}
+
+/// Uscita del gruppo conflux (punto E2): i circuiti che condividono questa
+/// uscita consegnano le celle spezzate con un numero di sequenza end-to-end;
+/// il collettore del gruppo le **ricompone** e le smista alle connessioni TCP.
+/// I circuiti si riconoscono tramite il LINK (set_id) nel primo quadro.
+async fn uscita_conflux(
     mut invio_monte: quinn::SendStream,
     mut ricezione_monte: quinn::RecvStream,
     chiave: [u8; 32],
 ) -> Risultato<()> {
-    use crate::cella::{cmd, Cella};
-    use std::collections::HashMap;
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    use tokio::sync::mpsc;
+    // 1º quadro onion = LINK (set_id del gruppo).
+    let Some(mut payload) = leggi_quadro(&mut ricezione_monte).await? else {
+        return Ok(());
+    };
+    cipolla::sbuccia(0, &chiave, &mut payload);
+    if payload.len() < 16 {
+        return Err("LINK del gruppo conflux mancante".into());
+    }
+    let mut set_id = [0u8; 16];
+    set_id.copy_from_slice(&payload[..16]);
+    let set = ottieni_set(set_id);
 
-    // Scrittore unico del ritorno.
-    let (tx_ritorno, mut rx_ritorno) = mpsc::channel::<Vec<u8>>(256);
-    let scrittore = tokio::spawn(async move {
+    // Scrittore di ritorno di QUESTO circuito.
+    let (tx_unit, mut rx_unit) = mpsc::channel::<Vec<u8>>(256);
+    set.circuiti_ritorno.lock().unwrap().push(tx_unit);
+    tokio::spawn(async move {
         let mut n: u64 = 0;
-        while let Some(mut payload) = rx_ritorno.recv().await {
-            cipolla::sbuccia(BIT_RISPOSTA | n, &chiave, &mut payload);
+        while let Some(mut unita) = rx_unit.recv().await {
+            cipolla::sbuccia(BIT_RISPOSTA | n, &chiave, &mut unita);
             n += 1;
-            if scrivi_quadro(&mut invio_monte, &payload).await.is_err() {
+            if scrivi_quadro(&mut invio_monte, &unita).await.is_err() {
                 break;
             }
         }
         let _ = invio_monte.finish();
     });
 
-    // Per ogni flusso aperto: canale verso il task che scrive sul suo TCP.
-    let mut verso_tcp: HashMap<u16, mpsc::Sender<Vec<u8>>> = HashMap::new();
-    let mut n: u64 = 0;
+    // Unità in andata → collettore del gruppo (0 era il LINK).
+    let mut n: u64 = 1;
     while let Some(mut payload) = leggi_quadro(&mut ricezione_monte).await? {
         cipolla::sbuccia(n, &chiave, &mut payload);
         n += 1;
-        let Some(cella) = Cella::da_byte(&payload) else { continue };
-        match cella.comando {
-            cmd::APRI => {
-                let flusso = cella.flusso;
-                let destinazione = String::from_utf8_lossy(&cella.dati).to_string();
-                match tokio::net::TcpStream::connect(destinazione.trim()).await {
-                    Ok(tcp) => {
-                        let (mut tcp_lettura, mut tcp_scrittura) = tcp.into_split();
-                        let (tx_dati, mut rx_dati) = mpsc::channel::<Vec<u8>>(64);
-                        verso_tcp.insert(flusso, tx_dati);
-                        // Prima l'esito, così arriva sempre prima dei dati.
-                        let _ = tx_ritorno.send(Cella::controllo(flusso, cmd::APERTO).in_byte()).await;
-                        // TCP → client (celle DATI), poi CHIUDI a fine connessione.
-                        let tx_ritorno2 = tx_ritorno.clone();
-                        tokio::spawn(async move {
-                            let mut buffer = vec![0u8; 16 * 1024];
-                            loop {
-                                match tcp_lettura.read(&mut buffer).await {
-                                    Ok(0) | Err(_) => break,
-                                    Ok(k) => {
-                                        let cella = Cella::nuova(flusso, cmd::DATI, buffer[..k].to_vec());
-                                        if tx_ritorno2.send(cella.in_byte()).await.is_err() {
-                                            break;
+        if let Some((seq, cella)) = conflux::spacchetta(&payload)
+            && set.tx_collect.send((seq, cella)).await.is_err()
+        {
+            break;
+        }
+    }
+    Ok(())
+}
+
+/// Collettore del gruppo: ricompone le unità in andata e, in ordine, apre le
+/// connessioni TCP (`APRI`), vi scrive (`DATI`), le chiude (`CHIUDI`).
+async fn collettore_uscita(mut rx: mpsc::Receiver<(u64, Vec<u8>)>, tx_return: mpsc::Sender<Vec<u8>>) {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let mut riordina = Riordina::nuovo();
+    let mut verso_tcp: HashMap<u16, mpsc::Sender<Vec<u8>>> = HashMap::new();
+    while let Some((seq, cella_bytes)) = rx.recv().await {
+        for cb in riordina.inserisci(seq, cella_bytes) {
+            let Some(cella) = Cella::da_byte(&cb) else { continue };
+            match cella.comando {
+                cmd::APRI => {
+                    let flusso = cella.flusso;
+                    let dest = String::from_utf8_lossy(&cella.dati).to_string();
+                    match tokio::net::TcpStream::connect(dest.trim()).await {
+                        Ok(tcp) => {
+                            let (mut lettura, mut scrittura) = tcp.into_split();
+                            let (tx_w, mut rx_w) = mpsc::channel::<Vec<u8>>(64);
+                            verso_tcp.insert(flusso, tx_w);
+                            let _ = tx_return.send(Cella::controllo(flusso, cmd::APERTO).in_byte()).await;
+                            let tx_ret2 = tx_return.clone();
+                            tokio::spawn(async move {
+                                let mut buffer = vec![0u8; 16 * 1024];
+                                loop {
+                                    match lettura.read(&mut buffer).await {
+                                        Ok(0) | Err(_) => break,
+                                        Ok(k) => {
+                                            let c = Cella::nuova(flusso, cmd::DATI, buffer[..k].to_vec());
+                                            if tx_ret2.send(c.in_byte()).await.is_err() {
+                                                break;
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            let _ = tx_ritorno2.send(Cella::controllo(flusso, cmd::CHIUDI).in_byte()).await;
-                        });
-                        // client → TCP.
-                        tokio::spawn(async move {
-                            while let Some(dati) = rx_dati.recv().await {
-                                if tcp_scrittura.write_all(&dati).await.is_err() {
-                                    break;
+                                let _ = tx_ret2.send(Cella::controllo(flusso, cmd::CHIUDI).in_byte()).await;
+                            });
+                            tokio::spawn(async move {
+                                while let Some(d) = rx_w.recv().await {
+                                    if scrittura.write_all(&d).await.is_err() {
+                                        break;
+                                    }
                                 }
-                            }
-                            let _ = tcp_scrittura.shutdown().await;
-                        });
-                    }
-                    Err(_) => {
-                        let _ = tx_ritorno.send(Cella::controllo(flusso, cmd::RIFIUTATO).in_byte()).await;
+                                let _ = scrittura.shutdown().await;
+                            });
+                        }
+                        Err(_) => {
+                            let _ = tx_return.send(Cella::controllo(flusso, cmd::RIFIUTATO).in_byte()).await;
+                        }
                     }
                 }
-            }
-            cmd::DATI => {
-                if let Some(tx) = verso_tcp.get(&cella.flusso) {
-                    let _ = tx.send(cella.dati).await;
+                cmd::DATI => {
+                    if let Some(tx) = verso_tcp.get(&cella.flusso) {
+                        let _ = tx.send(cella.dati).await;
+                    }
                 }
+                cmd::CHIUDI => {
+                    verso_tcp.remove(&cella.flusso);
+                }
+                _ => {}
             }
-            cmd::CHIUDI => {
-                verso_tcp.remove(&cella.flusso);
-            }
-            _ => {}
         }
     }
-    drop(verso_tcp);
-    drop(tx_ritorno);
-    let _ = scrittore.await;
-    Ok(())
+}
+
+/// Schedulatore del ritorno: numera le celle con la sequenza end-to-end e le
+/// spezza sui circuiti del gruppo a rotazione.
+async fn schedulatore_ritorno(mut rx: mpsc::Receiver<Vec<u8>>, circuiti: Arc<Mutex<Vec<mpsc::Sender<Vec<u8>>>>>) {
+    let mut seq: u64 = 0;
+    while let Some(cella_bytes) = rx.recv().await {
+        let unita = conflux::impacchetta(seq, &cella_bytes);
+        let destinatario = {
+            let c = circuiti.lock().unwrap();
+            if c.is_empty() {
+                None
+            } else {
+                Some(c[(seq as usize) % c.len()].clone())
+            }
+        };
+        match destinatario {
+            Some(tx) => {
+                let _ = tx.send(unita).await;
+                seq += 1;
+            }
+            None => break,
+        }
+    }
 }
 
 async fn collega_valle(

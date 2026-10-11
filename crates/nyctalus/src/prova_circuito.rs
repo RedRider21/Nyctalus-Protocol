@@ -42,20 +42,28 @@ pub async fn prova_circuito(percorso_rete: Vec<crate::avvia_circuito::NodoRete>,
     // 1) Apertura del circuito (1º quadro).
     scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
 
-    // 2) Cella APRI (flusso 0, andata #0): la destinazione "host:porta".
-    let destinazione = messaggio; // qui è la destinazione da raggiungere
+    // 2) LINK: set_id del gruppo conflux (qui un circuito solo).
+    let mut set_id = [0u8; 16];
+    getrandom::fill(&mut set_id).expect("generatore casuale di sistema");
+    let link = cipolla::avvolgi(0, &set_id, &circuito.chiavi_salto);
+    scrivi_quadro(&mut invio, &link).await?;
+
+    // 3) Unità conflux #0 = cella APRI con la destinazione "host:porta".
+    let destinazione = messaggio;
     let cella = Cella::nuova(0, cmd::APRI, destinazione.clone().into_bytes()).in_byte();
-    let avvolto = cipolla::avvolgi(0, &cella, &circuito.chiavi_salto);
+    let unita = crate::conflux::impacchetta(0, &cella);
+    let avvolto = cipolla::avvolgi(1, &unita, &circuito.chiavi_salto);
     scrivi_quadro(&mut invio, &avvolto).await?;
     println!("Richiesta connessione a {destinazione:?} attraverso il circuito");
 
-    // 3) Esito dall'uscita (ritorno #0): si tolgono tutti gli strati.
+    // 4) Esito dall'uscita (ritorno #0): si tolgono gli strati e si ricompone.
     match leggi_quadro(&mut ricezione).await? {
         Some(mut payload) => {
             for chiave in &circuito.chiavi_salto {
                 cipolla::sbuccia(BIT_RISPOSTA, chiave, &mut payload);
             }
-            let esito = match Cella::da_byte(&payload).map(|c| c.comando) {
+            let cella = crate::conflux::spacchetta(&payload).and_then(|(_, c)| Cella::da_byte(&c));
+            let esito = match cella.map(|c| c.comando) {
                 Some(cmd::APERTO) => "APERTO (connessione riuscita)",
                 Some(cmd::RIFIUTATO) => "RIFIUTATO (connessione fallita)",
                 _ => "risposta non riconosciuta",
