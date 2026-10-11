@@ -67,7 +67,7 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 - **Stretta di mano Noise NK:** i due estremi si accordano sul segreto senza farlo mai viaggiare; forward secrecy; il mittente resta anonimo.
 - **Indirizzi `.nyct`:** la chiave pubblica di un servizio in base32, con controllo anti-errori di battitura.
 - **L1 — livello a cipolla (data-plane):** gli strati simmetrici che ogni pacchetto attraversa.
-- **CLI (comandi in inglese):** demone `nyctalus start` (SOCKS5 da configurazione, ragnatela conflux) e `nyctalus status`; comandi di test `circuit`, `node`, `directory`, `authority`.
+- **CLI (comandi in inglese):** demone `nyctalus start` (SOCKS5 da configurazione, ragnatela conflux), `nyctalus status` e `nyctalus nodes` (elenco dei nodi, con `--probe` per vedere quali sono raggiungibili ora e il loro tempo di risposta); comandi di test `circuit`, `node`, `directory`, `authority`.
 - **Elenco firmato dei nodi** (directory, autorità Ed25519) e **autenticazione dei collegamenti**: il client pinna il guard, ogni relè pinna il nodo a valle con l'impronta presa dall'elenco firmato.
 - **Circuito condiviso**: un solo circuito trasporta più connessioni, multiplexate con celle dentro gli strati a cipolla (i relè restano ciechi ai singoli flussi).
 - **Ponte verso i `.onion` di Tor**: l'uscita riconosce gli indirizzi `.onion` e li raggiunge attraverso un Tor già presente sul sistema (proxy SOCKS, `--tor-socks`, default `127.0.0.1:9050`); i siti normali vanno in TCP diretto.
@@ -151,6 +151,20 @@ hops      = 3
 nyctalus status     # mostra la configurazione e valida l'elenco
 nyctalus start      # avvia il proxy SOCKS5 attraverso la ragnatela conflux
 ```
+
+### Elenco dei nodi e scelta del target
+
+```sh
+nyctalus nodes                      # elenco firmato dei nodi (indirizzo, chiave, impronta)
+nyctalus nodes --probe              # + verifica quali sono raggiungibili ora, con il tempo di risposta
+nyctalus nodes --probe --timeout 2  # tempo massimo di attesa per nodo (secondi)
+```
+
+`nodes` legge `directory`/`authority` dal config (o da `--directory`/`--authority`).
+Senza `--probe` non contatta nessuno: mostra solo l'elenco. Con `--probe` apre
+verso ogni nodo la stessa connessione QUIC autenticata di un circuito e segna
+`online`/`offline`. I valori `address` e `fingerprint` stampati si incollano
+direttamente in `single-hop`, `send` o `circuit` per **scegliere un target**.
 
 ### Programmi e monitoraggio
 

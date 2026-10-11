@@ -27,6 +27,7 @@ mod circuito_rete;
 mod invia;
 mod metriche;
 mod monitor;
+mod nodi_online;
 mod nodo;
 mod ponte;
 mod prova_circuito;
@@ -49,6 +50,7 @@ const USO: &str = "\
 Usage:
   nyctalus start   [--config FILE] [--directory FILE] [--authority HEX] [--socks 127.0.0.1:1080] [--circuits 2] [--hops 3]
   nyctalus status  [--config FILE]
+  nyctalus nodes   [--config FILE] [--directory FILE] [--authority HEX] [--probe] [--timeout 3] [--obfuscation HEX]
   nyctalus exec    [--socks ADDR] [--config FILE] -- PROGRAM [ARG...]
   nyctalus monitor [--control 127.0.0.1:1090]
   nyctalus node    --listen 0.0.0.0:4601 [--secret HEX] [--directory FILE --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050]
@@ -62,6 +64,7 @@ Usage:
   nyctalus exit    --listen 0.0.0.0:4600
 
 'start'/'status': SOCKS5 daemon driven by config (~/.config/nyctalus/config) and its status.
+'nodes': list the signed directory; with --probe, test which nodes are reachable now (and their RTT).
 'node'/'authority'/'directory': nodes and the signed directory.
 'circuit': like 'start' but with nodes given explicitly (testing).
 'receive'/'send': file transfer (L2 test). 'single-hop'/'exit': 1-hop proxy (test).";
@@ -120,6 +123,22 @@ async fn esegui() -> Risultato<()> {
             let cfg = Config::carica(&opzioni)?;
             cfg.stampa();
             Ok(())
+        }
+        "nodes" => {
+            // Elenco preso dalla configurazione se non passato a riga di comando.
+            let file = leggi_file_config(&match opzione(&opzioni, "config") {
+                Some(p) => PathBuf::from(p),
+                None => percorso_config_predefinito(),
+            });
+            let val = |k: &str| opzione(&opzioni, k).map(String::from).or_else(|| file.get(k).cloned());
+            let elenco = val("directory").ok_or("missing 'directory' (in config or --directory)")?;
+            let autorita = da_esadecimale(&val("authority").ok_or("missing 'authority' (in config or --authority)")?)?;
+            let offusca = da_esadecimale_opt(val("obfuscation").as_deref())?;
+            let sonda = opzioni.contains_key("probe");
+            let scadenza = std::time::Duration::from_secs_f32(
+                opzione(&opzioni, "timeout").map(str::parse).transpose()?.unwrap_or(3.0),
+            );
+            nodi_online::elenca(&elenco, autorita, offusca, sonda, scadenza).await
         }
         "monitor" => {
             let controllo: SocketAddr = opzione(&opzioni, "control").unwrap_or("127.0.0.1:1090").parse()?;
@@ -186,12 +205,19 @@ async fn esegui() -> Risultato<()> {
 
 type Opzioni = HashMap<String, String>;
 
+/// Opzioni senza valore (flag sì/no): se presenti valgono "true".
+const FLAG_BOOLEANI: &[&str] = &["probe"];
+
 fn leggi_opzioni(argomenti: &[String]) -> Risultato<(Opzioni, Vec<String>)> {
     let mut opzioni = HashMap::new();
     let mut posizionali = Vec::new();
     let mut iter = argomenti.iter();
     while let Some(argomento) = iter.next() {
         if let Some(nome) = argomento.strip_prefix("--") {
+            if FLAG_BOOLEANI.contains(&nome) {
+                opzioni.insert(nome.to_string(), "true".to_string());
+                continue;
+            }
             let valore = iter.next().ok_or_else(|| format!("missing value for --{nome}"))?;
             opzioni.insert(nome.to_string(), valore.clone());
         } else {
