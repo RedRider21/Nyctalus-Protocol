@@ -62,7 +62,7 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 
 ## A che punto siamo
 
-**Fatto e testato** (67 test automatici):
+**Fatto e testato** (72 test automatici):
 - **L2 — nucleo del protocollo:** frammentazione, etichette segrete rotanti (BLAKE3), cifratura end-to-end (ChaCha20-Poly1305) con pacchetti di lunghezza fissa, ricomposizione con limiti anti-DoS.
 - **Stretta di mano Noise NK:** i due estremi si accordano sul segreto senza farlo mai viaggiare; forward secrecy; il mittente resta anonimo.
 - **Indirizzi `.nyct`:** la chiave pubblica di un servizio in base32, con controllo anti-errori di battitura.
@@ -83,7 +83,7 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 Serve [Rust](https://rustup.rs) (profilo minimal sufficiente):
 
 ```sh
-cargo test              # 67 test
+cargo test              # 72 test
 cargo build --release   # produce target/release/nyctalus
 ```
 
@@ -192,23 +192,27 @@ Un nodo fa da **punto d'incontro**; il sito vi si registra e il visitatore vi si
 collega. Il nodo fa solo da ponte: fra sito e visitatore c'è una sessione
 cifrata end-to-end, e nessuno dei due conosce l'IP dell'altro.
 
+Con un elenco firmato dei nodi, il punto d'incontro si **sceglie da solo** (non
+serve indicarlo): sito e visitatore lo ricavano dall'indirizzo `.nyct` e
+dall'elenco, in modo deterministico.
+
 ```sh
-# 1) un nodo punto d'incontro (stampa la sua impronta TLS)
-nyctalus node --listen 127.0.0.1:4700
+# pubblica una cartella come sito .nyct (stampa l'indirizzo <ADDR>.nyct)
+nyctalus site --dir ./mio-sito --identity sito.key --directory directory.txt --authority <PUB>
 
-# 2) pubblica una cartella come sito .nyct (stampa l'indirizzo <ADDR>.nyct)
-nyctalus site --dir ./mio-sito --identity sito.key \
-  --rendezvous 127.0.0.1:4700 --fingerprint <FINGERPRINT>
-
-# 3) visita il sito (HTML, CSS, JS, immagini…)
-nyctalus browse <ADDR>.nyct --rendezvous 127.0.0.1:4700 --fingerprint <FINGERPRINT>
-nyctalus browse <ADDR>.nyct --path /pagina.html --rendezvous 127.0.0.1:4700 --fingerprint <FINGERPRINT>
+# visita il sito (HTML, CSS, JS, immagini…) — nessun punto d'incontro da indicare
+nyctalus browse <ADDR>.nyct --directory directory.txt --authority <PUB>
+nyctalus browse <ADDR>.nyct --path /pagina.html --directory directory.txt --authority <PUB>
 ```
 
+Il punto d'incontro **ruota nel tempo** (cambia con il giorno), così un nodo non
+resta legato per sempre a un servizio. Lo si può ancora forzare a mano con
+`--rendezvous IP:PORT --fingerprint <FP>` (utile per prove con un solo nodo).
+
 I siti `.nyct` sono normali pagine **HTML5 + JavaScript**: una cartella di file
-servita dal sito. Oggi il punto d'incontro si indica a mano (`--rendezvous`); la
-scelta automatica dall'elenco firmato, i circuiti a più salti e l'apertura di
-`http://<ADDR>.nyct` dal browser sono i passi successivi.
+servita dal sito. Passi successivi: raggiungere il punto d'incontro con circuiti
+a più salti (così nemmeno il nodo vede gli IP) e aprire `http://<ADDR>.nyct`
+direttamente dal browser (proxy SOCKS).
 
 ### Trasferimento di un file (test del livello L2)
 

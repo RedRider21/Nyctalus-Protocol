@@ -32,6 +32,7 @@ pub mod etichette;
 pub mod flusso;
 pub mod indirizzo;
 pub mod offuscamento;
+pub mod rendezvous;
 pub mod ricomposizione;
 pub mod socks5;
 pub mod stretta;

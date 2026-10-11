@@ -59,8 +59,8 @@ Usage:
   nyctalus directory --authority-secret HEX --entries 'addr,x,fp;addr,x,fp'
   nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)]
   nyctalus test-circuit (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--message DEST]
-  nyctalus site    --dir ./folder --rendezvous IP:PORT --fingerprint HEX [--identity FILE] [--obfuscation HEX]
-  nyctalus browse  ADDRESS.nyct --rendezvous IP:PORT --fingerprint HEX [--path /] [--obfuscation HEX]
+  nyctalus site    --dir ./folder [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--identity FILE]
+  nyctalus browse  ADDRESS.nyct [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--path /]
   nyctalus receive --out FILE [--listen 0.0.0.0:4433] [--identity FILE]
   nyctalus send    --to IP:PORT --fingerprint HEX --recipient ADDRESS.nyct [--lanes 4] FILE
   nyctalus single-hop --to IP:PORT --fingerprint HEX [--socks 127.0.0.1:1080]
@@ -151,10 +151,10 @@ async fn esegui() -> Risultato<()> {
         "site" => {
             let dir = PathBuf::from(obbligatoria(&opzioni, "dir")?);
             let identita = opzione(&opzioni, "identity").map(PathBuf::from);
-            let punto: SocketAddr = obbligatoria(&opzioni, "rendezvous")?.parse()?;
-            let impronta = da_esadecimale(obbligatoria(&opzioni, "fingerprint")?)?;
             let offusca = da_esadecimale_opt(opzione(&opzioni, "obfuscation"))?;
-            incontro::site(dir, identita, punto, impronta, offusca).await
+            let manuale = manuale_rendezvous(&opzioni)?;
+            let elenco = if manuale.is_some() { Vec::new() } else { carica_punti_incontro(&opzioni)? };
+            incontro::site(dir, identita, elenco, manuale, offusca).await
         }
         "browse" => {
             let indirizzo_nyct = match opzione(&opzioni, "address") {
@@ -162,10 +162,10 @@ async fn esegui() -> Risultato<()> {
                 None => posizionali.first().map(String::as_str).ok_or("missing .nyct address")?,
             };
             let percorso = opzione(&opzioni, "path").unwrap_or("/");
-            let punto: SocketAddr = obbligatoria(&opzioni, "rendezvous")?.parse()?;
-            let impronta = da_esadecimale(obbligatoria(&opzioni, "fingerprint")?)?;
             let offusca = da_esadecimale_opt(opzione(&opzioni, "obfuscation"))?;
-            incontro::browse(indirizzo_nyct, percorso, punto, impronta, offusca).await
+            let manuale = manuale_rendezvous(&opzioni)?;
+            let elenco = if manuale.is_some() { Vec::new() } else { carica_punti_incontro(&opzioni)? };
+            incontro::browse(indirizzo_nyct, percorso, elenco, manuale, offusca).await
         }
         "single-hop" => {
             let destinazione: SocketAddr = obbligatoria(&opzioni, "to")?.parse()?;
@@ -280,6 +280,30 @@ fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_cir
     let testo = std::fs::read_to_string(percorso)?;
     let voci = nyctalus_core::elenco::verifica_elenco(&testo, &autorita)?;
     voci.into_iter().map(|v| Ok((v.indirizzo.parse()?, v.x25519, Some(v.impronta_tls)))).collect()
+}
+
+/// Override manuale del punto d'incontro (`--rendezvous` + `--fingerprint`):
+/// se dati, si usa quel nodo invece della scelta automatica sull'elenco.
+fn manuale_rendezvous(opzioni: &Opzioni) -> Risultato<Option<incontro::Punto>> {
+    match (opzione(opzioni, "rendezvous"), opzione(opzioni, "fingerprint")) {
+        (Some(r), Some(fp)) => Ok(Some((r.parse()?, da_esadecimale(fp)?))),
+        (Some(_), None) => Err("--rendezvous requires --fingerprint".into()),
+        _ => Ok(None),
+    }
+}
+
+/// Nodi candidati a punto d'incontro (indirizzo + impronta TLS), dall'elenco
+/// firmato preso da `--directory`/`--authority` o dalla configurazione.
+fn carica_punti_incontro(opzioni: &Opzioni) -> Risultato<Vec<incontro::Punto>> {
+    let file = leggi_file_config(&match opzione(opzioni, "config") {
+        Some(p) => PathBuf::from(p),
+        None => percorso_config_predefinito(),
+    });
+    let val = |k: &str| opzione(opzioni, k).map(String::from).or_else(|| file.get(k).cloned());
+    let elenco = val("directory").ok_or("missing 'directory' (in config or --directory)")?;
+    let autorita = da_esadecimale(&val("authority").ok_or("missing 'authority' (in config or --authority)")?)?;
+    let nodi = nodi_da_elenco(&elenco, autorita)?;
+    Ok(nodi.into_iter().filter_map(|(a, _pub, fp)| fp.map(|f| (a, f))).collect())
 }
 
 /// Configurazione del demone: valori da riga di comando, poi dal file

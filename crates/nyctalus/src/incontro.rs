@@ -26,11 +26,11 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use chacha20poly1305::aead::{Aead, KeyInit};
 use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
-use nyctalus_core::indirizzo;
 use nyctalus_core::stretta::{self, Identita, Mittente};
+use nyctalus_core::{indirizzo, rendezvous};
 
 use crate::circuito_rete::{leggi_quadro, scrivi_quadro};
-use crate::{Risultato, in_esadecimale};
+use crate::Risultato;
 
 /// Marca che distingue uno stream di controllo del punto d'incontro da un
 /// pacchetto di apertura Sphinx di un circuito.
@@ -105,14 +105,40 @@ async fn ponte(
     Ok(())
 }
 
+/// Un nodo candidato a fare da punto d'incontro: indirizzo + impronta TLS.
+pub type Punto = (SocketAddr, [u8; 32]);
+
+/// Ordine dei punti d'incontro da provare per il servizio con quella chiave.
+/// Con `manuale` presente (da `--rendezvous`) si usa solo quello; altrimenti si
+/// calcola l'ordine deterministico sull'elenco firmato.
+fn candidati(
+    chiave: &[u8; 32],
+    elenco: &[Punto],
+    manuale: Option<Punto>,
+    con_ricambio: bool,
+) -> Vec<Punto> {
+    if let Some(m) = manuale {
+        return vec![m];
+    }
+    let epoca = rendezvous::epoca_attuale();
+    let ordine = if con_ricambio {
+        rendezvous::ordine_con_ricambio(chiave, elenco.len(), epoca)
+    } else {
+        rendezvous::ordine(chiave, elenco.len(), epoca)
+    };
+    ordine.into_iter().map(|i| elenco[i]).collect()
+}
+
 // --- lato servizio: `nyctalus site` -----------------------------------------
 
-/// Ospita la cartella `dir` come sito `.nyct` attraverso il punto d'incontro.
+/// Ospita la cartella `dir` come sito `.nyct`. Sceglie il punto d'incontro in
+/// automatico sull'elenco firmato (o usa `manuale` se dato), registrandosi al
+/// primo nodo raggiungibile.
 pub async fn site(
     dir: PathBuf,
     file_identita: Option<PathBuf>,
-    punto: SocketAddr,
-    impronta: [u8; 32],
+    elenco: Vec<Punto>,
+    manuale: Option<Punto>,
     offusca: Option<[u8; 32]>,
 ) -> Risultato<()> {
     if !dir.is_dir() {
@@ -123,23 +149,31 @@ pub async fn site(
         None => Identita::genera()?,
     };
     let indirizzo_nyct = indirizzo::da_chiave(&identita.pubblica());
-
-    let conn = connetti_al_punto(punto, impronta, offusca).await?;
-    let (mut invio, mut ricezione) = conn.open_bi().await?;
-    let mut controllo = MAGIA.to_vec();
-    controllo.push(REGISTRA);
-    controllo.extend_from_slice(&identita.pubblica());
-    scrivi_quadro(&mut invio, &controllo).await?;
-    match leggi_quadro(&mut ricezione).await? {
-        Some(r) if r == b"OK" => {}
-        _ => return Err("rendezvous refused the registration".into()),
+    let candidati = candidati(&identita.pubblica(), &elenco, manuale, false);
+    if candidati.is_empty() {
+        return Err("no rendezvous node available (empty signed directory?)".into());
     }
+
+    // Registrati al primo nodo candidato raggiungibile.
+    let mut registrazione = None;
+    for (punto, impronta) in &candidati {
+        match registra_presso(*punto, *impronta, &identita.pubblica(), offusca).await {
+            Ok(conn) => {
+                registrazione = Some((conn, *punto));
+                break;
+            }
+            Err(e) => eprintln!("rendezvous {punto}: {e}"),
+        }
+    }
+    let Some((conn, punto)) = registrazione else {
+        return Err("could not register at any rendezvous node".into());
+    };
 
     println!("Nyctalus site online.");
     println!("  address:    {indirizzo_nyct}");
     println!("  serving:    {}", dir.display());
     println!("  rendezvous: {punto}");
-    println!("\nVisit it with:\n  nyctalus browse {indirizzo_nyct} --rendezvous {punto} --fingerprint {}", in_esadecimale(&impronta));
+    println!("\nVisit it with:\n  nyctalus browse {indirizzo_nyct}");
 
     let identita = Arc::new(identita);
     let dir = Arc::new(dir);
@@ -189,28 +223,24 @@ async fn servi_client(
 // --- lato client: `nyctalus browse` -----------------------------------------
 
 /// Scarica una risorsa da un sito `.nyct` attraverso il punto d'incontro e la
-/// stampa sullo standard output.
+/// stampa sullo standard output. Prova i nodi candidati nell'ordine
+/// deterministico (o solo `manuale`, se dato) finché trova il servizio.
 pub async fn browse(
     indirizzo_nyct: &str,
     percorso: &str,
-    punto: SocketAddr,
-    impronta: [u8; 32],
+    elenco: Vec<Punto>,
+    manuale: Option<Punto>,
     offusca: Option<[u8; 32]>,
 ) -> Risultato<()> {
     let chiave = indirizzo::in_chiave(indirizzo_nyct)?;
-    let conn = connetti_al_punto(punto, impronta, offusca).await?;
-    let (mut invio, mut ricezione) = conn.open_bi().await?;
-
-    // Chiedi al nodo di collegarti al servizio.
-    let mut controllo = MAGIA.to_vec();
-    controllo.push(COLLEGA);
-    controllo.extend_from_slice(&chiave);
-    scrivi_quadro(&mut invio, &controllo).await?;
-    match leggi_quadro(&mut ricezione).await? {
-        Some(r) if r == b"OK" => {}
-        Some(r) if r == b"NO" => return Err("the service is not registered at this rendezvous".into()),
-        _ => return Err("rendezvous closed the stream".into()),
+    let candidati = candidati(&chiave, &elenco, manuale, true);
+    if candidati.is_empty() {
+        return Err("no rendezvous node available (empty signed directory?)".into());
     }
+
+    // Apri uno stream collegato al servizio, provando i candidati in ordine.
+    // `_conn` va tenuta viva: se cade, lo stream si chiude.
+    let (_conn, mut invio, mut ricezione) = collega_al_servizio(&chiave, &candidati, offusca).await?;
 
     // Stretta Noise NK end-to-end col servizio (il client è il mittente).
     let (mittente, primo) = Mittente::inizia(&chiave)?;
@@ -248,6 +278,64 @@ async fn connetti_al_punto(
     let endpoint = crate::trasporto::endpoint_client(locale, offusca)?;
     let config = crate::tls::config_client(impronta)?;
     Ok(endpoint.connect_with(config, punto, crate::tls::NOME_SERVER)?.await?)
+}
+
+/// Lato servizio: si connette a un nodo e si registra come servizio `chiave`.
+/// In caso di successo restituisce la connessione (da tenere viva per servire).
+async fn registra_presso(
+    punto: SocketAddr,
+    impronta: [u8; 32],
+    chiave_pubblica: &[u8; 32],
+    offusca: Option<[u8; 32]>,
+) -> Risultato<quinn::Connection> {
+    let conn = connetti_al_punto(punto, impronta, offusca).await?;
+    let (mut invio, mut ricezione) = conn.open_bi().await?;
+    let mut controllo = MAGIA.to_vec();
+    controllo.push(REGISTRA);
+    controllo.extend_from_slice(chiave_pubblica);
+    scrivi_quadro(&mut invio, &controllo).await?;
+    match leggi_quadro(&mut ricezione).await? {
+        Some(r) if r == b"OK" => Ok(conn),
+        _ => Err("registration refused".into()),
+    }
+}
+
+/// Lato client: prova i candidati in ordine e apre uno stream collegato al
+/// servizio `chiave` (il nodo fa da ponte). Restituisce lo stream pronto per la
+/// stretta Noise NK. Un nodo irraggiungibile o che non ha il servizio → il
+/// prossimo candidato.
+async fn collega_al_servizio(
+    chiave: &[u8; 32],
+    candidati: &[Punto],
+    offusca: Option<[u8; 32]>,
+) -> Risultato<(quinn::Connection, quinn::SendStream, quinn::RecvStream)> {
+    let mut ultimo = String::from("no rendezvous candidates");
+    for (punto, impronta) in candidati {
+        let conn = match connetti_al_punto(*punto, *impronta, offusca).await {
+            Ok(c) => c,
+            Err(e) => {
+                ultimo = format!("rendezvous {punto}: {e}");
+                continue;
+            }
+        };
+        let (mut invio, mut ricezione) = conn.open_bi().await?;
+        let mut controllo = MAGIA.to_vec();
+        controllo.push(COLLEGA);
+        controllo.extend_from_slice(chiave);
+        scrivi_quadro(&mut invio, &controllo).await?;
+        match leggi_quadro(&mut ricezione).await? {
+            Some(r) if r == b"OK" => return Ok((conn, invio, ricezione)),
+            Some(r) if r == b"NO" => {
+                ultimo = format!("service not registered at {punto}");
+                continue;
+            }
+            _ => {
+                ultimo = format!("rendezvous {punto} closed the stream");
+                continue;
+            }
+        }
+    }
+    Err(format!("could not reach the service ({ultimo})").into())
 }
 
 fn carica_o_crea_identita(percorso: &Path) -> Risultato<Identita> {
@@ -328,7 +416,7 @@ struct Record {
 
 impl Record {
     fn nuovo(chiave: &[u8; 32]) -> Self {
-        Self { aead: ChaCha20Poly1305::new(Key::from_slice(chiave)), contatore: 0 }
+        Self { aead: ChaCha20Poly1305::new(&Key::from(*chiave)), contatore: 0 }
     }
 
     fn nonce(&mut self) -> Nonce {
