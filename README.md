@@ -69,6 +69,8 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 - **L1 — livello a cipolla (data-plane):** gli strati simmetrici che ogni pacchetto attraversa.
 - **CLI:** proxy SOCKS5 funzionante (`nyctalus avvia`) a un salto, e **circuito anonimo a 3 salti** (`nyctalus avvia-circuito`), provati con `curl`.
 - **Elenco firmato dei nodi** (directory, autorità Ed25519) e **autenticazione dei collegamenti**: il client pinna il guard, ogni relè pinna il nodo a valle con l'impronta presa dall'elenco firmato.
+- **Circuito condiviso**: un solo circuito trasporta più connessioni, multiplexate con celle dentro gli strati a cipolla (i relè restano ciechi ai singoli flussi).
+- **Anti-correlazione**: il numero di sequenza non viaggia in chiaro (nonce da contatore locale per direzione).
 
 **In arrivo** (vedi [STATO.md](STATO.md)): apertura del circuito con Sphinx, ID di circuito per tratta, nodi intermedi, ragnatela completa, simulazione contro Tor con Shadow, camuffamento, browser dedicato.
 

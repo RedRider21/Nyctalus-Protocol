@@ -85,6 +85,9 @@ etichetta(i) = primi 8 byte di BLAKE3-keyed(chiave_etichette, i_LE64)
 ### 3.3-bis Anti-correlazione del nonce ✅
 Nel circuito (stream QUIC ordinato) il numero di sequenza usato come nonce **non viaggia in chiaro**: ogni nodo lo ricostruisce con un contatore locale per direzione (bit alto = ritorno). Così lo stesso pacchetto non espone alcun valore comune fra una tratta e l'altra. L'ID di circuito esplicito per tratta arriverà con la multiplazione (§ multiplexing, punto D).
 
+### 3.3-ter Multiplazione dei flussi (punto D) ✅
+Un **solo circuito** trasporta più connessioni dell'applicazione. Dentro gli strati a cipolla viaggiano **celle** `[flusso u16][comando u8][dati]` (`crates/nyctalus/src/cella.rs`): `APRI host:porta`, `DATI`, `CHIUDI`, e in ritorno `APERTO`/`RIFIUTATO`. Solo client e uscita interpretano le celle; i relè vedono un unico canale di byte cifrati e non distinguono i flussi. Lato client un task scrittore serializza l'andata (nonce unico) e un lettore smista il ritorno al flusso giusto; l'uscita apre una connessione TCP per flusso.
+
 ### 3.4 Formato del pacchetto ✅
 ```
  0        8                                                  8+3+D     8+3+D+16
