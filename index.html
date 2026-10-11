@@ -131,7 +131,8 @@
     <li><b><span class="it">Elenco firmato + collegamenti autenticati</span><span class="en">Signed directory + authenticated links</span></b> — <span class="it">autorità Ed25519; il client pinna il guard, ogni relè il nodo a valle.</span><span class="en">Ed25519 authority; the client pins the guard, each relay its next hop.</span></li>
     <li><b><span class="it">Circuito condiviso</span><span class="en">Shared circuit</span></b> — <span class="it">un solo circuito trasporta più connessioni (celle multiplexate dentro l'onion); i relè restano ciechi ai flussi.</span><span class="en">one circuit carries many connections (cells multiplexed inside the onion); relays stay blind to the flows.</span></li>
     <li><b><span class="it">Anti-correlazione</span><span class="en">Anti-correlation</span></b> — <span class="it">il numero di sequenza non viaggia in chiaro (nonce da contatore locale).</span><span class="en">the sequence number never travels in the clear (nonce from a local counter).</span></li>
-    <li class="futuro"><b><span class="it">In arrivo</span><span class="en">Coming</span></b> — <span class="it">ragnatela multipercorso, demone da configurazione, confronto con Tor, browser dedicato.</span><span class="en">multipath web, config-driven daemon, comparison against Tor, dedicated browser.</span></li>
+    <li><b><span class="it">Ragnatela a più circuiti</span><span class="en">Multi-circuit web</span></b> — <span class="it">più circuiti paralleli (guard condiviso, percorsi diversi); le connessioni si distribuiscono sulle strade.</span><span class="en">several parallel circuits (shared guard, different paths); connections spread across the roads.</span></li>
+    <li class="futuro"><b><span class="it">In arrivo</span><span class="en">Coming</span></b> — <span class="it">splitting di un singolo flusso su più strade, demone da configurazione, confronto con Tor, browser dedicato.</span><span class="en">splitting a single stream over many roads, config-driven daemon, comparison against Tor, dedicated browser.</span></li>
   </ul>
 </div></section>
 
@@ -172,10 +173,11 @@ nyctalus nodo --ascolta 0.0.0.0:4603 --elenco elenco.txt --autorita &lt;PUB&gt;
 <span class="c"><span class="it"># 3) firma l'elenco con le righe stampate</span><span class="en"># 3) sign the directory with the printed lines</span></span>
 nyctalus elenco --autorita-segreto &lt;SEGRETO&gt; --voci 'a,x,fp;a,x,fp;a,x,fp' &gt; elenco.txt
 
-<span class="c"><span class="it"># 4) proxy SOCKS5 attraverso il circuito a 3 salti</span><span class="en"># 4) SOCKS5 proxy through the 3-hop circuit</span></span>
-nyctalus avvia-circuito --elenco elenco.txt --autorita &lt;PUB&gt; --socks 127.0.0.1:1080
+<span class="c"><span class="it"># 4) proxy SOCKS5 attraverso la ragnatela a più circuiti</span><span class="en"># 4) SOCKS5 proxy through the multi-circuit web</span></span>
+nyctalus avvia-circuito --elenco elenco.txt --autorita &lt;PUB&gt; --socks 127.0.0.1:1080 --circuiti 2 --salti 3
 curl --socks5-hostname 127.0.0.1:1080 http://example.com</pre>
     <div class="nota"><span class="it">Con l'elenco firmato ogni collegamento è autenticato: un elenco manomesso o firmato da un'autorità diversa viene <b>rifiutato</b>. Il nodo intermedio non vede né il contenuto né la destinazione.</span><span class="en">With the signed directory every link is authenticated: a tampered directory, or one signed by a different authority, is <b>rejected</b>. The middle node sees neither the content nor the destination.</span></div>
+    <div class="nota"><span class="it"><b>Impostazioni del percorso:</b> <code class="in">--circuiti N</code> = strade parallele (min 1, max 8, default 2); <code class="in">--salti N</code> = nodi per percorso (min 1, max 5, default 3; sotto 3 niente vero anonimato). Il trasporto è QUIC: i pacchetti persi si recuperano da soli e un flusso non blocca gli altri.</span><span class="en"><b>Path settings:</b> <code class="in">--circuiti N</code> = parallel roads (min 1, max 8, default 2); <code class="in">--salti N</code> = nodes per path (min 1, max 5, default 3; below 3 there is no real anonymity). Transport is QUIC: lost packets recover on their own and one flow never stalls the others.</span></div>
   </div>
 
   <div class="passo">
