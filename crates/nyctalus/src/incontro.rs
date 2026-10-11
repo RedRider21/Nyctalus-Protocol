@@ -26,8 +26,11 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use chacha20poly1305::aead::{Aead, KeyInit};
 use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
+use nyctalus_core::socks5::{self, Esito};
 use nyctalus_core::stretta::{self, Identita, Mittente};
 use nyctalus_core::{indirizzo, rendezvous};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream;
 
 use crate::circuito_rete::{leggi_quadro, scrivi_quadro};
 use crate::Risultato;
@@ -190,6 +193,9 @@ pub async fn site(
     Ok(())
 }
 
+/// Dimensione massima dell'intestazione di una richiesta (anti-DoS).
+const MAX_INTESTAZIONE: usize = 64 * 1024;
+
 async fn servi_client(
     mut invio: quinn::SendStream,
     mut ricezione: quinn::RecvStream,
@@ -203,21 +209,59 @@ async fn servi_client(
     let mut rx = Record::nuovo(&segreti.verso_destinatario);
     let mut tx = Record::nuovo(&segreti.verso_mittente);
 
-    // Una richiesta HTTP (un record), una risposta.
-    let richiesta = rx.apri(&leggi_quadro(&mut ricezione).await?.ok_or("no request")?)?;
-    let percorso = percorso_richiesto(&richiesta);
-    let (stato, tipo, corpo) = apri_risorsa(dir, &percorso);
-    let testa = format!(
-        "HTTP/1.0 {stato}\r\nContent-Type: {tipo}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-        corpo.len()
-    );
-    let mut risposta_http = testa.into_bytes();
-    risposta_http.extend_from_slice(&corpo);
-    for pezzo in risposta_http.chunks(PEZZO) {
-        scrivi_quadro(&mut invio, &tx.sigilla(pezzo)).await?;
+    // Server HTTP in loop sulla sessione cifrata: una o più richieste
+    // (keep-alive), finché il client non chiude. I byte arrivano in record e si
+    // accumulano in un buffer da cui si estraggono le richieste complete.
+    let mut buffer: Vec<u8> = Vec::new();
+    loop {
+        // Assicurati di avere un'intestazione completa (fino a \r\n\r\n).
+        let fine = loop {
+            if let Some(p) = trova_fine_intestazione(&buffer) {
+                break p;
+            }
+            if buffer.len() > MAX_INTESTAZIONE {
+                return Err("request header too large".into());
+            }
+            match leggi_quadro(&mut ricezione).await? {
+                Some(q) => buffer.extend_from_slice(&rx.apri(&q)?),
+                None => return Ok(()), // il client ha chiuso
+            }
+        };
+        let intestazione: Vec<u8> = buffer.drain(..fine).collect();
+        let percorso = percorso_richiesto(&intestazione);
+        let keep_alive = vuole_keep_alive(&intestazione);
+
+        let (stato, tipo, corpo) = apri_risorsa(dir, &percorso);
+        let connessione = if keep_alive { "keep-alive" } else { "close" };
+        let testa = format!(
+            "HTTP/1.1 {stato}\r\nContent-Type: {tipo}\r\nContent-Length: {}\r\nConnection: {connessione}\r\n\r\n",
+            corpo.len()
+        );
+        let mut risposta_http = testa.into_bytes();
+        risposta_http.extend_from_slice(&corpo);
+        for pezzo in risposta_http.chunks(PEZZO) {
+            scrivi_quadro(&mut invio, &tx.sigilla(pezzo)).await?;
+        }
+        if !keep_alive {
+            let _ = invio.finish();
+            return Ok(());
+        }
     }
-    let _ = invio.finish();
-    Ok(())
+}
+
+/// Posizione subito dopo la fine dell'intestazione HTTP (`\r\n\r\n`), se c'è.
+fn trova_fine_intestazione(buffer: &[u8]) -> Option<usize> {
+    buffer.windows(4).position(|w| w == b"\r\n\r\n").map(|p| p + 4)
+}
+
+/// Vero se la richiesta vuole il keep-alive (HTTP/1.1 salvo `Connection: close`;
+/// HTTP/1.0 solo con `Connection: keep-alive`).
+fn vuole_keep_alive(intestazione: &[u8]) -> bool {
+    let testo = String::from_utf8_lossy(intestazione).to_ascii_lowercase();
+    let http11 = testo.lines().next().is_some_and(|r| r.contains("http/1.1"));
+    let chiede_chiusura = testo.contains("connection: close");
+    let chiede_keep = testo.contains("connection: keep-alive");
+    (http11 && !chiede_chiusura) || chiede_keep
 }
 
 // --- lato client: `nyctalus browse` -----------------------------------------
@@ -264,6 +308,76 @@ pub async fn browse(
     use std::io::Write as _;
     std::io::stdout().write_all(&corpo)?;
     std::io::stdout().flush()?;
+    Ok(())
+}
+
+// --- integrazione col proxy SOCKS: `.nyct` → rendezvous ---------------------
+
+/// Tunnel per il proxy SOCKS: collega un client TCP locale (il browser) a un
+/// servizio `.nyct` attraverso il punto d'incontro, con sessione Noise NK
+/// end-to-end. Scrive la risposta SOCKS e poi fa da ponte byte-per-byte.
+pub async fn tunnel_socks(
+    mut cliente: TcpStream,
+    indirizzo_nyct: &str,
+    elenco: Vec<Punto>,
+    offusca: Option<[u8; 32]>,
+) -> Risultato<()> {
+    let chiave = match indirizzo::in_chiave(indirizzo_nyct) {
+        Ok(k) => k,
+        Err(_) => {
+            cliente.write_all(&socks5::risposta_richiesta(Esito::ConnessioneRifiutata)).await?;
+            return Ok(());
+        }
+    };
+    let candidati = candidati(&chiave, &elenco, None, true);
+
+    // Collega al servizio e fai la stretta end-to-end prima di confermare al
+    // client: se qualcosa fallisce, rispondiamo con un errore SOCKS pulito.
+    let avviato = async {
+        let (conn, mut invio, mut ricezione) = collega_al_servizio(&chiave, &candidati, offusca).await?;
+        let (mittente, primo) = Mittente::inizia(&chiave)?;
+        scrivi_quadro(&mut invio, &primo).await?;
+        let risposta = leggi_quadro(&mut ricezione).await?.ok_or("no handshake reply")?;
+        let segreti = mittente.completa(&risposta)?;
+        Risultato::Ok((conn, invio, ricezione, segreti))
+    }
+    .await;
+
+    let (_conn, mut invio, mut ricezione, segreti) = match avviato {
+        Ok(v) => v,
+        Err(_) => {
+            cliente.write_all(&socks5::risposta_richiesta(Esito::ConnessioneRifiutata)).await?;
+            return Ok(());
+        }
+    };
+    cliente.write_all(&socks5::risposta_richiesta(Esito::Riuscito)).await?;
+
+    let mut tx = Record::nuovo(&segreti.verso_destinatario);
+    let mut rx = Record::nuovo(&segreti.verso_mittente);
+    let (mut app_lettura, mut app_scrittura) = cliente.into_split();
+
+    let andata = async {
+        let mut buffer = vec![0u8; PEZZO];
+        loop {
+            let letti = app_lettura.read(&mut buffer).await?;
+            if letti == 0 {
+                break;
+            }
+            scrivi_quadro(&mut invio, &tx.sigilla(&buffer[..letti])).await?;
+        }
+        let _ = invio.finish();
+        Risultato::Ok(())
+    };
+    let ritorno = async {
+        while let Some(q) = leggi_quadro(&mut ricezione).await? {
+            app_scrittura.write_all(&rx.apri(&q)?).await?;
+        }
+        let _ = app_scrittura.shutdown().await;
+        Risultato::Ok(())
+    };
+    let (a, b) = tokio::join!(andata, ritorno);
+    a?;
+    b?;
     Ok(())
 }
 

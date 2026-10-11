@@ -210,9 +210,19 @@ resta legato per sempre a un servizio. Lo si può ancora forzare a mano con
 `--rendezvous IP:PORT --fingerprint <FP>` (utile per prove con un solo nodo).
 
 I siti `.nyct` sono normali pagine **HTML5 + JavaScript**: una cartella di file
-servita dal sito. Passi successivi: raggiungere il punto d'incontro con circuiti
-a più salti (così nemmeno il nodo vede gli IP) e aprire `http://<ADDR>.nyct`
-direttamente dal browser (proxy SOCKS).
+servita dal sito.
+
+**Dal browser.** Il demone SOCKS (`start`/`circuit`) riconosce gli host `.nyct` e
+li instrada al punto d'incontro invece che all'uscita: basta puntare il browser
+(o `curl`) al proxy SOCKS e aprire `http://<ADDR>.nyct`.
+
+```sh
+nyctalus circuit --directory directory.txt --authority <PUB> --socks 127.0.0.1:1080 --hops 3
+curl --socks5-hostname 127.0.0.1:1080 http://<ADDR>.nyct/
+```
+
+Passo successivo: raggiungere il punto d'incontro con circuiti a più salti, così
+nemmeno quel nodo vede gli IP di sito e visitatore (oggi è a salto singolo).
 
 ### Trasferimento di un file (test del livello L2)
 

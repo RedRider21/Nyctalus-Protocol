@@ -116,6 +116,11 @@ pub async fn avvia_circuito(
     println!("Monitor:  nyctalus monitor --control {controllo}");
     println!("Try:  curl --socks5-hostname {socks} http://example.com\n");
 
+    // Nodi utilizzabili come punto d'incontro per i siti `.nyct` (indirizzo +
+    // impronta TLS): è lo stesso elenco firmato che alimenta i circuiti.
+    let punti_incontro: Arc<Vec<crate::incontro::Punto>> =
+        Arc::new(nodi.iter().filter_map(|(a, _, fp)| fp.map(|f| (*a, f))).collect());
+
     let mut prossimo_flusso: u16 = 0;
     loop {
         let (cliente, _) = ascoltatore.accept().await?;
@@ -126,8 +131,9 @@ pub async fn avvia_circuito(
         let tx_out = tx_out.clone();
         let flussi = flussi.clone();
         let metriche = metriche.clone();
+        let punti_incontro = punti_incontro.clone();
         tokio::spawn(async move {
-            if let Err(e) = gestisci_flusso(cliente, flusso, &tx_out, rx_in, &metriche).await {
+            if let Err(e) = gestisci_flusso(cliente, flusso, &tx_out, rx_in, &metriche, &punti_incontro, offusca).await {
                 eprintln!("flow {flusso} closed: {e}");
             }
             flussi.lock().unwrap().remove(&flusso);
@@ -263,6 +269,8 @@ async fn gestisci_flusso(
     tx_out: &mpsc::Sender<Vec<u8>>,
     mut rx_in: mpsc::Receiver<Cella>,
     metriche: &Arc<crate::metriche::Metriche>,
+    punti_incontro: &Arc<Vec<crate::incontro::Punto>>,
+    offusca: Option<[u8; 32]>,
 ) -> Risultato<()> {
     use std::sync::atomic::Ordering::Relaxed;
     let saluto = leggi_socks(&mut cliente, Saluto::analizza).await?;
@@ -272,6 +280,17 @@ async fn gestisci_flusso(
     }
     cliente.write_all(&socks5::risposta_saluto(socks5::METODO_SENZA_AUTENTICAZIONE)).await?;
     let richiesta = leggi_socks(&mut cliente, Richiesta::analizza).await?;
+
+    // Siti interni `.nyct`: non passano dall'uscita del circuito, ma dal punto
+    // d'incontro con sessione cifrata end-to-end verso il servizio.
+    if richiesta.destinazione.e_interna() {
+        if let Destinazione::Nome(nome) = &richiesta.destinazione {
+            metriche.flussi.fetch_add(1, Relaxed);
+            let _guardia = GuardiaFlusso(metriche);
+            return crate::incontro::tunnel_socks(cliente, nome, (**punti_incontro).clone(), offusca).await;
+        }
+    }
+
     let host = match &richiesta.destinazione {
         Destinazione::Nome(n) => n.clone(),
         Destinazione::Ipv4(b) => std::net::Ipv4Addr::from(*b).to_string(),
