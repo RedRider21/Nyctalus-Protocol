@@ -311,6 +311,11 @@ class Browser(FunzioniExtra, Gtk.Window):
         self._view_mode = {}    # WebView -> bool (True = scheda stealth)
         self._contexts = {}     # bool stealth -> WebKit2.WebContext (lazy)
         self._tor_ok = None     # None=non verificato, True/False
+        # Servizi Nyctalus avviati dal browser (demone + eventuale rete di prova).
+        self._servizi_avviati = False
+        self._servizi_proc = []       # processi figli da terminare alla chiusura
+        self._servizi_locale = False  # True = rete di prova LOCALE (non rete reale)
+        self._servizi_dir = None      # cartella temporanea della rete locale
 
         # Provider CSS locale al processo (non tocca pannello/desktop).
         self._css = Gtk.CssProvider()
@@ -339,7 +344,7 @@ class Browser(FunzioniExtra, Gtk.Window):
             self._set_active_tab(self.stack.get_children()[0])
         else:
             self.new_tab(start_url or config.get("homepage", "https://duckduckgo.com"))
-        self.connect("destroy", Gtk.main_quit)
+        self.connect("destroy", self._ferma_servizi)
         self.show_all()
         self._update_stealth_button()
 
@@ -611,21 +616,140 @@ class Browser(FunzioniExtra, Gtk.Window):
             return False
 
     def _ensure_tor(self):
-        """Verifica che il proxy della rete Nyctalus (il demone) sia raggiungibile.
-        Il browser NON avvia il demone (è un processo a parte): se non risponde,
-        controlla in sottofondo (fino a 60 s) e, appena appare, ricrea il contesto
-        stealth col proxy e aggiorna il pulsante. Finché la rete non c'è, le schede
-        stealth restano effimere ma SENZA proxy (nessuna traccia locale, IP reale);
-        i siti .nyct/.onion vengono bloccati con un avviso (niente leak)."""
+        """Verifica che il proxy della rete Nyctalus (il demone) sia raggiungibile;
+        se non lo è, AVVIA i servizi Nyctalus (il demone, connesso alla rete
+        pubblica se configurata, altrimenti una rete di prova locale) e li
+        attende in sottofondo (fino a 60 s). Appena il proxy risponde, ricrea il
+        contesto stealth col proxy e aggiorna il pulsante."""
         if self._tor_running():
             self._tor_ok = True
             return True
+        self._avvia_servizi()          # avvia demone/rete se non già in corso
         if not getattr(self, "_tor_avvio", False):
             self._tor_avvio = True
             self._tor_tentativi = 0
             GLib.timeout_add(1000, self._attendi_tor)
         self._tor_ok = False
         return False
+
+    # --- avvio automatico dei servizi Nyctalus --------------------------------
+    def _trova_binario(self):
+        """Percorso del binario `nyctalus`: nel target del progetto o nel PATH."""
+        cand = Path(__file__).resolve().parents[2] / "target" / "release" / "nyctalus"
+        if cand.exists():
+            return str(cand)
+        return shutil.which("nyctalus")
+
+    def _avvia_servizi(self):
+        """Avvia i servizi Nyctalus una sola volta. Non blocca la finestra: il
+        lavoro (download directory o bootstrap rete locale) gira in un thread; il
+        polling di `_attendi_tor` rileva quando il proxy è pronto."""
+        if self._servizi_avviati:
+            return
+        binario = self._trova_binario()
+        if not binario:
+            return                     # niente binario: resta 'non connesso'
+        self._servizi_avviati = True
+        # I servizi avviati da noi vanno fermati comunque esca il browser:
+        # chiusura finestra, Ctrl-C, SIGTERM (kill) o uscita normale.
+        import atexit
+        import signal
+        atexit.register(self._ferma_servizi_proc)
+        for _s in (signal.SIGTERM, signal.SIGINT):
+            try:
+                signal.signal(_s, lambda *_a: (self._ferma_servizi_proc(), os._exit(0)))
+            except Exception:          # noqa: BLE001
+                pass
+        threading.Thread(target=self._bootstrap_servizi, args=(binario,), daemon=True).start()
+
+    def _bootstrap_servizi(self, binario):
+        """In un thread: se è configurata una rete pubblica (directory_url +
+        authority) scarica la directory firmata e avvia il demone verso di essa
+        (il demone verifica la firma); altrimenti avvia una rete di PROVA LOCALE."""
+        try:
+            url = config.get("directory_url", "").strip()
+            auth = config.get("authority", "").strip()
+            socks = "%s:%d" % (TOR_HOST, TOR_PORT)
+            if url and auth:
+                self._servizi_locale = False
+                dirf = self.data_dir / "directory.txt"
+                try:
+                    import urllib.request
+                    with urllib.request.urlopen(url, timeout=15) as r:
+                        dirf.write_bytes(r.read())
+                except Exception:        # noqa: BLE001
+                    return               # directory non scaricabile: niente avvio
+                p = subprocess.Popen(
+                    [binario, "start", "--directory", str(dirf), "--authority", auth,
+                     "--socks", socks],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                self._servizi_proc.append(p)
+            else:
+                self._servizi_locale = True
+                self._avvia_rete_prova(binario, socks)
+        except Exception:                # noqa: BLE001
+            pass
+
+    def _avvia_rete_prova(self, binario, socks):
+        """Rete di prova LOCALE (autorità + 3 nodi + demone), tutta su 127.0.0.1.
+        Serve a provare il software; NON dà anonimato reale."""
+        import re
+        import subprocess as sp
+        import tempfile
+        import time as _t
+        d = Path(tempfile.mkdtemp(prefix="nyctalus-browser-"))
+        self._servizi_dir = d
+        out = sp.run([binario, "authority"], capture_output=True, text=True)
+        m_sec = re.search(r"secret:\s*([0-9a-f]+)", out.stdout)
+        m_pub = re.search(r"public:\s*([0-9a-f]+)", out.stdout)
+        if not m_sec or not m_pub:
+            return
+        sec, pub = m_sec.group(1), m_pub.group(1)
+        porte = [5900, 5901, 5902]
+        for porta in porte:
+            log = open(d / ("n%d.log" % porta), "w")
+            p = sp.Popen([binario, "node", "--listen", "127.0.0.1:%d" % porta],
+                         stdout=log, stderr=log)
+            self._servizi_proc.append(p)
+        righe = []
+        for porta in porte:
+            riga = None
+            for _ in range(40):
+                try:
+                    testo = (d / ("n%d.log" % porta)).read_text()
+                except OSError:
+                    testo = ""
+                mm = re.search(r"127\.0\.0\.1:%d,[0-9a-f]+,[0-9a-f]+" % porta, testo)
+                if mm:
+                    riga = mm.group(0)
+                    break
+                _t.sleep(0.25)
+            if riga:
+                righe.append(riga)
+        if len(righe) < len(porte):
+            return
+        dirf = d / "directory.txt"
+        with open(dirf, "w") as f:
+            sp.run([binario, "directory", "--authority-secret", sec,
+                    "--entries", ";".join(righe)], stdout=f)
+        p = sp.Popen([binario, "circuit", "--directory", str(dirf), "--authority", pub,
+                      "--socks", socks, "--hops", "3"],
+                     stdout=open(d / "daemon.log", "w"), stderr=sp.STDOUT)
+        self._servizi_proc.append(p)
+
+    def _ferma_servizi_proc(self):
+        """Termina i processi dei servizi Nyctalus avviati dal browser."""
+        for p in list(self._servizi_proc):
+            try:
+                p.terminate()
+            except Exception:            # noqa: BLE001
+                pass
+        self._servizi_proc = []
+
+    def _ferma_servizi(self, *_):
+        """Chiusura finestra: ferma i servizi e termina l'app."""
+        self._ferma_servizi_proc()
+        Gtk.main_quit()
 
     def _attendi_tor(self):
         """Controllo in sottofondo (1 s, fino a 60 s): la rete Nyctalus è pronta?"""
@@ -934,8 +1058,14 @@ class Browser(FunzioniExtra, Gtk.Window):
         sc = btn.get_style_context()
         if self.stealth:
             if self._tor_ok:
-                icon, label = "security-high-symbolic", _t("br.stealth_on")
-                tip = _t("br.stealth_on_tip")
+                icon = "security-high-symbolic"
+                if self._servizi_locale:
+                    label, tip = _t("br.stealth_on_locale"), _t("br.stealth_on_locale_tip")
+                else:
+                    label, tip = _t("br.stealth_on"), _t("br.stealth_on_tip")
+            elif self._servizi_avviati:
+                icon, label = "security-medium-symbolic", _t("br.stealth_avvio")
+                tip = _t("br.stealth_avvio_tip")
             else:
                 icon, label = "security-medium-symbolic", _t("br.stealth_notor")
                 tip = _t("br.stealth_notor_tip")
