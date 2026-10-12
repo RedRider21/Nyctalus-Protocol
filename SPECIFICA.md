@@ -201,10 +201,9 @@ Le chiavi dei singoli salti saranno incorporate nell'intestazione Sphinx: una so
 ---
 
 ## 7. Rumore di fondo 📐
-- Ogni nodo invia pacchetti fittizi a ritmo di Poisson verso i nodi vicini.
-- Un pacchetto fittizio ha la stessa lunghezza di uno vero e un'etichetta casuale: per chi lo osserva è identico, e per il destinatario è solo un'etichetta sconosciuta, da scartare.
-- Il traffico inoltrato per conto di altri utenti funziona già da copertura naturale.
-- ❓ La frequenza va tarata con misure reali (costo in banda contro beneficio).
+- ✅ **Celle a lunghezza fissa** (`crates/nyctalus/src/cella.rs`): ogni cella del circuito ha la **stessa dimensione** sul filo (`LUNGHEZZA` = intestazione + `CAPACITA`), con la lunghezza reale in un campo interno e il resto a zero. Così un osservatore non deduce la lunghezza dei contenuti e — condizione necessaria per il rumore di fondo — una cella fittizia è **indistinguibile** da una vera.
+- ✅ **Celle fittizie (cover traffic)** a ritmo di **Poisson** (`cmd::RIEMPIMENTO`, opzione `--cover HZ`, default spento): il client le inietta nel flusso in uscita; l'uscita del circuito le scarta. Mascherano *quando* l'utente invia davvero. Il traffico inoltrato per conto di altri utenti funziona già da copertura naturale.
+- 📐 Da fare: cover anche in discesa (uscita→client), riempimento dei quadri di apertura (LINK/Sphinx) per uniformità totale, e taratura della frequenza con misure reali (costo in banda contro beneficio).
 
 ---
 

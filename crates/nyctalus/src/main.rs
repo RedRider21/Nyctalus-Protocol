@@ -49,7 +49,7 @@ pub const ID_FLUSSO_DATI: u64 = 1;
 
 const USO: &str = "\
 Usage:
-  nyctalus start   [--config FILE] [--directory FILE] [--authority HEX] [--socks 127.0.0.1:1080] [--circuits 2] [--hops 3]
+  nyctalus start   [--config FILE] [--directory FILE] [--authority HEX] [--socks 127.0.0.1:1080] [--circuits 2] [--hops 3] [--cover 0]
   nyctalus status  [--config FILE]
   nyctalus nodes   [--config FILE] [--directory FILE] [--authority HEX] [--probe] [--timeout 3] [--obfuscation HEX]
   nyctalus exec    [--socks ADDR] [--config FILE] -- PROGRAM [ARG...]
@@ -121,7 +121,7 @@ async fn esegui() -> Risultato<()> {
             let cfg = Config::carica(&opzioni)?;
             println!("Configuration: {}", cfg.percorso.display());
             let nodi = nodi_da_elenco(&cfg.elenco, cfg.autorita)?;
-            avvia_circuito::avvia_circuito(nodi, cfg.circuiti, cfg.salti, cfg.socks, cfg.controllo, cfg.offuscamento).await
+            avvia_circuito::avvia_circuito(nodi, cfg.circuiti, cfg.salti, cfg.socks, cfg.controllo, cfg.offuscamento, cfg.copertura).await
         }
         "status" => {
             let cfg = Config::carica(&opzioni)?;
@@ -222,7 +222,8 @@ async fn esegui() -> Risultato<()> {
             let salti: usize = opzione(&opzioni, "hops").map(str::parse).transpose()?.unwrap_or(3);
             let controllo: SocketAddr = opzione(&opzioni, "control").unwrap_or("127.0.0.1:1090").parse()?;
             let offusca = da_esadecimale_opt(opzione(&opzioni, "obfuscation"))?;
-            avvia_circuito::avvia_circuito(nodi, circuiti, salti, socks, controllo, offusca).await
+            let copertura: f64 = opzione(&opzioni, "cover").map(str::parse).transpose()?.unwrap_or(0.0);
+            avvia_circuito::avvia_circuito(nodi, circuiti, salti, socks, controllo, offusca, copertura).await
         }
         "help" | "--help" | "-h" => {
             println!("{USO}");
@@ -329,6 +330,7 @@ struct Config {
     salti: usize,
     controllo: SocketAddr,
     offuscamento: Option<[u8; 32]>,
+    copertura: f64,
 }
 
 impl Config {
@@ -346,7 +348,8 @@ impl Config {
         let salti: usize = val("hops").map(|s| s.parse()).transpose()?.unwrap_or(3);
         let controllo: SocketAddr = val("control").unwrap_or_else(|| "127.0.0.1:1090".into()).parse()?;
         let offuscamento = da_esadecimale_opt(val("obfuscation").as_deref())?;
-        Ok(Self { percorso, elenco, autorita, socks, circuiti, salti, controllo, offuscamento })
+        let copertura: f64 = val("cover").map(|s| s.parse()).transpose()?.unwrap_or(0.0);
+        Ok(Self { percorso, elenco, autorita, socks, circuiti, salti, controllo, offuscamento, copertura })
     }
 
     fn stampa(&self) {

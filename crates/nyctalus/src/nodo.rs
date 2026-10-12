@@ -258,7 +258,7 @@ async fn collettore_uscita(mut rx: mpsc::Receiver<(u64, Vec<u8>)>, tx_return: mp
                             let _ = tx_return.send(Cella::controllo(flusso, cmd::APERTO).in_byte()).await;
                             let tx_ret2 = tx_return.clone();
                             tokio::spawn(async move {
-                                let mut buffer = vec![0u8; 16 * 1024];
+                                let mut buffer = vec![0u8; crate::cella::CAPACITA];
                                 loop {
                                     match lettura.read(&mut buffer).await {
                                         Ok(0) | Err(_) => break,

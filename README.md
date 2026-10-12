@@ -62,7 +62,7 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 
 ## A che punto siamo
 
-**Fatto e testato** (74 test automatici):
+**Fatto e testato** (78 test automatici):
 - **L2 — nucleo del protocollo:** frammentazione, etichette segrete rotanti (BLAKE3), cifratura end-to-end (ChaCha20-Poly1305) con pacchetti di lunghezza fissa, ricomposizione con limiti anti-DoS.
 - **Stretta di mano Noise NK:** i due estremi si accordano sul segreto senza farlo mai viaggiare; forward secrecy; il mittente resta anonimo.
 - **Indirizzi `.nyct`:** la chiave pubblica di un servizio in base32, con controllo anti-errori di battitura.
@@ -83,7 +83,7 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 Serve [Rust](https://rustup.rs) (profilo minimal sufficiente):
 
 ```sh
-cargo test              # 74 test
+cargo test              # 78 test
 cargo build --release   # produce target/release/nyctalus
 ```
 
@@ -183,6 +183,7 @@ nyctalus monitor --control 127.0.0.1:1090
 **Impostazioni del percorso:**
 - `--circuits N` (o `circuits` nel config) — strade parallele usate contemporaneamente. **Minimo 1, massimo 8**, default **2**.
 - `--hops N` (o `hops`) — nodi per percorso (guard + intermedi + uscita). **Minimo 1, massimo 5** (limite di Sphinx), default **3**. Sotto i 3 salti non c'è vero anonimato.
+- `--cover HZ` (o `cover`) — **rumore di fondo**: celle fittizie (indistinguibili dalle vere, perché tutte le celle hanno lunghezza fissa) iniettate a ritmo di Poisson per mascherare *quando* invii davvero. Default **0** (spento); un valore basso (es. `5`) è un compromesso fra copertura e banda.
 
 **Affidabilità:** il trasporto è QUIC (su UDP), che **recupera da solo i pacchetti persi** e li riconsegna in ordine; un pacchetto perso non blocca gli altri flussi (niente head-of-line blocking fra flussi).
 

@@ -47,6 +47,7 @@ pub async fn avvia_circuito(
     socks: SocketAddr,
     controllo: SocketAddr,
     offusca: Option<[u8; 32]>,
+    copertura: f64,
 ) -> Risultato<()> {
     if !(SALTI_MIN..=SALTI_MAX).contains(&salti) {
         return Err(format!("--hops must be between {SALTI_MIN} and {SALTI_MAX}").into());
@@ -102,6 +103,22 @@ pub async fn avvia_circuito(
 
     tokio::spawn(schedulatore(rx_out, inbox_circuiti));
     tokio::spawn(collettore_ritorno(rx_ret, flussi.clone()));
+
+    // Rumore di fondo (H2): se richiesto, inietta celle fittizie a ritmo di
+    // Poisson nel flusso in uscita. Hanno la stessa lunghezza delle vere e
+    // l'uscita le scarta: mascherano QUANDO l'utente invia davvero.
+    if copertura > 0.0 {
+        let tx = tx_out.clone();
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(ritardo_poisson(copertura)).await;
+                if tx.send(Cella::riempimento().in_byte()).await.is_err() {
+                    break;
+                }
+            }
+        });
+        println!("Cover traffic: ON (~{copertura:.1} dummy cells/s, uplink)");
+    }
 
     // Metriche + porta di controllo per `monitor`.
     let metriche = Arc::new(crate::metriche::Metriche::nuovo());
@@ -211,6 +228,9 @@ async fn collettore_ritorno(mut rx_ret: mpsc::Receiver<(u64, Vec<u8>)>, flussi: 
     while let Some((seq, cella_bytes)) = rx_ret.recv().await {
         for cb in riordina.inserisci(seq, cella_bytes) {
             if let Some(cella) = Cella::da_byte(&cb) {
+                if cella.comando == cmd::RIEMPIMENTO {
+                    continue; // cella fittizia (cover traffic): scartala
+                }
                 let inbox = flussi.lock().unwrap().get(&cella.flusso).cloned();
                 if let Some(inbox) = inbox {
                     let _ = inbox.send(cella).await;
@@ -218,6 +238,16 @@ async fn collettore_ritorno(mut rx_ret: mpsc::Receiver<(u64, Vec<u8>)>, flussi: 
             }
         }
     }
+}
+
+/// Ritardo casuale a legge esponenziale (processo di Poisson a `hz` eventi/s),
+/// limitato a 60s. A ogni intervallo si invia una cella fittizia.
+fn ritardo_poisson(hz: f64) -> std::time::Duration {
+    let mut b = [0u8; 8];
+    getrandom::fill(&mut b).expect("generatore casuale di sistema");
+    let u = (u64::from_le_bytes(b) as f64 / u64::MAX as f64).clamp(1e-12, 1.0);
+    let secondi = (-u.ln() / hz).min(60.0);
+    std::time::Duration::from_secs_f64(secondi)
 }
 
 /// Sceglie `circuiti` percorsi con **guard e uscita condivisi** e nodi
@@ -312,7 +342,7 @@ async fn gestisci_flusso(
 
     let (mut app_lettura, mut app_scrittura) = cliente.into_split();
     let andata = async {
-        let mut buffer = vec![0u8; 16 * 1024];
+        let mut buffer = vec![0u8; crate::cella::CAPACITA];
         loop {
             let letti = app_lettura.read(&mut buffer).await?;
             if letti == 0 {
