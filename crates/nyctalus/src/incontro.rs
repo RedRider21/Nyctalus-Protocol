@@ -30,7 +30,7 @@ use chacha20poly1305::aead::{Aead, KeyInit};
 use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
 use nyctalus_core::circuito::{apri_circuito, NodoPercorso};
 use nyctalus_core::socks5::{self, Esito};
-use nyctalus_core::stretta::{self, Identita, Mittente};
+use nyctalus_core::stretta::{self, Identita, Mittente, SegretiSessione};
 use nyctalus_core::{cipolla, indirizzo, rendezvous};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -52,6 +52,13 @@ const MAX_INTESTAZIONE: usize = 64 * 1024; // tetto anti-DoS sull'intestazione H
 /// e impronta TLS. (Per il `--rendezvous` manuale la chiave X25519 è a zero: si
 /// usa solo il modo diretto, che non apre circuiti.)
 pub type Punto = NodoRete;
+
+/// Cosa serve il sito `.nyct`: una cartella di file (server incorporato) oppure
+/// un **web server esterno** (Nginx/Apache…) a cui il demone fa da proxy.
+pub enum ModoServizio {
+    Cartella(PathBuf),
+    Backend(SocketAddr),
+}
 
 // ======================================================================
 //  Canale: trasporto a quadri verso/dal punto d'incontro
@@ -522,16 +529,23 @@ fn analizza_controllo(primo: &[u8]) -> Risultato<(u8, [u8; 32])> {
 // ======================================================================
 
 pub async fn site(
-    dir: PathBuf,
+    modo: ModoServizio,
     file_identita: Option<PathBuf>,
     elenco: Vec<NodoRete>,
     manuale: Option<NodoRete>,
     offusca: Option<[u8; 32]>,
     salti: usize,
+    pool: usize,
 ) -> Risultato<()> {
-    if !dir.is_dir() {
-        return Err(format!("{} is not a directory", dir.display()).into());
-    }
+    let descrizione = match &modo {
+        ModoServizio::Cartella(dir) => {
+            if !dir.is_dir() {
+                return Err(format!("{} is not a directory", dir.display()).into());
+            }
+            format!("folder {}", dir.display())
+        }
+        ModoServizio::Backend(addr) => format!("backend {addr}"),
+    };
     let identita = match &file_identita {
         Some(p) => carica_o_crea_identita(p)?,
         None => Identita::genera()?,
@@ -539,7 +553,7 @@ pub async fn site(
     let indirizzo_nyct = indirizzo::da_chiave(&identita.pubblica());
     println!("Nyctalus site online.");
     println!("  address:  {indirizzo_nyct}");
-    println!("  serving:  {}", dir.display());
+    println!("  serving:  {descrizione}");
     println!(
         "  mode:     {}",
         if manuale.is_some() { "direct rendezvous (single hop)" } else { "onion rendezvous (multi-hop)" }
@@ -547,30 +561,30 @@ pub async fn site(
     println!("\nVisit it with:\n  nyctalus browse {indirizzo_nyct}\n");
 
     let identita = Arc::new(identita);
-    let dir = Arc::new(dir);
+    let modo = Arc::new(modo);
 
     // Modo diretto (un nodo, concorrente): una connessione, più client in
     // parallelo (il nodo apre uno stream per client).
     if let Some(nodo) = manuale {
-        return site_diretto(nodo, identita, dir, offusca).await;
+        return site_diretto(nodo, identita, modo, offusca).await;
     }
 
     // Modo onion: il servizio serve un client per circuito; un pool di
     // registrazioni concorrenti permette a un browser di caricare più risorse in
     // parallelo. Ogni task del pool: registra un circuito, serve un client, e si
     // re-registra.
-    const POOL: usize = 4;
+    let pool = pool.clamp(1, 32);
     let elenco = Arc::new(elenco);
     let mut task = Vec::new();
-    for _ in 0..POOL {
+    for _ in 0..pool {
         let identita = identita.clone();
-        let dir = dir.clone();
+        let modo = modo.clone();
         let elenco = elenco.clone();
         task.push(tokio::spawn(async move {
             loop {
                 match registra_onion_e_canale(&identita.pubblica(), &elenco, offusca, salti).await {
-                    Ok(mut canale) => {
-                        if let Err(e) = servi_client(&mut canale, &identita, &dir).await {
+                    Ok(canale) => {
+                        if let Err(e) = servi_client(canale, &identita, &modo).await {
                             eprintln!("client error: {e}");
                         }
                     }
@@ -592,7 +606,7 @@ pub async fn site(
 async fn site_diretto(
     nodo: NodoRete,
     identita: Arc<Identita>,
-    dir: Arc<PathBuf>,
+    modo: Arc<ModoServizio>,
     offusca: Option<[u8; 32]>,
 ) -> Risultato<()> {
     let (conn, _endpoint) = match canale_diretto(&nodo, offusca).await? {
@@ -609,10 +623,10 @@ async fn site_diretto(
     };
     while let Ok((invio, ricezione)) = conn.accept_bi().await {
         let identita = identita.clone();
-        let dir = dir.clone();
+        let modo = modo.clone();
         tokio::spawn(async move {
-            let mut canale = Canale::Diretto { invio, ricezione, _conn: None, _endpoint: None };
-            if let Err(e) = servi_client(&mut canale, &identita, &dir).await {
+            let canale = Canale::Diretto { invio, ricezione, _conn: None, _endpoint: None };
+            if let Err(e) = servi_client(canale, &identita, &modo).await {
                 eprintln!("client error: {e}");
             }
         });
@@ -655,15 +669,23 @@ async fn registra_onion_e_canale(
     Err(ultimo.into())
 }
 
-async fn servi_client(canale: &mut Canale, identita: &Identita, dir: &Path) -> Risultato<()> {
+async fn servi_client(mut canale: Canale, identita: &Identita, modo: &ModoServizio) -> Risultato<()> {
     // Stretta Noise NK: il servizio è il destinatario (la sua chiave = il .nyct).
     let primo = canale.ricevi().await?.ok_or("no handshake")?;
     let (risposta, segreti) = stretta::rispondi(identita, &primo)?;
     canale.invia(&risposta).await?;
+    match modo {
+        ModoServizio::Cartella(dir) => servi_cartella(&mut canale, &segreti, dir).await,
+        ModoServizio::Backend(addr) => servi_backend(canale, &segreti, *addr).await,
+    }
+}
+
+/// Server di file incorporato: serve una cartella, in keep-alive, sulla sessione
+/// cifrata. Consuma l'eventuale corpo della richiesta (Content-Length) così il
+/// parsing resta allineato anche con richieste che hanno un corpo (es. POST).
+async fn servi_cartella(canale: &mut Canale, segreti: &SegretiSessione, dir: &Path) -> Risultato<()> {
     let mut rx = Record::nuovo(&segreti.verso_destinatario);
     let mut tx = Record::nuovo(&segreti.verso_mittente);
-
-    // Server HTTP in loop sulla sessione cifrata (keep-alive).
     let mut buffer: Vec<u8> = Vec::new();
     loop {
         let fine = loop {
@@ -681,6 +703,26 @@ async fn servi_client(canale: &mut Canale, identita: &Identita, dir: &Path) -> R
         let intestazione: Vec<u8> = buffer.drain(..fine).collect();
         let percorso = percorso_richiesto(&intestazione);
         let keep_alive = vuole_keep_alive(&intestazione);
+
+        // Scarta il corpo della richiesta, se c'è, per non disallineare il flusso.
+        let mut da_scartare = lunghezza_corpo(&intestazione).unwrap_or(0);
+        let gia = buffer.len().min(da_scartare);
+        buffer.drain(..gia);
+        da_scartare -= gia;
+        while da_scartare > 0 {
+            match canale.ricevi().await? {
+                Some(q) => {
+                    let d = rx.apri(&q)?;
+                    if d.len() <= da_scartare {
+                        da_scartare -= d.len();
+                    } else {
+                        buffer.extend_from_slice(&d[da_scartare..]);
+                        da_scartare = 0;
+                    }
+                }
+                None => return Ok(()),
+            }
+        }
 
         let (stato, tipo, corpo) = apri_risorsa(dir, &percorso);
         let chiusura = if keep_alive { "keep-alive" } else { "close" };
@@ -702,6 +744,51 @@ async fn servi_client(canale: &mut Canale, identita: &Identita, dir: &Path) -> R
             return Ok(());
         }
     }
+}
+
+/// Proxy verso un **web server esterno** (Nginx/Apache…): la sessione cifrata
+/// viene collegata byte-per-byte a una connessione TCP locale. Così il demone
+/// Nyctalus sta davanti a un sito esistente, che gestisce lui HTTP (GET, POST,
+/// keep-alive, pipeline).
+async fn servi_backend(canale: Canale, segreti: &SegretiSessione, backend: SocketAddr) -> Risultato<()> {
+    let mut rx = Record::nuovo(&segreti.verso_destinatario);
+    let mut tx = Record::nuovo(&segreti.verso_mittente);
+    let tcp = TcpStream::connect(backend).await?;
+    let (mut br, mut bw) = tcp.into_split();
+    let (mut scrittura, mut lettura) = canale.dividi();
+
+    let verso_backend = async move {
+        while let Some(q) = lettura.ricevi().await? {
+            bw.write_all(&rx.apri(&q)?).await?;
+        }
+        let _ = bw.shutdown().await;
+        Risultato::Ok(())
+    };
+    let verso_client = async move {
+        let mut buf = vec![0u8; PEZZO];
+        loop {
+            let letti = br.read(&mut buf).await?;
+            if letti == 0 {
+                break;
+            }
+            scrittura.invia(&tx.sigilla(&buf[..letti])).await?;
+        }
+        scrittura.finish();
+        Risultato::Ok(())
+    };
+    let (a, b) = tokio::join!(verso_backend, verso_client);
+    a?;
+    b?;
+    Ok(())
+}
+
+/// Valore di `Content-Length` in un'intestazione HTTP, se presente.
+fn lunghezza_corpo(intestazione: &[u8]) -> Option<usize> {
+    let testo = String::from_utf8_lossy(intestazione).to_ascii_lowercase();
+    testo
+        .lines()
+        .find_map(|r| r.strip_prefix("content-length:"))
+        .and_then(|v| v.trim().parse().ok())
 }
 
 // ======================================================================
@@ -730,17 +817,36 @@ pub async fn browse(
     let richiesta =
         format!("GET {percorso} HTTP/1.0\r\nHost: {indirizzo_nyct}\r\nConnection: close\r\n\r\n");
     canale.invia(&tx.sigilla(richiesta.as_bytes())).await?;
-    // Niente finish() qui: il servizio chiude lui dopo la risposta (HTTP/1.0
-    // close) e la nostra ricezione termina di conseguenza. Chiudere subito il
-    // lato di invio può propagarsi lungo il circuito e tagliare la risposta.
 
-    let mut corpo = Vec::new();
-    while let Some(q) = canale.ricevi().await? {
-        corpo.extend_from_slice(&rx.apri(&q)?);
+    // Leggi le intestazioni, poi il corpo per Content-Length (se c'è) o fino a
+    // fine stream: così si termina senza dipendere dal momento della chiusura.
+    let mut buffer = Vec::new();
+    let fine = loop {
+        if let Some(p) = trova_fine_intestazione(&buffer) {
+            break p;
+        }
+        match canale.ricevi().await? {
+            Some(q) => buffer.extend_from_slice(&rx.apri(&q)?),
+            None => break buffer.len(),
+        }
+    };
+    if let Some(len) = lunghezza_corpo(&buffer[..fine.min(buffer.len())]) {
+        let totale = fine + len;
+        while buffer.len() < totale {
+            match canale.ricevi().await? {
+                Some(q) => buffer.extend_from_slice(&rx.apri(&q)?),
+                None => break,
+            }
+        }
+        buffer.truncate(totale.min(buffer.len()));
+    } else {
+        while let Some(q) = canale.ricevi().await? {
+            buffer.extend_from_slice(&rx.apri(&q)?);
+        }
     }
     canale.finish();
     use std::io::Write as _;
-    std::io::stdout().write_all(&corpo)?;
+    std::io::stdout().write_all(&buffer)?;
     std::io::stdout().flush()?;
     Ok(())
 }

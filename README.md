@@ -213,7 +213,13 @@ in modo diretto a salto singolo, con `--rendezvous IP:PORT --fingerprint <FP>`
 (utile per prove con un solo nodo).
 
 I siti `.nyct` sono normali pagine **HTML5 + JavaScript**: una cartella di file
-servita dal sito.
+servita dal sito. In alternativa, con `site --backend IP:PORT` il demone fa da
+proxy a un **web server esistente** (Nginx, Apache…), che gestisce lui tutto
+l'HTTP:
+
+```sh
+nyctalus site --backend 127.0.0.1:8080 --directory directory.txt --authority <PUB>
+```
 
 **Dal browser.** Il demone SOCKS (`start`/`circuit`) riconosce gli host `.nyct` e
 li instrada al punto d'incontro invece che all'uscita: basta puntare il browser

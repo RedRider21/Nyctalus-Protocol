@@ -59,7 +59,7 @@ Usage:
   nyctalus directory --authority-secret HEX --entries 'addr,x,fp;addr,x,fp'
   nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)]
   nyctalus test-circuit (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--message DEST]
-  nyctalus site    --dir ./folder [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--identity FILE] [--hops 3]
+  nyctalus site    (--dir ./folder | --backend IP:PORT) [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--identity FILE] [--hops 3] [--pool 4]
   nyctalus browse  ADDRESS.nyct [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--path /] [--hops 3]
   nyctalus receive --out FILE [--listen 0.0.0.0:4433] [--identity FILE]
   nyctalus send    --to IP:PORT --fingerprint HEX --recipient ADDRESS.nyct [--lanes 4] FILE
@@ -149,12 +149,18 @@ async fn esegui() -> Risultato<()> {
             monitor::monitor(controllo).await
         }
         "site" => {
-            let dir = PathBuf::from(obbligatoria(&opzioni, "dir")?);
+            let modo = match (opzione(&opzioni, "dir"), opzione(&opzioni, "backend")) {
+                (Some(d), None) => incontro::ModoServizio::Cartella(PathBuf::from(d)),
+                (None, Some(b)) => incontro::ModoServizio::Backend(b.parse()?),
+                (Some(_), Some(_)) => return Err("use either --dir or --backend, not both".into()),
+                (None, None) => return Err("missing --dir FOLDER (or --backend IP:PORT)".into()),
+            };
             let identita = opzione(&opzioni, "identity").map(PathBuf::from);
             let offusca = da_esadecimale_opt(opzione(&opzioni, "obfuscation"))?;
             let manuale = manuale_rendezvous(&opzioni)?;
             let elenco = if manuale.is_some() { Vec::new() } else { carica_punti_incontro(&opzioni)? };
-            incontro::site(dir, identita, elenco, manuale, offusca, salti_incontro(&opzioni)?).await
+            let pool: usize = opzione(&opzioni, "pool").map(str::parse).transpose()?.unwrap_or(4);
+            incontro::site(modo, identita, elenco, manuale, offusca, salti_incontro(&opzioni)?, pool).await
         }
         "browse" => {
             let indirizzo_nyct = match opzione(&opzioni, "address") {
