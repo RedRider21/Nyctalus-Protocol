@@ -18,6 +18,7 @@
   <nav class="link">
     <a href="#idea"><span class="it">Idea</span><span class="en">Idea</span></a>
     <a href="#caratteristiche"><span class="it">Caratteristiche</span><span class="en">Features</span></a>
+    <a href="#traffico"><span class="it">Traffico</span><span class="en">Traffic</span></a>
     <a href="#stato"><span class="it">Stato</span><span class="en">Status</span></a>
     <a href="#manuale"><span class="it">Manuale</span><span class="en">Manual</span></a>
     <a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a>
@@ -105,6 +106,35 @@
   </ul>
 </div></section>
 
+<section id="traffico"><div class="wrap">
+  <div class="occhiello"><span class="it">Analisi del traffico</span><span class="en">Traffic analysis</span></div>
+  <h2><span class="it">Celle a lunghezza fissa e rumore di fondo</span><span class="en">Fixed-length cells and cover traffic</span></h2>
+  <p class="intro">
+    <span class="it">Nascondere <i>dove</i> vai non basta: chi osserva la rete può provare a dedurre <i>cosa</i> fai dalla <b>forma</b> del traffico — la dimensione dei pacchetti e i loro tempi. Nyctalus appiattisce entrambe.</span>
+    <span class="en">Hiding <i>where</i> you go is not enough: an observer can try to infer <i>what</i> you do from the <b>shape</b> of the traffic — packet sizes and their timing. Nyctalus flattens both.</span>
+  </p>
+
+  <h3><span class="it">Celle a lunghezza fissa</span><span class="en">Fixed-length cells</span></h3>
+  <p class="intro"><span class="it">Dentro un circuito, i dati non viaggiano come pacchetti di lunghezza variabile, ma spezzati in <b>celle tutte della stessa dimensione</b>: la lunghezza reale sta in un campo interno, il resto è riempimento a zero.</span><span class="en">Inside a circuit, data does not travel as variable-length packets, but split into <b>cells that are all the same size</b>: the real length lives in an internal field, the rest is zero padding.</span></p>
+  <pre class="diagramma">+--------+---------+-----------+----------------+------------------------+
+| flusso | comando | lunghezza |  dati (reali)  |   riempimento a zero   |
+|  2 B   |   1 B   |    2 B     |   0...1024 B   |  fino alla taglia fissa|
++--------+---------+-----------+----------------+------------------------+
+   intestazione (5 B)                CAPACITA = 1024 B
+          lunghezza totale sul filo = 1029 B, SEMPRE uguale</pre>
+  <ul class="spunta">
+    <li><span class="it">Un osservatore <b>non deduce la lunghezza dei contenuti</b>: una risposta di 1 byte e una di 1024 occupano lo stesso numero di celle identiche.</span><span class="en">An observer <b>cannot infer content lengths</b>: a 1-byte reply and a 1024-byte one occupy the same number of identical cells.</span></li>
+    <li><span class="it">Il riempimento è <i>dentro</i> lo strato cifrato: i nodi intermedi vedono solo celle uguali per dimensione a ogni tratta (lo strato a cipolla, ChaCha20, non cambia la lunghezza).</span><span class="en">The padding is <i>inside</i> the encrypted layer: relay nodes see only cells of equal size on every hop (the onion layer, ChaCha20, does not change the length).</span></li>
+    <li><span class="it">È la <b>condizione necessaria</b> perché il rumore di fondo funzioni: una cella finta dev'essere indistinguibile da una vera, e lo è solo se hanno la stessa forma.</span><span class="en">It is the <b>necessary condition</b> for cover traffic to work: a fake cell must be indistinguishable from a real one, which only holds if they share the same shape.</span></li>
+  </ul>
+
+  <h3><span class="it">Rumore di fondo (cover traffic)</span><span class="en">Cover traffic</span></h3>
+  <p class="intro"><span class="it">Con l'opzione <code class="in">--cover HZ</code> il demone inietta <b>celle fittizie</b> a <b>ritmo di Poisson</b>: indistinguibili dalle vere, vengono <b>scartate</b> dall'uscita del circuito. Mascherano <b>quando</b> l'utente invia davvero — un osservatore vede un flusso uniforme sia che tu stia caricando una pagina sia che tu sia fermo.</span><span class="en">With the <code class="in">--cover HZ</code> option the daemon injects <b>dummy cells</b> at a <b>Poisson rate</b>: indistinguishable from real ones, they are <b>discarded</b> by the circuit's exit. They mask <b>when</b> the user actually sends — an observer sees a uniform flow whether you are loading a page or idle.</span></p>
+  <pre>nyctalus circuit ... --cover 5   <span class="c"><span class="it"># ~5 celle finte/s; default 0 (spento)</span><span class="en"># ~5 dummy cells/s; default 0 (off)</span></span></pre>
+  <p class="intro"><span class="it">Il traffico che il tuo nodo inoltra per conto di altri utenti funge già da <b>copertura naturale</b>. Sul filo, inoltre, ogni datagramma può essere offuscato (<code class="in">--obfuscation</code>): per un DPI è rumore casuale, senza la firma di QUIC.</span><span class="en">The traffic your node forwards for other users already acts as <b>natural cover</b>. On the wire, moreover, every datagram can be obfuscated (<code class="in">--obfuscation</code>): to a DPI it is random noise, without QUIC's signature.</span></p>
+  <div class="nota"><span class="it"><b>Limiti attuali:</b> il rumore di fondo copre per ora la sola direzione in salita (client→uscita); i quadri di <i>apertura</i> del circuito non sono ancora riempiti alla stessa dimensione; e il ritmo va <b>tarato con misure reali</b> (banda contro beneficio).</span><span class="en"><b>Current limits:</b> cover traffic currently protects only the upstream direction (client→exit); the circuit's <i>setup</i> frames are not yet padded to the same size; and the rate must be <b>tuned with real measurements</b> (bandwidth vs benefit).</span></div>
+</div></section>
+
 <section id="caratteristiche"><div class="wrap">
   <div class="occhiello"><span class="it">Caratteristiche</span><span class="en">Features</span></div>
   <h2><span class="it">Cosa la distingue</span><span class="en">What sets it apart</span></h2>
@@ -121,7 +151,7 @@
 <section id="stato"><div class="wrap">
   <div class="occhiello"><span class="it">Stato</span><span class="en">Status</span></div>
   <h2><span class="it">A che punto siamo</span><span class="en">Where we are</span></h2>
-  <p class="intro"><span class="it">Fatto e testato (42 test automatici):</span><span class="en">Done and tested (42 automated tests):</span></p>
+  <p class="intro"><span class="it">Fatto e testato (78 test automatici):</span><span class="en">Done and tested (78 automated tests):</span></p>
   <ul class="spunta">
     <li><b><span class="it">Nucleo del protocollo (L2)</span><span class="en">Protocol core (L2)</span></b> — <span class="it">frammentazione, etichette segrete, cifratura end-to-end, ricomposizione anti-DoS.</span><span class="en">fragmentation, secret labels, end-to-end encryption, DoS-resistant reassembly.</span></li>
     <li><b><span class="it">Stretta di mano Noise NK</span><span class="en">Noise NK handshake</span></b> — <span class="it">segreto mai trasmesso, forward secrecy, mittente anonimo.</span><span class="en">secret never transmitted, forward secrecy, anonymous sender.</span></li>
@@ -135,7 +165,10 @@
     <li><b><span class="it">Ponte verso i .onion di Tor</span><span class="en">Bridge to Tor .onion</span></b> — <span class="it">l'uscita raggiunge i siti <code class="in">.onion</code> tramite il Tor già presente sul sistema (via SOCKS).</span><span class="en">the exit reaches <code class="in">.onion</code> sites through the system's existing Tor (via SOCKS).</span></li>
     <li><b><span class="it">Camuffamento del trasporto</span><span class="en">Transport camouflage</span></b> — <span class="it">con una chiave di rete, ogni datagramma UDP è offuscato: sul filo è rumore casuale, niente firma di QUIC per il DPI.</span><span class="en">with a network key, every UDP datagram is obfuscated: on the wire it looks like random noise, no QUIC signature for DPI.</span></li>
     <li><b><span class="it">Strumenti da terminale</span><span class="en">Terminal tools</span></b> — <span class="it">demone da configurazione (<code class="in">start</code>/<code class="in">status</code>), <code class="in">exec</code> (stile torsocks) e <code class="in">monitor</code> (cruscotto delle metriche).</span><span class="en">config-driven daemon (<code class="in">start</code>/<code class="in">status</code>), <code class="in">exec</code> (torsocks-style) and <code class="in">monitor</code> (metrics dashboard).</span></li>
-    <li class="futuro"><b><span class="it">In arrivo</span><span class="en">Coming</span></b> — <span class="it">rumore di fondo, servizi <code class="in">.nyct</code> nascosti, confronto con Tor, browser dedicato.</span><span class="en">cover traffic, hidden <code class="in">.nyct</code> services, comparison against Tor, dedicated browser.</span></li>
+    <li><b><span class="it">Siti interni .nyct (punto d'incontro, multi-salto)</span><span class="en">.nyct hidden sites (rendezvous, multi-hop)</span></b> — <span class="it">un servizio si registra a un <b>punto d'incontro</b> scelto in automatico; client e servizio lo raggiungono con un circuito a più salti e si incontrano lì, cifrati end-to-end (Noise NK). Il nodo d'incontro non vede gli IP né il contenuto. Comandi <code class="in">site</code>/<code class="in">browse</code>, oppure dal browser via proxy SOCKS.</span><span class="en">a service registers at an automatically chosen <b>rendezvous</b>; client and service reach it over a multi-hop circuit and meet there, end-to-end encrypted (Noise NK). The rendezvous node sees neither IPs nor content. Commands <code class="in">site</code>/<code class="in">browse</code>, or from the browser via the SOCKS proxy.</span></li>
+    <li><b><span class="it">Celle a lunghezza fissa + rumore di fondo</span><span class="en">Fixed-length cells + cover traffic</span></b> — <span class="it">tutte le celle hanno la stessa dimensione (l'osservatore non deduce la lunghezza dei contenuti) e si possono iniettare celle finte a ritmo di Poisson (<code class="in">--cover</code>) per mascherare i tempi. Vedi la sezione <a href="#traffico">Traffico</a>.</span><span class="en">all cells are the same size (an observer cannot infer content lengths) and dummy cells can be injected at a Poisson rate (<code class="in">--cover</code>) to mask timing. See the <a href="#traffico">Traffic</a> section.</span></li>
+    <li><b><span class="it">Browser dedicato</span><span class="en">Dedicated browser</span></b> — <span class="it">clone di Firefox (GTK/WebKit); parte come un browser normale, lo <b>stealth</b> (rete Nyctalus) si accende col bottone, e i <code class="in">.nyct</code> lo attivano da soli.</span><span class="en">a Firefox clone (GTK/WebKit); it starts as an ordinary browser, <b>stealth</b> (the Nyctalus network) is toggled with a button, and <code class="in">.nyct</code> addresses turn it on by themselves.</span></li>
+    <li class="futuro"><b><span class="it">In arrivo</span><span class="en">Coming</span></b> — <span class="it">chat nativa <code class="in">.nyct</code>, rumore di fondo anche in discesa, confronto con Tor (Shadow), rete di nodi pubblica.</span><span class="en">native <code class="in">.nyct</code> chat, cover traffic also downstream, comparison against Tor (Shadow), a public node network.</span></li>
   </ul>
 </div></section>
 
@@ -148,7 +181,7 @@
     <p class="intro"><span class="it">Serve <a href="https://rustup.rs">Rust</a> (profilo minimal sufficiente).</span><span class="en">You need <a href="https://rustup.rs">Rust</a> (the minimal profile is enough).</span></p>
     <pre>git clone https://github.com/RedRider21/Nyctalus-Protocol.git
 cd Nyctalus-Protocol
-cargo test              <span class="c"><span class="it"># 42 test</span><span class="en"># 42 tests</span></span>
+cargo test              <span class="c"><span class="it"># 78 test</span><span class="en"># 78 tests</span></span>
 cargo build --release   <span class="c"><span class="it"># produce target/release/nyctalus</span><span class="en"># builds target/release/nyctalus</span></span></pre>
   </div>
 
@@ -180,7 +213,7 @@ nyctalus directory --authority-secret &lt;SECRET&gt; --entries 'a,x,fp;a,x,fp;a,
 nyctalus circuit --directory directory.txt --authority &lt;PUB&gt; --socks 127.0.0.1:1080 --circuits 2 --hops 3
 curl --socks5-hostname 127.0.0.1:1080 http://example.com</pre>
     <div class="nota"><span class="it">Con l'elenco firmato ogni collegamento è autenticato: un elenco manomesso o firmato da un'autorità diversa viene <b>rifiutato</b>. Il nodo intermedio non vede né il contenuto né la destinazione.</span><span class="en">With the signed directory every link is authenticated: a tampered directory, or one signed by a different authority, is <b>rejected</b>. The middle node sees neither the content nor the destination.</span></div>
-    <div class="nota"><span class="it"><b>Impostazioni del percorso:</b> <code class="in">--circuits N</code> = strade parallele (min 1, max 8, default 2); <code class="in">--hops N</code> = nodi per percorso (min 1, max 5, default 3; sotto 3 niente vero anonimato). Il trasporto è QUIC: i pacchetti persi si recuperano da soli e un flusso non blocca gli altri.</span><span class="en"><b>Path settings:</b> <code class="in">--circuits N</code> = parallel roads (min 1, max 8, default 2); <code class="in">--hops N</code> = nodes per path (min 1, max 5, default 3; below 3 there is no real anonymity). Transport is QUIC: lost packets recover on their own and one flow never stalls the others.</span></div>
+    <div class="nota"><span class="it"><b>Impostazioni del percorso:</b> <code class="in">--circuits N</code> = strade parallele (min 1, max 8, default 2); <code class="in">--hops N</code> = nodi per percorso (min 1, max 5, default 3; sotto 3 niente vero anonimato); <code class="in">--cover HZ</code> = rumore di fondo (celle finte a ritmo di Poisson, default 0). Il trasporto è QUIC: i pacchetti persi si recuperano da soli e un flusso non blocca gli altri.</span><span class="en"><b>Path settings:</b> <code class="in">--circuits N</code> = parallel roads (min 1, max 8, default 2); <code class="in">--hops N</code> = nodes per path (min 1, max 5, default 3; below 3 there is no real anonymity); <code class="in">--cover HZ</code> = cover traffic (dummy cells at a Poisson rate, default 0). Transport is QUIC: lost packets recover on their own and one flow never stalls the others.</span></div>
   </div>
 
   <div class="passo">
