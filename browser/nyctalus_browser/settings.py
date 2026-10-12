@@ -163,7 +163,7 @@ def apri_impostazioni(browser):
     scuro.set_active(bool(config.get("dark_mode", True)))
     r = _riga(g, r, _t("br.set.dark"), scuro)
     anon = Gtk.Switch(); anon.set_halign(Gtk.Align.START)
-    anon.set_active(bool(config.get("stealth", True)))
+    anon.set_active(bool(config.get("stealth", False)))
     r = _riga(g, r, _t("br.set.stealth"), anon, _t("br.set.stealth_note"))
     https = Gtk.Switch(); https.set_halign(Gtk.Align.START)
     https.set_active(bool(config.get("https_only", True)))

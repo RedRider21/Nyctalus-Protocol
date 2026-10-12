@@ -75,6 +75,18 @@ TOR_PORT = int(config.get("socks_port", 1080))
 # Schema "socks5://": così WebKit/GLib usa SOCKS5 (non SOCKS4) e manda il nome
 # host al proxy (DNS remoto), necessario per risolvere i .nyct nel demone.
 TOR_SOCKS = "socks5://%s:%d" % (TOR_HOST, TOR_PORT)
+
+
+def _host_interno(url):
+    """Vero se l'URL punta a un servizio interno .nyct (o .onion di Tor):
+    raggiungibile SOLO attraverso la rete anonima, quindi richiede lo stealth."""
+    try:
+        host = urlparse(url if "://" in url else "http://" + url).hostname or ""
+    except Exception:            # noqa: BLE001
+        return False
+    return host.lower().rstrip(".").endswith((".nyct", ".onion"))
+
+
 # UA di Firefox: il browser e' un clone di Firefox e si confonde nella massa.
 STEALTH_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) "
               "Gecko/20100101 Firefox/128.0")
@@ -285,7 +297,12 @@ class Browser(FunzioniExtra, Gtk.Window):
         # COLLASSATA: si vedono subito le icone dei preferiti in colonna; si
         # espande (elenco completo) a richiesta.
         self.dark_mode = bool(config.get("dark_mode", True))
-        self.stealth = bool(config.get("stealth", True))   # anonimo di default
+        # Browser NORMALE di default: lo stealth (rete Nyctalus) si accende col
+        # bottone. Eccezione: un indirizzo .nyct/.onion passato all'avvio è
+        # raggiungibile solo via rete anonima, quindi accende lo stealth da sé.
+        self.stealth = bool(config.get("stealth", False))
+        if start_url and _host_interno(start_url):
+            self.stealth = True
         self.bookmarks_minimized = True   # sidebar collassata all'avvio (icone)
         self._is_fullscreen = False   # stato schermo intero (F11)
         self._tab_labels = {}   # WebView -> (box, img, label)
@@ -988,8 +1005,25 @@ class Browser(FunzioniExtra, Gtk.Window):
 
     def navigate_to_url(self):
         v = self.current_view()
+        url = self._normalize(self.url_bar.get_text())
+        # I .nyct/.onion passano SOLO dalla rete anonima: se non siamo già in una
+        # scheda stealth, accendi lo stealth e aprili in una scheda instradata.
+        if _host_interno(url) and self._view_mode.get(v) is not True:
+            self._apri_interno(url)
+            return
         if v:
-            v.load_uri(self._normalize(self.url_bar.get_text()))
+            v.load_uri(url)
+
+    def _apri_interno(self, url):
+        """Accende lo stealth (se spento) e apre un sito interno .nyct/.onion in
+        una scheda instradata nella rete Nyctalus."""
+        if not self.stealth:
+            self.stealth = True
+            config.set("stealth", True)
+            self._ensure_tor()
+            self._contexts.pop(True, None)   # ricrea il contesto stealth col proxy
+            self._update_stealth_button()
+        self.new_tab(url, stealth=True)
 
     def navigate_back(self):
         v = self.current_view()
