@@ -22,6 +22,7 @@ QtWebEngine (Chromium) non e' disponibile su TinyCore (python3.9, niente
 tcz/ABI): WebKit2GTK e' la resa equivalente e nativa per lo stack NexusSec.
 """
 
+import html
 import json
 import os
 import shutil
@@ -599,8 +600,10 @@ class Browser(FunzioniExtra, Gtk.Window):
         self.paned.set_position(SIDEBAR_MIN if self.bookmarks_minimized else SIDEBAR_W)
         self.load_bookmarks()
 
-    # ------------------------------------------------------- stealth / Tor
+    # ----------------------------------------------- stealth / rete Nyctalus
     def _tor_running(self):
+        """Il proxy SOCKS della rete Nyctalus (il demone, 127.0.0.1:1080 di
+        default) è raggiungibile?"""
         try:
             with socket.create_connection((TOR_HOST, TOR_PORT), timeout=0.6):
                 return True
@@ -608,14 +611,12 @@ class Browser(FunzioniExtra, Gtk.Window):
             return False
 
     def _ensure_tor(self):
-        """SOCKS di Tor su 9050 raggiungibile? Se no lo accende (nxs-tor on,
-        lo stesso interruttore del pannello: un solo Tor per tutta la distro;
-        ripiego: tor utente) e NON blocca la finestra: controlla in sottofondo
-        e, appena Tor risponde, ricrea il contesto anonimo col proxy e aggiorna
-        il pulsante. Prima il controllo era uno solo, all'apertura: se Tor non
-        era ancora pronto il browser restava "Stealth (no Tor)" fino al riavvio.
-        Finche' Tor non c'e' le schede anonime restano effimere ma SENZA proxy
-        (fallback onesto: nessuna traccia locale, IP reale) e il badge lo dice."""
+        """Verifica che il proxy della rete Nyctalus (il demone) sia raggiungibile.
+        Il browser NON avvia il demone (è un processo a parte): se non risponde,
+        controlla in sottofondo (fino a 60 s) e, appena appare, ricrea il contesto
+        stealth col proxy e aggiorna il pulsante. Finché la rete non c'è, le schede
+        stealth restano effimere ma SENZA proxy (nessuna traccia locale, IP reale);
+        i siti .nyct/.onion vengono bloccati con un avviso (niente leak)."""
         if self._tor_running():
             self._tor_ok = True
             return True
@@ -627,7 +628,7 @@ class Browser(FunzioniExtra, Gtk.Window):
         return False
 
     def _attendi_tor(self):
-        """Controllo in sottofondo (1 s, fino a 60 s): Tor e' arrivato?"""
+        """Controllo in sottofondo (1 s, fino a 60 s): la rete Nyctalus è pronta?"""
         self._tor_tentativi = getattr(self, "_tor_tentativi", 0) + 1
         if self._tor_running():
             self._tor_ok = True
@@ -1024,6 +1025,41 @@ class Browser(FunzioniExtra, Gtk.Window):
             self._contexts.pop(True, None)   # ricrea il contesto stealth col proxy
             self._update_stealth_button()
         self.new_tab(url, stealth=True)
+
+    def _guardia_interni(self, view, decisione, tipo):
+        """Impedisce che un sito .nyct/.onion parta SENZA la rete Nyctalus
+        attiva: altrimenti la richiesta uscirebbe in chiaro e il nome potrebbe
+        risolversi su localhost (es. un Apache locale). Mostra un avviso."""
+        if tipo != WebKit2.PolicyDecisionType.NAVIGATION_ACTION:
+            return False
+        try:
+            uri = decisione.get_navigation_action().get_request().get_uri()
+        except Exception:            # noqa: BLE001
+            return False
+        if not _host_interno(uri):
+            return False
+        # Serve una scheda stealth CON la rete raggiungibile (proxy attivo).
+        if self._view_mode.get(view, self.stealth) and self._tor_ok is True:
+            return False
+        decisione.ignore()
+        self._pagina_rete_assente(view, uri)
+        return True
+
+    def _pagina_rete_assente(self, view, uri):
+        pagina = """<!doctype html><meta charset="utf-8"><title>%(t)s</title>
+<style>body{font-family:system-ui,sans-serif;background:#0b1020;color:#e6ecff;
+display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+.b{max-width:560px;padding:40px;text-align:center}.bat{font-size:52px}
+h1{font-size:22px;margin:.4em 0}p{color:#9fb0d9;line-height:1.6}
+code{color:#5aa9ff}</style><div class="b"><div class="bat">🦇</div>
+<h1>%(t)s</h1><p>%(d)s</p><p><code>%(u)s</code></p></div>""" % {
+            "t": html.escape(_t("br.nored.title")),
+            "d": _t("br.nored.body"),
+            "u": html.escape(uri)}
+        try:
+            view.load_alternate_html(pagina, uri, None)
+        except Exception:            # noqa: BLE001
+            pass
 
     def navigate_back(self):
         v = self.current_view()

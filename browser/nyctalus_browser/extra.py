@@ -103,6 +103,7 @@ class FunzioniExtra:
         security.blocca_popup(view)
         self.solo_https.aggancia(view)
         self.antitrack.applica(view)
+        view.connect("decide-policy", self._guardia_interni)
         view.connect("load-changed", self._caricamento)
         view.connect("notify::is-playing-audio", self._audio)
         view.connect("context-menu", self._menu_contestuale)
