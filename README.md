@@ -65,17 +65,19 @@ ma spezzati in **celle tutte della stessa dimensione** (`crates/nyctalus/src/cel
 ```
 ┌─────────┬─────────┬────────────┬───────────────┬──────────────────────┐
 │ flusso  │ comando │ lunghezza  │ dati (reali)  │  riempimento a zero   │
-│  2 B    │  1 B    │   2 B      │   0…1024 B    │  fino a lunghezza fissa│
+│  2 B    │  1 B    │   2 B      │   0…1359 B    │  fino a lunghezza fissa│
 └─────────┴─────────┴────────────┴───────────────┴──────────────────────┘
-        intestazione (5 B)              CAPACITA = 1024 B
-                 lunghezza totale sul filo = 1029 B, SEMPRE
+        intestazione (5 B)              CAPACITA = 1359 B
 ```
 
-La lunghezza reale dei dati sta in un **campo interno**; il resto è riempimento a
-zero. Conseguenze:
+La taglia è scelta apposta: un'**unità dati** sul filo (sequenza + cella) è
+**1372 byte**, esattamente come il **pacchetto di apertura Sphinx** — così
+nemmeno il primo quadro del circuito si distingue per dimensione. La lunghezza
+reale dei dati sta in un **campo interno**; il resto è riempimento a zero.
+Conseguenze:
 
 - **Un osservatore non deduce la lunghezza dei contenuti:** una risposta di 1 byte
-  e una di 1024 occupano lo stesso numero di celle della stessa dimensione.
+  e una di 1359 occupano lo stesso numero di celle della stessa dimensione.
 - Poiché il riempimento è *dentro* lo strato cifrato, i nodi intermedi vedono
   solo celle identiche per dimensione a ogni tratta (lo strato a cipolla, ChaCha20,
   non cambia la lunghezza).
@@ -118,10 +120,10 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 
 | Livello | Cosa fa | Stato |
 |---|---|---|
-| **L3 Applicazione** | proxy SOCKS5 locale · siti interni · browser | 🟡 SOCKS5 + circuito a 3 salti |
+| **L3 Applicazione** | proxy SOCKS5 locale · siti interni `.nyct` · browser | ✅ |
 | **L2 Flusso** | etichette segrete + cifratura end-to-end + ricomposizione | ✅ |
-| **L1 Cipolla** | apertura circuito (Sphinx) + strati simmetrici | ✅ |
-| **L0 Collegamento** | QUIC tra nodi, camuffato da HTTPS | 🟡 QUIC fatto |
+| **L1 Cipolla** | apertura circuito (Sphinx) + strati simmetrici · celle a lunghezza fissa | ✅ |
+| **L0 Collegamento** | QUIC tra nodi, camuffato (offuscamento ChaCha20) | ✅ |
 
 ## A che punto siamo
 
@@ -139,7 +141,10 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 - **Anti-correlazione**: il numero di sequenza non viaggia in chiaro (nonce da contatore locale per direzione).
 - **Siti interni `.nyct`**: `site` ospita una cartella come sito `.nyct`, `browse` lo visita, e il **browser** li apre dal proxy SOCKS. Servizio e client si incontrano a un **nodo punto d'incontro** che fa solo da ponte opaco; fra loro c'è una sessione **Noise NK end-to-end** (l'indirizzo `.nyct` *è* la chiave del servizio) con HTTP sopra. Il punto d'incontro si **sceglie da solo** (deterministico dall'indirizzo e dall'elenco firmato, con rotazione) e lo si raggiunge con un **circuito a più salti**: così nemmeno quel nodo conosce gli IP di sito e visitatore — vede solo l'ultimo relè.
 
-**In arrivo** (vedi [STATO.md](STATO.md)): apertura del circuito con Sphinx, ID di circuito per tratta, nodi intermedi, ragnatela completa, simulazione contro Tor con Shadow, camuffamento, browser dedicato.
+- **Rumore di fondo (cover traffic) + celle a lunghezza fissa**: tutti i quadri del circuito e del rendezvous hanno la **stessa taglia** (1372 byte); celle fittizie opzionali (`--cover`) in **entrambe le direzioni** mascherano *quando* si invia.
+- **Browser dedicato** (clone di Firefox): parte normale, lo **stealth** (rete Nyctalus) si accende col bottone e **avvia da solo i servizi** (rete pubblica configurata o rete di prova locale); i `.nyct` attivano lo stealth automaticamente.
+
+**In arrivo** (vedi [STATO.md](STATO.md)): taratura del rumore di fondo su rete reale, rotazione dei guard e ripresa dai circuiti caduti, descrittore firmato dei servizi, simulazione contro Tor con **Shadow**, chat nativa `.nyct`, gestore file grafico, mini-launcher da desktop.
 
 ## Compilare
 
@@ -154,9 +159,12 @@ cargo build --release   # produce target/release/nyctalus
 
 ## Uso da terminale
 
-Nyctalus è, come Tor, un demone con interfaccia a riga di comando; il browser
-è solo uno dei client. Comandi previsti (`avvia`, `stato`, `sito`, `monitor`,
-`esec`); oggi funzionano questi:
+Nyctalus è, come Tor, un demone con interfaccia a riga di comando (in inglese);
+il browser è solo uno dei client. I comandi (`start`, `status`, `nodes`, `site`,
+`browse`, `monitor`, `exec`, `node`, `authority`, `directory`, …) sono elencati
+da `nyctalus help`. Per **installare, configurare e mettere in piedi una rete**
+vedi **[DEPLOY.md](DEPLOY.md)**; per **verificare** sicurezza e anonimato
+**[SICUREZZA.md](SICUREZZA.md)**. Esempi:
 
 ### Proxy SOCKS5 (un salto — non ancora anonimo)
 
@@ -164,7 +172,7 @@ Sul nodo di uscita:
 ```sh
 nyctalus exit --listen 0.0.0.0:4600
 ```
-Stampa il comando `avvia` completo, con l'impronta del certificato. Sul client:
+Stampa il comando `single-hop` completo, con l'impronta del certificato. Sul client:
 ```sh
 nyctalus single-hop --to IP-USCITA:4600 --fingerprint <FINGERPRINT> --socks 127.0.0.1:1080
 curl --socks5-hostname 127.0.0.1:1080 https://example.com
@@ -250,7 +258,7 @@ nyctalus monitor --control 127.0.0.1:1090
 
 **Affidabilità:** il trasporto è QUIC (su UDP), che **recupera da solo i pacchetti persi** e li riconsegna in ordine; un pacchetto perso non blocca gli altri flussi (niente head-of-line blocking fra flussi).
 
-### Siti interni `.nyct` (prima versione)
+### Siti interni `.nyct`
 
 Un nodo fa da **punto d'incontro**; il sito vi si registra e il visitatore vi si
 collega. Il nodo fa solo da ponte: fra sito e visitatore c'è una sessione
@@ -320,6 +328,8 @@ chi si identifica da solo (login, dati personali).
 - [VISIONE.md](VISIONE.md) — l'idea, le scelte, il percorso verso il protocollo di riferimento
 - [SPECIFICA.md](SPECIFICA.md) — modello di minaccia, livelli, formati dei pacchetti
 - [STATO.md](STATO.md) — punto dei lavori e cose da fare
+- [DEPLOY.md](DEPLOY.md) — installare, configurare, mettere in piedi una rete, opzioni
+- [SICUREZZA.md](SICUREZZA.md) — come verificare sicurezza e anonimato (e cosa serve un audit)
 
 ## Il nome
 
