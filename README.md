@@ -51,6 +51,66 @@ fondo per guadagnare velocità senza rinunciare all'anonimato:
 4. **Cipolla:** ogni frammento è chiuso in più strati; ogni nodo ne toglie uno e scopre solo il nodo successivo.
 5. **Ricomposizione:** a destinazione i frammenti tornano in ordine.
 
+## Protezione dall'analisi del traffico: celle a lunghezza fissa e rumore di fondo
+
+Nascondere *dove* vai non basta: chi osserva la rete può provare a dedurre
+*cosa* fai dalla **forma** del traffico — la dimensione dei pacchetti e i loro
+tempi. Nyctalus appiattisce entrambe.
+
+### Celle a lunghezza fissa
+
+Dentro un circuito, i dati non viaggiano come pacchetti di lunghezza variabile,
+ma spezzati in **celle tutte della stessa dimensione** (`crates/nyctalus/src/cella.rs`):
+
+```
+┌─────────┬─────────┬────────────┬───────────────┬──────────────────────┐
+│ flusso  │ comando │ lunghezza  │ dati (reali)  │  riempimento a zero   │
+│  2 B    │  1 B    │   2 B      │   0…1024 B    │  fino a lunghezza fissa│
+└─────────┴─────────┴────────────┴───────────────┴──────────────────────┘
+        intestazione (5 B)              CAPACITA = 1024 B
+                 lunghezza totale sul filo = 1029 B, SEMPRE
+```
+
+La lunghezza reale dei dati sta in un **campo interno**; il resto è riempimento a
+zero. Conseguenze:
+
+- **Un osservatore non deduce la lunghezza dei contenuti:** una risposta di 1 byte
+  e una di 1024 occupano lo stesso numero di celle della stessa dimensione.
+- Poiché il riempimento è *dentro* lo strato cifrato, i nodi intermedi vedono
+  solo celle identiche per dimensione a ogni tratta (lo strato a cipolla, ChaCha20,
+  non cambia la lunghezza).
+- **È la condizione necessaria** perché il rumore di fondo funzioni: una cella
+  finta dev'essere indistinguibile da una vera, e lo è solo se hanno la stessa forma.
+
+Il prezzo è un po' di banda sprecata nel riempimento (il compromesso classico,
+come i 514 byte delle celle di Tor).
+
+### Rumore di fondo (cover traffic)
+
+Con l'opzione `--cover HZ` il demone inietta **celle fittizie** (comando
+`RIEMPIMENTO`) a **ritmo di Poisson** nel flusso in uscita: indistinguibili dalle
+vere, vengono **scartate** dall'uscita del circuito (e saltate dal collettore di
+ritorno). Mascherano **quando** l'utente invia davvero: un osservatore vede un
+flusso di celle uniforme sia che tu stia caricando una pagina sia che tu sia fermo.
+
+```sh
+nyctalus circuit … --cover 5      # ~5 celle finte/s; default 0 (spento)
+```
+
+Il traffico che il tuo nodo inoltra per conto di altri utenti funge già da
+**copertura naturale** aggiuntiva.
+
+### Camuffamento del trasporto
+
+Sul filo, ogni datagramma UDP può essere avvolto (ChaCha20 + nonce per
+datagramma, opzione `--obfuscation`): per un DPI è rumore casuale, senza la firma
+di QUIC. Così la rete non si riconosce nemmeno a livello di collegamento.
+
+**Limiti attuali:** il rumore di fondo copre per ora solo la direzione in salita
+(client→uscita); i quadri di *apertura* del circuito (LINK, pacchetto Sphinx) non
+sono ancora riempiti alla stessa dimensione; e il ritmo del cover va **tarato con
+misure reali** (costo in banda contro beneficio). Vedi [STATO.md](STATO.md) §H.
+
 ## Architettura a livelli
 
 | Livello | Cosa fa | Stato |
