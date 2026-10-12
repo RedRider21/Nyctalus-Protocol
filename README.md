@@ -108,10 +108,11 @@ Sul filo, ogni datagramma UDP può essere avvolto (ChaCha20 + nonce per
 datagramma, opzione `--obfuscation`): per un DPI è rumore casuale, senza la firma
 di QUIC. Così la rete non si riconosce nemmeno a livello di collegamento.
 
-**Limiti attuali:** il quadro LINK è riempito, ma il **pacchetto di apertura
-Sphinx** (formato proprio) e i quadri del **tunnel rendezvous** non sono ancora
-uniformati; e il ritmo del cover va **tarato con misure reali** (costo in banda
-contro beneficio). Vedi [STATO.md](STATO.md) §H.
+Tutti i quadri del circuito e del rendezvous — dati, LINK, **pacchetto di
+apertura Sphinx** e tunnel `.nyct` — hanno ora la **stessa taglia** (1372 byte).
+**Limite rimasto:** il ritmo del cover va **tarato con misure reali** (costo in
+banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
+[STATO.md](STATO.md) §H.
 
 ## Architettura a livelli
 
@@ -124,7 +125,7 @@ contro beneficio). Vedi [STATO.md](STATO.md) §H.
 
 ## A che punto siamo
 
-**Fatto e testato** (78 test automatici):
+**Fatto e testato** (80 test automatici):
 - **L2 — nucleo del protocollo:** frammentazione, etichette segrete rotanti (BLAKE3), cifratura end-to-end (ChaCha20-Poly1305) con pacchetti di lunghezza fissa, ricomposizione con limiti anti-DoS.
 - **Stretta di mano Noise NK:** i due estremi si accordano sul segreto senza farlo mai viaggiare; forward secrecy; il mittente resta anonimo.
 - **Indirizzi `.nyct`:** la chiave pubblica di un servizio in base32, con controllo anti-errori di battitura.
@@ -145,7 +146,7 @@ contro beneficio). Vedi [STATO.md](STATO.md) §H.
 Serve [Rust](https://rustup.rs) (profilo minimal sufficiente):
 
 ```sh
-cargo test              # 78 test
+cargo test              # 80 test
 cargo build --release   # produce target/release/nyctalus
 ```
 
