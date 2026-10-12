@@ -33,9 +33,15 @@ pub mod cmd {
     pub const RIFIUTATO: u8 = 0x11;
 }
 
-/// Byte utili trasportabili in una cella (il resto è riempimento).
-pub const CAPACITA: usize = 1024;
 const INTESTAZIONE: usize = 2 + 1 + 2; // flusso(2) + comando(1) + lunghezza(2)
+/// Byte di sequenza che il livello conflux antepone a ogni cella.
+const PREFISSO_SEQ: usize = 8;
+/// Byte utili trasportabili in una cella (il resto è riempimento). Scelti così
+/// che l'**unità dati** sul filo (seq + cella) abbia la stessa taglia del
+/// **pacchetto di apertura Sphinx**: nemmeno il primo quadro del circuito si
+/// distingue per dimensione (punto H2).
+pub const CAPACITA: usize =
+    nyctalus_core::circuito::TAGLIA_PACCHETTO - PREFISSO_SEQ - INTESTAZIONE;
 /// Lunghezza fissa di una cella serializzata (uguale per tutte).
 pub const LUNGHEZZA: usize = INTESTAZIONE + CAPACITA;
 

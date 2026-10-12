@@ -156,7 +156,12 @@ async fn gestisci_circuito(
                 return Ok(());
             };
             cipolla::sbuccia(0, &chiave, &mut primo);
-            if primo.starts_with(crate::incontro::MAGIA) {
+            // Rendezvous se, tolto l'incapsulamento del tunnel, il 1º quadro
+            // inizia con MAGIA; altrimenti è il LINK del gruppo conflux.
+            let e_rendezvous = crate::incontro::spacchetta_tunnel(&primo)
+                .map(|p| p.starts_with(crate::incontro::MAGIA))
+                .unwrap_or(false);
+            if e_rendezvous {
                 crate::incontro::uscita_rendezvous(invio_monte, ricezione_monte, chiave, primo).await?;
             } else {
                 uscita_conflux(invio_monte, ricezione_monte, chiave, primo).await?;

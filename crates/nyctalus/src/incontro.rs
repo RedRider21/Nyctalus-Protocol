@@ -45,8 +45,17 @@ use crate::Risultato;
 pub const MAGIA: &[u8; 8] = b"NYCTRDV1";
 const REGISTRA: u8 = 0x01; // servizio → nodo: «tieni il mio canale»
 const COLLEGA: u8 = 0x02; // client → nodo: «collegami a questo .nyct»
-const PEZZO: usize = 16 * 1024;
 const MAX_INTESTAZIONE: usize = 64 * 1024; // tetto anti-DoS sull'intestazione HTTP
+
+/// Taglia fissa di un quadro del tunnel rendezvous in modo onion: la stessa dei
+/// quadri del circuito, così i circuiti del rendezvous non si distinguono da
+/// quelli dati (punto H2). Ogni payload è incapsulato `[lunghezza u16][dati][0…]`.
+const TAGLIA_TUNNEL: usize = crate::conflux::LUNGHEZZA_UNITA;
+/// Byte di payload utili in un quadro onion del tunnel (dopo il prefisso lunghezza).
+const CAPACITA_TUNNEL: usize = TAGLIA_TUNNEL - 2;
+/// Dimensione massima di un pezzo di dati applicativi: sigillato (+16 del tag)
+/// deve stare nel payload di un quadro del tunnel.
+const PEZZO: usize = CAPACITA_TUNNEL - 16;
 
 /// Un nodo utilizzabile come punto d'incontro / tappa: indirizzo, chiave X25519
 /// e impronta TLS. (Per il `--rendezvous` manuale la chiave X25519 è a zero: si
@@ -88,12 +97,36 @@ enum Canale {
     },
 }
 
+/// Incapsula un payload in un quadro del tunnel a **taglia fissa**
+/// `[lunghezza u16 LE][payload][riempimento a zero]`, così tutti i quadri onion
+/// del rendezvous hanno la stessa dimensione (come i quadri del circuito).
+pub(crate) fn impacchetta_tunnel(payload: &[u8]) -> Vec<u8> {
+    debug_assert!(payload.len() <= CAPACITA_TUNNEL);
+    let mut v = Vec::with_capacity(TAGLIA_TUNNEL);
+    v.extend_from_slice(&(payload.len() as u16).to_le_bytes());
+    v.extend_from_slice(payload);
+    v.resize(TAGLIA_TUNNEL, 0);
+    v
+}
+
+/// Estrae il payload da un quadro del tunnel a taglia fissa.
+pub(crate) fn spacchetta_tunnel(quadro: &[u8]) -> Risultato<Vec<u8>> {
+    if quadro.len() < 2 {
+        return Err("tunnel frame too short".into());
+    }
+    let lunghezza = u16::from_le_bytes([quadro[0], quadro[1]]) as usize;
+    if 2 + lunghezza > quadro.len() {
+        return Err("tunnel frame malformed".into());
+    }
+    Ok(quadro[2..2 + lunghezza].to_vec())
+}
+
 impl Canale {
     async fn invia(&mut self, carico: &[u8]) -> Risultato<()> {
         match self {
             Canale::Diretto { invio, .. } => scrivi_quadro(invio, carico).await,
             Canale::Onion { invio, chiavi, n_out, .. } => {
-                let avvolto = cipolla::avvolgi(*n_out, carico, chiavi);
+                let avvolto = cipolla::avvolgi(*n_out, &impacchetta_tunnel(carico), chiavi);
                 *n_out += 1;
                 scrivi_quadro(invio, &avvolto).await
             }
@@ -110,7 +143,7 @@ impl Canale {
                         cipolla::sbuccia(BIT_RISPOSTA | *n_in, chiave, &mut payload);
                     }
                     *n_in += 1;
-                    Ok(Some(payload))
+                    Ok(Some(spacchetta_tunnel(&payload)?))
                 }
             },
         }
@@ -168,7 +201,7 @@ impl ScritturaCanale {
         match &mut self.onion {
             None => scrivi_quadro(&mut self.invio, carico).await,
             Some((chiavi, n)) => {
-                let avvolto = cipolla::avvolgi(*n, carico, chiavi);
+                let avvolto = cipolla::avvolgi(*n, &impacchetta_tunnel(carico), chiavi);
                 *n += 1;
                 scrivi_quadro(&mut self.invio, &avvolto).await
             }
@@ -191,7 +224,7 @@ impl LetturaCanale {
                         cipolla::sbuccia(BIT_RISPOSTA | *n, chiave, &mut payload);
                     }
                     *n += 1;
-                    Ok(Some(payload))
+                    Ok(Some(spacchetta_tunnel(&payload)?))
                 }
             },
         }
@@ -408,7 +441,7 @@ pub async fn uscita_rendezvous(
     chiave: [u8; 32],
     primo: Vec<u8>,
 ) -> Risultato<()> {
-    let (tipo, key) = analizza_controllo(&primo)?;
+    let (tipo, key) = analizza_controllo(&spacchetta_tunnel(&primo)?)?;
     match tipo {
         REGISTRA => {
             let (tx_vs, rx_vs) = mpsc::channel::<Vec<u8>>(256);
@@ -474,7 +507,9 @@ async fn scrittore_ritorno(
     mut rx: mpsc::Receiver<Vec<u8>>,
 ) {
     let mut n: u64 = 0;
-    let mut buf = iniziale;
+    // "OK"/"NO" li genera l'uscita, quindi vanno incapsulati qui (i quadri
+    // relayati da `rx` sono già incapsulati dal mittente: si passano com'è).
+    let mut buf = impacchetta_tunnel(&iniziale);
     cipolla::sbuccia(BIT_RISPOSTA | n, &chiave, &mut buf);
     n += 1;
     if scrivi_quadro(&mut invio, &buf).await.is_err() {
@@ -491,7 +526,8 @@ async fn scrittore_ritorno(
 }
 
 /// Scrive un solo quadro di ritorno (usato per "NO").
-async fn scrittore_ritorno_singolo(mut invio: quinn::SendStream, chiave: [u8; 32], mut buf: Vec<u8>) {
+async fn scrittore_ritorno_singolo(mut invio: quinn::SendStream, chiave: [u8; 32], carico: Vec<u8>) {
+    let mut buf = impacchetta_tunnel(&carico);
     cipolla::sbuccia(BIT_RISPOSTA, &chiave, &mut buf);
     let _ = scrivi_quadro(&mut invio, &buf).await;
     let _ = invio.finish();

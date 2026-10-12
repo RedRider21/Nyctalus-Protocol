@@ -39,6 +39,12 @@ use crate::cipolla::ChiaveSalto;
 
 /// Massimo numero di nodi in un percorso (vincolo di `sphinx-packet`).
 pub const MAX_NODI: usize = 5;
+
+/// Dimensione in byte del pacchetto di apertura Sphinx (`to_bytes()`), costante
+/// per ogni numero di salti. Serve a dare ai quadri dati del circuito la **stessa
+/// taglia** del pacchetto di apertura, così nemmeno il primo quadro si distingue
+/// per dimensione (punto H2). Un test verifica che corrisponda alla realtà.
+pub const TAGLIA_PACCHETTO: usize = 1372;
 const CONTESTO_CHIAVE: &str = "Nyctalus v0 2026-09-27 chiave di salto da seme Sphinx";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -180,6 +186,15 @@ mod test {
             percorso.push(NodoPercorso { indirizzo, pubblica });
         }
         (segreti, percorso)
+    }
+
+    #[test]
+    fn taglia_pacchetto_costante_e_nota() {
+        let (_s, percorso) = nodi(MAX_NODI);
+        for n in 1..=MAX_NODI {
+            let c = apri_circuito(&percorso[..n], b"nyctalus").unwrap();
+            assert_eq!(c.pacchetto.len(), TAGLIA_PACCHETTO, "a {n} salti");
+        }
     }
 
     #[test]

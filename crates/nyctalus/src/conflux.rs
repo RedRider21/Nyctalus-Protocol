@@ -93,6 +93,14 @@ mod test {
     }
 
     #[test]
+    fn unita_grande_come_il_pacchetto_di_apertura() {
+        // Uniformità dei quadri (H2): un'unità dati ha la stessa taglia del
+        // pacchetto di apertura Sphinx, così il 1º quadro non si distingue.
+        assert_eq!(LUNGHEZZA_UNITA, nyctalus_core::circuito::TAGLIA_PACCHETTO);
+        assert_eq!(quadro_link(&[0u8; 16]).len(), LUNGHEZZA_UNITA);
+    }
+
+    #[test]
     fn in_ordine() {
         let mut r = Riordina::nuovo();
         assert_eq!(r.inserisci(0, b"a".to_vec()), vec![b"a".to_vec()]);
