@@ -73,24 +73,49 @@ say "creo l'autorità e 4 nodi di prova…"
 "$BIN" authority > auth.txt 2>&1
 SEC=$(grep -oE 'secret:[[:space:]]+[0-9a-f]+' auth.txt | awk '{print $2}')
 PUB=$(grep -oE 'public:[[:space:]]+[0-9a-f]+' auth.txt | awk '{print $2}')
-LINES=""
-for p in 5810 5811 5812 5813; do
-  "$BIN" node --listen 127.0.0.1:$p > "n$p.log" 2>&1 & PIDS+=($!)
+if [ -z "$SEC" ] || [ -z "$PUB" ]; then
+  err "non riesco a creare l'autorità:"; cat auth.txt; exit 1
+fi
+
+NODI=(5810 5811 5812 5813)
+for p in "${NODI[@]}"; do
+  if ss -ltn 2>/dev/null | grep -q "127.0.0.1:$p\b"; then
+    err "la porta del nodo $p è occupata. Chiudi il processo che la usa e riprova."; exit 1
+  fi
+  "$BIN" node --listen 127.0.0.1:"$p" > "n$p.log" 2>&1 & PIDS+=($!)
 done
-sleep 2
-for p in 5810 5811 5812 5813; do
-  L=$(grep -oE "127\.0\.0\.1:$p,[0-9a-f]+,[0-9a-f]+" "n$p.log" | head -1)
+
+# Aspetta che OGNI nodo abbia stampato la sua riga d'elenco (fino a ~15s).
+LINES=""
+for p in "${NODI[@]}"; do
+  L=""
+  for _ in $(seq 1 60); do
+    L=$(grep -oE "127\.0\.0\.1:$p,[0-9a-f]+,[0-9a-f]+" "n$p.log" | head -1)
+    [ -n "$L" ] && break
+    sleep 0.25
+  done
+  if [ -z "$L" ]; then
+    err "il nodo $p non è partito:"; cat "n$p.log"; exit 1
+  fi
   LINES="$LINES${LINES:+;}$L"
 done
-"$BIN" directory --authority-secret "$SEC" --entries "$LINES" > dir.txt 2>/dev/null
+
+"$BIN" directory --authority-secret "$SEC" --entries "$LINES" > dir.txt 2>dir.err
+if ! grep -q '^firma ' dir.txt 2>/dev/null; then
+  err "non riesco a firmare l'elenco dei nodi:"; cat dir.err 2>/dev/null; exit 1
+fi
 
 # --- sito .nyct (rendezvous onion automatico, 3 salti) ----------------------
 say "pubblico il sito .nyct…"
 "$BIN" site --dir sito --identity svc.key --directory dir.txt --authority "$PUB" --hops 3 > site.log 2>&1 & PIDS+=($!)
-sleep 3
-ADDR=$(grep -oE '[a-z2-7]{56}\.nyct' site.log | head -1)
+ADDR=""
+for _ in $(seq 1 40); do
+  ADDR=$(grep -oE '[a-z2-7]{56}\.nyct' site.log | head -1)
+  [ -n "$ADDR" ] && break
+  sleep 0.25
+done
+if [ -z "$ADDR" ]; then err "il sito non è partito:"; cat site.log; exit 1; fi
 echo "$ADDR" > sito/addr.txt
-if [ -z "$ADDR" ]; then err "il sito non è partito"; cat site.log; exit 1; fi
 
 # --- demone con proxy SOCKS --------------------------------------------------
 say "avvio il demone (proxy SOCKS su 127.0.0.1:$SOCKS_PORT, 3 salti)…"
