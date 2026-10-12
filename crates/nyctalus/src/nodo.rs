@@ -14,6 +14,7 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
 use nyctalus_core::circuito::{self, PassoNodo};
@@ -37,7 +38,9 @@ pub async fn nodo(
     segreto: [u8; 32],
     auth: Option<Autenticazione>,
     offusca: Option<[u8; 32]>,
+    copertura: f64,
 ) -> Risultato<()> {
+    let _ = COPERTURA_NODO.set(copertura);
     let pubblica = circuito::chiave_pubblica(&segreto);
     let identita = crate::tls::identita_server()?;
     println!("Node listening on {ascolta}");
@@ -51,6 +54,9 @@ pub async fn nodo(
     }
     if offusca.is_some() {
         println!("  transport camouflage: ON");
+    }
+    if copertura > 0.0 {
+        println!("  cover traffic (downstream): ~{copertura:.1} dummy cells/s");
     }
 
     let endpoint = crate::trasporto::endpoint_server(identita.config, ascolta, offusca)?;
@@ -164,7 +170,15 @@ async fn gestisci_circuito(
 /// le unità in andata dai vari circuiti e tiene le caselle di ritorno di ognuno.
 struct ConfluxUscita {
     tx_collect: mpsc::Sender<(u64, Vec<u8>)>,
-    circuiti_ritorno: Arc<Mutex<Vec<mpsc::Sender<Vec<u8>>>>>,
+    circuiti_ritorno: Arc<Mutex<Vec<(u64, mpsc::Sender<Vec<u8>>)>>>,
+    prossimo_id: AtomicU64,
+}
+
+/// Ritmo (celle/s) del rumore di fondo in **discesa** (uscita→client), impostato
+/// all'avvio del nodo con `--cover`. 0 = spento.
+static COPERTURA_NODO: OnceLock<f64> = OnceLock::new();
+fn copertura_nodo() -> f64 {
+    *COPERTURA_NODO.get().unwrap_or(&0.0)
 }
 
 fn registro() -> &'static Mutex<HashMap<[u8; 16], Arc<ConfluxUscita>>> {
@@ -182,11 +196,33 @@ fn ottieni_set(set_id: [u8; 16]) -> Arc<ConfluxUscita> {
     let (tx_collect, rx_collect) = mpsc::channel::<(u64, Vec<u8>)>(256);
     let (tx_return, rx_return) = mpsc::channel::<Vec<u8>>(256);
     let circuiti_ritorno = Arc::new(Mutex::new(Vec::new()));
-    let set = Arc::new(ConfluxUscita { tx_collect, circuiti_ritorno: circuiti_ritorno.clone() });
+    let set = Arc::new(ConfluxUscita {
+        tx_collect,
+        circuiti_ritorno: circuiti_ritorno.clone(),
+        prossimo_id: AtomicU64::new(0),
+    });
     reg.insert(set_id, set.clone());
     drop(reg);
-    tokio::spawn(collettore_uscita(rx_collect, tx_return));
-    tokio::spawn(schedulatore_ritorno(rx_return, circuiti_ritorno));
+    tokio::spawn(collettore_uscita(rx_collect, tx_return.clone()));
+    tokio::spawn(schedulatore_ritorno(set_id, rx_return, circuiti_ritorno.clone()));
+
+    // Rumore di fondo in discesa: celle fittizie a ritmo di Poisson verso il
+    // client, scartate dal suo lato. Si ferma quando il gruppo non ha più
+    // circuiti attivi (evita di girare a vuoto su circuiti morti).
+    let copertura = copertura_nodo();
+    if copertura > 0.0 {
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(crate::avvia_circuito::ritardo_poisson(copertura)).await;
+                if circuiti_ritorno.lock().unwrap().is_empty() {
+                    break;
+                }
+                if tx_return.send(Cella::riempimento().in_byte()).await.is_err() {
+                    break;
+                }
+            }
+        });
+    }
     set
 }
 
@@ -208,9 +244,13 @@ async fn uscita_conflux(
     set_id.copy_from_slice(&link[..16]);
     let set = ottieni_set(set_id);
 
-    // Scrittore di ritorno di QUESTO circuito.
+    // Scrittore di ritorno di QUESTO circuito. Si registra con un id e si toglie
+    // dalla lista del gruppo quando il circuito cade (così lo schedulatore e il
+    // rumore di fondo non girano a vuoto su circuiti morti).
     let (tx_unit, mut rx_unit) = mpsc::channel::<Vec<u8>>(256);
-    set.circuiti_ritorno.lock().unwrap().push(tx_unit);
+    let id = set.prossimo_id.fetch_add(1, Ordering::Relaxed);
+    set.circuiti_ritorno.lock().unwrap().push((id, tx_unit));
+    let circuiti = set.circuiti_ritorno.clone();
     tokio::spawn(async move {
         let mut n: u64 = 0;
         while let Some(mut unita) = rx_unit.recv().await {
@@ -221,6 +261,7 @@ async fn uscita_conflux(
             }
         }
         let _ = invio_monte.finish();
+        circuiti.lock().unwrap().retain(|(i, _)| *i != id);
     });
 
     // Unità in andata → collettore del gruppo (0 era il LINK).
@@ -302,7 +343,11 @@ async fn collettore_uscita(mut rx: mpsc::Receiver<(u64, Vec<u8>)>, tx_return: mp
 
 /// Schedulatore del ritorno: numera le celle con la sequenza end-to-end e le
 /// spezza sui circuiti del gruppo a rotazione.
-async fn schedulatore_ritorno(mut rx: mpsc::Receiver<Vec<u8>>, circuiti: Arc<Mutex<Vec<mpsc::Sender<Vec<u8>>>>>) {
+async fn schedulatore_ritorno(
+    set_id: [u8; 16],
+    mut rx: mpsc::Receiver<Vec<u8>>,
+    circuiti: Arc<Mutex<Vec<(u64, mpsc::Sender<Vec<u8>>)>>>,
+) {
     let mut seq: u64 = 0;
     while let Some(cella_bytes) = rx.recv().await {
         let unita = conflux::impacchetta(seq, &cella_bytes);
@@ -311,7 +356,7 @@ async fn schedulatore_ritorno(mut rx: mpsc::Receiver<Vec<u8>>, circuiti: Arc<Mut
             if c.is_empty() {
                 None
             } else {
-                Some(c[(seq as usize) % c.len()].clone())
+                Some(c[(seq as usize) % c.len()].1.clone())
             }
         };
         match destinatario {
@@ -322,6 +367,8 @@ async fn schedulatore_ritorno(mut rx: mpsc::Receiver<Vec<u8>>, circuiti: Arc<Mut
             None => break,
         }
     }
+    // Gruppo esaurito: togli lo stato dal registro.
+    registro().lock().unwrap().remove(&set_id);
 }
 
 async fn collega_valle(

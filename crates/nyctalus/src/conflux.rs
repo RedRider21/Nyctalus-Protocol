@@ -22,6 +22,19 @@ pub fn impacchetta(seq: u64, cella: &[u8]) -> Vec<u8> {
     v
 }
 
+/// Lunghezza di un'unità conflux (seq + cella a lunghezza fissa): la stessa per
+/// ogni quadro dati del circuito.
+pub const LUNGHEZZA_UNITA: usize = 8 + crate::cella::LUNGHEZZA;
+
+/// Quadro di LINK (set_id del gruppo) **riempito** alla lunghezza di un'unità
+/// dati, così il primo quadro del circuito non si distingue per dimensione. Il
+/// destinatario legge i primi 16 byte come set_id e ignora il riempimento.
+pub fn quadro_link(set_id: &[u8; 16]) -> Vec<u8> {
+    let mut v = vec![0u8; LUNGHEZZA_UNITA];
+    v[..16].copy_from_slice(set_id);
+    v
+}
+
 /// Estrae (numero di sequenza, cella) da un'unità conflux.
 pub fn spacchetta(byte: &[u8]) -> Option<(u64, Vec<u8>)> {
     if byte.len() < 8 {

@@ -181,7 +181,10 @@ fn avvia_controllo(indirizzo: SocketAddr, metriche: Arc<crate::metriche::Metrich
 /// avvolta negli strati a cipolla con nonce = contatore locale.
 async fn scrittore_circuito(mut invio: quinn::SendStream, chiavi: Chiavi, set_id: [u8; 16], mut rx: mpsc::Receiver<Vec<u8>>) {
     let mut n: u64 = 0;
-    let link = cipolla::avvolgi(n, &set_id, &chiavi);
+    // LINK riempito alla stessa dimensione di un'unità dati, così il 1º quadro
+    // non si distingue dagli altri per lunghezza (il destinatario legge i primi
+    // 16 byte come set_id e ignora il riempimento).
+    let link = cipolla::avvolgi(n, &crate::conflux::quadro_link(&set_id), &chiavi);
     if scrivi_quadro(&mut invio, &link).await.is_err() {
         return;
     }
@@ -242,7 +245,7 @@ async fn collettore_ritorno(mut rx_ret: mpsc::Receiver<(u64, Vec<u8>)>, flussi: 
 
 /// Ritardo casuale a legge esponenziale (processo di Poisson a `hz` eventi/s),
 /// limitato a 60s. A ogni intervallo si invia una cella fittizia.
-fn ritardo_poisson(hz: f64) -> std::time::Duration {
+pub(crate) fn ritardo_poisson(hz: f64) -> std::time::Duration {
     let mut b = [0u8; 8];
     getrandom::fill(&mut b).expect("generatore casuale di sistema");
     let u = (u64::from_le_bytes(b) as f64 / u64::MAX as f64).clamp(1e-12, 1.0);

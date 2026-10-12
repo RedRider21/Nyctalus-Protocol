@@ -87,14 +87,16 @@ come i 514 byte delle celle di Tor).
 
 ### Rumore di fondo (cover traffic)
 
-Con l'opzione `--cover HZ` il demone inietta **celle fittizie** (comando
-`RIEMPIMENTO`) a **ritmo di Poisson** nel flusso in uscita: indistinguibili dalle
-vere, vengono **scartate** dall'uscita del circuito (e saltate dal collettore di
-ritorno). Mascherano **quando** l'utente invia davvero: un osservatore vede un
-flusso di celle uniforme sia che tu stia caricando una pagina sia che tu sia fermo.
+Con l'opzione `--cover HZ` si iniettano **celle fittizie** (comando
+`RIEMPIMENTO`) a **ritmo di Poisson**, indistinguibili dalle vere e **scartate**
+dall'altro estremo. Funziona in **entrambe le direzioni**: in salita sul demone
+(`circuit/start --cover`) e in discesa sul nodo d'uscita (`node --cover`).
+Mascherano **quando** si invia davvero: un osservatore vede un flusso di celle
+uniforme sia che tu stia caricando una pagina sia che tu sia fermo.
 
 ```sh
-nyctalus circuit … --cover 5      # ~5 celle finte/s; default 0 (spento)
+nyctalus circuit … --cover 5      # ~5 celle finte/s in salita; default 0 (spento)
+nyctalus node    … --cover 5      # ~5 celle finte/s in discesa
 ```
 
 Il traffico che il tuo nodo inoltra per conto di altri utenti funge già da
@@ -106,10 +108,10 @@ Sul filo, ogni datagramma UDP può essere avvolto (ChaCha20 + nonce per
 datagramma, opzione `--obfuscation`): per un DPI è rumore casuale, senza la firma
 di QUIC. Così la rete non si riconosce nemmeno a livello di collegamento.
 
-**Limiti attuali:** il rumore di fondo copre per ora solo la direzione in salita
-(client→uscita); i quadri di *apertura* del circuito (LINK, pacchetto Sphinx) non
-sono ancora riempiti alla stessa dimensione; e il ritmo del cover va **tarato con
-misure reali** (costo in banda contro beneficio). Vedi [STATO.md](STATO.md) §H.
+**Limiti attuali:** il quadro LINK è riempito, ma il **pacchetto di apertura
+Sphinx** (formato proprio) e i quadri del **tunnel rendezvous** non sono ancora
+uniformati; e il ritmo del cover va **tarato con misure reali** (costo in banda
+contro beneficio). Vedi [STATO.md](STATO.md) §H.
 
 ## Architettura a livelli
 

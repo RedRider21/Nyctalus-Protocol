@@ -45,7 +45,7 @@ pub async fn prova_circuito(percorso_rete: Vec<crate::avvia_circuito::NodoRete>,
     // 2) LINK: set_id del gruppo conflux (qui un circuito solo).
     let mut set_id = [0u8; 16];
     getrandom::fill(&mut set_id).expect("generatore casuale di sistema");
-    let link = cipolla::avvolgi(0, &set_id, &circuito.chiavi_salto);
+    let link = cipolla::avvolgi(0, &crate::conflux::quadro_link(&set_id), &circuito.chiavi_salto);
     scrivi_quadro(&mut invio, &link).await?;
 
     // 3) Unità conflux #0 = cella APRI con la destinazione "host:porta".
