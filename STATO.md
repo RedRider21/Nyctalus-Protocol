@@ -83,6 +83,12 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
 - [ ] **K. Simulazione con Shadow** e confronto misurato con Tor.
 - [~] **Distribuzione (eseguibili multi-SO).** CI GitHub Actions pronta e **verificata** (compila Linux x86_64/arm64, Windows x86_64, macOS Intel/Apple Silicon); su un tag `v*` produce i binari come Release. **Pubblicazione rimandata**: non si distribuisce un binario di anonimato non ancora verificato.
 
+### Client grafici ed esperienza utente (da fare)
+- [ ] **Chat nativa `.nyct`.** Ogni utente è un indirizzo `.nyct`; messaggi punto-punto dentro la rete tramite il punto d'incontro, **senza server e senza metadati** (modello Ricochet/Cwtch). Si appoggia sul rendezvous già fatto.
+- [ ] **Gestore grafico di invio/ricezione file.** Interfaccia sopra i comandi `send`/`receive` (indirizzi `.nyct`, scelta file, avanzamento), stile OnionShare.
+- [ ] **Mini-menu/launcher da desktop.** Un piccolo pannello **mobile e trascinabile** collocabile ovunque sul desktop (in qualsiasi posizione), con **bottoni quadrati** disposti **in orizzontale o in verticale** a scelta da un **settings dedicato**, per lanciare i vari componenti di Nyctalus: il **browser** (con le sue modalità normale/stealth), la **chat**, e il **gestore file**. Posizione/orientamento persistiti; aggancio ai componenti man mano che vengono creati. **Tecnologia (raccomandazione):** **Python + GTK3**, come il browser — è solo un launcher (lancia processi, nessuna crittografia/prestazione), così condivide stile, icone e traduzioni (`nxs_i18n`) ed è rapido da iterare. Rust (slint/egui/gtk-rs) darebbe un binario unico senza dipendenze (più portabile) ma è più lavoro e un toolkit diverso dal browser: ha senso solo se in futuro si unifica tutto il desktop in Rust. Il **motore** (demone/nodi) resta Rust; i **client** restano Python/GTK.
+- [ ] **Decisioni sulle tecnologie dei client.** Desktop (Linux/Windows/macOS): Python+GTK (come il browser) o altro. **Mobile (Android/iOS): valutare web-app PWA** (HTML5 + JavaScript, con **IndexedDB** per lo stato locale quando serve), così un unico fronte web copre più piattaforme; il trasporto Nyctalus lato telefono può girare da Termux o come servizio. Da scegliere con l'utente, componente per componente.
+
 ## Per ripartire
 ```sh
 cd "nyctalus protocol"
