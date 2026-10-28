@@ -634,10 +634,13 @@ class Browser(FunzioniExtra, Gtk.Window):
 
     # --- avvio automatico dei servizi Nyctalus --------------------------------
     def _trova_binario(self):
-        """Percorso del binario `nyctalus`: nel target del progetto o nel PATH."""
-        cand = Path(__file__).resolve().parents[2] / "target" / "release" / "nyctalus"
-        if cand.exists():
-            return str(cand)
+        """Percorso del binario `nyctalus`: nel pacchetto (bin/), nel target di
+        sviluppo, o nel PATH."""
+        base = Path(__file__).resolve().parents[2]      # cartella che contiene browser/
+        for cand in (base / "bin" / "nyctalus",
+                     base / "target" / "release" / "nyctalus"):
+            if cand.exists():
+                return str(cand)
         return shutil.which("nyctalus")
 
     def _avvia_servizi(self):

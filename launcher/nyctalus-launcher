@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+#
+# Avvia il mini-launcher da desktop di Nyctalus (pannello trascinabile con i
+# bottoni dei componenti). Richiede python3 + PyGObject (GTK3).
+set -u
+QUI="$(cd "$(dirname "$0")" && pwd)"
+RADICE="$(cd "$QUI/.." && pwd)"
+# nxs_i18n (traduzioni) sta nel browser: aggiungilo al PYTHONPATH.
+export PYTHONPATH="$QUI:$RADICE/browser${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m nyctalus_launcher "$@"

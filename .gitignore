@@ -1,2 +1,5 @@
 target/
 *.swp
+pacchetto/
+__pycache__/
+*.pyc
