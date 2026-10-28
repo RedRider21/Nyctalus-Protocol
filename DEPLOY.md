@@ -27,15 +27,19 @@ per **verificare** sicurezza e anonimato [SICUREZZA.md](SICUREZZA.md).
 - In alternativa, quando ci sarà una Release pubblica, si scaricano i binari
   già pronti (Linux x86_64/arm64, Windows, macOS).
 
-### Per il browser (client grafico)
-- **Python 3**, **PyGObject (GTK 3)**, **WebKit2GTK**.
+### Per i client grafici (browser, launcher, chat)
+- **Python 3**, **PyGObject (GTK 3)**; **WebKit2GTK** solo per il browser.
   ```sh
   sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
   # su sistemi più vecchi: gir1.2-webkit2-4.0
+  # opzionale, per i tasti rapidi GLOBALI del launcher:
+  sudo apt install gir1.2-keybinder-3.0
   ```
+  Il **launcher** e la **chat** richiedono solo GTK 3 (non WebKit).
 - Avvio:
   ```sh
   ./scripts/demo-locale-nav-normal.sh      # browser in navigazione normale
+  ./scripts/demo-chat.sh                    # chat: due finestre in locale
   ```
 
 ### Per una prova completa in locale (tutto in uno)
@@ -61,6 +65,7 @@ Il binario `nyctalus` fa tutto, con sotto-comandi (`nyctalus help` per l'elenco)
 | `nyctalus start` / `nyctalus circuit` | il **demone**: proxy SOCKS5 che instrada attraverso la rete. |
 | `nyctalus site --dir ./sito` / `--backend IP:PORTA` | pubblica un **sito `.nyct`** (cartella o web server esterno). |
 | `nyctalus browse ADDR.nyct` | visita un sito `.nyct` da terminale. |
+| `nyctalus chat` | **motore della chat `.nyct`** (senza server, senza metadati): parla con l'interfaccia grafica su una porta di controllo locale. |
 | `nyctalus exec -- PROGRAMMA` | lancia un programma instradandolo nella rete (stile torsocks). |
 | `nyctalus monitor` | cruscotto testuale delle metriche del demone. |
 
@@ -172,11 +177,50 @@ I visitatori aprono `http://<ADDR>.nyct` dal browser (con lo Stealth attivo) o c
 
 ---
 
-## 6. Riassunto delle opzioni (cosa scegliere)
+## 6. La chat `.nyct` (senza server, senza metadati)
+
+Ogni utente **è** un indirizzo `.nyct`: quello è il suo **Contact ID**, l'unica cosa
+da scambiarsi. Non esiste un server centrale né una rubrica globale: i messaggi
+viaggiano punto-a-punto nella rete (circuito → punto d'incontro → servizio),
+cifrati end-to-end. Il mittente è **autenticato crittograficamente** (un secondo
+handshake Noise NK dentro il tunnel: solo chi possiede la chiave privata
+dell'indirizzo che dichiara può concludere la conversazione), quindi nessuno può
+spacciarsi per un tuo contatto.
+
+**Serve la rete condivisa.** La chat è a due parti: per parlarsi, **entrambi**
+devono essere sulla **stessa rete** (quella pubblica di §3, configurata nei client
+come in §4 — `directory_url` + `authority`). Senza configurazione la finestra si
+apre comunque, ma su una rete di prova **locale** (non raggiungi altre persone).
+
+**Avvio (uso reale):**
+```sh
+./avvia-chat.sh          # nel pacchetto; oppure scripts/avvia-chat.sh in sviluppo
+```
+Fa tutto da sé: avvia/riusa il proxy SOCKS, pubblica il tuo servizio `.nyct`, avvia
+il motore e apre la finestra. Al primo avvio crea la tua identità in
+`~/.nyctalus-chat/identita` (il tuo Contact ID non cambia più). Nella finestra:
+copia il tuo Contact ID e dallo agli amici; premi « + » per aggiungere il loro
+indirizzo; scrivi.
+
+**Provarla da solo su un PC** (due identità, due finestre, rete locale):
+```sh
+./scripts/demo-chat.sh
+```
+
+**A mano** (se vuoi controllare i pezzi): servono `nyctalus start` (il SOCKS),
+`nyctalus site --backend 127.0.0.1:1082 --identity ~/.nyctalus-chat/identita …`
+(l'entrata) e `nyctalus chat` (il motore); l'interfaccia è
+`python3 -m nyctalus_chat` con `PYTHONPATH` su `chat/` e `browser/`.
+
+---
+
+## 7. Riassunto delle opzioni (cosa scegliere)
 
 | Vuoi… | Fai così |
 |---|---|
 | Provare tutto su un PC | `./scripts/demo-locale.sh` |
+| Provare la **chat** su un PC | `./scripts/demo-chat.sh` (due finestre) |
+| Usare la **chat** per davvero | `./avvia-chat.sh` (serve la rete condivisa, §3–4) |
 | Solo il browser normale | `./scripts/demo-locale-nav-normal.sh` |
 | Una rete condivisa per i tester | §3 (nodi pubblici + directory pubblicata) + §4 (config dei client) |
 | Più anonimato (più lento) | `--hops 4` o `5`, `--circuits 3`+ |

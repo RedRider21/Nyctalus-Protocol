@@ -87,6 +87,18 @@ Con `--cover 5` su demone e nodi, il flusso di celle resta **uniforme anche da
 fermo**: un osservatore non capisce *quando* invii davvero. Lo si vede dal volume
 costante di datagrammi anche senza navigare.
 
+### 2.6 Chat: autenticazione del contatto
+La chat `.nyct` eredita tutte le proprietà del trasporto (anonimato di rete,
+cifratura E2E verso il servizio, uniformità dei quadri). In più, quando qualcuno
+ti scrive **non ci si fida dell'indirizzo dichiarato**: il motore esegue, dentro
+il tunnel già cifrato, un **secondo handshake Noise NK** verso quell'indirizzo —
+solo chi possiede la chiave privata del `.nyct` dichiarato lo conclude, quindi un
+impostore che conosce l'indirizzo di un tuo contatto **non** riesce a spacciarsi
+per lui. Il test `cargo test` include la prova che un impostore viene respinto; a
+livello end-to-end lo si vede con `scripts/demo-chat.sh` (i messaggi arrivano con
+l'indirizzo autenticato del mittente). *Nota:* resta la verifica umana del Contact
+ID (scambiatevelo per un canale fidato, come si fa con le onion di Ricochet).
+
 ---
 
 ## 3. Cosa serve l'uno (e cosa **non** basta da soli)
