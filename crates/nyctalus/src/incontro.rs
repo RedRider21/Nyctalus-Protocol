@@ -1039,13 +1039,13 @@ fn tipo_contenuto(percorso: &Path) -> &'static str {
 
 /// Strato di record end-to-end: ChaCha20-Poly1305 con nonce a contatore (una
 /// chiave per direzione, dai segreti della sessione Noise).
-struct Record {
+pub(crate) struct Record {
     aead: ChaCha20Poly1305,
     contatore: u64,
 }
 
 impl Record {
-    fn nuovo(chiave: &[u8; 32]) -> Self {
+    pub(crate) fn nuovo(chiave: &[u8; 32]) -> Self {
         Self { aead: ChaCha20Poly1305::new(&Key::from(*chiave)), contatore: 0 }
     }
 
@@ -1056,12 +1056,12 @@ impl Record {
         Nonce::from(byte)
     }
 
-    fn sigilla(&mut self, chiaro: &[u8]) -> Vec<u8> {
+    pub(crate) fn sigilla(&mut self, chiaro: &[u8]) -> Vec<u8> {
         let nonce = self.nonce();
         self.aead.encrypt(&nonce, chiaro).expect("ChaCha20-Poly1305 in memoria non fallisce")
     }
 
-    fn apri(&mut self, cifrato: &[u8]) -> Risultato<Vec<u8>> {
+    pub(crate) fn apri(&mut self, cifrato: &[u8]) -> Risultato<Vec<u8>> {
         let nonce = self.nonce();
         self.aead.decrypt(&nonce, cifrato).map_err(|_| "record authentication failed".into())
     }

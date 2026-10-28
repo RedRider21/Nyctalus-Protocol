@@ -22,6 +22,7 @@
 mod avvia;
 mod avvia_circuito;
 mod cella;
+mod chat;
 mod conflux;
 mod circuito_rete;
 mod invia;
@@ -61,6 +62,7 @@ Usage:
   nyctalus test-circuit (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--message DEST]
   nyctalus site    (--dir ./folder | --backend IP:PORT) [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--identity FILE] [--hops 3] [--pool 4]
   nyctalus browse  ADDRESS.nyct [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--path /] [--hops 3]
+  nyctalus chat    [--data DIR] [--identity FILE] [--backend 127.0.0.1:1082] [--control 127.0.0.1:1091] [--socks 127.0.0.1:1080]
   nyctalus receive --out FILE [--listen 0.0.0.0:4433] [--identity FILE]
   nyctalus send    --to IP:PORT --fingerprint HEX --recipient ADDRESS.nyct [--lanes 4] FILE
   nyctalus single-hop --to IP:PORT --fingerprint HEX [--socks 127.0.0.1:1080]
@@ -71,6 +73,7 @@ Usage:
 'node'/'authority'/'directory': nodes and the signed directory.
 'circuit': like 'start' but with nodes given explicitly (testing).
 'site'/'browse': host and visit an internal .nyct site through a rendezvous node (a node reached with --rendezvous/--fingerprint).
+'chat': metadata-free .nyct chat engine (needs 'start' for the SOCKS and a 'site --backend' pointing at its backend port); a GTK UI talks to it on the control port.
 'receive'/'send': file transfer (L2 test). 'single-hop'/'exit': 1-hop proxy (test).";
 
 #[tokio::main]
@@ -225,6 +228,18 @@ async fn esegui() -> Risultato<()> {
             let offusca = da_esadecimale_opt(opzione(&opzioni, "obfuscation"))?;
             let copertura: f64 = opzione(&opzioni, "cover").map(str::parse).transpose()?.unwrap_or(0.0);
             avvia_circuito::avvia_circuito(nodi, circuiti, salti, socks, controllo, offusca, copertura).await
+        }
+        "chat" => {
+            let base = PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".into()))
+                .join(".nyctalus-chat");
+            let dati = opzione(&opzioni, "data").map(PathBuf::from).unwrap_or(base);
+            let identita = opzione(&opzioni, "identity")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| dati.join("identita"));
+            let backend: SocketAddr = opzione(&opzioni, "backend").unwrap_or("127.0.0.1:1082").parse()?;
+            let controllo: SocketAddr = opzione(&opzioni, "control").unwrap_or("127.0.0.1:1091").parse()?;
+            let socks: SocketAddr = opzione(&opzioni, "socks").unwrap_or("127.0.0.1:1080").parse()?;
+            chat::chat(identita, backend, controllo, socks, dati).await
         }
         "help" | "--help" | "-h" => {
             println!("{USO}");
