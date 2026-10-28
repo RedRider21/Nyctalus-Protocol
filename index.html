@@ -152,7 +152,7 @@ nyctalus node    ... --cover 5   <span class="c"><span class="it"># discesa</spa
 <section id="stato"><div class="wrap">
   <div class="occhiello"><span class="it">Stato</span><span class="en">Status</span></div>
   <h2><span class="it">A che punto siamo</span><span class="en">Where we are</span></h2>
-  <p class="intro"><span class="it">Fatto e testato (80 test automatici):</span><span class="en">Done and tested (80 automated tests):</span></p>
+  <p class="intro"><span class="it">Fatto e testato (84 test automatici):</span><span class="en">Done and tested (84 automated tests):</span></p>
   <ul class="spunta">
     <li><b><span class="it">Nucleo del protocollo (L2)</span><span class="en">Protocol core (L2)</span></b> — <span class="it">frammentazione, etichette segrete, cifratura end-to-end, ricomposizione anti-DoS.</span><span class="en">fragmentation, secret labels, end-to-end encryption, DoS-resistant reassembly.</span></li>
     <li><b><span class="it">Stretta di mano Noise NK</span><span class="en">Noise NK handshake</span></b> — <span class="it">segreto mai trasmesso, forward secrecy, mittente anonimo.</span><span class="en">secret never transmitted, forward secrecy, anonymous sender.</span></li>
@@ -169,7 +169,9 @@ nyctalus node    ... --cover 5   <span class="c"><span class="it"># discesa</spa
     <li><b><span class="it">Siti interni .nyct (punto d'incontro, multi-salto)</span><span class="en">.nyct hidden sites (rendezvous, multi-hop)</span></b> — <span class="it">un servizio si registra a un <b>punto d'incontro</b> scelto in automatico; client e servizio lo raggiungono con un circuito a più salti e si incontrano lì, cifrati end-to-end (Noise NK). Il nodo d'incontro non vede gli IP né il contenuto. Comandi <code class="in">site</code>/<code class="in">browse</code>, oppure dal browser via proxy SOCKS.</span><span class="en">a service registers at an automatically chosen <b>rendezvous</b>; client and service reach it over a multi-hop circuit and meet there, end-to-end encrypted (Noise NK). The rendezvous node sees neither IPs nor content. Commands <code class="in">site</code>/<code class="in">browse</code>, or from the browser via the SOCKS proxy.</span></li>
     <li><b><span class="it">Celle a lunghezza fissa + rumore di fondo</span><span class="en">Fixed-length cells + cover traffic</span></b> — <span class="it">tutte le celle hanno la stessa dimensione (l'osservatore non deduce la lunghezza dei contenuti) e si possono iniettare celle finte a ritmo di Poisson (<code class="in">--cover</code>) per mascherare i tempi. Vedi la sezione <a href="#traffico">Traffico</a>.</span><span class="en">all cells are the same size (an observer cannot infer content lengths) and dummy cells can be injected at a Poisson rate (<code class="in">--cover</code>) to mask timing. See the <a href="#traffico">Traffic</a> section.</span></li>
     <li><b><span class="it">Browser dedicato</span><span class="en">Dedicated browser</span></b> — <span class="it">clone di Firefox (GTK/WebKit); parte come un browser normale, lo <b>stealth</b> (rete Nyctalus) si accende col bottone, e i <code class="in">.nyct</code> lo attivano da soli.</span><span class="en">a Firefox clone (GTK/WebKit); it starts as an ordinary browser, <b>stealth</b> (the Nyctalus network) is toggled with a button, and <code class="in">.nyct</code> addresses turn it on by themselves.</span></li>
-    <li class="futuro"><b><span class="it">In arrivo</span><span class="en">Coming</span></b> — <span class="it">chat nativa <code class="in">.nyct</code>, gestore file grafico, mini-launcher da desktop, taratura del rumore di fondo su rete reale, confronto con Tor (Shadow), rete di nodi pubblica.</span><span class="en">native <code class="in">.nyct</code> chat, graphical file manager, desktop mini-launcher, tuning cover traffic on a real network, comparison against Tor (Shadow), a public node network.</span></li>
+    <li><b><span class="it">Chat .nyct (senza server, senza metadati)</span><span class="en">.nyct chat (no server, no metadata)</span></b> — <span class="it">ogni utente è un indirizzo <code class="in">.nyct</code> (il suo <b>Contact ID</b>); motore in Rust (<code class="in">nyctalus chat</code>) + finestra GTK. Oltre all'anonimato e alla cifratura E2E, <b>chi scrive è autenticato</b> da un secondo handshake Noise NK dentro il tunnel: nessuno può spacciarsi per un contatto. Vedi la <a href="#chat">guida alla chat</a>.</span><span class="en">each user is a <code class="in">.nyct</code> address (their <b>Contact ID</b>); Rust engine (<code class="in">nyctalus chat</code>) + GTK window. Beyond network anonymity and E2E encryption, <b>the sender is authenticated</b> by a second Noise NK handshake inside the tunnel: nobody can impersonate a contact. See the <a href="#chat">chat guide</a>.</span></li>
+    <li><b><span class="it">Mini-launcher da desktop</span><span class="en">Desktop mini-launcher</span></b> — <span class="it">pannello trascinabile con bottoni quadrati (orizzontale/verticale), dimensione regolabile e tasti rapidi configurabili, per lanciare Browser e Chat. Client grafici in Python+GTK3; il motore resta in Rust.</span><span class="en">a draggable panel with square buttons (horizontal/vertical), adjustable size and configurable hotkeys, to launch Browser and Chat. Graphical clients in Python+GTK3; the engine stays in Rust.</span></li>
+    <li class="futuro"><b><span class="it">In arrivo</span><span class="en">Coming</span></b> — <span class="it">gestore file grafico, taratura del rumore di fondo su rete reale, confronto con Tor (Shadow), rete di nodi pubblica.</span><span class="en">graphical file manager, tuning cover traffic on a real network, comparison against Tor (Shadow), a public node network.</span></li>
   </ul>
 </div></section>
 
@@ -182,7 +184,7 @@ nyctalus node    ... --cover 5   <span class="c"><span class="it"># discesa</spa
     <p class="intro"><span class="it">Serve <a href="https://rustup.rs">Rust</a> (profilo minimal sufficiente).</span><span class="en">You need <a href="https://rustup.rs">Rust</a> (the minimal profile is enough).</span></p>
     <pre>git clone https://github.com/RedRider21/Nyctalus-Protocol.git
 cd Nyctalus-Protocol
-cargo test              <span class="c"><span class="it"># 80 test</span><span class="en"># 80 tests</span></span>
+cargo test              <span class="c"><span class="it"># 84 test</span><span class="en"># 84 tests</span></span>
 cargo build --release   <span class="c"><span class="it"># produce target/release/nyctalus</span><span class="en"># builds target/release/nyctalus</span></span></pre>
   </div>
 
@@ -237,6 +239,35 @@ curl --socks5-hostname 127.0.0.1:1080 http://example.com</pre>
         <tr><td>.onion</td><td><code class="in">nyctalus site</code></td><td><span class="it">pubblicare un sito .nyct</span><span class="en">publish a .nyct site</span></td></tr>
       </tbody>
     </table>
+  </div>
+</div></section>
+
+<section id="chat"><div class="wrap">
+  <div class="occhiello"><span class="it">Chat</span><span class="en">Chat</span></div>
+  <h2><span class="it">La chat .nyct</span><span class="en">The .nyct chat</span></h2>
+  <p class="intro"><span class="it">Una chat <b>senza server e senza metadati</b>: nessuna azienda in mezzo, nessun numero di telefono. Ogni persona <b>è</b> un indirizzo <code class="in">.nyct</code> — il suo <b>Contact ID</b> — e i messaggi viaggiano cifrati fino all'altro capo dentro la rete (modello Ricochet/Cwtch).</span><span class="en">A chat with <b>no server and no metadata</b>: no company in the middle, no phone number. Each person <b>is</b> a <code class="in">.nyct</code> address — their <b>Contact ID</b> — and messages travel end-to-end encrypted inside the network (Ricochet/Cwtch model).</span></p>
+
+  <div class="passo">
+    <h3><span class="it">Avvio</span><span class="en">Start</span></h3>
+    <p class="intro"><span class="it">Dal <b>launcher</b> premi <b>Chat</b>, oppure da terminale:</span><span class="en">From the <b>launcher</b> press <b>Chat</b>, or from a terminal:</span></p>
+    <pre>./avvia-chat.sh          <span class="c"><span class="it"># nel pacchetto</span><span class="en"># in the package</span></span>
+./scripts/demo-chat.sh   <span class="c"><span class="it"># prova locale: due finestre</span><span class="en"># local demo: two windows</span></span></pre>
+    <div class="nota"><span class="it">La finestra si apre <b>subito</b>; la rete sale in sottofondo (deve costruire un circuito e registrare il tuo servizio al punto d'incontro): qualche secondo e puoi scrivere. Non è un difetto — è il prezzo dell'assenza di metadati.</span><span class="en">The window opens <b>right away</b>; the network comes up in the background (it builds a circuit and registers your service at a rendezvous): a few seconds and you can write. It's not a flaw — it's the price of having no metadata.</span></div>
+  </div>
+
+  <div class="passo">
+    <h3><span class="it">Il Contact ID</span><span class="en">The Contact ID</span></h3>
+    <p class="intro"><span class="it">Il codice in basso a sinistra (con <b>Copia</b>) è il tuo <b>indirizzo nella rete</b>: l'unica cosa da dare agli altri perché ti scrivano, come un numero o un indirizzo <code class="in">.onion</code>. <b>Non è segreto</b> (puoi condividerlo). Il segreto è la chiave privata, che resta in <code class="in">~/.nyctalus-chat/identita</code> e non cambia nel tempo.</span><span class="en">The code at the bottom-left (with <b>Copy</b>) is your <b>address on the network</b>: the only thing to give others so they can message you, like a number or a <code class="in">.onion</code> address. It is <b>not secret</b> (share it freely). The secret is the private key, kept in <code class="in">~/.nyctalus-chat/identita</code> and stable over time.</span></p>
+  </div>
+
+  <div class="passo">
+    <h3><span class="it">Parlarsi</span><span class="en">Talking</span></h3>
+    <p class="intro"><span class="it">Premi <b>«+»</b>, incolla l'indirizzo dell'altra persona e dagli un nome; selezionalo e scrivi. Serve che <b>entrambi</b> siate sulla stessa <b>rete condivisa</b> (quella pubblica configurata — vedi la guida al deploy nel repo). Senza configurazione la chat apre su una rete di prova locale (non raggiungi altre persone).</span><span class="en">Press <b>«+»</b>, paste the other person's address and give it a name; select it and type. <b>Both</b> of you must be on the same <b>shared network</b> (the configured public one — see the deploy guide in the repo). Without configuration the chat opens on a local test network (you won't reach other people).</span></p>
+  </div>
+
+  <div class="passo">
+    <h3><span class="it">Sicurezza</span><span class="en">Security</span></h3>
+    <p class="intro"><span class="it">Messaggi <b>cifrati end-to-end</b>; i relay non vedono il contenuto né gli IP. <b>Chi scrive è autenticato</b>: la chat verifica con la crittografia che il mittente possieda la chiave privata dell'indirizzo dichiarato, quindi nessuno può spacciarsi per un contatto. Resta la verifica umana del Contact ID (scambiatevelo per un canale fidato). È un <b>prototipo</b> non ancora verificato da revisori indipendenti: usalo per provarlo, non per dati reali.</span><span class="en"><b>End-to-end encrypted</b> messages; relays see neither content nor IPs. <b>The sender is authenticated</b>: the chat cryptographically verifies that the sender holds the private key of the claimed address, so nobody can impersonate a contact. Human verification of the Contact ID still matters (exchange it over a trusted channel). It is a <b>prototype</b> not yet reviewed by independent auditors: use it to try it out, not for real data.</span></p>
   </div>
 </div></section>
 
