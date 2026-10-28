@@ -37,7 +37,7 @@ cp -r "$ROOT/launcher/nyctalus_launcher" "$OUT/launcher/"
 cp -r "$ROOT/chat/nyctalus_chat" "$OUT/chat/"
 cp "$ROOT/scripts/avvia-chat.sh" "$OUT/avvia-chat.sh"
 cp "$ROOT/logo.svg" "$OUT/logo.svg"
-cp "$ROOT/DEPLOY.md" "$ROOT/SICUREZZA.md" "$ROOT/LICENSE" "$OUT/"
+cp "$ROOT/DEPLOY.md" "$ROOT/SICUREZZA.md" "$ROOT/MANUALE-CHAT.md" "$ROOT/LICENSE" "$OUT/"
 # niente cache Python nel pacchetto
 find "$OUT" -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true
 
@@ -88,13 +88,15 @@ configurata — vedi DEPLOY.md §4). I siti .nyct accendono lo stealth da soli.
 Chat: ogni utente è un indirizzo .nyct (il suo Contact ID). Per parlarsi servono
 DUE persone sulla STESSA rete condivisa: configura la rete pubblica (DEPLOY.md)
 e scambiatevi i Contact ID. Senza configurazione la chat apre comunque, ma su
-una rete di prova locale (non raggiungi altre persone).
+una rete di prova locale (non raggiungi altre persone). Guida passo-passo in
+MANUALE-CHAT.md.
 
 Struttura:
   bin/        il motore (demone, nodi, strumenti, chat): comando `nyctalus`
   browser/    il browser
   launcher/   il mini-launcher
   chat/       la finestra della chat
+  MANUALE-CHAT.md  come usare la chat (passo-passo)
   DEPLOY.md   installare, configurare, mettere in piedi una rete
   SICUREZZA.md  come verificare sicurezza e anonimato
 EOF

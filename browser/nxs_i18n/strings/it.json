@@ -1511,13 +1511,13 @@
   "chat.aggiungi": "Aggiungi contatto",
   "chat.il_mio_id": "Il tuo Contact ID",
   "chat.copia": "Copia",
-  "chat.copiato": "Copiato!",
+  "chat.copiato": "Copiato negli appunti!",
   "chat.scrivi": "Scrivi un messaggio…",
   "chat.invia": "Invia",
   "chat.online": "in linea",
   "chat.offline": "non in linea",
   "chat.nessun_contatto": "Nessun contatto. Premi « + » e incolla un indirizzo .nyct.",
-  "chat.scegli": "Scegli un contatto per iniziare a chattare.",
+  "chat.scegli": "Scegli un contatto a sinistra, oppure aggiungine uno con « + ».",
   "chat.addr": "Indirizzo .nyct",
   "chat.nome": "Nome (soprannome locale)",
   "chat.annulla": "Annulla",
@@ -1526,5 +1526,10 @@
   "chat.motore_assente": "Motore non raggiungibile",
   "chat.motore_assente_corpo": "Il motore della chat non è in esecuzione.\nAvvia la chat dallo script o dal launcher.",
   "chat.nuovo_contatto": "Nuovo contatto ti ha scritto",
-  "chat.aggiungi_sconosciuto": "Qualcuno ti ha scritto da un indirizzo non in rubrica. Aggiungilo per rispondere."
+  "chat.aggiungi_sconosciuto": "Qualcuno ti ha scritto da un indirizzo non in rubrica. Aggiungilo per rispondere.",
+  "chat.app": "Nyctalus",
+  "chat.sottotitolo": "Chat .nyct",
+  "chat.cerca": "Cerca…",
+  "chat.benvenuto": "Le tue conversazioni, cifrate e senza metadati",
+  "chat.id_tip": "È il tuo indirizzo nella rete: condividilo per farti raggiungere.\nNon è segreto. La chiave privata resta in ~/.nyctalus-chat."
 }

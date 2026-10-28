@@ -1511,13 +1511,13 @@
   "chat.aggiungi": "Add contact",
   "chat.il_mio_id": "Your Contact ID",
   "chat.copia": "Copy",
-  "chat.copiato": "Copied!",
+  "chat.copiato": "Copied to clipboard!",
   "chat.scrivi": "Type a message…",
   "chat.invia": "Send",
   "chat.online": "online",
   "chat.offline": "offline",
   "chat.nessun_contatto": "No contacts yet. Press « + » and paste a .nyct address.",
-  "chat.scegli": "Pick a contact to start chatting.",
+  "chat.scegli": "Pick a contact on the left, or add one with « + ».",
   "chat.addr": ".nyct address",
   "chat.nome": "Name (local nickname)",
   "chat.annulla": "Cancel",
@@ -1526,5 +1526,10 @@
   "chat.motore_assente": "Engine unreachable",
   "chat.motore_assente_corpo": "The chat engine is not running.\nStart the chat from the script or the launcher.",
   "chat.nuovo_contatto": "A new contact messaged you",
-  "chat.aggiungi_sconosciuto": "Someone messaged you from an address not in your contacts. Add them to reply."
+  "chat.aggiungi_sconosciuto": "Someone messaged you from an address not in your contacts. Add them to reply.",
+  "chat.app": "Nyctalus",
+  "chat.sottotitolo": ".nyct chat",
+  "chat.cerca": "Search…",
+  "chat.benvenuto": "Your conversations, encrypted and metadata-free",
+  "chat.id_tip": "It's your address on the network: share it so people can reach you.\nIt's not secret. The private key stays in ~/.nyctalus-chat."
 }
