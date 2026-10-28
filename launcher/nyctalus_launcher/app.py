@@ -135,7 +135,7 @@ class Launcher(Gtk.Window):
         # il logo (a sinistra/in alto) apre il sito/guida su GitHub Pages
         self._bottone_logo(_t("lau.info"), self._apri_pages)
         self._bottone("web-browser-symbolic", _t("lau.browser"), self._apri_browser)
-        self._bottone("user-available-symbolic", _t("lau.chat"), self._apri_chat, attivo=False)
+        self._bottone("user-available-symbolic", _t("lau.chat"), self._apri_chat)
         self._bottone("folder-download-symbolic", _t("lau.file"), self._apri_file, attivo=False)
         sep = Gtk.Separator(
             orientation=Gtk.Orientation.VERTICAL if not verticale else Gtk.Orientation.HORIZONTAL)
@@ -323,6 +323,11 @@ class Launcher(Gtk.Window):
         self._lancia([sys.executable, "-m", "nyctalus_browser"], env=env)
 
     def _apri_chat(self):
+        # lo script porta su l'intero stack (motore + servizio + finestra).
+        for candidato in (RADICE / "avvia-chat.sh", RADICE / "scripts" / "avvia-chat.sh"):
+            if candidato.exists():
+                self._lancia(["bash", str(candidato)])
+                return
         self._avviso(_t("lau.chat"), _t("lau.in_arrivo_corpo"))
 
     def _apri_file(self):
