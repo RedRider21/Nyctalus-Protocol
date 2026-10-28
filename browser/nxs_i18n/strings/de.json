@@ -613,6 +613,7 @@
   "lau.verticale": "Vertikale Anordnung",
   "lau.piu_grande": "Größer",
   "lau.piu_piccola": "Kleiner",
+  "lau.normale": "Normal",
   "md.cleaned_ok": "%s Dateien bereinigt (*.cleaned-Kopien neben den Originalen).",
   "md.cleaned_partial": "%s Dateien bereinigt, %s nicht verarbeitet.",
   "md.no_mat2": "mat2 nicht verfügbar.",

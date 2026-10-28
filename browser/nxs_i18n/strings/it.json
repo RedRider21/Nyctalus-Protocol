@@ -613,6 +613,7 @@
   "lau.verticale": "Disposizione verticale",
   "lau.piu_grande": "Più grande",
   "lau.piu_piccola": "Più piccola",
+  "lau.normale": "Normale",
   "md.cleaned_ok": "Ripuliti %s file (copie *.cleaned accanto agli originali).",
   "md.cleaned_partial": "Ripuliti %s file, %s non elaborati.",
   "md.no_mat2": "mat2 non disponibile.",

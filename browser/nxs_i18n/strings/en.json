@@ -613,6 +613,7 @@
   "lau.verticale": "Vertical layout",
   "lau.piu_grande": "Larger",
   "lau.piu_piccola": "Smaller",
+  "lau.normale": "Normal",
   "md.cleaned_ok": "Cleaned %s files (*.cleaned copies next to the originals).",
   "md.cleaned_partial": "Cleaned %s files, %s not processed.",
   "md.no_mat2": "mat2 not available.",

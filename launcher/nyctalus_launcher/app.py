@@ -190,6 +190,10 @@ class Launcher(Gtk.Window):
         piccola.connect("activate", lambda _w: self._ridimensiona(-PASSO_DIM))
         piccola.set_sensitive(self.dim > DIM_MIN)
         menu.append(piccola)
+        normale = Gtk.MenuItem(label=_t("lau.normale"))
+        normale.connect("activate", lambda _w: self._dimensione_normale())
+        normale.set_sensitive(self.dim != DIM_DEF)
+        menu.append(normale)
         menu.append(Gtk.SeparatorMenuItem())
         sopra = Gtk.CheckMenuItem(label=_t("lau.sopra"))
         sopra.set_active(bool(self.cfg.get("sopra", True)))
@@ -207,7 +211,13 @@ class Launcher(Gtk.Window):
         self.resize(1, 1)            # si ridimensiona al contenuto
 
     def _ridimensiona(self, delta):
-        nuova = max(DIM_MIN, min(DIM_MAX, int(self.cfg.get("dimensione", DIM_DEF)) + delta))
+        self._imposta_dimensione(int(self.cfg.get("dimensione", DIM_DEF)) + delta)
+
+    def _dimensione_normale(self):
+        self._imposta_dimensione(DIM_DEF)
+
+    def _imposta_dimensione(self, valore):
+        nuova = max(DIM_MIN, min(DIM_MAX, valore))
         if nuova == self.cfg.get("dimensione", DIM_DEF):
             return
         self.cfg["dimensione"] = nuova
