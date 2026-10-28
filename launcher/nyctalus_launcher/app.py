@@ -42,13 +42,16 @@ CSS = b"""
 .nyct-launcher button { border: none; background: transparent; box-shadow: none;
                         border-radius: 12px; padding: 7px; margin: 0;
                         min-width: 0; min-height: 0;
-                        color: #e6ecff;                 /* icone chiare sul fondo scuro */
+                        color: #8a9bb8;                 /* icone tenui, leggibili ma non accese */
                         -gtk-icon-shadow: none;
                         transition: background 120ms ease, color 120ms ease; }
-.nyct-launcher button image { color: #e6ecff; }
-.nyct-launcher button:hover { background: rgba(90,169,255,0.18); color: #ffffff; }
-.nyct-launcher button:hover image { color: #ffffff; }
+.nyct-launcher button image { color: #8a9bb8; }
+.nyct-launcher button:hover { background: rgba(90,169,255,0.18); color: #dfe8ff; }
+.nyct-launcher button:hover image { color: #dfe8ff; }
 .nyct-launcher button:active { background: rgba(90,169,255,0.32); }
+/* il bottone-logo ha un alone tenue: il suo disco scuro e' quasi come il pannello */
+.nyct-launcher button.logo { background: rgba(99,208,224,0.12); }
+.nyct-launcher button.logo:hover { background: rgba(99,208,224,0.22); }
 .nyct-launcher separator { background: rgba(255,255,255,0.08);
                            min-width: 1px; min-height: 1px; margin: 4px; }
 """
@@ -127,11 +130,13 @@ class Launcher(Gtk.Window):
 
     def _bottone_logo(self, tip, cb):
         try:
-            px = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(LOGO), 30, 30, True)
+            px = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(LOGO), 38, 38, True)
             img = Gtk.Image.new_from_pixbuf(px)
         except Exception:            # noqa: BLE001
             img = Gtk.Image.new_from_icon_name("help-about-symbolic", Gtk.IconSize.DND)
-        return self._nuovo_bottone(img, tip, cb)
+        b = self._nuovo_bottone(img, tip, cb)
+        b.get_style_context().add_class("logo")
+        return b
 
     def _apri_pages(self):
         env = dict(os.environ)
