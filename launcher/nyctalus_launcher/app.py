@@ -34,6 +34,10 @@ PAGES = "https://redrider21.github.io/Nyctalus-Protocol/"
 CONF_DIR = Path.home() / ".nyctalus-launcher"
 CONF = CONF_DIR / "config.json"
 
+# Dimensione dei bottoni (lato del quadrato, in px). Regolabile dalle
+# impostazioni: "Più grande"/"Più piccola" cambiano a passi di PASSO_DIM.
+DIM_MIN, DIM_MAX, DIM_DEF, PASSO_DIM = 36, 104, 50, 8
+
 # Look piatto e pulito: pannello scuro arrotondato, bottoni senza bordo con solo
 # un leggero evidenziatore al passaggio.
 CSS = b"""
@@ -95,6 +99,8 @@ class Launcher(Gtk.Window):
         if figlio is not None:
             self.remove(figlio)
         verticale = self.cfg.get("orientamento") == "verticale"
+        # dimensione dei bottoni, limitata a un intervallo ragionevole
+        self.dim = max(DIM_MIN, min(DIM_MAX, int(self.cfg.get("dimensione", DIM_DEF))))
         orient = Gtk.Orientation.VERTICAL if verticale else Gtk.Orientation.HORIZONTAL
         self.box = Gtk.Box(orientation=orient, spacing=4)
         self.box.set_border_width(6)
@@ -114,7 +120,7 @@ class Launcher(Gtk.Window):
         b = Gtk.Button()
         b.set_image(img)
         b.set_always_show_image(True)
-        b.set_size_request(50, 50)          # quadrato, piccolo
+        b.set_size_request(self.dim, self.dim)   # quadrato, dimensione regolabile
         b.set_relief(Gtk.ReliefStyle.NONE)
         b.set_can_focus(False)
         b.set_tooltip_text(tip)
@@ -124,16 +130,19 @@ class Launcher(Gtk.Window):
 
     def _bottone(self, icona, tip, cb, attivo=True):
         img = Gtk.Image.new_from_icon_name(icona, Gtk.IconSize.DND)
+        img.set_pixel_size(int(self.dim * 0.56))   # l'icona scala col bottone
         if not attivo:
             tip = "%s — %s" % (tip, _t("lau.in_arrivo"))
         return self._nuovo_bottone(img, tip, cb)
 
     def _bottone_logo(self, tip, cb):
+        lato = int(self.dim * 0.74)
         try:
-            px = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(LOGO), 38, 38, True)
+            px = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(LOGO), lato, lato, True)
             img = Gtk.Image.new_from_pixbuf(px)
         except Exception:            # noqa: BLE001
             img = Gtk.Image.new_from_icon_name("help-about-symbolic", Gtk.IconSize.DND)
+            img.set_pixel_size(lato)
         b = self._nuovo_bottone(img, tip, cb)
         b.get_style_context().add_class("logo")
         return b
@@ -172,6 +181,16 @@ class Launcher(Gtk.Window):
             menu.append(mi)
 
         voce(_t("lau.orizzontale") if verticale else _t("lau.verticale"), self._cambia_orientamento)
+        menu.append(Gtk.SeparatorMenuItem())
+        grande = Gtk.MenuItem(label=_t("lau.piu_grande"))
+        grande.connect("activate", lambda _w: self._ridimensiona(+PASSO_DIM))
+        grande.set_sensitive(self.dim < DIM_MAX)
+        menu.append(grande)
+        piccola = Gtk.MenuItem(label=_t("lau.piu_piccola"))
+        piccola.connect("activate", lambda _w: self._ridimensiona(-PASSO_DIM))
+        piccola.set_sensitive(self.dim > DIM_MIN)
+        menu.append(piccola)
+        menu.append(Gtk.SeparatorMenuItem())
         sopra = Gtk.CheckMenuItem(label=_t("lau.sopra"))
         sopra.set_active(bool(self.cfg.get("sopra", True)))
         sopra.connect("toggled", self._cambia_sopra)
@@ -183,6 +202,15 @@ class Launcher(Gtk.Window):
 
     def _cambia_orientamento(self):
         self.cfg["orientamento"] = "orizzontale" if self.cfg.get("orientamento") == "verticale" else "verticale"
+        self._salva_cfg()
+        self._costruisci()
+        self.resize(1, 1)            # si ridimensiona al contenuto
+
+    def _ridimensiona(self, delta):
+        nuova = max(DIM_MIN, min(DIM_MAX, int(self.cfg.get("dimensione", DIM_DEF)) + delta))
+        if nuova == self.cfg.get("dimensione", DIM_DEF):
+            return
+        self.cfg["dimensione"] = nuova
         self._salva_cfg()
         self._costruisci()
         self.resize(1, 1)            # si ridimensiona al contenuto

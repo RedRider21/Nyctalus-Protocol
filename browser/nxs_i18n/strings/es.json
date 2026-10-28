@@ -611,6 +611,8 @@
   "lau.settings": "Ajustes",
   "lau.sopra": "Siempre encima",
   "lau.verticale": "Disposición vertical",
+  "lau.piu_grande": "Más grande",
+  "lau.piu_piccola": "Más pequeño",
   "md.cleaned_ok": "%s archivos limpiados (copias *.cleaned junto a los originales).",
   "md.cleaned_partial": "%s archivos limpiados, %s sin procesar.",
   "md.no_mat2": "mat2 no disponible.",

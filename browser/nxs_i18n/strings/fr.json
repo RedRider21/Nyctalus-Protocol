@@ -611,6 +611,8 @@
   "lau.settings": "Réglages",
   "lau.sopra": "Toujours au premier plan",
   "lau.verticale": "Disposition verticale",
+  "lau.piu_grande": "Plus grand",
+  "lau.piu_piccola": "Plus petit",
   "md.cleaned_ok": "%s fichiers nettoyés (copies *.cleaned à côté des originaux).",
   "md.cleaned_partial": "%s fichiers nettoyés, %s non traités.",
   "md.no_mat2": "mat2 indisponible.",
