@@ -26,10 +26,19 @@ gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GLib, Gtk, Pango  # noqa: E402
 
 try:
-    from nxs_i18n import t as _t
+    from nxs_i18n import t as _t_base
 except Exception:                # noqa: BLE001
-    def _t(key, **kw):
-        return _ITA.get(key, key)
+    _t_base = None
+
+
+def _t(key, **kw):
+    """Traduzione con ripiego all'italiano: se nxs_i18n non ha la chiave
+    (restituisce la chiave stessa) usiamo i testi di riserva _ITA."""
+    if _t_base is not None:
+        valore = _t_base(key, **kw)
+        if valore != key:
+            return valore
+    return _ITA.get(key, key)
 
 # Testi italiani di riserva, se nxs_i18n non è nel percorso.
 _ITA = {
