@@ -20,6 +20,18 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # noqa: E402
 
+# Tasti rapidi GLOBALI (funzionano anche quando il launcher non è a fuoco):
+# serve la libreria Keybinder. Se manca, ripieghiamo su acceleratori locali
+# (attivi solo con la finestra del launcher a fuoco).
+try:
+    gi.require_version("Keybinder", "3.0")
+    from gi.repository import Keybinder  # noqa: E402
+    Keybinder.init()
+    HA_KEYBINDER = True
+except Exception:                # noqa: BLE001
+    Keybinder = None
+    HA_KEYBINDER = False
+
 # Traduzioni: riusa quelle del browser (nxs_i18n); fallback alla chiave.
 try:
     from nxs_i18n import t as _t
@@ -84,14 +96,29 @@ class Launcher(Gtk.Window):
         self.get_style_context().add_class("nyct-launcher")
 
         self.set_keep_above(bool(self.cfg.get("sopra", True)))
+        self._accel = Gtk.AccelGroup()       # ripiego locale (finestra a fuoco)
+        self.add_accel_group(self._accel)
+        self._keybinder_attivi = []          # combinazioni globali registrate
         self._costruisci()
         self._applica_posizione()
 
         self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
         self.connect("button-press-event", self._premuto)
         self.connect("configure-event", self._spostato)
-        self.connect("destroy", Gtk.main_quit)
+        self.connect("destroy", self._su_chiusura)
         self.show_all()
+        self._applica_scorciatoie()
+
+    # --- azioni associabili a un tasto rapido ---------------------------------
+    def _azioni(self):
+        # (chiave di config, etichetta, callback)
+        return [
+            ("pages", _t("lau.info"), self._apri_pages),
+            ("browser", _t("lau.browser"), self._apri_browser),
+            ("chat", _t("lau.chat"), self._apri_chat),
+            ("file", _t("lau.file"), self._apri_file),
+            ("mostra", _t("lau.mostra_nascondi"), self._toggle_visibile),
+        ]
 
     # --- costruzione -----------------------------------------------------------
     def _costruisci(self):
@@ -147,6 +174,136 @@ class Launcher(Gtk.Window):
         b.get_style_context().add_class("logo")
         return b
 
+    # --- tasti rapidi ---------------------------------------------------------
+    def _scorciatoie_cfg(self):
+        sc = self.cfg.get("scorciatoie")
+        return dict(sc) if isinstance(sc, dict) else {}
+
+    def _applica_scorciatoie(self):
+        """Lega ogni combinazione configurata alla sua azione. Combinazioni
+        vuote = azione senza tasto rapido."""
+        # pulizia dei binding precedenti
+        if HA_KEYBINDER:
+            for accel in self._keybinder_attivi:
+                try:
+                    Keybinder.unbind(accel)
+                except Exception:        # noqa: BLE001
+                    pass
+        self._keybinder_attivi = []
+        try:
+            self.remove_accel_group(self._accel)
+        except Exception:                # noqa: BLE001
+            pass
+        self._accel = Gtk.AccelGroup()
+        self.add_accel_group(self._accel)
+
+        sc = self._scorciatoie_cfg()
+        for chiave, _etichetta, cb in self._azioni():
+            accel = (sc.get(chiave) or "").strip()
+            if not accel:
+                continue
+            tasto, mods = Gtk.accelerator_parse(accel)
+            if not tasto:
+                continue
+            if HA_KEYBINDER:
+                # Keybinder vuole la stringa dell'acceleratore (es. "<Super>b")
+                if Keybinder.bind(accel, lambda _a, _k, c=cb: c()):
+                    self._keybinder_attivi.append(accel)
+            else:
+                self._accel.connect(tasto, mods, Gtk.AccelFlags.VISIBLE,
+                                    lambda *_a, c=cb: (c(), True)[1])
+
+    def _toggle_visibile(self):
+        if self.get_visible() and self.is_active():
+            self.hide()
+        else:
+            self.show_all()
+            self.present()
+
+    def _su_chiusura(self, *_a):
+        if HA_KEYBINDER:
+            for accel in self._keybinder_attivi:
+                try:
+                    Keybinder.unbind(accel)
+                except Exception:        # noqa: BLE001
+                    pass
+        Gtk.main_quit()
+
+    def _dialogo_scorciatoie(self):
+        d = Gtk.Dialog(title=_t("lau.tasti_rapidi"), transient_for=self, modal=True)
+        d.add_button(_t("lau.chiudi"), Gtk.ResponseType.CLOSE)
+        box = d.get_content_area()
+        box.set_spacing(8)
+        box.set_border_width(14)
+        intro = Gtk.Label(xalign=0, label=_t("lau.tasti_info")
+                          if HA_KEYBINDER else _t("lau.tasti_info_locale"))
+        intro.set_line_wrap(True)
+        intro.set_max_width_chars(44)
+        box.pack_start(intro, False, False, 0)
+
+        griglia = Gtk.Grid(column_spacing=10, row_spacing=8)
+        box.pack_start(griglia, False, False, 6)
+        sc = self._scorciatoie_cfg()
+        for r, (chiave, etichetta, _cb) in enumerate(self._azioni()):
+            griglia.attach(Gtk.Label(label=etichetta, xalign=0), 0, r, 1, 1)
+            btn = Gtk.Button(label=sc.get(chiave) or _t("lau.nessun_tasto"))
+            btn.set_size_request(180, -1)
+            btn.connect("clicked", self._cattura_tasto, chiave, btn)
+            griglia.attach(btn, 1, r, 1, 1)
+            pulisci = Gtk.Button(label="✕")
+            pulisci.set_tooltip_text(_t("lau.togli_tasto"))
+            pulisci.connect("clicked", self._pulisci_tasto, chiave, btn)
+            griglia.attach(pulisci, 2, r, 1, 1)
+        d.show_all()
+        d.run()
+        d.destroy()
+
+    def _pulisci_tasto(self, _w, chiave, btn):
+        sc = self._scorciatoie_cfg()
+        sc.pop(chiave, None)
+        self.cfg["scorciatoie"] = sc
+        self._salva_cfg()
+        btn.set_label(_t("lau.nessun_tasto"))
+        self._applica_scorciatoie()
+
+    def _cattura_tasto(self, _w, chiave, btn):
+        """Finestrella che cattura la prossima combinazione premuta."""
+        cat = Gtk.Dialog(title=_t("lau.premi_combinazione"), transient_for=self, modal=True)
+        lab = Gtk.Label(label=_t("lau.premi_combinazione_corpo"))
+        lab.set_margin_top(18)
+        lab.set_margin_bottom(18)
+        lab.set_margin_start(24)
+        lab.set_margin_end(24)
+        cat.get_content_area().pack_start(lab, True, True, 0)
+        cat.add_events(Gdk.EventMask.KEY_PRESS_MASK)
+
+        def premuto(_d, ev):
+            # ignora i soli modificatori
+            if ev.keyval in (Gdk.KEY_Control_L, Gdk.KEY_Control_R, Gdk.KEY_Alt_L,
+                             Gdk.KEY_Alt_R, Gdk.KEY_Shift_L, Gdk.KEY_Shift_R,
+                             Gdk.KEY_Super_L, Gdk.KEY_Super_R, Gdk.KEY_Meta_L,
+                             Gdk.KEY_Meta_R, Gdk.KEY_Hyper_L, Gdk.KEY_Hyper_R):
+                return True
+            if ev.keyval == Gdk.KEY_Escape:
+                cat.response(Gtk.ResponseType.CANCEL)
+                return True
+            mods = ev.state & Gtk.accelerator_get_default_mod_mask()
+            if Gtk.accelerator_valid(ev.keyval, mods):
+                accel = Gtk.accelerator_name(ev.keyval, mods)
+                sc = self._scorciatoie_cfg()
+                sc[chiave] = accel
+                self.cfg["scorciatoie"] = sc
+                self._salva_cfg()
+                btn.set_label(accel)
+                self._applica_scorciatoie()
+                cat.response(Gtk.ResponseType.OK)
+            return True
+
+        cat.connect("key-press-event", premuto)
+        cat.show_all()
+        cat.run()
+        cat.destroy()
+
     def _apri_pages(self):
         env = dict(os.environ)
         env["PYTHONPATH"] = str(CARTELLA_BROWSER) + os.pathsep + env.get("PYTHONPATH", "")
@@ -199,6 +356,8 @@ class Launcher(Gtk.Window):
         sopra.set_active(bool(self.cfg.get("sopra", True)))
         sopra.connect("toggled", self._cambia_sopra)
         menu.append(sopra)
+        menu.append(Gtk.SeparatorMenuItem())
+        voce(_t("lau.tasti_rapidi") + "…", self._dialogo_scorciatoie)
         menu.append(Gtk.SeparatorMenuItem())
         voce(_t("lau.esci"), self.destroy)
         menu.show_all()
