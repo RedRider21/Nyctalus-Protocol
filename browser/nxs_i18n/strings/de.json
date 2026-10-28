@@ -1531,5 +1531,6 @@
   "chat.sottotitolo": ".nyct-Chat",
   "chat.cerca": "Suchen…",
   "chat.benvenuto": "Deine Gespräche, verschlüsselt und ohne Metadaten",
-  "chat.id_tip": "Das ist deine Adresse im Netz: teile sie, damit man dich erreicht.\nSie ist nicht geheim. Der private Schlüssel bleibt in ~/.nyctalus-chat."
+  "chat.id_tip": "Das ist deine Adresse im Netz: teile sie, damit man dich erreicht.\nSie ist nicht geheim. Der private Schlüssel bleibt in ~/.nyctalus-chat.",
+  "chat.aiuto": "Handbuch (öffnet im Browser)"
 }

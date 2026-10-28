@@ -1531,5 +1531,6 @@
   "chat.sottotitolo": "Chat .nyct",
   "chat.cerca": "Rechercher…",
   "chat.benvenuto": "Vos conversations, chiffrées et sans métadonnées",
-  "chat.id_tip": "C'est votre adresse sur le réseau : partagez-la pour être joignable.\nElle n'est pas secrète. La clé privée reste dans ~/.nyctalus-chat."
+  "chat.id_tip": "C'est votre adresse sur le réseau : partagez-la pour être joignable.\nElle n'est pas secrète. La clé privée reste dans ~/.nyctalus-chat.",
+  "chat.aiuto": "Manuel (ouvre dans le navigateur)"
 }

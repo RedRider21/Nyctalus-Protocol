@@ -120,14 +120,14 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 
 | Livello | Cosa fa | Stato |
 |---|---|---|
-| **L3 Applicazione** | proxy SOCKS5 locale · siti interni `.nyct` · browser | ✅ |
+| **L3 Applicazione** | proxy SOCKS5 locale · siti interni `.nyct` · browser · chat · launcher | ✅ |
 | **L2 Flusso** | etichette segrete + cifratura end-to-end + ricomposizione | ✅ |
 | **L1 Cipolla** | apertura circuito (Sphinx) + strati simmetrici · celle a lunghezza fissa | ✅ |
 | **L0 Collegamento** | QUIC tra nodi, camuffato (offuscamento ChaCha20) | ✅ |
 
 ## A che punto siamo
 
-**Fatto e testato** (80 test automatici):
+**Fatto e testato** (84 test automatici):
 - **L2 — nucleo del protocollo:** frammentazione, etichette segrete rotanti (BLAKE3), cifratura end-to-end (ChaCha20-Poly1305) con pacchetti di lunghezza fissa, ricomposizione con limiti anti-DoS.
 - **Stretta di mano Noise NK:** i due estremi si accordano sul segreto senza farlo mai viaggiare; forward secrecy; il mittente resta anonimo.
 - **Indirizzi `.nyct`:** la chiave pubblica di un servizio in base32, con controllo anti-errori di battitura.
@@ -143,15 +143,17 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 
 - **Rumore di fondo (cover traffic) + celle a lunghezza fissa**: tutti i quadri del circuito e del rendezvous hanno la **stessa taglia** (1372 byte); celle fittizie opzionali (`--cover`) in **entrambe le direzioni** mascherano *quando* si invia.
 - **Browser dedicato** (clone di Firefox): parte normale, lo **stealth** (rete Nyctalus) si accende col bottone e **avvia da solo i servizi** (rete pubblica configurata o rete di prova locale); i `.nyct` attivano lo stealth automaticamente.
+- **Chat `.nyct`** (senza server, senza metadati): ogni utente è un indirizzo `.nyct` (il suo Contact ID); motore in Rust (`nyctalus chat`) + finestra GTK. Oltre all'anonimato di rete e alla cifratura E2E, **chi scrive è autenticato crittograficamente** (un secondo handshake Noise NK dentro il tunnel: solo chi possiede la chiave privata dell'indirizzo dichiarato lo conclude), quindi nessuno può spacciarsi per un contatto. Guida: [MANUALE-CHAT.md](MANUALE-CHAT.md).
+- **Mini-launcher da desktop**: pannello senza bordi, trascinabile, con bottoni quadrati (orizzontale/verticale), **dimensione regolabile** e **tasti rapidi configurabili**, per lanciare Browser e Chat. Client grafici (browser, launcher, chat) in **Python+GTK3**; il motore resta in **Rust**.
 
-**In arrivo** (vedi [STATO.md](STATO.md)): taratura del rumore di fondo su rete reale, rotazione dei guard e ripresa dai circuiti caduti, descrittore firmato dei servizi, simulazione contro Tor con **Shadow**, chat nativa `.nyct`, gestore file grafico, mini-launcher da desktop.
+**In arrivo** (vedi [STATO.md](STATO.md)): taratura del rumore di fondo su rete reale, rotazione dei guard e ripresa dai circuiti caduti, descrittore firmato dei servizi, simulazione contro Tor con **Shadow**, gestore file grafico.
 
 ## Compilare
 
 Serve [Rust](https://rustup.rs) (profilo minimal sufficiente):
 
 ```sh
-cargo test              # 80 test
+cargo test              # 84 test
 cargo build --release   # produce target/release/nyctalus
 ```
 
@@ -312,6 +314,18 @@ Stampa il comando `invia` con l'indirizzo `.nyct` del ricevitore. Sul mittente:
 ```sh
 nyctalus send --to IP:4433 --fingerprint <FINGERPRINT> --recipient <ADDRESS>.nyct file
 ```
+
+### Client grafici (browser, chat, launcher)
+
+I client grafici sono in Python+GTK3 e stanno in `browser/`, `chat/`, `launcher/`.
+```sh
+./scripts/demo-locale.sh     # browser stealth su un sito .nyct di prova
+./scripts/demo-chat.sh       # chat: due finestre (due identità) in locale
+./launcher/nyctalus-launcher # il pannello da cui lanci browser e chat
+```
+Per l'uso reale (rete condivisa) usa `avvia-chat.sh`; la guida passo-passo della
+chat è in [MANUALE-CHAT.md](MANUALE-CHAT.md). Dentro la chat, il pulsante **?**
+apre il manuale nel browser.
 
 ## Cosa promette e cosa no
 

@@ -15,6 +15,8 @@ a-capo nel protocollo a righe.
 """
 import os
 import socket
+import subprocess
+import sys
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -49,6 +51,7 @@ _ITA = {
     "chat.contatti": "Contatti",
     "chat.cerca": "Cerca…",
     "chat.aggiungi": "Aggiungi contatto",
+    "chat.aiuto": "Manuale (apre nel browser)",
     "chat.il_mio_id": "Il tuo Contact ID",
     "chat.id_tip": "È il tuo indirizzo nella rete: condividilo per farti raggiungere.\nNon è segreto. La chiave privata resta in ~/.nyctalus-chat.",
     "chat.copia": "Copia",
@@ -73,7 +76,11 @@ _ITA = {
 
 CTRL_HOST = os.environ.get("NYCTALUS_CHAT_HOST", "127.0.0.1")
 CTRL_PORT = int(os.environ.get("NYCTALUS_CHAT_PORT", "1091"))
-LOGO = Path(__file__).resolve().parents[2] / "logo.svg"
+RADICE = Path(__file__).resolve().parents[2]      # cartella progetto / pacchetto
+LOGO = RADICE / "logo.svg"
+# Manuale online (Pages). Il pulsante « ? » lo apre nel browser Nyctalus.
+MANUALE_URL = os.environ.get(
+    "NYCTALUS_MANUALE_URL", "https://redrider21.github.io/Nyctalus-Protocol/#chat")
 
 # Colori per gli avatar (scelti in modo deterministico dall'indirizzo).
 AVATAR_COLORI = ["#5aa9ff", "#7f6cff", "#38c6a4", "#e0794b", "#d45b8e",
@@ -254,6 +261,10 @@ class Chat(Gtk.Window):
         agg.set_tooltip_text(_t("chat.aggiungi")); agg.set_valign(Gtk.Align.CENTER)
         agg.connect("clicked", lambda _w: self._dialogo_aggiungi())
         testa.pack_end(agg, False, False, 0)
+        aiuto = Gtk.Button(label="?"); aiuto.get_style_context().add_class("pill")
+        aiuto.set_tooltip_text(_t("chat.aiuto")); aiuto.set_valign(Gtk.Align.CENTER)
+        aiuto.connect("clicked", self._apri_manuale)
+        testa.pack_end(aiuto, False, False, 0)
         lato.pack_start(testa, False, False, 0)
 
         # ricerca
@@ -617,6 +628,18 @@ class Chat(Gtk.Window):
                 self._cmd("ADD %s %s" % (addr, nome.encode().hex()))
                 self._upsert_contatto(_con_suffisso(addr), nome)
         d.destroy()
+
+    def _apri_manuale(self, _w):
+        """Apre il manuale nel browser Nyctalus; se non c'è, nel browser di
+        sistema."""
+        env = dict(os.environ)
+        env["PYTHONPATH"] = str(RADICE / "browser") + os.pathsep + env.get("PYTHONPATH", "")
+        try:
+            subprocess.Popen([sys.executable, "-m", "nyctalus_browser", MANUALE_URL],
+                             env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:        # noqa: BLE001
+            import webbrowser
+            webbrowser.open(MANUALE_URL)
 
     def _copia_id(self, _w):
         if not self.me:
