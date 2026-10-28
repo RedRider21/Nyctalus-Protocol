@@ -42,9 +42,13 @@ CSS = b"""
 .nyct-launcher button { border: none; background: transparent; box-shadow: none;
                         border-radius: 12px; padding: 7px; margin: 0;
                         min-width: 0; min-height: 0;
-                        transition: background 120ms ease; }
-.nyct-launcher button:hover { background: rgba(90,169,255,0.16); }
-.nyct-launcher button:active { background: rgba(90,169,255,0.30); }
+                        color: #e6ecff;                 /* icone chiare sul fondo scuro */
+                        -gtk-icon-shadow: none;
+                        transition: background 120ms ease, color 120ms ease; }
+.nyct-launcher button image { color: #e6ecff; }
+.nyct-launcher button:hover { background: rgba(90,169,255,0.18); color: #ffffff; }
+.nyct-launcher button:hover image { color: #ffffff; }
+.nyct-launcher button:active { background: rgba(90,169,255,0.32); }
 .nyct-launcher separator { background: rgba(255,255,255,0.08);
                            min-width: 1px; min-height: 1px; margin: 4px; }
 """
