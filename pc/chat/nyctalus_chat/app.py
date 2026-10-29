@@ -55,6 +55,19 @@ _ITA = {
     "chat.contatti": "Contatti",
     "chat.cerca": "Cerca…",
     "chat.aggiungi": "Aggiungi contatto",
+    "chat.gal.titolo": "Allega",
+    "chat.gal.galleria": "Galleria",
+    "chat.gal.fotocamera": "Fotocamera",
+    "chat.gal.scheda_file": "File",
+    "chat.gal.scheda_altre": "Altre foto",
+    "chat.gal.scheda_foto": "Foto",
+    "chat.gal.scheda_video": "Video",
+    "chat.gal.didascalia": "Aggiungi una didascalia…",
+    "chat.gal.exif": "Senza metadati",
+    "chat.gal.invia": "Invia",
+    "chat.gal.invia_n": "Invia (%d)",
+    "chat.gal.selezionati": "%d selezionati",
+    "chat.gal.vuoto": "Nessuna foto o video recente nelle cartelle Immagini, Video e Download. Usa «Altre foto» o «File».",
     "chat.allega.foto_cam": "Scatta una foto",
     "chat.allega.video_cam": "Registra un video",
     "chat.allega.media": "Foto o video",
@@ -279,6 +292,15 @@ dialog check:checked { background-color: @SEND@; color: #ffffff; }
 dialog list, dialog list row { background-color: transparent; color: @TEXT@; }
 dialog list row:selected { background-color: rgba(@RGB@,0.22); }
 .fotocamera { background-color: #000000; }
+
+/* selettore allegati come Telegram */
+.selettore-allegati { background-color: @PANEL@; }
+.gal-titolo { font-weight: 800; font-size: 16px; color: @TEXT@; }
+.gal-conta { color: @ACCENT@; font-weight: 700; }
+.gal-cam { background-image: linear-gradient(135deg, #1f3b66, #2a2050); color: #ffffff; border: none;
+           border-radius: 2px; font-size: 13px; }
+.gal-schede button { border-radius: 18px; }
+.gal-vuoto { color: @MUTED@; padding: 20px; }
 
 /* allegati in stile Telegram */
 .bolla.foto { padding: 0; background-color: transparent; background-image: none; box-shadow: none; }
@@ -1396,21 +1418,25 @@ class Chat(Gtk.Window):
             pass
 
     # --- graffetta: menu, scelta, fotocamera, anteprima --------------------------
-    def _menu_graffetta(self, bottone):
+    def _menu_graffetta(self, _bottone):
+        """📎 → il selettore di Telegram: griglia delle foto/video recenti con
+        selezione numerata; le schede portano a fotocamera, video e file."""
         if not self.attivo:
             return
-        menu = self._nuovo_menu()
-        cam = media.fotocamera_disponibile()
-        self._voce(menu, _t("chat.allega.foto_cam"), lambda: self._scatta("foto"), icona="camera-photo-symbolic")
-        self._voce(menu, _t("chat.allega.video_cam"), lambda: self._scatta("video"), icona="camera-video-symbolic")
-        if not cam:
-            for v in menu.get_children():
-                v.set_sensitive(False)
-        menu.append(Gtk.SeparatorMenuItem())
-        self._voce(menu, _t("chat.allega.media"), lambda: self._scegli_file("media"), icona="image-x-generic-symbolic")
-        self._voce(menu, _t("chat.allega.file"), lambda: self._scegli_file("tutti"), icona="text-x-generic-symbolic")
-        menu.show_all()
-        menu.popup_at_widget(bottone, Gdk.Gravity.NORTH_WEST, Gdk.Gravity.SOUTH_WEST, None)
+        chiavi = ("titolo", "galleria", "fotocamera", "scheda_file", "scheda_altre", "scheda_foto", "scheda_video",
+                  "didascalia", "exif", "invia", "invia_n", "selezionati", "vuoto")
+        dlg = media.SelettoreAllegati(self, {k: _t("chat.gal." + k) for k in chiavi}, self.ui.get("senza_exif", True))
+        esito = dlg.run()
+        scelti, testo, exif, azione = list(dlg.scelti), dlg.didascalia(), dlg.senza_exif(), dlg.azione
+        dlg.destroy()
+        if esito == Gtk.ResponseType.OK and scelti:
+            for p in scelti:
+                self._invia_file(p, mime_di(p), exif)
+            if testo:
+                self._cmd("SEND %s %s" % (self.attivo, testo.encode().hex()))
+        elif esito == Gtk.ResponseType.ACCEPT:
+            {"foto": lambda: self._scatta("foto"), "video": lambda: self._scatta("video"),
+             "file": lambda: self._scegli_file("tutti"), "altre": lambda: self._scegli_file("media")}[azione]()
 
     def _scegli_file(self, tipo):
         d = Gtk.FileChooserNative.new(_t("chat.allega"), self, Gtk.FileChooserAction.OPEN, None, None)

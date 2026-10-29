@@ -1597,5 +1597,18 @@
   "chat.ant.didascalia": "Add a caption…",
   "chat.ant.exif": "Strip metadata from photos (GPS location, camera)",
   "chat.ant.invia": "Send",
-  "chat.ant.annulla": "Cancel"
+  "chat.ant.annulla": "Cancel",
+  "chat.gal.titolo": "Attach",
+  "chat.gal.galleria": "Gallery",
+  "chat.gal.fotocamera": "Camera",
+  "chat.gal.scheda_file": "File",
+  "chat.gal.scheda_altre": "More photos",
+  "chat.gal.scheda_foto": "Photo",
+  "chat.gal.scheda_video": "Video",
+  "chat.gal.didascalia": "Add a caption…",
+  "chat.gal.exif": "No metadata",
+  "chat.gal.invia": "Send",
+  "chat.gal.invia_n": "Send (%d)",
+  "chat.gal.selezionati": "%d selected",
+  "chat.gal.vuoto": "No recent photos or videos in Pictures, Videos and Downloads. Use «More photos» or «File»."
 }

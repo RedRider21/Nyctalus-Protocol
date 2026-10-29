@@ -68,15 +68,19 @@ ti propone di aggiungerlo per rispondere.
 
 ## 4. Allegati: file, foto, video, audio, documenti
 
-- **Inviare**: apri la chat con un contatto e premi la **graffetta 📎**. Si apre un
-  menu con:
-  - **Scatta una foto** / **Registra un video** — dalla webcam, con l'anteprima
-    dal vivo; nel video viene registrato anche l'audio del microfono (il timer
-    rosso mostra la durata, «Ferma e usa» chiude la registrazione);
-  - **Foto o video** e **File** — per sceglierne dal disco (anche più d'uno).
+- **Inviare**: apri la chat con un contatto e premi la **graffetta 📎**. Si apre il
+  **selettore come in Telegram**:
+  - la **griglia** delle tue foto e video più recenti (sul PC dalle cartelle Immagini,
+    Video e Download; sul telefono dalla galleria); la prima casella è la **Fotocamera**;
+  - **tocca/clicca le foto per sceglierle**: compare il **numero d'ordine** nel cerchio
+    blu (1, 2, 3…), e vengono inviate in quell'ordine; un altro tocco le toglie;
+  - con almeno una scelta compaiono la **didascalia**, «Senza metadati» e **«Invia (N)»**;
+  - le schede in basso: **File** (qualunque file) · **Altre foto** (scegli da altre
+    cartelle) · **Foto** e **Video** dalla fotocamera (con l'audio del microfono; il timer
+    rosso mostra la durata, «Ferma e usa» chiude la registrazione).
 
   In alternativa puoi **trascinare i file** dentro la conversazione.
-- **Prima di inviare** compare l'**anteprima** (come «Invia foto» di Telegram):
+- Per i file scelti con «File», «Altre foto», la fotocamera o il trascinamento, **prima di inviare** compare l'**anteprima** (come «Invia foto» di Telegram):
   miniature, una **didascalia** facoltativa (arriva come messaggio subito dopo) e
   l'opzione per togliere i metadati dalle foto.
 - **Come si vedono in chat**:

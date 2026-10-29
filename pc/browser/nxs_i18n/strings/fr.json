@@ -1597,5 +1597,18 @@
   "chat.ant.didascalia": "Ajouter une légende…",
   "chat.ant.exif": "Retirer les métadonnées des photos (position GPS, appareil)",
   "chat.ant.invia": "Envoyer",
-  "chat.ant.annulla": "Annuler"
+  "chat.ant.annulla": "Annuler",
+  "chat.gal.titolo": "Joindre",
+  "chat.gal.galleria": "Galerie",
+  "chat.gal.fotocamera": "Caméra",
+  "chat.gal.scheda_file": "Fichier",
+  "chat.gal.scheda_altre": "Autres photos",
+  "chat.gal.scheda_foto": "Photo",
+  "chat.gal.scheda_video": "Vidéo",
+  "chat.gal.didascalia": "Ajouter une légende…",
+  "chat.gal.exif": "Sans métadonnées",
+  "chat.gal.invia": "Envoyer",
+  "chat.gal.invia_n": "Envoyer (%d)",
+  "chat.gal.selezionati": "%d sélectionnés",
+  "chat.gal.vuoto": "Aucune photo ou vidéo récente dans Images, Vidéos et Téléchargements. Utilisez « Autres photos » ou « Fichier »."
 }

@@ -22,4 +22,22 @@ else
   fail "video non registrato"
 fi
 grep -q "^anteprima ok" "$TMP/r.txt" && pass "finestra d'anteprima con didascalia e opzione EXIF" || fail "anteprima d'invio"
+
+# --- selettore allegati come Telegram, su una galleria finta ---
+G="$TMP/galleria"; mkdir -p "$G"
+for c in 1e88e5 e53935 43a047 fdd835 8e24aa; do
+  python3 -c "import zlib,struct,sys;w=h=96;c=bytes.fromhex(sys.argv[1]);raw=b''.join(b'\x00'+c*w for _ in range(h))
+def k(t,d):return struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d))
+open(sys.argv[2],'wb').write(b'\x89PNG\r\n\x1a\n'+k(b'IHDR',struct.pack('>IIBBBBB',w,h,8,2,0,0,0))+k(b'IDAT',zlib.compress(raw))+k(b'IEND',b''))" "$c" "$G/IMG_$c.png"
+  sleep 0.05
+done
+command -v ffmpeg >/dev/null && ffmpeg -v error -f lavfi -i testsrc2=size=320x240:rate=10:duration=3 -pix_fmt yuv420p "$G/VID_prova.mp4"
+NYCTALUS_GALLERIA="$G" NYCTALUS_GALLERIA_SOLO=1 XDG_CACHE_HOME="$TMP/cache" PYTHONPATH="$ROOT/pc/chat:$ROOT/pc/browser" timeout 60 \
+  python3 "$STRUMENTI/prova_selettore.py" > "$TMP/s.txt" 2>/dev/null
+v() { grep -oE "^$1 .*" "$TMP/s.txt" | cut -d' ' -f2-; }
+[ "$(v caselle)" -eq 6 ] && pass "selettore: griglia con foto e video recenti ($(v caselle))" || fail "griglia: $(v caselle)"
+[ "$(v miniature)" -ge 6 ] && pass "miniature caricate (anche del video)" || fail "miniature: $(v miniature)"
+[ "$(v numeri)" = "1,2" ] && pass "selezione numerata come Telegram (1, 2)" || fail "numerazione: $(v numeri)"
+[ "$(v bottone)" = "Invia (2)" ] && [ "$(v barra)" = "True" ] && pass "didascalia + «Invia (2)» al posto delle schede" || fail "barra di invio: $(v bottone) $(v barra)"
+[ -n "$(v ordine)" ] && pass "ordine di invio = ordine di tocco ($(v ordine))" || fail "ordine dei file scelti"
 [ "$KO" -eq 0 ]

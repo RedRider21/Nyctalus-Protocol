@@ -272,6 +272,8 @@ ESTENSIONI_MEDIA = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".mp4", "
 
 def cartelle_galleria():
     extra = [Path(x) for x in os.environ.get("NYCTALUS_GALLERIA", "").split(os.pathsep) if x]
+    if os.environ.get("NYCTALUS_GALLERIA_SOLO"):      # prove: mai le cartelle vere dell'utente
+        return extra
     return extra + [HOME / "storage" / "dcim", HOME / "storage" / "pictures", HOME / "storage" / "movies"]
 
 

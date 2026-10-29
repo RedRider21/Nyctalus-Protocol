@@ -525,3 +525,231 @@ class AnteprimaInvio(Gtk.Dialog):
 
     def senza_exif(self):
         return self.exif.get_active()
+
+
+# --- selettore allegati come Telegram (griglia foto/video recenti) --------------------
+ESTENSIONI_MEDIA = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".mp4", ".mov", ".webm", ".mkv", ".avi"}
+
+
+def cartelle_galleria():
+    extra = [Path(x) for x in os.environ.get("NYCTALUS_GALLERIA", "").split(os.pathsep) if x]
+    if os.environ.get("NYCTALUS_GALLERIA_SOLO"):      # prove: mai le cartelle vere dell'utente
+        return extra
+    speciali = []
+    for d in (GLib.UserDirectory.DIRECTORY_PICTURES, GLib.UserDirectory.DIRECTORY_VIDEOS,
+              GLib.UserDirectory.DIRECTORY_DOWNLOAD):
+        p = GLib.get_user_special_dir(d)
+        if p:
+            speciali.append(Path(p))
+    return extra + speciali
+
+
+def elenco_galleria(quanti=90):
+    """Foto e video più recenti (dal più nuovo), senza cartelle nascoste."""
+    voci, visti = [], set()
+    for radice in cartelle_galleria():
+        if not radice.is_dir():
+            continue
+        for cart, sotto, files in os.walk(radice):
+            prof = len(Path(cart).relative_to(radice).parts)
+            sotto[:] = [d for d in sotto if not d.startswith(".") and prof < 2]
+            for f in files:
+                if f.startswith(".") or os.path.splitext(f)[1].lower() not in ESTENSIONI_MEDIA:
+                    continue
+                p = os.path.join(cart, f)
+                try:
+                    reale, st = os.path.realpath(p), os.stat(p)
+                except OSError:
+                    continue
+                if reale not in visti:
+                    visti.add(reale)
+                    voci.append((st.st_mtime, p))
+    voci.sort(reverse=True)
+    return [p for _t, p in voci[:quanti]]
+
+
+class TileGalleria(Gtk.DrawingArea):
+    """Casella della griglia: immagine ritagliata a quadrato; cerchio in alto a
+    destra vuoto, o blu col numero d'ordine se scelta (e la foto si rimpicciolisce)."""
+
+    LATO = 132
+
+    def __init__(self, percorso, video, al_clic):
+        super().__init__()
+        self.percorso, self.video, self.numero, self.pixbuf, self.durata = percorso, video, 0, None, ""
+        self.set_size_request(self.LATO, self.LATO)
+        self.set_halign(Gtk.Align.CENTER); self.set_valign(Gtk.Align.START)   # sempre quadrata
+        self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+        self.connect("button-press-event", lambda _w, ev: ev.button == 1 and (al_clic(self) or True))
+        self.connect("draw", self._disegna)
+        self.connect("realize", lambda w: w.get_window().set_cursor(Gdk.Cursor.new_from_name(w.get_display(), "pointer")))
+
+    def imposta_pixbuf(self, px):
+        self.pixbuf = px
+        self.queue_draw()
+
+    def _disegna(self, _w, cr):
+        w, h = self.get_allocated_width(), self.get_allocated_height()
+        cr.set_source_rgba(0.15, 0.18, 0.26, 1)
+        cr.rectangle(0, 0, w, h)
+        cr.fill()
+        m = 8 if self.numero else 0                        # scelta: foto rimpicciolita
+        if self.pixbuf is not None:
+            cr.save()
+            _rettangolo_arrotondato(cr, m, m, w - 2 * m, h - 2 * m, 10 if self.numero else 0)
+            cr.clip()
+            pw, ph = self.pixbuf.get_width(), self.pixbuf.get_height()
+            s = max((w - 2 * m) / pw, (h - 2 * m) / ph)
+            cr.translate(m + ((w - 2 * m) - pw * s) / 2, m + ((h - 2 * m) - ph * s) / 2)
+            cr.scale(s, s)
+            Gdk.cairo_set_source_pixbuf(cr, self.pixbuf, 0, 0)
+            cr.paint()
+            cr.restore()
+        if self.video:
+            _pillola(cr, "▶ " + (self.durata or "video"), 6, h - 26)
+        # cerchio di selezione (percorso nuovo: niente linee dal disegno precedente)
+        cr.new_path()
+        cx, cy, r = w - 18, 18, 11
+        if self.numero:
+            cr.set_source_rgb(*_rgb("#2f6fe0"))
+            cr.arc(cx, cy, r, 0, 2 * math.pi)
+            cr.fill_preserve()
+            cr.set_source_rgb(1, 1, 1)
+            cr.set_line_width(2)
+            cr.stroke()
+            cr.select_font_face("Sans", 0, 1)
+            cr.set_font_size(12)
+            t = str(self.numero)
+            est = cr.text_extents(t)
+            cr.move_to(cx - est.width / 2 - est.x_bearing, cy - est.height / 2 - est.y_bearing)
+            cr.show_text(t)
+        else:
+            cr.set_source_rgba(0, 0, 0, 0.25)
+            cr.arc(cx, cy, r, 0, 2 * math.pi)
+            cr.fill_preserve()
+            cr.set_source_rgba(1, 1, 1, 0.95)
+            cr.set_line_width(2)
+            cr.stroke()
+        return False
+
+
+class SelettoreAllegati(Gtk.Dialog):
+    """Il selettore di Telegram: griglia delle foto/video recenti (prima casella:
+    fotocamera), selezione numerata, schede in basso, didascalia e «Invia (N)».
+    run() == OK → self.scelti (percorsi, nell'ordine), self.didascalia(), self.senza_exif().
+    Se si sceglie una scheda (fotocamera, file…) run() == ACCEPT e self.azione dice quale."""
+
+    def __init__(self, genitore, testi, exif_predefinito):
+        super().__init__(title=testi["titolo"], transient_for=genitore, modal=True)
+        self.t, self.scelti, self.tile, self.azione = testi, [], [], None
+        self.get_style_context().add_class("selettore-allegati")
+        self.set_default_size(620, 600)
+        area = self.get_content_area()
+        area.set_spacing(0)
+
+        testa = Gtk.Box(spacing=8); testa.set_border_width(12)
+        tit = Gtk.Label(label=testi["galleria"], xalign=0); tit.get_style_context().add_class("gal-titolo")
+        self.conta = Gtk.Label(xalign=1); self.conta.get_style_context().add_class("gal-conta")
+        testa.pack_start(tit, True, True, 0); testa.pack_end(self.conta, False, False, 0)
+        area.pack_start(testa, False, False, 0)
+
+        self.griglia = Gtk.FlowBox()
+        self.griglia.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.griglia.set_max_children_per_line(4); self.griglia.set_min_children_per_line(4)
+        self.griglia.set_column_spacing(3); self.griglia.set_row_spacing(3); self.griglia.set_homogeneous(True)
+        self.griglia.set_valign(Gtk.Align.START); self.griglia.set_halign(Gtk.Align.CENTER)
+        cam = Gtk.Button(label="📷\n" + testi["fotocamera"]); cam.get_style_context().add_class("gal-cam")
+        cam.set_size_request(TileGalleria.LATO, TileGalleria.LATO)
+        cam.set_halign(Gtk.Align.CENTER); cam.set_valign(Gtk.Align.START)
+        cam.set_sensitive(fotocamera_disponibile())
+        cam.connect("clicked", lambda *_a: self._scheda("foto"))
+        self.griglia.add(cam)
+        scorri = Gtk.ScrolledWindow(); scorri.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scorri.set_vexpand(True); scorri.add(self.griglia)
+        area.pack_start(scorri, True, True, 0)
+
+        # in basso: schede, oppure (con qualcosa scelto) didascalia + Invia (N)
+        self.schede = Gtk.Box(spacing=6, homogeneous=True); self.schede.set_border_width(10)
+        self.schede.get_style_context().add_class("gal-schede")
+        for chiave, icona in (("file", "📄"), ("altre", "🗂"), ("foto", "📷"), ("video", "🎥")):
+            b = Gtk.Button(label="%s  %s" % (icona, testi["scheda_" + chiave]))
+            b.connect("clicked", lambda _b, k=chiave: self._scheda(k))
+            if chiave in ("foto", "video"):
+                b.set_sensitive(fotocamera_disponibile())
+            self.schede.pack_start(b, True, True, 0)
+        area.pack_start(self.schede, False, False, 0)
+        self.barra = Gtk.Box(spacing=8); self.barra.set_border_width(10)
+        self.barra.get_style_context().add_class("gal-invio")
+        self.voce_didascalia = Gtk.Entry(); self.voce_didascalia.set_placeholder_text(testi["didascalia"])
+        self.voce_didascalia.set_activates_default(True)
+        self.exif = Gtk.CheckButton(label=testi["exif"]); self.exif.set_active(exif_predefinito)
+        self.invia = Gtk.Button(label=testi["invia"]); self.invia.get_style_context().add_class("suggested-action")
+        self.invia.connect("clicked", lambda *_a: self.response(Gtk.ResponseType.OK))
+        self.barra.pack_start(self.voce_didascalia, True, True, 0)
+        self.barra.pack_start(self.exif, False, False, 0)
+        self.barra.pack_end(self.invia, False, False, 0)
+        area.pack_start(self.barra, False, False, 0)
+
+        self.show_all()
+        self.barra.hide()
+        self._carica()
+
+    def _carica(self):
+        def lavoro():
+            percorsi = elenco_galleria()
+            GLib.idle_add(lambda: (self._riempi(percorsi), False)[1])
+        threading.Thread(target=lavoro, daemon=True).start()
+
+    def _riempi(self, percorsi):
+        if not percorsi:
+            vuoto = Gtk.Label(label=self.t["vuoto"]); vuoto.set_line_wrap(True); vuoto.get_style_context().add_class("gal-vuoto")
+            self.griglia.add(vuoto); vuoto.show()
+        for p in percorsi:
+            video = (mimetypes_guess(p) or "").startswith("video/")
+            tile = TileGalleria(p, video, self._tocca)
+            self.tile.append(tile)
+            self.griglia.add(tile)
+            tile.show()
+            if video:
+                miniatura_video(p, lambda jpg, d, t=tile: (setattr(t, "durata", durata_leggibile(d)),
+                                                          jpg and t.imposta_pixbuf(_px(jpg)), t.queue_draw()))
+            else:
+                threading.Thread(target=lambda t=tile: (lambda px: GLib.idle_add(
+                    lambda: (t.imposta_pixbuf(px), False)[1]))(_px(t.percorso)), daemon=True).start()
+
+    def _tocca(self, tile):
+        if tile.percorso in self.scelti:
+            self.scelti.remove(tile.percorso)
+        else:
+            self.scelti.append(tile.percorso)
+        for t in self.tile:
+            t.numero = self.scelti.index(t.percorso) + 1 if t.percorso in self.scelti else 0
+            t.queue_draw()
+        n = len(self.scelti)
+        self.conta.set_text(self.t["selezionati"] % n if n else "")
+        self.invia.set_label(self.t["invia_n"] % n if n > 1 else self.t["invia"])
+        self.schede.set_visible(n == 0)
+        self.barra.set_visible(n > 0)
+
+    def _scheda(self, chiave):
+        self.azione = chiave
+        self.response(Gtk.ResponseType.ACCEPT)
+
+    def didascalia(self):
+        return self.voce_didascalia.get_text().strip()
+
+    def senza_exif(self):
+        return self.exif.get_active()
+
+
+def mimetypes_guess(p):
+    import mimetypes
+    return mimetypes.guess_type(p)[0]
+
+
+def _px(percorso, lato=TileGalleria.LATO * 2):
+    try:
+        px = GdkPixbuf.Pixbuf.new_from_file_at_scale(percorso, lato, lato, True)
+        return px.apply_embedded_orientation() or px
+    except Exception:            # noqa: BLE001
+        return None

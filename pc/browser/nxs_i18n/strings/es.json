@@ -1597,5 +1597,18 @@
   "chat.ant.didascalia": "Añade un pie de foto…",
   "chat.ant.exif": "Quitar los metadatos de las fotos (ubicación GPS, cámara)",
   "chat.ant.invia": "Enviar",
-  "chat.ant.annulla": "Cancelar"
+  "chat.ant.annulla": "Cancelar",
+  "chat.gal.titolo": "Adjuntar",
+  "chat.gal.galleria": "Galería",
+  "chat.gal.fotocamera": "Cámara",
+  "chat.gal.scheda_file": "Archivo",
+  "chat.gal.scheda_altre": "Más fotos",
+  "chat.gal.scheda_foto": "Foto",
+  "chat.gal.scheda_video": "Vídeo",
+  "chat.gal.didascalia": "Añade un pie de foto…",
+  "chat.gal.exif": "Sin metadatos",
+  "chat.gal.invia": "Enviar",
+  "chat.gal.invia_n": "Enviar (%d)",
+  "chat.gal.selezionati": "%d seleccionados",
+  "chat.gal.vuoto": "No hay fotos ni vídeos recientes en Imágenes, Vídeos y Descargas. Usa «Más fotos» o «Archivo»."
 }
