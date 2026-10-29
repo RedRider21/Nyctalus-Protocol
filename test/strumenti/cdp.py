@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 # Pilota Chrome (senza finestra) col protocollo DevTools: naviga, aspetta, esegue JS, fotografa.
-# uso: cdp.py PROFILO PASSI.json   — PASSI = [["vai", url], ["attendi", sec], ["js", codice], ["foto", file]]
+# uso: cdp.py PROFILO PASSI.json   — PASSI = [["vai", url], ["attendi", sec], ["finche", js, sec], ["js", codice], ["foto", file]]
 import base64, json, os, socket, subprocess, sys, time, urllib.request
 
 profilo, passi = sys.argv[1], json.load(open(sys.argv[2]))
@@ -51,6 +51,12 @@ try:
     for passo in passi:
         if passo[0] == "vai": chiama("Page.navigate", url=passo[1])
         elif passo[0] == "attendi": time.sleep(passo[1])
+        elif passo[0] == "finche":      # ["finche", espressione JS, secondi max]: attende che diventi vera
+            fine = time.time() + passo[2]
+            while time.time() < fine:
+                r = chiama("Runtime.evaluate", expression=passo[1], returnByValue=True)
+                if r.get("result", {}).get("value"): break
+                time.sleep(0.5)
         elif passo[0] == "js":
             r = chiama("Runtime.evaluate", expression=passo[1], awaitPromise=True, returnByValue=True)
             v = r.get("result", {}).get("value")

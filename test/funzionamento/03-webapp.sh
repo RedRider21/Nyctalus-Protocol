@@ -55,7 +55,7 @@ cat > "$TMP/passi.json" <<EOF
  ["js","'BOTTONE ' + document.querySelector('#foglio .invia-gal').textContent"],
  ["foto","${NYCT_FOTO:-$TMP}/galleria.png"],
  ["js","(()=>{window._prima=document.querySelectorAll('#messaggi .msg img').length; document.querySelector('#foglio .invia-gal').click(); return 'inviate'})()"],
- ["attendi",12],
+ ["finche","document.querySelectorAll('#messaggi .msg img').length - window._prima >= 4",30],
  ["js","'NUOVE ' + (document.querySelectorAll('#messaggi .msg img').length - window._prima)"],
  ["foto","${NYCT_FOTO:-$TMP}/chat-dopo-galleria.png"]]
 EOF
