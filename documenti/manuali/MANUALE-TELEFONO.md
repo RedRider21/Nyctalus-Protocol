@@ -15,8 +15,10 @@ gestisce gli allegati. Installazione: **`MANUALE-INSTALLAZIONE.md`**, capitolo 2
 ## 1. Avvio
 
 In Termux scrivi `nyctalus-mobile` e apri nel browser l'indirizzo che stampa
-(`http://127.0.0.1:18731/?t=…`). Con l'app Nyctalus basta toccare l'icona: avvia Nyctalus in Termux e
-apre la chat. Le foto e i video scattati dalla chat con l'app restano nella sua cartella
+(`http://127.0.0.1:18731/?t=…`). Con l'app Nyctalus basta toccare l'icona: compare la **splash** col logo, l'app avvia
+Nyctalus in Termux e, quando la scritta dice «● Nyctalus è pronto», tocchi **Entra**.
+I pulsanti per Termux (installa/aggiorna Termux, installa/aggiorna Nyctalus, apri Termux,
+comando di avvio) sono sotto **Strumenti ▾**. Le foto e i video scattati dalla chat con l'app restano nella sua cartella
 privata (non finiscono nella galleria) e si cancellano dopo un giorno.
 
 In cima all'elenco una striscia ti dice a che punto è la rete:
@@ -64,6 +66,13 @@ Tocca **📎**: sale il **selettore**.
 
 Note:
 - Per vedere le foto nella griglia, in Termux una volta sola: `termux-setup-storage`.
+- Le **miniature** si preparano poche alla volta e solo per le caselle visibili; restano
+  in memoria, quindi la seconda apertura è immediata. Con `python-pillow` (l'installatore
+  lo aggiunge) sono nitide; senza, si usano quelle già contenute nelle foto. Una foto grande
+  senza miniatura mostra un'icona: non si carica mai la foto intera solo per l'anteprima.
+- Il cerchio di selezione compare quando la foto è pronta.
+- Puoi scegliere **più foto insieme**: arrivano tutte (prima della versione 0.5 dell'app
+  una poteva perdersi).
 - Le foto JPEG/PNG partono **senza metadati** (niente posizione GPS né modello del
   telefono): si può cambiare nelle impostazioni.
 - In chat le **foto** si vedono a tutta bolla, i **video** con miniatura e ▶ (le
@@ -78,7 +87,10 @@ Note:
 - **Tema**: Notte, Ardesia (stile Telegram), Viola, Chiaro;
 - **Sfondo della chat**: pipistrelli, velo di colore, tinta unita;
 - **Foto senza metadati**;
-- **Rete Nyctalus**: **Avvia** / **Ferma**.
+- **Rete Nyctalus**: una spia dice in che fase sei. **● verde** = attiva (e se è la rete
+  di prova locale o quella condivisa); **● gialla lampeggiante** = in avvio o in arresto;
+  **○ grigia** = ferma; **● rossa** = errore. **▶ Avvia rete** si può toccare solo a
+  rete ferma (o dopo un errore, come «↻ Riprova»), **■ Ferma rete** solo a rete attiva.
 
 ## 6. Sicurezza sul telefono
 

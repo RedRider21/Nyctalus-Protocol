@@ -23,6 +23,7 @@
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use nyctalus_core::stretta::{self, Identita, Mittente, SegretiSessione};
@@ -56,6 +57,8 @@ pub async fn chat(
         dati: dati.clone(),
         contatti: Mutex::new(carica_contatti(&dati)),
         sessioni: Mutex::new(HashMap::new()),
+        composizione: tokio::sync::Mutex::new(()),
+        prossima_sessione: AtomicU64::new(1),
         iscritti: Mutex::new(Vec::new()),
         in_arrivo: Mutex::new(HashMap::new()),
         max_file,
@@ -96,7 +99,9 @@ struct Stato {
     socks: SocketAddr,
     dati: PathBuf,
     contatti: Mutex<Vec<(String, String)>>,                  // (indirizzo, soprannome hex)
-    sessioni: Mutex<HashMap<String, mpsc::Sender<Vec<u8>>>>, // indirizzo → scrittore (limitato)
+    sessioni: Mutex<HashMap<String, (u64, mpsc::Sender<Vec<u8>>)>>, // indirizzo → (n° sessione, scrittore limitato)
+    composizione: tokio::sync::Mutex<()>,                    // un solo collegamento in uscita alla volta
+    prossima_sessione: AtomicU64,                            // numera le sessioni (vedi abbandona_in_arrivo)
     iscritti: Mutex<Vec<mpsc::UnboundedSender<String>>>,     // UI in ascolto degli eventi
     in_arrivo: Mutex<HashMap<(String, String), InArrivo>>,   // (mittente, id) → allegato in arrivo
     max_file: u64,                                           // dimensione massima di un allegato
@@ -106,6 +111,7 @@ struct Stato {
 /// Un allegato che sta arrivando: si scrive in `<nome>.part` e diventa
 /// definitivo solo se dimensione e impronta BLAKE3 tornano.
 struct InArrivo {
+    sessione: u64, // la sessione da cui arriva: se cade quella, si butta
     file: std::fs::File,
     parziale: PathBuf,
     finale: PathBuf,
@@ -193,7 +199,8 @@ impl Stato {
         };
 
         let (ch_tx, mut ch_rx) = mpsc::channel::<Vec<u8>>(CODA_SESSIONE);
-        self.sessioni.lock().unwrap().insert(peer.clone(), ch_tx);
+        let sid = self.prossima_sessione.fetch_add(1, Ordering::Relaxed);
+        self.sessioni.lock().unwrap().insert(peer.clone(), (sid, ch_tx));
         self.notifica(format!("ST {peer} 1"));
 
         // scrittore: sigilla ogni messaggio in chiaro e lo spedisce
@@ -212,16 +219,27 @@ impl Stato {
             loop {
                 match leggi_frame(&mut lettura).await {
                     Ok(Some(frame)) => match rx.apri(&frame) {
-                        Ok(chiaro) => stato.ricevi_messaggio(&peer, &chiaro),
+                        Ok(chiaro) => stato.ricevi_messaggio(&peer, sid, &chiaro),
                         Err(_) => break, // frame corrotto: chiudiamo
                     },
                     _ => break, // EOF o errore
                 }
             }
             scrittore.abort();
-            stato.sessioni.lock().unwrap().remove(&peer);
-            stato.abbandona_in_arrivo(&peer);
-            stato.notifica(format!("ST {peer} 0"));
+            // si toglie dalla mappa solo se è ancora questa la sessione registrata: con
+            // due collegamenti allo stesso contatto, l'altro resta valido (e «in linea»)
+            let era_lei = {
+                let mut g = stato.sessioni.lock().unwrap();
+                let lei = g.get(&peer).is_some_and(|(n, _)| *n == sid);
+                if lei {
+                    g.remove(&peer);
+                }
+                lei
+            };
+            stato.abbandona_in_arrivo(&peer, sid);
+            if era_lei {
+                stato.notifica(format!("ST {peer} 0"));
+            }
         });
     }
 
@@ -230,12 +248,12 @@ impl Stato {
     ///   `F <id> <ts> <dim> <mime> <nome hex>`    inizio di un allegato
     ///   `D <id> <byte…>`                         un blocco dell'allegato
     ///   `E <id> <blake3 hex>`                    fine: impronta di tutto il file
-    fn ricevi_messaggio(&self, peer: &str, chiaro: &[u8]) {
+    fn ricevi_messaggio(&self, peer: &str, sid: u64, chiaro: &[u8]) {
         if let Some(r) = chiaro.strip_prefix(b"D ") {
             return self.ricevi_blocco(peer, r);
         }
         if let Some(r) = chiaro.strip_prefix(b"F ") {
-            return self.ricevi_intestazione(peer, r);
+            return self.ricevi_intestazione(peer, sid, r);
         }
         if let Some(r) = chiaro.strip_prefix(b"E ") {
             return self.ricevi_fine(peer, r);
@@ -251,16 +269,20 @@ impl Stato {
         self.notifica(format!("MSG {peer} {ts} {}", in_esadecimale(testo)));
     }
 
-    /// Lo scrittore della sessione con un contatto, aprendola se serve.
+    /// Lo scrittore della sessione con un contatto, aprendola se serve. Le aperture
+    /// sono una alla volta: due invii simultanei (es. due foto) usano la STESSA
+    /// sessione invece di aprirne due.
     async fn sessione(self: &Arc<Self>, addr: &str) -> Risultato<mpsc::Sender<Vec<u8>>> {
-        let esistente = self.sessioni.lock().unwrap().get(addr).cloned();
-        match esistente {
-            Some(s) => Ok(s),
-            None => {
-                self.componi(addr).await?;
-                Ok(self.sessioni.lock().unwrap().get(addr).cloned().ok_or("sessione non creata")?)
-            }
+        let esistente = || self.sessioni.lock().unwrap().get(addr).map(|(_, s)| s.clone());
+        if let Some(s) = esistente() {
+            return Ok(s);
         }
+        let _turno = self.composizione.lock().await;
+        if let Some(s) = esistente() {
+            return Ok(s); // aperta da chi era in coda prima di noi
+        }
+        self.componi(addr).await?;
+        Ok(esistente().ok_or("sessione non creata")?)
     }
 
     /// Invia un messaggio a un contatto, aprendo la sessione se serve.
@@ -336,7 +358,7 @@ impl Stato {
     }
 
     // --- allegati: ricezione -------------------------------------------------
-    fn ricevi_intestazione(&self, peer: &str, r: &[u8]) {
+    fn ricevi_intestazione(&self, peer: &str, sid: u64, r: &[u8]) {
         let Ok(testo) = std::str::from_utf8(r) else { return };
         let campi: Vec<&str> = testo.split(' ').collect();
         let [id, ts, dim, mime, nome_hex] = campi.as_slice() else { return };
@@ -367,7 +389,7 @@ impl Stato {
         let Ok(file) = std::fs::File::create(&parziale) else { return };
         g.insert(
             (peer.to_string(), id.to_string()),
-            InArrivo { file, parziale, finale, nome, mime, totale, ricevuti: 0, impronta: blake3::Hasher::new(), ts, ultimo_avviso: 0 },
+            InArrivo { sessione: sid, file, parziale, finale, nome, mime, totale, ricevuti: 0, impronta: blake3::Hasher::new(), ts, ultimo_avviso: 0 },
         );
         drop(g);
         let (m, n) = {
@@ -433,10 +455,11 @@ impl Stato {
         self.notifica(format!("FILE {peer} in {} {id} {} {} {nome_hex} {percorso_hex}", a.ts, a.totale, a.mime));
     }
 
-    /// La sessione è caduta: gli allegati a metà vengono buttati.
-    fn abbandona_in_arrivo(&self, peer: &str) {
+    /// La sessione `sid` è caduta: i SUOI allegati a metà vengono buttati (quelli che
+    /// arrivano da un'altra sessione con lo stesso contatto proseguono).
+    fn abbandona_in_arrivo(&self, peer: &str, sid: u64) {
         let mut g = self.in_arrivo.lock().unwrap();
-        let chiavi: Vec<_> = g.keys().filter(|(p, _)| p == peer).cloned().collect();
+        let chiavi: Vec<_> = g.iter().filter(|((p, _), a)| p == peer && a.sessione == sid).map(|(k, _)| k.clone()).collect();
         for k in chiavi {
             if let Some(a) = g.remove(&k) {
                 let _ = std::fs::remove_file(&a.parziale);
@@ -975,6 +998,8 @@ mod prove {
             dati: d.clone(),
             contatti: Mutex::new(Vec::new()),
             sessioni: Mutex::new(HashMap::new()),
+            composizione: tokio::sync::Mutex::new(()),
+            prossima_sessione: AtomicU64::new(1),
             iscritti: Mutex::new(Vec::new()),
             in_arrivo: Mutex::new(HashMap::new()),
             max_file: 1,

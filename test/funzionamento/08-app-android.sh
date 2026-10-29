@@ -94,7 +94,7 @@ python3 -m http.server 19735 --bind 127.0.0.1 --directory "$PK/web" > /dev/null 
 H2="$TMP/home2"; P2="$TMP/usr2"; F2="$TMP/finti2"; mkdir -p "$H2/.termux" "$P2/bin" "$F2"
 printf 'extra-keys = [[ESC]]\n' > "$H2/.termux/termux.properties"
 printf '#!/bin/sh\necho "$*" >> "%s/pkg.txt"\n' "$TMP" > "$F2/pkg"
-printf '#!/bin/sh\n[ "$1" = "-s" ] || exit 1\ncase "$2" in python|termux-tools) exit 0 ;; *) exit 1 ;; esac\n' > "$F2/dpkg"
+printf '#!/bin/sh\n[ "$1" = "-s" ] || exit 1\ncase "$2" in python|termux-tools|python-pillow) exit 0 ;; *) exit 1 ;; esac\n' > "$F2/dpkg"
 printf '#!/bin/sh\nexec python3 "$@"\n' > "$F2/python"
 printf '#!/bin/sh\necho "$*" >> "%s/am.txt"\n' "$TMP" > "$F2/am"
 printf '#!/bin/sh\necho "--sfondo" >> "%s/avvii2.txt"\n' "$TMP" > "$F2/nyctalus-mobile"

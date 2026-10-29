@@ -17,7 +17,7 @@ printf '#!/bin/sh\necho altro comando\n' > "$P/bin/altro-comando"
 chmod +x "$H/.termux/boot/altro-progetto" "$P/bin/altro-comando"
 # finti strumenti di Termux
 printf '#!/bin/sh\necho "$*" >> "%s"\n' "$PKG" > "$F/pkg"
-printf '#!/bin/sh\n[ "$1" = "-s" ] || exit 1\ncase "$2" in python|termux-tools) exit 0 ;; *) exit 1 ;; esac\n' > "$F/dpkg"
+printf '#!/bin/sh\n[ "$1" = "-s" ] || exit 1\ncase "$2" in python|termux-tools|python-pillow) exit 0 ;; *) exit 1 ;; esac\n' > "$F/dpkg"
 printf '#!/bin/sh\nexec python3 "$@"\n' > "$F/python"
 chmod +x "$F"/*
 # l'archivio come lo produce crea-installazioni (col motore già pronto)

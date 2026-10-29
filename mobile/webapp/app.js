@@ -414,7 +414,8 @@ async function apriGalleria() {
   const testa = el("div", "testa-gal"), titolo = el("span", "", "Galleria"), conta = el("span", "conta", "");
   testa.append(titolo, conta);
   const griglia = el("div", "griglia-gal");
-  const cam = el("button", "tile tile-cam"); cam.append(el("span", "ic", "📷"), el("span", "", "Fotocamera"));
+  const cam = el("button", "tile tile-cam"), dentro = el("span", "dentro");
+  dentro.append(el("span", "ic", "📷"), el("span", "", "Fotocamera")); cam.appendChild(dentro);
   cam.onclick = () => { chiudiFoglio(); $("in-foto").click(); };
   griglia.appendChild(cam);
 
@@ -453,11 +454,29 @@ async function apriGalleria() {
       : "Per vedere qui le foto del telefono, in Termux scrivi:  termux-setup-storage  e consenti l'accesso ai file.");
     griglia.appendChild(v);
   }
+  // miniature: solo quelle visibili (o quasi) e al massimo 4 per volta, così il telefono
+  // non scarica e decodifica decine di immagini insieme
+  const coda = []; let inCorso = 0;
+  const pompa = () => {
+    while (inCorso < 4 && coda.length) {
+      const [t, img, v] = coda.shift(); inCorso++;
+      const fatto = () => { inCorso--; pompa(); };
+      img.onload = () => { t.classList.add("pronta"); fatto(); };
+      img.onerror = () => { img.remove(); t.classList.add("pronta"); t.appendChild(el("span", "ic", v.mime.startsWith("video/") ? "🎬" : "🖼")); fatto(); };
+      img.src = "/api/miniatura?p=" + v.p;
+    }
+  };
+  const osservatore = "IntersectionObserver" in window ? new IntersectionObserver((voci) => voci.forEach((x) => {
+    if (!x.isIntersecting) return;
+    osservatore.unobserve(x.target); coda.push(x.target._carica); pompa();
+  }), { root: griglia, rootMargin: "300px 0px" }) : null;
+  f._chiudi = () => { coda.length = 0; if (osservatore) osservatore.disconnect(); };
+
   dati.voci.forEach((v, i) => {
     const t = el("button", "tile"); t.dataset.i = i; t._voce = v;
-    const img = el("img"); img.loading = "lazy"; img.decoding = "async"; img.alt = v.nome;
-    img.src = "/api/miniatura?p=" + v.p;
-    img.onerror = () => { img.remove(); t.appendChild(el("span", "ic", v.mime.startsWith("video/") ? "🎬" : "🖼")); };
+    const img = el("img"); img.decoding = "async"; img.alt = v.nome;
+    t._carica = [t, img, v];
+    if (osservatore) osservatore.observe(t); else { coda.push(t._carica); pompa(); }
     t.appendChild(img);
     if (v.mime.startsWith("video/")) t.appendChild(el("span", "video-gal", "▶"));
     t.appendChild(el("span", "num"));
@@ -555,7 +574,11 @@ function apriFoglio(titolo, contenuto) {
   f.append(el("div", "maniglia"), ...(titolo ? [el("div", "titolo", titolo)] : []), ...contenuto);
   $("velo").classList.remove("nascosto"); f.classList.remove("nascosto");
 }
-function chiudiFoglio() { $("velo").classList.add("nascosto"); $("foglio").classList.add("nascosto"); $("foglio").classList.remove("galleria"); }
+function chiudiFoglio() {
+  const f = $("foglio");
+  if (f._chiudi) { f._chiudi(); f._chiudi = null; }     // ferma il caricamento delle miniature
+  $("velo").classList.add("nascosto"); f.classList.add("nascosto"); f.classList.remove("galleria");
+}
 $("velo").onclick = chiudiFoglio;
 const voce = (ic, testo, az, pericolosa) => {
   const b = el("button", "voce" + (pericolosa ? " pericolosa" : "")); b.append(el("span", "ic", ic), el("span", "", testo));
@@ -663,12 +686,33 @@ function impostazioni() {
   const l = el("label", "spunta"); const c = el("input"); c.type = "checkbox"; c.checked = S.exif;
   c.onchange = () => { S.exif = c.checked; salva("exif", c.checked); };
   l.append(c, el("span", "", "Foto senza metadati (consigliato)"));
+  // rete: stato sempre visibile e pulsanti attivi solo quando hanno senso
+  const statoRete = el("div", "stato-rete-imp"), luce = el("span", "luce"), descr = el("span", "");
+  statoRete.append(luce, descr);
   const servizi = el("div", "pulsanti"); servizi.style.justifyContent = "flex-start";
-  const ba = el("button", "", "▶ Avvia rete"); ba.onclick = async () => { await post("/api/servizi/avvia"); controllaServizi(); toast("Avvio…"); };
-  const bf = el("button", "pericoloso", "■ Ferma rete"); bf.onclick = async () => { await post("/api/servizi/ferma"); controllaServizi(); toast("Nyctalus fermato"); };
+  const ba = el("button", "", "▶ Avvia rete"), bf = el("button", "pericoloso", "■ Ferma rete");
   servizi.append(ba, bf);
+  const mostraRete = (fase, testo) => {
+    statoRete.dataset.fase = fase; descr.textContent = testo;
+    ba.disabled = !(fase === "fermo" || fase === "errore");
+    bf.disabled = !(fase === "pronto" || fase === "errore");
+    ba.textContent = fase === "errore" ? "↻ Riprova" : "▶ Avvia rete";
+  };
+  const leggiRete = async () => {
+    let info;
+    try { info = await (await fetch("/api/stato")).json(); } catch (e) { return mostraRete("errore", "Servizio non raggiungibile"); }
+    if (info.stato === "pronto") mostraRete("pronto", info.modalita === "locale"
+      ? "Attiva — rete di prova locale (solo su questo dispositivo)" : "Attiva — rete condivisa");
+    else if (info.stato === "avvio") mostraRete("avvio", "Avvio in corso… " + (info.dettaglio || ""));
+    else if (info.stato === "errore") mostraRete("errore", "Errore: " + (info.dettaglio || "sconosciuto"));
+    else mostraRete("fermo", "Ferma");
+  };
+  ba.onclick = async () => { mostraRete("avvio", "Avvio in corso…"); await post("/api/servizi/avvia"); controllaServizi(); leggiRete(); };
+  bf.onclick = async () => { mostraRete("avvio", "Arresto in corso…"); await post("/api/servizi/ferma"); controllaServizi(); leggiRete(); };
+  mostraRete("avvio", "Controllo…"); leggiRete();
+  const giro = setInterval(() => { if (!statoRete.isConnected || $("dialogo").classList.contains("nascosto")) clearInterval(giro); else leggiRete(); }, 1000);
   dialogo("Impostazioni", [el("p", "", "Il tuo Contact ID — dallo agli amici perché ti scrivano (non è segreto):"), id, bott,
-    el("p", "", "Tema"), temi, el("p", "", "Sfondo della chat"), sfondi, l, el("p", "", "Rete Nyctalus"), servizi],
+    el("p", "", "Tema"), temi, el("p", "", "Sfondo della chat"), sfondi, l, el("p", "", "Rete Nyctalus"), statoRete, servizi],
     HOST ? [["Esci dall'app", () => HOST.esci()], ["Chiudi", null, "primario"]] : [["Chiudi", null, "primario"]]);
 }
 

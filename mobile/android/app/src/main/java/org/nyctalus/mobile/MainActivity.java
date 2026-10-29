@@ -76,7 +76,8 @@ public class MainActivity extends Activity {
     private WebView web;
     private TextView stato;
     private String segreto;
-    private boolean caricata = false, pronto = false, entraAppenaPronto = true, inPausa = false;
+    private boolean caricata = false, pronto = false, entraAppenaPronto = false, inPausa = false;
+    private Button pulsanteEntra;
     private volatile boolean avviando = false, provatoInPrimoPiano = false;
 
     private ValueCallback<Uri[]> attesaFile;
@@ -151,42 +152,69 @@ public class MainActivity extends Activity {
     }
 
     // ------------------------------------------------------------- AVVIO -----
+    /**
+     * Splash: logo grande al centro (compare in dissolvenza e poi «respira» piano), nome,
+     * stato e il pulsante «Entra»: si entra solo toccandolo. Gli strumenti di Termux
+     * stanno raccolti sotto «Strumenti ▾».
+     */
     private View costruisciAvvio() {
         LinearLayout r = new LinearLayout(this);
         r.setOrientation(LinearLayout.VERTICAL);
         r.setGravity(Gravity.CENTER_HORIZONTAL);
-        r.setBackgroundColor(C_SFONDO);
-        r.setPadding(dp(22), dp(22), dp(22), dp(20));
+        GradientDrawable fondo = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{C_SCHEDA, C_SFONDO, C_SFONDO});
+        r.setBackground(fondo);
+        r.setPadding(dp(22), dp(22), dp(22), dp(16));
         r.addView(spazio());
 
+        // alone luminoso dietro al logo
+        android.widget.FrameLayout cornice = new android.widget.FrameLayout(this);
+        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(dp(230), dp(230));
+        cornice.setLayoutParams(cp);
+        View alone = new View(this);
+        GradientDrawable g = new GradientDrawable();
+        g.setGradientType(GradientDrawable.RADIAL_GRADIENT);
+        g.setGradientRadius(dp(115));
+        g.setColors(new int[]{(C_ACCENTO & 0x00FFFFFF) | 0x55000000, (C_ACCENTO & 0x00FFFFFF) | 0x00000000});
+        alone.setBackground(g);
+        cornice.addView(alone, new android.widget.FrameLayout.LayoutParams(dp(230), dp(230)));
         ImageView logo = new ImageView(this);
         logo.setImageResource(R.drawable.logo);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(112), dp(112));
-        lp.bottomMargin = dp(14);
-        logo.setLayoutParams(lp);
-        r.addView(logo);
+        android.widget.FrameLayout.LayoutParams lp = new android.widget.FrameLayout.LayoutParams(dp(170), dp(170));
+        lp.gravity = Gravity.CENTER;
+        cornice.addView(logo, lp);
+        r.addView(cornice);
 
-        TextView t = testo("Nyctalus", C_TESTO, 30);
-        t.setTypeface(t.getTypeface(), Typeface.BOLD);
+        TextView t = testo("Nyctalus", C_TESTO, 34);
+        t.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
+        t.setLetterSpacing(0.08f);
         r.addView(t);
-        TextView sub = testo("chat anonima", C_TENUE, 14);
-        sub.setLetterSpacing(0.2f);
+        TextView sub = testo("CHAT ANONIMA", C_ACCENTO, 12);
+        sub.setLetterSpacing(0.35f);
+        sub.setPadding(0, dp(4), 0, 0);
         r.addView(sub);
 
         stato = testo("avvio in corso…", C_TENUE, 13);
         LinearLayout.LayoutParams sp = avvolgi();
-        sp.topMargin = dp(22);
+        sp.topMargin = dp(26);
         stato.setLayoutParams(sp);
         r.addView(stato);
 
-        Button entra = bottone("Entra  ▸", true, v -> entra());
+        pulsanteEntra = bottone("Entra", true, v -> entra());
+        pulsanteEntra.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        pulsanteEntra.setPadding(dp(64), dp(14), dp(64), dp(14));
         LinearLayout.LayoutParams ep = avvolgi();
-        ep.topMargin = dp(22);
-        entra.setLayoutParams(ep);
-        r.addView(entra);
+        ep.topMargin = dp(18);
+        pulsanteEntra.setLayoutParams(ep);
+        pulsanteEntra.setAlpha(pronto ? 1f : 0.55f);
+        r.addView(pulsanteEntra);
         r.addView(spazio());
 
-        // pannello comandi (come Termux-NexusSEC-OS): Termux, Nyctalus, aggiornamenti
+        // strumenti (come il pannello di Termux-NexusSEC-OS), raccolti sotto «Strumenti ▾»
+        LinearLayout strumenti = new LinearLayout(this);
+        strumenti.setOrientation(LinearLayout.VERTICAL);
+        strumenti.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
         LinearLayout riga1 = riga(), riga2 = riga(), riga3 = riga(), riga4 = riga();
         riga1.addView(cella("⬇  Installa Termux", v -> installaTermux()));
         riga1.addView(cella("↻  Aggiorna Termux", v -> aggiornaTermux()));
@@ -198,11 +226,47 @@ public class MainActivity extends Activity {
         riga4.addView(gh);
         for (LinearLayout x : new LinearLayout[]{riga1, riga2, riga3, riga4}) {
             ((LinearLayout.LayoutParams) x.getLayoutParams()).topMargin = dp(8);
-            r.addView(x);
+            strumenti.addView(x);
         }
+        boolean aperti = getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("strumenti", false);
+        strumenti.setVisibility(aperti ? View.VISIBLE : View.GONE);
+        TextView apri = testo(aperti ? "Strumenti ▴" : "Strumenti ▾", C_TENUE, 14);
+        apri.setPadding(dp(20), dp(10), dp(20), dp(4));
+        apri.setOnClickListener(v -> {
+            boolean ora = strumenti.getVisibility() != View.VISIBLE;
+            strumenti.setVisibility(ora ? View.VISIBLE : View.GONE);
+            apri.setText(ora ? "Strumenti ▴" : "Strumenti ▾");
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("strumenti", ora).apply();
+        });
+        r.addView(apri);
+        r.addView(strumenti);
         TextView versione = testo("versione " + versioneApp(), C_TENUE, 11);
+        versione.setAlpha(0.7f);
         versione.setPadding(0, dp(10), 0, 0);
         r.addView(versione);
+
+        // animazioni: il logo compare e poi «respira»; il resto sale in dissolvenza
+        logo.setAlpha(0f);
+        logo.setScaleX(0.82f);
+        logo.setScaleY(0.82f);
+        alone.setAlpha(0f);
+        logo.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(900)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator()).withEndAction(() -> {
+                    android.animation.ObjectAnimator a = android.animation.ObjectAnimator.ofPropertyValuesHolder(logo,
+                            android.animation.PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.04f),
+                            android.animation.PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.04f));
+                    a.setDuration(2200);
+                    a.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+                    a.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+                    a.start();
+                }).start();
+        alone.animate().alpha(1f).setDuration(1400).start();
+        for (View v : new View[]{t, sub, stato, pulsanteEntra}) {
+            v.setTranslationY(dp(14));
+            float fine = v.getAlpha();
+            v.setAlpha(0f);
+            v.animate().alpha(fine).translationY(0).setStartDelay(350).setDuration(700).start();
+        }
         return r;
     }
 
@@ -283,7 +347,8 @@ public class MainActivity extends Activity {
 
     private void servizioPronto() {
         pronto = true;
-        imposta("Nyctalus è pronto ✓");
+        imposta("● Nyctalus è pronto — tocca Entra");
+        runOnUiThread(() -> { if (pulsanteEntra != null) pulsanteEntra.animate().alpha(1f).setDuration(300).start(); });
         if (entraAppenaPronto) mostraWeb();
     }
 
@@ -368,9 +433,8 @@ public class MainActivity extends Activity {
         ServitorePacchetto sp = avviaServitore();
         if (sp == null) return;
         provatoInPrimoPiano = true;
-        entraAppenaPronto = true;
         eseguiInTermux(comandoInstallazione(sp), true, null);
-        imposta("Installazione in corso in Termux…\nAlla fine l'app torna qui da sola.");
+        imposta("Installazione in corso in Termux…\nAlla fine l'app torna qui: poi tocca Entra.");
     }
 
     private ServitorePacchetto avviaServitore() {
@@ -486,7 +550,6 @@ public class MainActivity extends Activity {
             cmd = "if [ -x ~/nyctalus/nyctalus-mobile ]; then " + cmd + "; else " + comandoInstallazione(sp) + "; fi";
         }
         copiaNegliAppunti(cmd);
-        entraAppenaPronto = true;
         apriTermux();
         avviso("Comando copiato. In Termux: tieni premuto → Incolla → Invio. "
              + "Se Nyctalus manca lo installa, poi lo avvia (vale 15 minuti).");

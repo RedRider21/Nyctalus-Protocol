@@ -165,6 +165,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
 #dialogo input[type=text]:focus { border-color: var(--accento); }
 #dialogo .pulsanti { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 #dialogo .pulsanti button { border: 0; border-radius: 10px; padding: 9px 18px; background: rgba(var(--rgb), .14); font-weight: 600; }
+#dialogo .pulsanti button:disabled { opacity: .35; cursor: default; }
+.stato-rete-imp { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 2px 0 8px; }
+.stato-rete-imp .luce { width: 10px; height: 10px; border-radius: 50%; background: var(--tenue); flex: none; }
+.stato-rete-imp[data-fase="pronto"] .luce { background: #3ec46d; box-shadow: 0 0 6px #3ec46d; }
+.stato-rete-imp[data-fase="avvio"] .luce { background: #e8b339; animation: lampeggio 1s infinite; }
+.stato-rete-imp[data-fase="errore"] .luce { background: #e5534b; }
+@keyframes lampeggio { 50% { opacity: .3; } }
 #dialogo .pulsanti .primario { background: var(--invia); color: #fff; }
 #dialogo .pulsanti .pericoloso { background: #d64545; color: #fff; }
 #dialogo label.spunta { display: flex; gap: 10px; align-items: center; color: var(--testo); margin: 8px 0; }
@@ -186,13 +193,23 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .testa-gal { display: flex; justify-content: space-between; align-items: baseline; padding: 0 18px 10px; font-weight: 700; font-size: 17px; }
 .testa-gal .conta { color: var(--accento); font-size: 14px; font-weight: 600; }
 .griglia-gal { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 0 3px 3px; align-content: start; }
-.tile { position: relative; aspect-ratio: 1 / 1; border: 0; padding: 0; overflow: hidden; background: rgba(var(--rgb), .10);
-  display: grid; place-items: center; border-radius: 2px; }
-.tile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .15s ease; }
-.tile .ic { font-size: 30px; }
-.tile-cam { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: linear-gradient(135deg, #1f3b66, #2a2050); color: #fff; font-size: 13px; }
+/* casella quadrata col «padding» al 100%: funziona anche sulle WebView vecchie senza aspect-ratio */
+.tile { position: relative; display: block; width: 100%; border: 0; padding: 0; overflow: hidden;
+  background: rgba(var(--rgb), .10); border-radius: 2px; }
+.tile::before { content: ""; display: block; padding-top: 100%; }
+.tile img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block;
+  opacity: 0; transition: transform .15s ease, opacity .2s ease; }
+.tile.pronta img { opacity: 1; }
+.tile .ic { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 30px; }
+.tile-cam { background: linear-gradient(135deg, #1f3b66, #2a2050); color: #fff; font-size: 13px; }
+.tile-cam .dentro { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px; }
+.tile-cam .dentro .ic { position: static; transform: none; }
+/* il cerchio di selezione compare solo quando la foto c'è (niente file di «occhielli» vuoti) */
 .tile .num { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff;
-  background: rgba(0,0,0,.25); color: #fff; font-size: 13px; font-weight: 700; display: grid; place-items: center; }
+  background: rgba(0,0,0,.25); color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center;
+  justify-content: center; opacity: 0; transition: opacity .2s ease; box-shadow: 0 0 3px rgba(0,0,0,.4); }
+.tile.pronta .num, .tile.scelta .num { opacity: 1; }
 .tile.scelta .num { background: var(--invia); border-color: #fff; }
 .tile.scelta img { transform: scale(.88); border-radius: 8px; }
 .tile .video-gal { position: absolute; left: 6px; bottom: 6px; background: rgba(0,0,0,.5); color: #fff; font-size: 11px;

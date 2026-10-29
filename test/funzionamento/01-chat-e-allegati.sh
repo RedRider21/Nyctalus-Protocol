@@ -13,6 +13,7 @@ sleep 2
 SA=alicesegreto0123456789abcdef; SB=bobsegreto0123456789abcdef00
 identita alice 19311 19321 19380 "$SA"; ALICE=$ADDR
 identita bob 19312 19322 19380 "$SB"; BOB=$ADDR
+SC=carlasegreto0123456789abcdef0; identita carla 19313 19323 19380 "$SC"; CARLA=$ADDR
 [ -n "$ALICE" ] && [ -n "$BOB" ] || { fail "identità non partite"; exit 1; }
 pass "due identità con il loro servizio .nyct"
 sleep 4
@@ -50,4 +51,20 @@ for n in "dati 3MB.bin" "foto.png"; do
 done
 [ -z "$(find "$TMP/bob/allegati" -name '*.part')" ] && pass "nessun file parziale rimasto" || fail "file .part rimasti"
 grep -q "^fin " "$TMP/bob/cronologia/$ALICE.log" && pass "allegati registrati in cronologia" || fail "allegati non in cronologia"
+
+# --- più allegati INSIEME verso un contatto senza sessione aperta (come 2-3 foto
+#     scelte dalla galleria): prima aprivano collegamenti doppi e uno andava perso ---
+for k in 1 2 3; do head -c $((40000 + k * 1000)) /dev/urandom > "$TMP/insieme-$k.bin"; done
+hexp() { printf %s "$TMP/$1" | xxd -p | tr -d '\n'; }
+R=$(NYCT_FINO="(^(OK|ERR).*\n.*){3}" controllo 19323 "$SC" 90 \
+  "SENDFILE $BOB $(hexp insieme-1.bin) application/octet-stream" \
+  "SENDFILE $BOB $(hexp insieme-2.bin) application/octet-stream" \
+  "SENDFILE $BOB $(hexp insieme-3.bin) application/octet-stream")
+[ "$(echo "$R" | grep -c '^OK')" -eq 3 ] && pass "tre allegati inviati insieme" || fail "invio simultaneo: $(echo "$R" | grep -E '^(OK|ERR)' | tr '\n' ' ')"
+for _ in $(seq 1 40); do [ "$(find "$TMP/bob/allegati" -name 'insieme-*.bin' | wc -l)" -ge 3 ] && break; sleep 0.5; done
+N=0; for k in 1 2 3; do
+  R2=$(find "$TMP/bob/allegati" -name "insieme-$k.bin" -print -quit)
+  [ -n "$R2" ] && [ "$(sha256sum < "$TMP/insieme-$k.bin")" = "$(sha256sum < "$R2")" ] && N=$((N + 1))
+done
+[ "$N" -eq 3 ] && pass "arrivati tutti e tre, identici (nessuno perso)" || fail "arrivati integri $N allegati su 3"
 [ "$KO" -eq 0 ]

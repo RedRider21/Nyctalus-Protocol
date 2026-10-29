@@ -89,7 +89,7 @@ riscrivere il file.
 2. installa **`Nyctalus.apk`** e aprila; concedi il permesso «Esegui comandi in Termux»;
 3. tocca **«🦇 Installa / aggiorna Nyctalus in Termux»**. Termux si apre e mostra
    l'installazione (lo stesso installatore del punto 2.3, che convive con gli altri
-   progetti); alla fine l'app torna davanti da sola ed entra nella chat.
+   progetti); alla fine l'app torna davanti da sola: tocca **Entra**.
 
 Solo la **prima volta** Termux può non eseguire il comando da solo (manca ancora
 l'impostazione `allow-external-apps`, che l'installatore poi aggiunge): in Termux tieni

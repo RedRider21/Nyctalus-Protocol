@@ -48,9 +48,9 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 | Prova | Cosa verifica |
 |---|---|
 | `00-test-automatici` | tutti i test del motore (`cargo test`): crittografia, celle, conflux, rendezvous, chat |
-| `01-chat-e-allegati` | su una **rete di prova** (4 nodi, circuiti a 3 salti): testo nei due sensi, identità autenticata, allegati da 3 MB e immagini **identici al byte** (SHA-256), avanzamento, cronologia |
-| `02-orchestratore` | il servizio del telefono avvia rete e chat, ponte WebSocket verso il motore, caricamento e lettura a pezzi (Range), arresto senza processi orfani |
-| `03-webapp` | la web-app in Chrome a misura di telefono: elenco, cache IndexedDB, conversazione in fondo, pressione lunga, foto senza EXIF, **selettore allegati** (griglia, selezione numerata, «Invia (2)»), messaggi e foto a se stessi **attraverso la rete** |
+| `01-chat-e-allegati` | su una **rete di prova** (4 nodi, circuiti a 3 salti): testo nei due sensi, identità autenticata, allegati da 3 MB e immagini **identici al byte** (SHA-256), avanzamento, cronologia; **tre allegati inviati insieme** a un contatto nuovo arrivano tutti (difetto dei collegamenti doppi) |
+| `02-orchestratore` | il servizio del telefono avvia rete e chat, ponte WebSocket verso il motore, caricamento e lettura a pezzi (Range), arresto senza processi orfani; **miniature** della galleria con Pillow, senza Pillow né ffmpeg (miniatura EXIF con orientamento) e mai la foto intera se grande |
+| `03-webapp` | la web-app in Chrome a misura di telefono: elenco, cache IndexedDB, conversazione in fondo, pressione lunga, foto senza EXIF, **selettore allegati** (griglia, selezione numerata, «Invia (2)»), messaggi e foto a se stessi **attraverso la rete**; pulsanti della rete accesi/spenti secondo la fase |
 | `04-fotocamera` | foto (JPEG) e video (H.264 + audio AAC, file chiuso bene) dalla fotocamera della chat, finestra di anteprima d'invio |
 | `05-installatore-termux` | installatore in un **Termux simulato**: tutto in `~/nyctalus`, nessun pacchetto superfluo né `pkg upgrade`, `termux.properties` intatto e senza righe doppie, avvio automatico solo se chiesto, `nyctalus-mobile` avvia/ferma, disinstallazione che **non tocca gli altri progetti**, comandi omonimi altrui non sovrascritti |
 | `06-installazioni` | la cartella `installazioni/`: pacchetti e LEGGIMI per ogni dispositivo, **nessun dato personale** dentro, il pacchetto PC si estrae e parte, quello Android contiene tutto il necessario |

@@ -23,4 +23,9 @@ done < "$TMP/r.txt"
 kill "$OPID"; sleep 1.5
 N=$(pgrep -fc -- "--data $H/.nyctalus-chat" || true)
 [ "$N" = "0" ] && pass "fermato: nessun processo orfano" || fail "processi rimasti dopo l'arresto: $N"
+# miniature della galleria (con e senza Pillow/ffmpeg, come su un telefono appena installato)
+python3 "$STRUMENTI/prova_miniature.py" "$TMP/mini" > "$TMP/m.txt" 2>&1 || echo "KO prova miniature: $(tail -1 "$TMP/m.txt")" >> "$TMP/m.txt"
+while read -r esito resto; do
+  case "$esito" in OK) pass "$resto" ;; KO) fail "$resto" ;; SALTA) salta "$resto" ;; esac
+done < "$TMP/m.txt"
 [ "$KO" -eq 0 ]

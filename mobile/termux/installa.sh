@@ -37,6 +37,12 @@ if [ ${#DA_INSTALLARE[@]} -gt 0 ]; then
 else
   ok "Pacchetti necessari già presenti"
 fi
+# Pillow: miniature veloci e nitide nella galleria degli allegati (facoltativo: senza,
+# si usano le miniature già dentro le foto). Se l'installazione non riesce si prosegue.
+if manca python-pillow; then
+  say "Installo python-pillow (miniature della galleria, pochi MB)"
+  pkg install -y python-pillow || avv "python-pillow non installato: la galleria userà miniature più piccole"
+fi
 if manca ffmpeg; then
   avv "Facoltativo: 'pkg install ffmpeg' per le miniature dei video in chat."
 fi

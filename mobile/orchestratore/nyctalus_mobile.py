@@ -29,6 +29,7 @@ import re
 import secrets
 import shutil
 import signal
+import struct
 import socket
 import subprocess
 import sys
@@ -36,6 +37,7 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 VERSIONE = "0.1"
@@ -336,20 +338,93 @@ def percorso_libero(cartella, nome):
     return p
 
 
-def miniatura_video(percorso):
-    """JPEG piccolo di una foto o di un fotogramma video (ffmpeg, se c'è); in cache."""
-    if not shutil.which("ffmpeg"):
+LATO_MINIATURA = 360
+MINIATURE = ThreadPoolExecutor(max_workers=2)    # poche alla volta: il telefono resta reattivo
+
+
+def miniatura_exif(percorso):
+    """La miniatura che le fotocamere mettono già dentro il JPEG (EXIF, ~160 px): solo
+    libreria standard, istantanea. Le si aggiunge l'orientamento della foto, così il
+    browser la gira come l'originale."""
+    with open(percorso, "rb") as f:
+        testa = f.read(256 * 1024)
+    if testa[:2] != b"\xff\xd8":
         return None
-    video = (mimetypes.guess_type(str(percorso))[0] or "").startswith("video/")
+    k = 2
+    while k + 4 <= len(testa) and testa[k] == 0xFF:
+        tipo, lung = testa[k + 1], struct.unpack(">H", testa[k + 2:k + 4])[0]
+        if tipo == 0xE1 and testa[k + 4:k + 10] == b"Exif\x00\x00":
+            t = testa[k + 10:k + 2 + lung]
+            o = "<" if t[:2] == b"II" else ">"
+            def ifd(pos):
+                n = struct.unpack(o + "H", t[pos:pos + 2])[0]
+                voci = {}
+                for e in range(n):
+                    tag, _ty, _cnt, val = struct.unpack(o + "HHI4s", t[pos + 2 + 12 * e:pos + 14 + 12 * e])
+                    voci[tag] = val
+                return voci, struct.unpack(o + "I", t[pos + 2 + 12 * n:pos + 6 + 12 * n])[0]
+            try:
+                ifd0, prossimo = ifd(struct.unpack(o + "I", t[4:8])[0])
+                orient = struct.unpack(o + "H", ifd0[0x0112][:2])[0] if 0x0112 in ifd0 else 1
+                if not prossimo:
+                    return None
+                ifd1, _ = ifd(prossimo)
+                ini = struct.unpack(o + "I", ifd1[0x0201])[0]
+                dim = struct.unpack(o + "I", ifd1[0x0202])[0]
+            except (KeyError, struct.error):
+                return None
+            mini = t[ini:ini + dim]
+            if mini[:2] != b"\xff\xd8" or len(mini) != dim:
+                return None
+            if orient in range(2, 9):
+                carico = (b"Exif\x00\x00MM\x00\x2a\x00\x00\x00\x08\x00\x01"
+                          + struct.pack(">HHIHH", 0x0112, 3, 1, orient, 0) + b"\x00\x00\x00\x00")
+                mini = mini[:2] + b"\xff\xe1" + struct.pack(">H", len(carico) + 2) + carico + mini[2:]
+            return mini
+        if tipo == 0xDA:          # inizio dell'immagine: niente EXIF
+            return None
+        k += 2 + lung
+    return None
+
+
+def miniatura(percorso):
+    """JPEG piccolo (lato ~360 px) di una foto o di un video, in cache. In ordine:
+    Pillow (se c'è: veloce e nitida) → miniatura EXIF già nel file → ffmpeg.
+    None se non si riesce: la web-app mostra un'icona invece della foto intera."""
     st = percorso.stat()
     chiave = hashlib.sha1(("%s|%d|%d" % (percorso, st.st_size, int(st.st_mtime))).encode()).hexdigest()
     CACHE.mkdir(parents=True, exist_ok=True)
     dest = CACHE / (chiave + ".jpg")
-    if not dest.exists():
+    if dest.exists():
+        return dest
+    video = (mimetypes.guess_type(str(percorso))[0] or "").startswith("video/")
+    if not video:
+        try:
+            from PIL import Image, ImageOps
+            with Image.open(percorso) as im:
+                im.draft("RGB", (LATO_MINIATURA, LATO_MINIATURA))   # JPEG: decodifica già ridotta
+                im = ImageOps.exif_transpose(im).convert("RGB")
+                im.thumbnail((LATO_MINIATURA, LATO_MINIATURA))
+                im.save(dest, "JPEG", quality=80)
+            return dest
+        except Exception:        # noqa: BLE001  (Pillow assente o formato non suo)
+            pass
+        try:
+            mini = miniatura_exif(percorso)
+        except OSError:
+            mini = None
+        if mini:
+            dest.write_bytes(mini)
+            return dest
+    if shutil.which("ffmpeg"):
         subprocess.run(["ffmpeg", "-v", "error", "-y"] + (["-ss", "0.5"] if video else []) +
-                       ["-i", str(percorso), "-frames:v", "1", "-vf", "scale=360:-2", str(dest)],
+                       ["-i", str(percorso), "-frames:v", "1", "-vf", "scale=%d:-2" % LATO_MINIATURA, str(dest)],
                        capture_output=True, timeout=25)
-    return dest if dest.exists() else None
+        if dest.exists():
+            return dest
+    if not video and st.st_size <= 400 * 1024:
+        return percorso          # foto già piccola: va bene così
+    return None
 
 
 def apri_con_app(percorso):
@@ -413,7 +488,7 @@ async def rispondi_json(scrittore, obj, stato="200 OK"):
     await rispondi(scrittore, stato, json.dumps(obj), "application/json")
 
 
-async def servi_file(scrittore, req, percorso, tipo=None):
+async def servi_file(scrittore, req, percorso, tipo=None, extra=""):
     """File con supporto a Range (necessario per scorrere video e audio)."""
     tipo = tipo or mimetypes.guess_type(str(percorso))[0] or "application/octet-stream"
     totale = percorso.stat().st_size
@@ -432,9 +507,9 @@ async def servi_file(scrittore, req, percorso, tipo=None):
         stato = "206 Partial Content"
     lunghezza = fine - inizio + 1 if totale else 0
     testa = ("HTTP/1.1 %s\r\nContent-Type: %s\r\nContent-Length: %d\r\nAccept-Ranges: bytes\r\n%s%s"
-             "Connection: close\r\n\r\n" % (stato, tipo, lunghezza, INTESTAZIONI_SICUREZZA,
+             "%sConnection: close\r\n\r\n" % (stato, tipo, lunghezza, INTESTAZIONI_SICUREZZA,
                                             ("Content-Range: bytes %d-%d/%d\r\n" % (inizio, fine, totale))
-                                            if stato.startswith("206") else ""))
+                                            if stato.startswith("206") else "", extra))
     scrittore.write(testa.encode())
     with open(percorso, "rb") as f:
         f.seek(inizio)
@@ -595,12 +670,13 @@ async def instrada(req, lettore, scrittore):
         return await servi_file(scrittore, req, f)
     if p == "/api/miniatura":
         f = leggibile(bytes.fromhex(req.query.get("p", "")).decode("utf-8", "replace"))
-        m = miniatura_video(f) if f else None
-        if not m and f and (mimetypes.guess_type(str(f))[0] or "").startswith("image/"):
-            m = f                                   # senza ffmpeg: la foto stessa
+        m = await asyncio.get_running_loop().run_in_executor(MINIATURE, miniatura, f) if f else None
         if not m:
             return await rispondi(scrittore, "404 Not Found", "nessuna miniatura")
-        return await servi_file(scrittore, req, m, "image/jpeg")
+        # le miniature non cambiano (la chiave dipende da file, dimensione e data): la
+        # WebView le tiene in cache e riaprire la galleria è immediato
+        return await servi_file(scrittore, req, m, None if m == f else "image/jpeg",
+                                extra="Cache-Control: private, max-age=86400\r\n")
     if p == "/api/galleria":
         voci = [{"p": pf.encode().hex(), "nome": os.path.basename(pf), "dim": dim, "ts": int(ts),
                  "mime": mimetypes.guess_type(pf)[0] or "application/octet-stream"}

@@ -57,7 +57,10 @@ cat > "$TMP/passi.json" <<EOF
  ["js","(()=>{window._prima=document.querySelectorAll('#messaggi .msg img').length; document.querySelector('#foglio .invia-gal').click(); return 'inviate'})()"],
  ["finche","document.querySelectorAll('#messaggi .msg img').length - window._prima >= 4",30],
  ["js","'NUOVE ' + (document.querySelectorAll('#messaggi .msg img').length - window._prima)"],
- ["foto","${NYCT_FOTO:-$TMP}/chat-dopo-galleria.png"]]
+ ["foto","${NYCT_FOTO:-$TMP}/chat-dopo-galleria.png"],
+ ["js","impostazioni(); 'impostazioni'"],["finche","document.querySelector('.stato-rete-imp') && document.querySelector('.stato-rete-imp').dataset.fase !== 'avvio'",10],
+ ["js","(()=>{const b=[...document.querySelectorAll('#dialogo .pulsanti button')]; const a=b.find(x=>x.textContent.includes('Avvia')), f=b.find(x=>x.textContent.includes('Ferma')); return 'RETE ' + document.querySelector('.stato-rete-imp').dataset.fase + ',' + a.disabled + ',' + f.disabled})()"],
+ ["foto","${NYCT_FOTO:-$TMP}/impostazioni.png"]]
 EOF
 timeout 120 python3 "$STRUMENTI/cdp.py" "$TMP/chrome" "$TMP/passi.json" > "$TMP/r.txt" 2>&1
 r() { grep -oE "^js → $1 .*" "$TMP/r.txt" | head -1 | cut -d' ' -f4-; }
@@ -77,4 +80,5 @@ done
 [ "$(r NUMERI)" = "1,2" ] && pass "selezione numerata come Telegram (1, 2)" || fail "numerazione: $(r NUMERI)"
 [ "$(r BOTTONE)" = "Invia (2)" ] && pass "pulsante «Invia (2)»" || fail "pulsante: $(r BOTTONE)"
 [ "$(r NUOVE)" -ge 4 ] && pass "le 2 foto della galleria inviate e ricevute" || fail "foto dalla galleria: $(r NUOVE)"
+[ "$(r RETE)" = "pronto,true,false" ] && pass "impostazioni: rete «attiva», «Avvia» spento e «Ferma» acceso" || fail "pulsanti della rete: $(r RETE)"
 [ "$KO" -eq 0 ]
