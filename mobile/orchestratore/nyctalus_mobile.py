@@ -263,8 +263,44 @@ SERVIZI = Servizi()
 
 
 # --- file: dove si può leggere, nomi sicuri ------------------------------------------
+# Galleria del telefono: dopo `termux-setup-storage` Termux vede la memoria
+# condivisa in ~/storage/. Solo LETTURA, e solo foto/video (per il selettore
+# allegati in stile Telegram). NYCTALUS_GALLERIA (cartelle separate da ":")
+# permette di indicarne altre, per esempio sul PC.
+ESTENSIONI_MEDIA = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".mp4", ".mov", ".webm", ".3gp", ".mkv"}
+
+
+def cartelle_galleria():
+    extra = [Path(x) for x in os.environ.get("NYCTALUS_GALLERIA", "").split(os.pathsep) if x]
+    return extra + [HOME / "storage" / "dcim", HOME / "storage" / "pictures", HOME / "storage" / "movies"]
+
+
+def elenco_galleria(quanti=120):
+    """Foto e video più recenti (dal più nuovo), senza cartelle nascoste né miniature di sistema."""
+    voci, visti = [], set()
+    for radice in cartelle_galleria():
+        if not radice.exists():
+            continue
+        for cart, sottocartelle, files in os.walk(radice, followlinks=True):
+            profondita = len(Path(cart).relative_to(radice).parts)
+            sottocartelle[:] = [d for d in sottocartelle if not d.startswith(".") and profondita < 3]
+            for f in files:
+                if f.startswith(".") or os.path.splitext(f)[1].lower() not in ESTENSIONI_MEDIA:
+                    continue
+                pf = os.path.join(cart, f)
+                try:
+                    reale, st = os.path.realpath(pf), os.stat(pf)
+                except OSError:
+                    continue
+                if reale not in visti:
+                    visti.add(reale)
+                    voci.append((st.st_mtime, pf, st.st_size))
+    voci.sort(reverse=True)
+    return voci[:quanti]
+
+
 def radici_lettura():
-    return [DATI_CHAT / "allegati", INVIO, CACHE]
+    return [DATI_CHAT / "allegati", INVIO, CACHE] + [g for g in cartelle_galleria() if g.exists()]
 
 
 def leggibile(percorso):
@@ -299,16 +335,18 @@ def percorso_libero(cartella, nome):
 
 
 def miniatura_video(percorso):
-    """JPEG di un fotogramma (ffmpeg, se c'è); in cache."""
+    """JPEG piccolo di una foto o di un fotogramma video (ffmpeg, se c'è); in cache."""
     if not shutil.which("ffmpeg"):
         return None
+    video = (mimetypes.guess_type(str(percorso))[0] or "").startswith("video/")
     st = percorso.stat()
     chiave = hashlib.sha1(("%s|%d|%d" % (percorso, st.st_size, int(st.st_mtime))).encode()).hexdigest()
     CACHE.mkdir(parents=True, exist_ok=True)
     dest = CACHE / (chiave + ".jpg")
     if not dest.exists():
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "0.5", "-i", str(percorso), "-frames:v", "1",
-                        "-vf", "scale=480:-2", str(dest)], capture_output=True, timeout=25)
+        subprocess.run(["ffmpeg", "-v", "error", "-y"] + (["-ss", "0.5"] if video else []) +
+                       ["-i", str(percorso), "-frames:v", "1", "-vf", "scale=360:-2", str(dest)],
+                       capture_output=True, timeout=25)
     return dest if dest.exists() else None
 
 
@@ -556,9 +594,17 @@ async def instrada(req, lettore, scrittore):
     if p == "/api/miniatura":
         f = leggibile(bytes.fromhex(req.query.get("p", "")).decode("utf-8", "replace"))
         m = miniatura_video(f) if f else None
+        if not m and f and (mimetypes.guess_type(str(f))[0] or "").startswith("image/"):
+            m = f                                   # senza ffmpeg: la foto stessa
         if not m:
             return await rispondi(scrittore, "404 Not Found", "nessuna miniatura")
         return await servi_file(scrittore, req, m, "image/jpeg")
+    if p == "/api/galleria":
+        voci = [{"p": pf.encode().hex(), "nome": os.path.basename(pf), "dim": dim, "ts": int(ts),
+                 "mime": mimetypes.guess_type(pf)[0] or "application/octet-stream"}
+                for ts, pf, dim in await asyncio.get_running_loop().run_in_executor(None, elenco_galleria)]
+        return await rispondi_json(scrittore, {"disponibile": any(g.exists() for g in cartelle_galleria()),
+                                               "voci": voci})
     if p == "/api/apri" and req.metodo == "POST":
         f = leggibile(bytes.fromhex(req.query.get("p", "")).decode("utf-8", "replace"))
         return await rispondi_json(scrittore, {"ok": bool(f and apri_con_app(f))})

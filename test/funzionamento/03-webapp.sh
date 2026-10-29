@@ -20,7 +20,16 @@ printf '%s %s\n' "$BOB" "$(hx Bob)" > "$H/.nyctalus-chat/contatti"
 ORA=$(date +%s)
 printf 'in %d %s\nout %d %s\nin %d %s\n' $((ORA-600)) "$(hx 'Ciao, tutto bene?')" $((ORA-500)) "$(hx 'Sì, e tu?')" \
   $((ORA-60)) "$(hx 'Ci vediamo stasera?')" > "$H/.nyctalus-chat/cronologia/$BOB.log"
-HOME="$H" NYCTALUS_BIN="$BIN" python3 "$ROOT/mobile/orchestratore/nyctalus_mobile.py" > "$TMP/o.log" 2>&1 & PIDS+=($!)
+# una galleria finta (al posto di DCIM del telefono): foto e un video
+G="$TMP/galleria/Camera"; mkdir -p "$G"
+for c in 1e88e5 e53935 43a047 fdd835 8e24aa; do
+  python3 -c "import zlib,struct,sys;w=h=96;c=bytes.fromhex(sys.argv[1]);raw=b''.join(b'\x00'+c*w for _ in range(h))
+def k(t,d):return struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d))
+open(sys.argv[2],'wb').write(b'\x89PNG\r\n\x1a\n'+k(b'IHDR',struct.pack('>IIBBBBB',w,h,8,2,0,0,0))+k(b'IDAT',zlib.compress(raw))+k(b'IEND',b''))" "$c" "$G/IMG_$c.png"
+  sleep 0.05
+done
+command -v ffmpeg >/dev/null && ffmpeg -v error -f lavfi -i testsrc2=size=320x240:rate=10:duration=2 -pix_fmt yuv420p "$G/VID_prova.mp4"
+NYCTALUS_GALLERIA="$TMP/galleria" HOME="$H" NYCTALUS_BIN="$BIN" python3 "$ROOT/mobile/orchestratore/nyctalus_mobile.py" > "$TMP/o.log" 2>&1 & PIDS+=($!)
 [ -n "$(attendi_regex "$TMP/o.log" 'servizi pronti' 40)" ] || { fail "servizi non avviati"; exit 1; }
 U="http://127.0.0.1:19733"
 cat > "$TMP/passi.json" <<EOF
@@ -32,13 +41,23 @@ cat > "$TMP/passi.json" <<EOF
  ["attendi",2.5],
  ["js","apriChat('$BOB'); 'aperta'"],["attendi",3],
  ["js","'BOLLE ' + document.querySelectorAll('#messaggi .msg').length"],
- ["js","const m=document.getElementById('messaggi'); 'FONDO ' + (m.scrollHeight - m.scrollTop - m.clientHeight < 5)"],
+ ["js","(()=>{const m=document.getElementById('messaggi'); return 'FONDO ' + (m.scrollHeight - m.scrollTop - m.clientHeight < 5)})()"],
  ["js","document.querySelector('#messaggi .msg').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true})); 'MENU ' + document.querySelectorAll('#foglio .voce').length"],
  ["js","chiudiFoglio(); manda('ADD '+S.me+' '+inHex('Io')); aggiornaContatto(S.me,'Io'); apriChat(S.me); 'io'"],["attendi",1.5],
  ["js","manda('SEND '+S.me+' '+inHex('prova dalla web-app')); 'inviato'"],
  ["js","(async()=>{const c=document.createElement('canvas');c.width=320;c.height=200;const g=c.getContext('2d');g.fillStyle='#3a7bd5';g.fillRect(0,0,320,200);const b=await new Promise(o=>c.toBlob(o,'image/jpeg',0.9));await carica(S.me,new File([b],'foto-web.jpg',{type:'image/jpeg'}),true);return 'CARICATA'})()"],
  ["attendi",14],
- ["js","'IO ' + [...document.querySelectorAll('#messaggi .msg')].map(m=>m.className.split(' ')[1]+':'+(m.querySelector('img')?'FOTO':'TESTO')).join(',')"]]
+ ["js","'IO ' + [...document.querySelectorAll('#messaggi .msg')].map(m=>m.className.split(' ')[1]+':'+(m.querySelector('img')?'FOTO':'TESTO')).join(',')"],
+ ["js","S.exif=false; apriGalleria(); 'galleria'"],["attendi",2],
+ ["js","'TILE ' + document.querySelectorAll('#foglio .tile[data-i]').length"],
+ ["js","(()=>{const t=document.querySelectorAll('#foglio .tile[data-i] img'); return 'MINI ' + [...t].filter(i=>i.complete&&i.naturalWidth>0).length})()"],
+ ["js","(()=>{const t=document.querySelectorAll('#foglio .tile[data-i]'); t[1].click(); t[3].click(); return 'NUMERI ' + [...document.querySelectorAll('#foglio .tile.scelta .num')].map(n=>n.textContent).join(',')})()"],
+ ["js","'BOTTONE ' + document.querySelector('#foglio .invia-gal').textContent"],
+ ["foto","${NYCT_FOTO:-$TMP}/galleria.png"],
+ ["js","(()=>{window._prima=document.querySelectorAll('#messaggi .msg img').length; document.querySelector('#foglio .invia-gal').click(); return 'inviate'})()"],
+ ["attendi",12],
+ ["js","'NUOVE ' + (document.querySelectorAll('#messaggi .msg img').length - window._prima)"],
+ ["foto","${NYCT_FOTO:-$TMP}/chat-dopo-galleria.png"]]
 EOF
 timeout 120 python3 "$STRUMENTI/cdp.py" "$TMP/chrome" "$TMP/passi.json" > "$TMP/r.txt" 2>&1
 r() { grep -oE "^js → $1 .*" "$TMP/r.txt" | head -1 | cut -d' ' -f4-; }
@@ -53,4 +72,9 @@ IO=$(r IO)
 for atteso in "out:TESTO" "in:TESTO" "out:FOTO" "in:FOTO"; do
   echo "$IO" | grep -q "$atteso" && pass "a se stessi attraverso la rete: $atteso" || fail "manca $atteso ($IO)"
 done
+[ "$(r TILE)" -ge 6 ] && pass "selettore: griglia con le foto e i video recenti ($(r TILE))" || fail "griglia della galleria: $(r TILE)"
+[ "$(r MINI)" -ge 5 ] && pass "miniature caricate dal telefono" || fail "miniature: $(r MINI)"
+[ "$(r NUMERI)" = "1,2" ] && pass "selezione numerata come Telegram (1, 2)" || fail "numerazione: $(r NUMERI)"
+[ "$(r BOTTONE)" = "Invia (2)" ] && pass "pulsante «Invia (2)»" || fail "pulsante: $(r BOTTONE)"
+[ "$(r NUOVE)" -ge 4 ] && pass "le 2 foto della galleria inviate e ricevute" || fail "foto dalla galleria: $(r NUOVE)"
 [ "$KO" -eq 0 ]

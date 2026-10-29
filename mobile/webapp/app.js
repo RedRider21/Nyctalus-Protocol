@@ -399,17 +399,86 @@ function inviaTesto() {
   manda("SEND " + S.attivo + " " + inHex(t)); campo.value = ""; campo.dispatchEvent(new Event("input"));
 }
 
-// graffetta: foglio con le quattro scelte (come Telegram mobile)
-$("btn-allega").onclick = () => {
-  const g = el("div", "griglia");
-  [["📷", "Fotocamera", "#3fa7c9", "in-foto"], ["🎥", "Video", "#e05a8a", "in-video"],
-   ["🖼", "Galleria", "#7f6cff", "in-galleria"], ["📄", "File", "#4f86e0", "in-file"]].forEach(([ic, nome, col, inp]) => {
-    const b = el("button"); const t = el("span", "tondo", ic); t.style.background = col;
-    b.append(t, el("span", "", nome)); b.onclick = () => { chiudiFoglio(); $(inp).click(); };
-    g.appendChild(b);
+// graffetta: selettore come Telegram per Android — griglia delle foto/video recenti
+// (prima casella = fotocamera), selezione numerata, schede in basso, «Invia (N)».
+$("btn-allega").onclick = apriGalleria;
+
+async function apriGalleria() {
+  if (!S.attivo) return;
+  const sel = [];                                   // voci selezionate, nell'ordine di tocco
+  const f = $("foglio"); f.textContent = ""; f.classList.add("galleria");
+  const testa = el("div", "testa-gal"), titolo = el("span", "", "Galleria"), conta = el("span", "conta", "");
+  testa.append(titolo, conta);
+  const griglia = el("div", "griglia-gal");
+  const cam = el("button", "tile tile-cam"); cam.append(el("span", "ic", "📷"), el("span", "", "Fotocamera"));
+  cam.onclick = () => { chiudiFoglio(); $("in-foto").click(); };
+  griglia.appendChild(cam);
+
+  const did = el("input"); did.type = "text"; did.placeholder = "Aggiungi una didascalia…";
+  const invia = el("button", "invia-gal", "Invia");
+  const barraInvio = el("div", "invio-gal nascosto"); barraInvio.append(did, invia);
+
+  const schede = el("div", "schede-gal");
+  [["🖼", "Galleria", "#3fa7c9", null], ["📄", "File", "#4f86e0", "in-file"], ["🎞", "Altre foto", "#7f6cff", "in-galleria"],
+   ["🎥", "Video", "#e05a8a", "in-video"]].forEach(([ic, nome, col, inp]) => {
+    const b = el("button", inp ? "" : "attiva"); const t = el("span", "tondo", ic); t.style.background = col;
+    b.append(t, el("span", "", nome));
+    b.onclick = () => { if (!inp) return; chiudiFoglio(); $(inp).click(); };
+    schede.appendChild(b);
   });
-  apriFoglio("Allega", [g]);
-};
+
+  const aggiorna = () => {
+    griglia.querySelectorAll(".tile[data-i]").forEach((t) => {
+      const k = sel.indexOf(t._voce);
+      t.classList.toggle("scelta", k >= 0);
+      t.querySelector(".num").textContent = k >= 0 ? String(k + 1) : "";
+    });
+    conta.textContent = sel.length ? sel.length + " selezionat" + (sel.length === 1 ? "o" : "i") : "";
+    barraInvio.classList.toggle("nascosto", !sel.length);
+    schede.classList.toggle("nascosto", !!sel.length);
+    invia.textContent = sel.length > 1 ? "Invia (" + sel.length + ")" : "Invia";
+  };
+
+  f.append(el("div", "maniglia"), testa, griglia, schede, barraInvio);
+  $("velo").classList.remove("nascosto"); f.classList.remove("nascosto");
+
+  let dati = { disponibile: false, voci: [] };
+  try { dati = await (await fetch("/api/galleria")).json(); } catch (e) { /* niente */ }
+  if (!dati.voci.length) {
+    const v = el("div", "vuoto-gal", dati.disponibile ? "Nessuna foto o video recente."
+      : "Per vedere qui le foto del telefono, in Termux scrivi:  termux-setup-storage  e consenti l'accesso ai file.");
+    griglia.appendChild(v);
+  }
+  dati.voci.forEach((v, i) => {
+    const t = el("button", "tile"); t.dataset.i = i; t._voce = v;
+    const img = el("img"); img.loading = "lazy"; img.decoding = "async"; img.alt = v.nome;
+    img.src = "/api/miniatura?p=" + v.p;
+    img.onerror = () => { img.remove(); t.appendChild(el("span", "ic", v.mime.startsWith("video/") ? "🎬" : "🖼")); };
+    t.appendChild(img);
+    if (v.mime.startsWith("video/")) t.appendChild(el("span", "video-gal", "▶"));
+    t.appendChild(el("span", "num"));
+    t.onclick = () => { const k = sel.indexOf(v); k >= 0 ? sel.splice(k, 1) : sel.push(v); aggiorna(); };
+    griglia.appendChild(t);
+  });
+
+  invia.onclick = async () => {
+    const dest = S.attivo, testo = did.value.trim(), scelte = sel.slice();
+    chiudiFoglio();
+    for (const v of scelte) {
+      const percorso = daHex(v.p);
+      if (S.exif && (v.mime === "image/jpeg" || v.mime === "image/png")) {
+        // foto con metadati: si ripulisce qui (ridisegno su canvas) e si carica la copia pulita
+        try {
+          const blob = await (await fetch("/api/file?p=" + v.p)).blob();
+          await carica(dest, new File([blob], v.nome, { type: v.mime }), true);
+          continue;
+        } catch (e) { /* ripiego: invio diretto */ }
+      }
+      manda("SENDFILE " + dest + " " + v.p + " " + v.mime);   // il motore legge il file direttamente
+    }
+    if (testo) manda("SEND " + dest + " " + inHex(testo));
+  };
+}
 ["in-foto", "in-video", "in-galleria", "in-file"].forEach((id) => {
   $(id).onchange = (e) => { const f = [...e.target.files]; e.target.value = ""; if (f.length) anteprimaInvio(f); };
 });
@@ -478,11 +547,11 @@ async function carica(dest, file, togliExif) {
 
 // ---------- menu della pressione lunga (come il tasto destro sul PC) --------------------
 function apriFoglio(titolo, contenuto) {
-  const f = $("foglio"); f.textContent = "";
+  const f = $("foglio"); f.textContent = ""; f.classList.remove("galleria");
   f.append(el("div", "maniglia"), ...(titolo ? [el("div", "titolo", titolo)] : []), ...contenuto);
   $("velo").classList.remove("nascosto"); f.classList.remove("nascosto");
 }
-function chiudiFoglio() { $("velo").classList.add("nascosto"); $("foglio").classList.add("nascosto"); }
+function chiudiFoglio() { $("velo").classList.add("nascosto"); $("foglio").classList.add("nascosto"); $("foglio").classList.remove("galleria"); }
 $("velo").onclick = chiudiFoglio;
 const voce = (ic, testo, az, pericolosa) => {
   const b = el("button", "voce" + (pericolosa ? " pericolosa" : "")); b.append(el("span", "ic", ic), el("span", "", testo));
