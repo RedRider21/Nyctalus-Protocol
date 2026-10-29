@@ -15,6 +15,7 @@ a-capo nel protocollo a righe.
 """
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -52,6 +53,29 @@ _ITA = {
     "chat.contatti": "Contatti",
     "chat.cerca": "Cerca…",
     "chat.aggiungi": "Aggiungi contatto",
+    "chat.menu.altro": "Altre azioni",
+    "chat.menu.apri": "Apri la chat",
+    "chat.menu.letto": "Segna come letto",
+    "chat.menu.non_letto": "Segna come non letto",
+    "chat.menu.fissa": "Fissa in alto",
+    "chat.menu.sblocca": "Togli dai fissati",
+    "chat.menu.rinomina": "Rinomina…",
+    "chat.menu.copia_id": "Copia il Contact ID",
+    "chat.menu.cancella_cron": "Cancella cronologia",
+    "chat.menu.elimina_chat": "Elimina la chat",
+    "chat.menu.salva_come": "Salva con nome…",
+    "chat.menu.inoltra": "Inoltra",
+    "chat.menu.inoltra_a": "Inoltra a…",
+    "chat.menu.copia_testo": "Copia testo",
+    "chat.menu.elimina_msg": "Elimina per me",
+    "chat.menu.salva": "Salva",
+    "chat.menu.cancella": "Cancella",
+    "chat.menu.elimina": "Elimina",
+    "chat.conferma.cancella_cron": "Tutti i messaggi con %s verranno cancellati da questo computer. I file ricevuti restano nella cartella degli allegati.",
+    "chat.conferma.elimina_chat": "%s verrà tolto dai contatti e la cronologia verrà cancellata da questo computer.",
+    "chat.conferma.elimina_msg": "Il messaggio verrà cancellato solo da questo computer, non da quello dell'altra persona.",
+    "chat.tu": "Tu:",
+    "chat.foto": "Foto",
     "chat.allega": "Allega file, foto, video…",
     "chat.apri": "Apri",
     "chat.mostra_cartella": "Mostra nella cartella",
@@ -192,6 +216,28 @@ row.contatto:hover { background: rgba(@RGB@,0.09); }
         min-width: 42px; min-height: 42px; font-size: 16px; }
 .send:hover { background: @SENDH@; }
 .send:disabled { background: rgba(@RGB@,0.15); color: @MUTED@; }
+
+/* menu a comparsa intonati al tema (tasto destro, ⋮, ⚙) */
+menu, .menu, .context-menu {
+    background-color: @PANEL@; color: @TEXT@;
+    border: 1px solid rgba(@RGB@,0.18); border-radius: 10px; padding: 6px 0; }
+menu menuitem { padding: 7px 18px 7px 12px; color: @TEXT@; }
+menu menuitem:hover { background-color: rgba(@RGB@,0.18); }
+menu menuitem image { color: @MUTED@; }
+menu menuitem:hover image { color: @TEXT@; }
+menu menuitem:disabled label { color: @MUTED@; font-size: 11px; font-weight: 700; }
+menu menuitem.pericolosa label, menu menuitem.pericolosa image { color: #ef5b5b; }
+menu separator { background-color: rgba(@RGB@,0.14); margin: 5px 0; min-height: 1px; }
+menu check, menu radio { color: @ACCENT@; }
+
+/* elenco stile Telegram: ora, contatore, spillo; tre puntini */
+.ora-riga { color: @MUTED@; font-size: 11px; }
+.badge { background: @SEND@; color: #ffffff; border-radius: 10px; font-size: 11px;
+         font-weight: 700; padding: 0 6px; min-width: 10px; }
+.spillo { font-size: 10px; }
+.puntini { background: transparent; border: none; box-shadow: none; color: @MUTED@;
+           font-size: 20px; padding: 2px 10px; }
+.puntini:hover { color: @TEXT@; background: rgba(@RGB@,0.12); }
 
 /* allegati */
 .graffetta { background: transparent; border: none; box-shadow: none; color: @MUTED@;
@@ -352,6 +398,36 @@ def senza_metadati(percorso, mime):
         return percorso
 
 
+def anteprima_da_riga(grezza):
+    """(ts, testo breve) da una riga di cronologia: testo o allegato."""
+    p = grezza.split(" ")
+    try:
+        if p[0] in ("in", "out") and len(p) >= 3:
+            testo = _da_hex(p[2]).replace("\n", " ")
+            return int(p[1]), (_t("chat.tu") + " " if p[0] == "out" else "") + testo
+        if p[0] in ("fin", "fout") and len(p) >= 6:
+            mime, nome = p[4], _da_hex(p[5])
+            etichetta = _t("chat.foto") if mime in TIPI_ANTEPRIMA else nome
+            return int(p[1]), (_t("chat.tu") + " " if p[0] == "fout" else "") + icona_tipo(mime) + " " + etichetta
+    except Exception:            # noqa: BLE001
+        pass
+    return None, ""
+
+
+def ora_o_data(ts):
+    """Come Telegram: l'ora se è oggi, altrimenti il giorno."""
+    try:
+        d = datetime.fromtimestamp(int(ts))
+    except Exception:            # noqa: BLE001
+        return ""
+    oggi = datetime.now()
+    if d.date() == oggi.date():
+        return d.strftime("%H:%M")
+    if (oggi.date() - d.date()).days < 7:
+        return d.strftime("%a")
+    return d.strftime("%d/%m/%y")
+
+
 def ora_hhmm(ts):
     try:
         return datetime.fromtimestamp(int(ts)).strftime("%H:%M")
@@ -394,6 +470,7 @@ class Chat(Gtk.Window):
         self.sock = None
         self.filtro = ""
         self.trasferimenti = {}  # id → (riga, barra, etichetta) delle bolle in corso
+        self.ultimo = {}         # addr → (ts, testo d'anteprima) per l'elenco
 
         # aspetto (tema + sfondo) ricordato fra un avvio e l'altro
         self.ui = self._carica_ui()
@@ -480,7 +557,9 @@ class Chat(Gtk.Window):
         self.lista = Gtk.ListBox()
         self.lista.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.lista.set_filter_func(self._filtra_riga)
+        self.lista.set_sort_func(self._ordina_righe)
         self.lista.connect("row-selected", self._scelto_contatto)
+        self.lista.connect("button-press-event", self._click_lista)
         scorri.add(self.lista)
         lato.pack_start(scorri, True, True, 0)
 
@@ -528,6 +607,11 @@ class Chat(Gtk.Window):
         col.pack_start(self.conv_nome, False, False, 0)
         col.pack_start(self.conv_sotto, False, False, 0)
         self.testa_conv.pack_start(col, True, True, 0)
+        puntini = Gtk.Button(label="⋮"); puntini.get_style_context().add_class("puntini")
+        puntini.set_tooltip_text(_t("chat.menu.altro")); puntini.set_valign(Gtk.Align.CENTER)
+        puntini.connect("clicked", lambda b: self.attivo and self._menu_contatto(self.attivo).popup_at_widget(
+            b, Gdk.Gravity.SOUTH_EAST, Gdk.Gravity.NORTH_EAST, None))
+        self.testa_conv.pack_end(puntini, False, False, 0)
         destra.pack_start(self.testa_conv, False, False, 0)
 
         # pila: stato vuoto / conversazione
@@ -542,6 +626,7 @@ class Chat(Gtk.Window):
         self.scorri_conv.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.conv = Gtk.ListBox()
         self.conv.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.conv.connect("button-press-event", self._click_conversazione)
         self.conv.get_style_context().add_class("conversazione")
         self.scorri_conv.add(self.conv)
         self.pila.add_named(self.scorri_conv, "conv")
@@ -654,6 +739,9 @@ class Chat(Gtk.Window):
             addr = parti[1]
             nome = _da_hex(parti[2]) if len(parti) >= 3 and parti[2] else addr[:10]
             self._upsert_contatto(addr, nome)
+        elif tipo == "L" and len(parti) >= 4:
+            # L <addr> <ultima riga di cronologia>
+            self._aggiorna_anteprima(parti[1], " ".join(parti[2:]))
         elif tipo == "ST" and len(parti) >= 3:
             addr, stato = parti[1], parti[2]
             if stato == "1":
@@ -665,24 +753,30 @@ class Chat(Gtk.Window):
                 self._aggiorna_testa()
         elif tipo == "MSG" and len(parti) >= 4:
             addr, ts, hx = parti[1], parti[2], parti[3]
+            grezza = "in %s %s" % (ts, hx)
+            self._aggiorna_anteprima(addr, grezza, nuovo=True)
             if addr == self.attivo:
-                self._bolla("in", _da_hex(hx), ts)
+                self._bolla("in", _da_hex(hx), ts, grezza)
         elif tipo == "OUT" and len(parti) >= 4:
             addr, ts, hx = parti[1], parti[2], parti[3]
+            grezza = "out %s %s" % (ts, hx)
+            self._aggiorna_anteprima(addr, grezza)
             if addr == self.attivo:
-                self._bolla("out", _da_hex(hx), ts)
+                self._bolla("out", _da_hex(hx), ts, grezza)
         elif tipo == "P" and len(parti) >= 8 and parti[1] in ("fin", "fout"):
             # P fin|fout <ts> <id> <dim> <mime> <nome hex> <percorso hex>
             self._bolla_allegato("out" if parti[1] == "fout" else "in", parti[2], parti[3],
-                                 parti[4], parti[5], _da_hex(parti[6]), _da_hex(parti[7]))
+                                 parti[4], parti[5], _da_hex(parti[6]), _da_hex(parti[7]), riga[2:])
         elif tipo == "P" and len(parti) >= 4:
             direzione, ts, hx = parti[1], parti[2], parti[3]
-            self._bolla("out" if direzione == "out" else "in", _da_hex(hx), ts)
+            self._bolla("out" if direzione == "out" else "in", _da_hex(hx), ts, riga[2:])
         elif tipo == "FILE" and len(parti) >= 9:
             # FILE <addr> <in|out> <ts> <id> <dim> <mime> <nome hex> <percorso hex>
+            grezza = " ".join(["fout" if parti[2] == "out" else "fin"] + parti[3:9])
+            self._aggiorna_anteprima(parti[1], grezza, nuovo=(parti[2] == "in"))
             if parti[1] == self.attivo:
                 self._bolla_allegato(parti[2], parti[3], parti[4], parti[5], parti[6],
-                                     _da_hex(parti[7]), _da_hex(parti[8]))
+                                     _da_hex(parti[7]), _da_hex(parti[8]), grezza)
         elif tipo == "PROG" and len(parti) >= 6:
             # PROG <addr> <in|out> <id> <fatti> <totale>
             if parti[1] == self.attivo:
@@ -718,15 +812,32 @@ class Chat(Gtk.Window):
         av = fai_avatar(nome, addr)
         riga.avatar = av
         box.pack_start(av, False, False, 0)
-        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
+        alto = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         et = Gtk.Label(label=nome, xalign=0); et.get_style_context().add_class("nome")
         et.set_ellipsize(Pango.EllipsizeMode.END)
-        et.set_max_width_chars(18)
+        et.set_max_width_chars(14)
         riga.etichetta = et
+        spillo = Gtk.Label(label="📌"); spillo.get_style_context().add_class("spillo")
+        spillo.set_no_show_all(True)
+        riga.spillo = spillo
+        ora = Gtk.Label(label="", xalign=1); ora.get_style_context().add_class("ora-riga")
+        riga.ora = ora
+        alto.pack_start(et, True, True, 0)
+        alto.pack_start(spillo, False, False, 0)
+        alto.pack_end(ora, False, False, 0)
+        basso = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         st = Gtk.Label(label=_t("chat.offline"), xalign=0); st.get_style_context().add_class("stato-riga")
+        st.set_ellipsize(Pango.EllipsizeMode.END)
+        st.set_max_width_chars(18)
         riga.stato = st
-        col.pack_start(et, False, False, 0)
-        col.pack_start(st, False, False, 0)
+        badge = Gtk.Label(label=""); badge.get_style_context().add_class("badge")
+        badge.set_no_show_all(True)
+        riga.badge = badge
+        basso.pack_start(st, True, True, 0)
+        basso.pack_end(badge, False, False, 0)
+        col.pack_start(alto, False, False, 0)
+        col.pack_start(basso, False, False, 0)
         box.pack_start(col, True, True, 0)
         riga.add(box)
         return riga
@@ -738,7 +849,276 @@ class Chat(Gtk.Window):
         on = addr in self.online
         ctx = riga.avatar.get_style_context()
         ctx.add_class("online") if on else ctx.remove_class("online")
-        riga.stato.set_text(_t("chat.online") if on else _t("chat.offline"))
+        if addr not in self.ultimo:   # senza messaggi: mostra lo stato
+            riga.stato.set_text(_t("chat.online") if on else _t("chat.offline"))
+        self._aggiorna_badge(addr)
+
+    def _aggiorna_anteprima(self, addr, grezza, nuovo=False):
+        """Ultimo messaggio + ora nella riga del contatto; se arriva un
+        messaggio nuovo da una chat non aperta, sale il contatore dei non letti."""
+        ts, testo = anteprima_da_riga(grezza)
+        if ts is None:
+            return
+        self.ultimo[addr] = (ts, testo)
+        riga = self.righe_contatto.get(addr)
+        if riga is not None:
+            riga.stato.set_text(testo)
+            riga.ora.set_text(ora_o_data(ts))
+        if nuovo and addr != self.attivo:
+            nl = self.ui["non_letti"]
+            nl[addr] = int(nl.get(addr, 0)) + 1
+            self._salva_ui()
+        self._aggiorna_badge(addr)
+        self.lista.invalidate_sort()
+
+    def _aggiorna_badge(self, addr):
+        riga = self.righe_contatto.get(addr)
+        if riga is None:
+            return
+        n = int(self.ui["non_letti"].get(addr, 0))
+        riga.badge.set_text(str(n) if n < 100 else "99+")
+        riga.badge.set_visible(n > 0)
+        riga.spillo.set_visible(addr in self.ui["fissati"])
+
+    def _ordina_righe(self, r1, r2):
+        """Prima i fissati, poi le chat con l'attività più recente."""
+        f1, f2 = r1.addr in self.ui["fissati"], r2.addr in self.ui["fissati"]
+        if f1 != f2:
+            return -1 if f1 else 1
+        t1, t2 = self.ultimo.get(r1.addr, (0, ""))[0], self.ultimo.get(r2.addr, (0, ""))[0]
+        return (t2 > t1) - (t2 < t1)
+
+    # --- menu contestuali ------------------------------------------------------
+    def _voce(self, menu, testo, cb, pericolosa=False, icona=None):
+        v = Gtk.MenuItem()
+        riga = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        img = Gtk.Image()
+        if icona and Gtk.IconTheme.get_default().has_icon(icona):
+            img.set_from_icon_name(icona, Gtk.IconSize.MENU)
+        img.set_size_request(16, 16)
+        riga.pack_start(img, False, False, 0)
+        et = Gtk.Label(label=testo, xalign=0)
+        riga.pack_start(et, True, True, 0)
+        if pericolosa:
+            v.get_style_context().add_class("pericolosa")
+        v.add(riga)
+        v.connect("activate", lambda *_a: cb())
+        menu.append(v)
+
+    def _nuovo_menu(self):
+        m = Gtk.Menu()
+        m.get_style_context().add_class("nyct-menu")
+        # finestrina del menu con trasparenza: niente angoli chiari attorno ai bordi arrotondati
+        top = m.get_toplevel()
+        visual = top.get_screen().get_rgba_visual()
+        if visual is not None and top.get_screen().is_composited():
+            top.set_visual(visual)
+            top.set_app_paintable(True)
+        return m
+
+    def _menu_contatto(self, addr):
+        menu = self._nuovo_menu()
+        nl = int(self.ui["non_letti"].get(addr, 0))
+        fiss = addr in self.ui["fissati"]
+        self._voce(menu, _t("chat.menu.apri"), lambda: self._apri_contatto(addr), icona="document-open-symbolic")
+        self._voce(menu, _t("chat.menu.letto") if nl else _t("chat.menu.non_letto"),
+                   lambda: self._segna_letto(addr, bool(nl)), icona="mail-read-symbolic" if nl else "mail-unread-symbolic")
+        self._voce(menu, _t("chat.menu.sblocca") if fiss else _t("chat.menu.fissa"),
+                   lambda: self._fissa(addr, not fiss), icona="view-pin-symbolic")
+        self._voce(menu, _t("chat.menu.rinomina"), lambda: self._dialogo_rinomina(addr), icona="document-edit-symbolic")
+        self._voce(menu, _t("chat.menu.copia_id"), lambda: self._copia_testo(addr), icona="edit-copy-symbolic")
+        menu.append(Gtk.SeparatorMenuItem())
+        self._voce(menu, _t("chat.menu.cancella_cron"), lambda: self._cancella_cronologia(addr), True, "edit-clear-all-symbolic")
+        self._voce(menu, _t("chat.menu.elimina_chat"), lambda: self._elimina_chat(addr), True, "user-trash-symbolic")
+        menu.show_all()
+        return menu
+
+    def _click_lista(self, _w, ev):
+        if ev.type != Gdk.EventType.BUTTON_PRESS or ev.button != 3:
+            return False
+        riga = self.lista.get_row_at_y(int(ev.y))
+        if riga is None:
+            return False
+        self._menu_contatto(riga.addr).popup_at_pointer(ev)
+        return True
+
+    def _click_conversazione(self, _w, ev):
+        if ev.type != Gdk.EventType.BUTTON_PRESS or ev.button != 3:
+            return False
+        riga = self.conv.get_row_at_y(int(ev.y))
+        if riga is None or not getattr(riga, "grezza", None):
+            return False
+        self._menu_messaggio(riga).popup_at_pointer(ev)
+        return True
+
+    def _menu_messaggio(self, riga):
+        menu = self._nuovo_menu()
+        allegato = getattr(riga, "allegato", None)
+        if allegato:
+            percorso, mime, _nome = allegato
+            if os.path.isfile(percorso):
+                if apribile(mime):
+                    self._voce(menu, _t("chat.apri"), lambda: self._apri_allegato(percorso, mime), icona="document-open-symbolic")
+                self._voce(menu, _t("chat.mostra_cartella"), lambda: self._mostra_cartella(percorso), icona="folder-open-symbolic")
+                self._voce(menu, _t("chat.menu.salva_come"), lambda: self._salva_come(percorso), icona="document-save-as-symbolic")
+                self._voce(menu, _t("chat.menu.inoltra"), lambda: self._inoltra(file=percorso, mime=mime), icona="mail-forward-symbolic")
+        else:
+            testo = getattr(riga, "testo", "")
+            self._voce(menu, _t("chat.menu.copia_testo"), lambda: self._copia_testo(testo), icona="edit-copy-symbolic")
+            self._voce(menu, _t("chat.menu.inoltra"), lambda: self._inoltra(testo=testo), icona="mail-forward-symbolic")
+        menu.append(Gtk.SeparatorMenuItem())
+        self._voce(menu, _t("chat.menu.elimina_msg"), lambda: self._elimina_messaggio(riga), True, "user-trash-symbolic")
+        menu.show_all()
+        return menu
+
+    # --- azioni dei menu -------------------------------------------------------
+    def _apri_contatto(self, addr):
+        riga = self.righe_contatto.get(addr)
+        if riga is not None:
+            self.lista.select_row(riga)
+
+    def _segna_letto(self, addr, letto):
+        if letto:
+            self.ui["non_letti"].pop(addr, None)
+        else:
+            self.ui["non_letti"][addr] = max(1, int(self.ui["non_letti"].get(addr, 0)))
+        self._salva_ui()
+        self._aggiorna_badge(addr)
+
+    def _fissa(self, addr, si):
+        f = self.ui["fissati"]
+        if si and addr not in f:
+            f.append(addr)
+        elif not si and addr in f:
+            f.remove(addr)
+        self._salva_ui()
+        self._aggiorna_badge(addr)
+        self.lista.invalidate_sort()
+
+    def _copia_testo(self, testo):
+        Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).set_text(testo, -1)
+
+    def _conferma(self, titolo, corpo, pulsante):
+        d = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.WARNING,
+                              buttons=Gtk.ButtonsType.NONE, text=titolo)
+        d.format_secondary_text(corpo)
+        d.add_button(_t("chat.annulla"), Gtk.ResponseType.CANCEL)
+        b = d.add_button(pulsante, Gtk.ResponseType.OK)
+        b.get_style_context().add_class("destructive-action")
+        ok = d.run() == Gtk.ResponseType.OK
+        d.destroy()
+        return ok
+
+    def _dialogo_rinomina(self, addr):
+        d = Gtk.Dialog(title=_t("chat.menu.rinomina"), transient_for=self, modal=True)
+        d.add_button(_t("chat.annulla"), Gtk.ResponseType.CANCEL)
+        d.add_button(_t("chat.menu.salva"), Gtk.ResponseType.OK)
+        d.set_default_response(Gtk.ResponseType.OK)
+        box = d.get_content_area(); box.set_border_width(14); box.set_spacing(8)
+        e = Gtk.Entry(); e.set_text(self.contatti.get(addr, "")); e.set_activates_default(True)
+        e.set_width_chars(30)
+        box.pack_start(e, False, False, 0)
+        d.show_all()
+        if d.run() == Gtk.ResponseType.OK and e.get_text().strip():
+            nome = e.get_text().strip()
+            self._cmd("ADD %s %s" % (addr, nome.encode().hex()))
+            self._upsert_contatto(addr, nome)
+            riga = self.righe_contatto.get(addr)
+            if riga is not None:   # avatar con la nuova iniziale
+                for f in riga.get_child().get_children()[:1]:
+                    riga.get_child().remove(f)
+                riga.avatar = fai_avatar(nome, addr)
+                riga.get_child().pack_start(riga.avatar, False, False, 0)
+                riga.get_child().reorder_child(riga.avatar, 0)
+                riga.show_all()
+                self._aggiorna_pallino(addr)
+            if addr == self.attivo:
+                self._aggiorna_testa()
+        d.destroy()
+
+    def _cancella_cronologia(self, addr):
+        nome = self.contatti.get(addr, addr[:10])
+        if not self._conferma(_t("chat.menu.cancella_cron") + "?",
+                              _t("chat.conferma.cancella_cron") % nome, _t("chat.menu.cancella")):
+            return
+        self._cmd("CLEAR %s" % addr)
+        self.ultimo.pop(addr, None)
+        self.ui["non_letti"].pop(addr, None); self._salva_ui()
+        self._aggiorna_pallino(addr)
+        riga = self.righe_contatto.get(addr)
+        if riga is not None:
+            riga.ora.set_text("")
+        if addr == self.attivo:
+            for figlio in self.conv.get_children():
+                self.conv.remove(figlio)
+
+    def _elimina_chat(self, addr):
+        nome = self.contatti.get(addr, addr[:10])
+        if not self._conferma(_t("chat.menu.elimina_chat") + "?",
+                              _t("chat.conferma.elimina_chat") % nome, _t("chat.menu.elimina")):
+            return
+        self._cmd("DEL %s" % addr)
+        riga = self.righe_contatto.pop(addr, None)
+        if riga is not None:
+            self.lista.remove(riga)
+        self.contatti.pop(addr, None)
+        self.ultimo.pop(addr, None)
+        self.ui["non_letti"].pop(addr, None)
+        if addr in self.ui["fissati"]:
+            self.ui["fissati"].remove(addr)
+        self._salva_ui()
+        self.vuoto_contatti.set_visible(len(self.contatti) == 0)
+        if addr == self.attivo:
+            self._mostra_vuoto()
+
+    def _elimina_messaggio(self, riga):
+        if not self._conferma(_t("chat.menu.elimina_msg") + "?", _t("chat.conferma.elimina_msg"),
+                              _t("chat.menu.elimina")):
+            return
+        self._cmd("DELMSG %s %s" % (self.attivo, riga.grezza.encode().hex()))
+        self.conv.remove(riga)
+        # l'anteprima nell'elenco diventa l'ultimo messaggio rimasto
+        rimaste = [r for r in self.conv.get_children() if getattr(r, "grezza", None)]
+        if rimaste:
+            self._aggiorna_anteprima(self.attivo, rimaste[-1].grezza)
+        else:
+            self.ultimo.pop(self.attivo, None)
+            self._aggiorna_pallino(self.attivo)
+
+    def _salva_come(self, percorso):
+        d = Gtk.FileChooserNative.new(_t("chat.menu.salva_come"), self, Gtk.FileChooserAction.SAVE, None, None)
+        d.set_current_name(os.path.basename(percorso))
+        d.set_do_overwrite_confirmation(True)
+        if d.run() == Gtk.ResponseType.ACCEPT:
+            try:
+                shutil.copy2(percorso, d.get_filename())
+            except Exception as e:   # noqa: BLE001
+                self._avviso_inline("⚠ %s" % e)
+        d.destroy()
+
+    def _inoltra(self, testo=None, file=None, mime=None):
+        """Sceglie un contatto e gli rimanda il messaggio o l'allegato."""
+        d = Gtk.Dialog(title=_t("chat.menu.inoltra_a"), transient_for=self, modal=True)
+        d.add_button(_t("chat.annulla"), Gtk.ResponseType.CANCEL)
+        d.add_button(_t("chat.menu.inoltra"), Gtk.ResponseType.OK)
+        box = d.get_content_area(); box.set_border_width(12)
+        elenco = Gtk.ListBox(); elenco.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        for addr, nome in sorted(self.contatti.items(), key=lambda kv: kv[1].lower()):
+            r = Gtk.ListBoxRow(); r.addr = addr
+            hb = Gtk.Box(spacing=10); hb.set_border_width(6)
+            hb.pack_start(fai_avatar(nome, addr), False, False, 0)
+            hb.pack_start(Gtk.Label(label=nome, xalign=0), True, True, 0)
+            r.add(hb); elenco.add(r)
+        sc = Gtk.ScrolledWindow(); sc.set_min_content_height(260); sc.set_min_content_width(300)
+        sc.add(elenco); box.pack_start(sc, True, True, 0)
+        d.show_all()
+        if d.run() == Gtk.ResponseType.OK and elenco.get_selected_row() is not None:
+            dest = elenco.get_selected_row().addr
+            if testo is not None:
+                self._cmd("SEND %s %s" % (dest, testo.encode().hex()))
+            elif file:
+                self._cmd("SENDFILE %s %s %s" % (dest, file.encode().hex(), mime or ""))
+        d.destroy()
 
     def _cerca_cambiata(self, entry):
         self.filtro = entry.get_text().strip().lower()
@@ -754,6 +1134,9 @@ class Chat(Gtk.Window):
         if riga is None:
             return
         self.attivo = riga.addr
+        if self.ui["non_letti"].pop(riga.addr, None) is not None:
+            self._salva_ui()
+            self._aggiorna_badge(riga.addr)
         self.comp.set_sensitive(True)
         self.comp.set_visible(True)          # il compositore compare con la chat
         self.comp.show_all()
@@ -816,22 +1199,23 @@ class Chat(Gtk.Window):
         self.conv.add(riga)
         GLib.idle_add(self._scorri_in_fondo)
 
-    def _bolla(self, direzione, testo, ts):
+    def _bolla(self, direzione, testo, ts, grezza=None):
         riga, bolla = self._nuova_bolla(direzione, ts)
+        riga.grezza, riga.testo = grezza, testo
         et = Gtk.Label(label=testo, xalign=0); et.get_style_context().add_class("testo")
         et.set_line_wrap(True)
         et.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
         et.set_max_width_chars(46)
-        et.set_selectable(True)
         bolla.pack_start(et, False, False, 0)
         self._chiudi_bolla(riga, bolla, ts)
 
     # --- allegati ----------------------------------------------------------------
-    def _bolla_allegato(self, direzione, ts, ident, dim, mime, nome, percorso):
+    def _bolla_allegato(self, direzione, ts, ident, dim, mime, nome, percorso, grezza=None):
         """Foto: anteprima cliccabile. Altri tipi: scheda con icona, nome,
         dimensione e i pulsanti Apri / Mostra nella cartella."""
         self._togli_trasferimento(ident)
         riga, bolla = self._nuova_bolla(direzione, ts, "allegato")
+        riga.grezza, riga.allegato = grezza, (percorso, mime, nome)
         esiste = bool(percorso) and os.path.isfile(percorso)
         anteprima = None
         if esiste and mime in TIPI_ANTEPRIMA:
@@ -845,7 +1229,8 @@ class Chat(Gtk.Window):
             scatola.add(anteprima)
             scatola.get_style_context().add_class("anteprima")
             scatola.set_tooltip_text("%s · %s" % (nome, dimensione_leggibile(dim)))
-            scatola.connect("button-press-event", lambda *_a: self._apri_allegato(percorso, mime))
+            scatola.connect("button-press-event",   # sinistro apre; destro passa al menu
+                            lambda _w, ev: ev.button == 1 and (self._apri_allegato(percorso, mime) or True))
             bolla.pack_start(scatola, False, False, 0)
         else:
             scheda = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
@@ -1015,6 +1400,10 @@ class Chat(Gtk.Window):
             d["tema"] = TEMA_DEF
         if d.get("sfondo") not in SFONDI:
             d["sfondo"] = SFONDO_DEF
+        if not isinstance(d.get("non_letti"), dict):
+            d["non_letti"] = {}
+        if not isinstance(d.get("fissati"), list):
+            d["fissati"] = []
         return d
 
     def _salva_ui(self):
@@ -1051,7 +1440,7 @@ class Chat(Gtk.Window):
         self.prov.load_from_data(_css(self.ui["tema"], self.ui["sfondo"]).encode())
 
     def _menu_aspetto(self, bottone):
-        menu = Gtk.Menu()
+        menu = self._nuovo_menu()
 
         def sezione(titolo):
             t = Gtk.MenuItem(label=titolo)
