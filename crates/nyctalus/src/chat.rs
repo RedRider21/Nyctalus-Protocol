@@ -44,6 +44,7 @@ pub async fn chat(
     socks: SocketAddr,
     dati: PathBuf,
     max_file: u64,
+    segreto: Option<String>,
 ) -> Risultato<()> {
     std::fs::create_dir_all(&dati)?;
     let identita = carica_identita(&identita_path)?;
@@ -58,6 +59,7 @@ pub async fn chat(
         iscritti: Mutex::new(Vec::new()),
         in_arrivo: Mutex::new(HashMap::new()),
         max_file,
+        segreto,
     });
 
     println!("Nyctalus chat");
@@ -98,6 +100,7 @@ struct Stato {
     iscritti: Mutex<Vec<mpsc::UnboundedSender<String>>>,     // UI in ascolto degli eventi
     in_arrivo: Mutex<HashMap<(String, String), InArrivo>>,   // (mittente, id) → allegato in arrivo
     max_file: u64,                                           // dimensione massima di un allegato
+    segreto: Option<String>,                                 // se c'è, la UI deve presentarlo (AUTH)
 }
 
 /// Un allegato che sta arrivando: si scrive in `<nome>.part` e diventa
@@ -545,6 +548,23 @@ impl Stato {
 
         let mut lettore = BufReader::new(lettura);
         let mut linea = String::new();
+        // Con un segreto impostato la prima riga deve essere `AUTH <segreto>`:
+        // su Android ogni app può aprire le porte di 127.0.0.1, e così solo chi
+        // ha il segreto (la nostra interfaccia) può leggere e mandare messaggi.
+        if let Some(atteso) = &self.segreto {
+            if lettore.read_line(&mut linea).await? == 0 {
+                scrittore.abort();
+                return Ok(());
+            }
+            let dato = linea.trim_end().strip_prefix("AUTH ").unwrap_or("");
+            if !uguali_a_tempo_costante(dato.as_bytes(), atteso.as_bytes()) {
+                let _ = tx.send("ERR autenticazione richiesta\n".into());
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                scrittore.abort();
+                return Ok(());
+            }
+            let _ = tx.send("AUTHOK\n".into());
+        }
         loop {
             linea.clear();
             if lettore.read_line(&mut linea).await? == 0 {
@@ -764,6 +784,14 @@ fn mime_sicuro(mime: &str) -> String {
     if ok { m } else { "application/octet-stream".to_string() }
 }
 
+/// Confronto che non rivela, coi tempi, quanti caratteri iniziali coincidono.
+fn uguali_a_tempo_costante(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
 fn id_valido(id: &str) -> bool {
     (1..=32).contains(&id.len()) && id.chars().all(|c| c.is_ascii_hexdigit())
 }
@@ -931,6 +959,13 @@ mod prove {
     }
 
     #[test]
+    fn confronto_segreto() {
+        assert!(uguali_a_tempo_costante(b"abc123", b"abc123"));
+        assert!(!uguali_a_tempo_costante(b"abc124", b"abc123"));
+        assert!(!uguali_a_tempo_costante(b"abc", b"abc123"));
+    }
+
+    #[test]
     fn togli_riga_rimuove_solo_quel_messaggio() {
         let d = std::env::temp_dir().join(format!("nyct-cron-{}", nuovo_id()));
         let st = Stato {
@@ -943,6 +978,7 @@ mod prove {
             iscritti: Mutex::new(Vec::new()),
             in_arrivo: Mutex::new(HashMap::new()),
             max_file: 1,
+            segreto: None,
         };
         st.registra_riga("x.nyct", "in 1 6161");
         st.registra_riga("x.nyct", "out 2 6262");

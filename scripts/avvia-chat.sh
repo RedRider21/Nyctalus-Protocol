@@ -43,6 +43,11 @@ porta_occupata() { ss -ltn 2>/dev/null | grep -q ":$1\b"; }
 URL="$(leggi_cfg directory_url)"; AUTH="$(leggi_cfg authority)"
 if [ -n "$URL" ] && [ -n "$AUTH" ]; then SOCKS="127.0.0.1:1080"; else SOCKS="127.0.0.1:1086"; fi
 
+# Segreto della porta di controllo: solo la nostra finestra potrà usarla
+# (passa per variabile d'ambiente, così non compare nell'elenco dei processi).
+NYCTALUS_CHAT_TOKEN="$(python3 -c 'import secrets;print(secrets.token_hex(16))')"
+export NYCTALUS_CHAT_TOKEN
+
 # --- 1) motore (parte subito) e FINESTRA (subito) ----------------------------
 echo "» avvio il motore della chat"
 "$BIN" chat --data "$DATI" --backend "$BACKEND" --control "$CONTROL" --socks "$SOCKS" > "$WORK/chat.log" 2>&1 & MIEI+=($!)

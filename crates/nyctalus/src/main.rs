@@ -62,7 +62,7 @@ Usage:
   nyctalus test-circuit (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--message DEST]
   nyctalus site    (--dir ./folder | --backend IP:PORT) [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--identity FILE] [--hops 3] [--pool 4]
   nyctalus browse  ADDRESS.nyct [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--path /] [--hops 3]
-  nyctalus chat    [--data DIR] [--identity FILE] [--backend 127.0.0.1:1082] [--control 127.0.0.1:1091] [--socks 127.0.0.1:1080] [--max-file 200]
+  nyctalus chat    [--data DIR] [--identity FILE] [--backend 127.0.0.1:1082] [--control 127.0.0.1:1091] [--socks 127.0.0.1:1080] [--max-file 200] [--control-token SECRET]
   nyctalus receive --out FILE [--listen 0.0.0.0:4433] [--identity FILE]
   nyctalus send    --to IP:PORT --fingerprint HEX --recipient ADDRESS.nyct [--lanes 4] FILE
   nyctalus single-hop --to IP:PORT --fingerprint HEX [--socks 127.0.0.1:1080]
@@ -243,7 +243,17 @@ async fn esegui() -> Risultato<()> {
             if !(1..=4096).contains(&max_mb) {
                 return Err("--max-file must be between 1 and 4096 (MB)".into());
             }
-            chat::chat(identita, backend, controllo, socks, dati, max_mb * 1024 * 1024).await
+            // segreto della porta di controllo: da opzione o (meglio, non compare in `ps`) da variabile
+            let segreto = opzione(&opzioni, "control-token")
+                .map(String::from)
+                .or_else(|| std::env::var("NYCTALUS_CHAT_TOKEN").ok())
+                .filter(|t| !t.is_empty());
+            if let Some(t) = &segreto {
+                if t.len() < 16 || !t.chars().all(|c| c.is_ascii_alphanumeric()) {
+                    return Err("--control-token: at least 16 alphanumeric characters".into());
+                }
+            }
+            chat::chat(identita, backend, controllo, socks, dati, max_mb * 1024 * 1024, segreto).await
         }
         "help" | "--help" | "-h" => {
             println!("{USO}");

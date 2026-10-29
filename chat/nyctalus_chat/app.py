@@ -745,6 +745,9 @@ class Chat(Gtk.Window):
             self.sock = None
             return False
         threading.Thread(target=self._lettore, daemon=True).start()
+        segreto = os.environ.get("NYCTALUS_CHAT_TOKEN", "")
+        if segreto:                       # porta di controllo protetta: ci presentiamo
+            self._cmd("AUTH " + segreto)
         self._cmd("WHOAMI")
         self._cmd("LIST")
         self._cmd("SUB")
