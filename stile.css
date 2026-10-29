@@ -91,3 +91,14 @@ code.in{background:var(--sup2);border:1px solid var(--bordo);border-radius:6px;p
   margin-top:16px;color:var(--tenue);font-size:.92rem}
 footer{padding:44px 0 60px;border-top:1px solid var(--bordo);color:var(--tenue);font-size:.9rem;text-align:center}
 footer a{color:var(--acc)}
+
+/* come appare: screenshot */
+.sotto-gal{font-size:1.05rem;margin:26px 0 12px;color:var(--tenue)}
+.galleria-pc{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.galleria-pc .larga,.galleria-pc .stretta{grid-column:1/-1}
+.galleria-tel{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}
+.scatto{margin:0}
+.scatto img{width:100%;height:auto;display:block;border-radius:12px;border:1px solid var(--bordo);box-shadow:var(--ombra);background:var(--sup)}
+.scatto.stretta img{width:auto;max-width:100%;margin:0 auto}
+.scatto figcaption{font-size:.86rem;color:var(--tenue);margin-top:8px;text-align:center;line-height:1.45}
+@media (max-width:760px){.galleria-pc{grid-template-columns:1fr}.galleria-tel{grid-template-columns:1fr 1fr}}
