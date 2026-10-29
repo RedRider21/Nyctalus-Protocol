@@ -62,7 +62,7 @@ Usage:
   nyctalus test-circuit (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--message DEST]
   nyctalus site    (--dir ./folder | --backend IP:PORT) [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--identity FILE] [--hops 3] [--pool 4]
   nyctalus browse  ADDRESS.nyct [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--path /] [--hops 3]
-  nyctalus chat    [--data DIR] [--identity FILE] [--backend 127.0.0.1:1082] [--control 127.0.0.1:1091] [--socks 127.0.0.1:1080]
+  nyctalus chat    [--data DIR] [--identity FILE] [--backend 127.0.0.1:1082] [--control 127.0.0.1:1091] [--socks 127.0.0.1:1080] [--max-file 200]
   nyctalus receive --out FILE [--listen 0.0.0.0:4433] [--identity FILE]
   nyctalus send    --to IP:PORT --fingerprint HEX --recipient ADDRESS.nyct [--lanes 4] FILE
   nyctalus single-hop --to IP:PORT --fingerprint HEX [--socks 127.0.0.1:1080]
@@ -239,7 +239,11 @@ async fn esegui() -> Risultato<()> {
             let backend: SocketAddr = opzione(&opzioni, "backend").unwrap_or("127.0.0.1:1082").parse()?;
             let controllo: SocketAddr = opzione(&opzioni, "control").unwrap_or("127.0.0.1:1091").parse()?;
             let socks: SocketAddr = opzione(&opzioni, "socks").unwrap_or("127.0.0.1:1080").parse()?;
-            chat::chat(identita, backend, controllo, socks, dati).await
+            let max_mb: u64 = opzione(&opzioni, "max-file").map(str::parse).transpose()?.unwrap_or(200);
+            if !(1..=4096).contains(&max_mb) {
+                return Err("--max-file must be between 1 and 4096 (MB)".into());
+            }
+            chat::chat(identita, backend, controllo, socks, dati, max_mb * 1024 * 1024).await
         }
         "help" | "--help" | "-h" => {
             println!("{USO}");

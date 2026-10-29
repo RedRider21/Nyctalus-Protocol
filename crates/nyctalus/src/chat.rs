@@ -43,6 +43,7 @@ pub async fn chat(
     controllo: SocketAddr,
     socks: SocketAddr,
     dati: PathBuf,
+    max_file: u64,
 ) -> Risultato<()> {
     std::fs::create_dir_all(&dati)?;
     let identita = carica_identita(&identita_path)?;
@@ -55,6 +56,8 @@ pub async fn chat(
         contatti: Mutex::new(carica_contatti(&dati)),
         sessioni: Mutex::new(HashMap::new()),
         iscritti: Mutex::new(Vec::new()),
+        in_arrivo: Mutex::new(HashMap::new()),
+        max_file,
     });
 
     println!("Nyctalus chat");
@@ -63,6 +66,7 @@ pub async fn chat(
     println!("Controllo (UI):     {controllo}");
     println!("Uscita (SOCKS):     {socks}");
     println!("Dati:               {}", dati.display());
+    println!("Allegati fino a:    {} MB", max_file / (1024 * 1024));
 
     let ascoltatore = TcpListener::bind(backend).await?;
     let st_ctrl = stato.clone();
@@ -90,9 +94,35 @@ struct Stato {
     socks: SocketAddr,
     dati: PathBuf,
     contatti: Mutex<Vec<(String, String)>>,                  // (indirizzo, soprannome hex)
-    sessioni: Mutex<HashMap<String, mpsc::UnboundedSender<Vec<u8>>>>, // indirizzo → scrittore
+    sessioni: Mutex<HashMap<String, mpsc::Sender<Vec<u8>>>>, // indirizzo → scrittore (limitato)
     iscritti: Mutex<Vec<mpsc::UnboundedSender<String>>>,     // UI in ascolto degli eventi
+    in_arrivo: Mutex<HashMap<(String, String), InArrivo>>,   // (mittente, id) → allegato in arrivo
+    max_file: u64,                                           // dimensione massima di un allegato
 }
+
+/// Un allegato che sta arrivando: si scrive in `<nome>.part` e diventa
+/// definitivo solo se dimensione e impronta BLAKE3 tornano.
+struct InArrivo {
+    file: std::fs::File,
+    parziale: PathBuf,
+    finale: PathBuf,
+    nome: String,
+    mime: String,
+    totale: u64,
+    ricevuti: u64,
+    impronta: blake3::Hasher,
+    ts: u64,
+    ultimo_avviso: u64,
+}
+
+/// Blocco dati di un allegato (16 KB): sta comodo in un frame da 64 KB.
+const BLOCCO: usize = 16 * 1024;
+/// Ogni quanto avvisare l'interfaccia sull'avanzamento.
+const PASSO_AVANZAMENTO: u64 = 256 * 1024;
+/// Allegati contemporanei in arrivo dallo stesso contatto.
+const MAX_IN_ARRIVO: usize = 8;
+/// Coda dello scrittore di sessione: dà contropressione agli invii lunghi.
+const CODA_SESSIONE: usize = 32;
 
 impl Stato {
     // --- eventi verso le interfacce iscritte ---------------------------------
@@ -159,7 +189,7 @@ impl Stato {
             (Record::nuovo(&segreti.verso_mittente), Record::nuovo(&segreti.verso_destinatario))
         };
 
-        let (ch_tx, mut ch_rx) = mpsc::unbounded_channel::<Vec<u8>>();
+        let (ch_tx, mut ch_rx) = mpsc::channel::<Vec<u8>>(CODA_SESSIONE);
         self.sessioni.lock().unwrap().insert(peer.clone(), ch_tx);
         self.notifica(format!("ST {peer} 1"));
 
@@ -187,12 +217,26 @@ impl Stato {
             }
             scrittore.abort();
             stato.sessioni.lock().unwrap().remove(&peer);
+            stato.abbandona_in_arrivo(&peer);
             stato.notifica(format!("ST {peer} 0"));
         });
     }
 
-    /// Un messaggio applicativo è `M <ts> <testo>` (testo UTF-8, anche con spazi).
+    /// Messaggi applicativi sulla sessione interna:
+    ///   `M <ts> <testo>`                         testo (UTF-8, anche con spazi)
+    ///   `F <id> <ts> <dim> <mime> <nome hex>`    inizio di un allegato
+    ///   `D <id> <byte…>`                         un blocco dell'allegato
+    ///   `E <id> <blake3 hex>`                    fine: impronta di tutto il file
     fn ricevi_messaggio(&self, peer: &str, chiaro: &[u8]) {
+        if let Some(r) = chiaro.strip_prefix(b"D ") {
+            return self.ricevi_blocco(peer, r);
+        }
+        if let Some(r) = chiaro.strip_prefix(b"F ") {
+            return self.ricevi_intestazione(peer, r);
+        }
+        if let Some(r) = chiaro.strip_prefix(b"E ") {
+            return self.ricevi_fine(peer, r);
+        }
         let Some(resto) = chiaro.strip_prefix(b"M ") else { return };
         let Some(sp) = resto.iter().position(|&b| b == b' ') else { return };
         let ts = std::str::from_utf8(&resto[..sp]).ok().and_then(|t| t.parse::<u64>().ok()).unwrap_or_else(ora);
@@ -204,30 +248,204 @@ impl Stato {
         self.notifica(format!("MSG {peer} {ts} {}", in_esadecimale(testo)));
     }
 
+    /// Lo scrittore della sessione con un contatto, aprendola se serve.
+    async fn sessione(self: &Arc<Self>, addr: &str) -> Risultato<mpsc::Sender<Vec<u8>>> {
+        let esistente = self.sessioni.lock().unwrap().get(addr).cloned();
+        match esistente {
+            Some(s) => Ok(s),
+            None => {
+                self.componi(addr).await?;
+                Ok(self.sessioni.lock().unwrap().get(addr).cloned().ok_or("sessione non creata")?)
+            }
+        }
+    }
+
     /// Invia un messaggio a un contatto, aprendo la sessione se serve.
     async fn invia_a(self: &Arc<Self>, indirizzo_contatto: &str, testo: &[u8]) -> Risultato<()> {
         let addr = con_suffisso(indirizzo_contatto);
         let ts = ora();
-        let scrittore = {
-            let g = self.sessioni.lock().unwrap();
-            g.get(&addr).cloned()
-        };
-        let scrittore = match scrittore {
-            Some(s) => s,
-            None => {
-                self.componi(&addr).await?;
-                self.sessioni.lock().unwrap().get(&addr).cloned().ok_or("sessione non creata")?
-            }
-        };
+        let scrittore = self.sessione(&addr).await?;
         let mut chiaro = format!("M {ts} ").into_bytes();
         chiaro.extend_from_slice(testo);
-        scrittore.send(chiaro).map_err(|_| "sessione chiusa")?;
+        scrittore.send(chiaro).await.map_err(|_| "sessione chiusa")?;
         self.registra(&addr, "out", ts, testo);
         self.notifica(format!("OUT {addr} {ts} {}", in_esadecimale(testo)));
         Ok(())
     }
 
+    // --- allegati: invio -----------------------------------------------------
+    /// Spedisce un file a blocchi; la coda limitata della sessione fa da
+    /// contropressione (il file non viene caricato tutto in memoria).
+    async fn invia_file_a(self: &Arc<Self>, indirizzo_contatto: &str, percorso: &Path, mime: &str) -> Risultato<()> {
+        use tokio::io::AsyncReadExt as _;
+        let addr = con_suffisso(indirizzo_contatto);
+        let meta = tokio::fs::metadata(percorso).await.map_err(|_| "file non trovato")?;
+        if !meta.is_file() {
+            return Err("non è un file".into());
+        }
+        let totale = meta.len();
+        if totale > self.max_file {
+            return Err(format!("file troppo grande (massimo {} MB)", self.max_file / (1024 * 1024)).into());
+        }
+        let nome = nome_sicuro(&percorso.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default());
+        let mime = mime_sicuro(mime);
+        let id = nuovo_id();
+        let ts = ora();
+        let nome_hex = in_esadecimale(nome.as_bytes());
+
+        let scrittore = self.sessione(&addr).await?;
+        scrittore
+            .send(format!("F {id} {ts} {totale} {mime} {nome_hex}").into_bytes())
+            .await
+            .map_err(|_| "sessione chiusa")?;
+
+        let mut f = tokio::fs::File::open(percorso).await?;
+        let mut impronta = blake3::Hasher::new();
+        let mut buf = vec![0u8; BLOCCO];
+        let (mut inviati, mut ultimo) = (0u64, 0u64);
+        loop {
+            let n = f.read(&mut buf).await?;
+            if n == 0 {
+                break;
+            }
+            impronta.update(&buf[..n]);
+            let mut blocco = format!("D {id} ").into_bytes();
+            blocco.extend_from_slice(&buf[..n]);
+            scrittore.send(blocco).await.map_err(|_| "sessione chiusa durante l'invio")?;
+            inviati += n as u64;
+            if inviati - ultimo >= PASSO_AVANZAMENTO || inviati == totale {
+                ultimo = inviati;
+                self.notifica(format!("PROG {addr} out {id} {inviati} {totale}"));
+            }
+        }
+        if inviati != totale {
+            return Err("il file è cambiato durante l'invio".into());
+        }
+        scrittore
+            .send(format!("E {id} {}", impronta.finalize().to_hex()).into_bytes())
+            .await
+            .map_err(|_| "sessione chiusa")?;
+
+        let percorso_hex = in_esadecimale(percorso.to_string_lossy().as_bytes());
+        self.registra_riga(&addr, &format!("fout {ts} {id} {totale} {mime} {nome_hex} {percorso_hex}"));
+        self.notifica(format!("FILE {addr} out {ts} {id} {totale} {mime} {nome_hex} {percorso_hex}"));
+        Ok(())
+    }
+
+    // --- allegati: ricezione -------------------------------------------------
+    fn ricevi_intestazione(&self, peer: &str, r: &[u8]) {
+        let Ok(testo) = std::str::from_utf8(r) else { return };
+        let campi: Vec<&str> = testo.split(' ').collect();
+        let [id, ts, dim, mime, nome_hex] = campi.as_slice() else { return };
+        if !id_valido(id) {
+            return;
+        }
+        let (Ok(ts), Ok(totale)) = (ts.parse::<u64>(), dim.parse::<u64>()) else { return };
+        let nome = nome_sicuro(&String::from_utf8_lossy(&da_hex(nome_hex).unwrap_or_default()));
+        let mime = mime_sicuro(mime);
+        if totale > self.max_file {
+            let msg = format!("allegato rifiutato: troppo grande ({} MB)", totale / (1024 * 1024));
+            self.notifica(format!("FERR {peer} {id} {}", in_esadecimale(msg.as_bytes())));
+            return;
+        }
+        let mut g = self.in_arrivo.lock().unwrap();
+        if g.keys().filter(|(p, _)| p == peer).count() >= MAX_IN_ARRIVO || g.contains_key(&(peer.to_string(), id.to_string())) {
+            return;
+        }
+        let cartella = self.dati.join("allegati").join(cartella_contatto(peer));
+        if std::fs::create_dir_all(&cartella).is_err() {
+            return;
+        }
+        let finale = percorso_libero(&cartella, &nome);
+        let parziale = finale.with_extension(format!(
+            "{}part",
+            finale.extension().map(|e| format!("{}.", e.to_string_lossy())).unwrap_or_default()
+        ));
+        let Ok(file) = std::fs::File::create(&parziale) else { return };
+        g.insert(
+            (peer.to_string(), id.to_string()),
+            InArrivo { file, parziale, finale, nome, mime, totale, ricevuti: 0, impronta: blake3::Hasher::new(), ts, ultimo_avviso: 0 },
+        );
+        drop(g);
+        self.notifica(format!("PROG {peer} in {id} 0 {totale}"));
+    }
+
+    fn ricevi_blocco(&self, peer: &str, r: &[u8]) {
+        use std::io::Write;
+        let Some(sp) = r.iter().position(|&b| b == b' ') else { return };
+        let Ok(id) = std::str::from_utf8(&r[..sp]) else { return };
+        let dati = &r[sp + 1..];
+        let chiave = (peer.to_string(), id.to_string());
+        let mut g = self.in_arrivo.lock().unwrap();
+        let Some(a) = g.get_mut(&chiave) else { return };
+        // più byte di quelli annunciati, o errore di scrittura: si scarta tutto
+        if a.ricevuti + dati.len() as u64 > a.totale || a.file.write_all(dati).is_err() {
+            let a = g.remove(&chiave).unwrap();
+            drop(g);
+            let _ = std::fs::remove_file(&a.parziale);
+            self.notifica(format!("FERR {peer} {id} {}", in_esadecimale("allegato non valido, scartato".as_bytes())));
+            return;
+        }
+        a.impronta.update(dati);
+        a.ricevuti += dati.len() as u64;
+        let avviso = a.ricevuti - a.ultimo_avviso >= PASSO_AVANZAMENTO;
+        if avviso {
+            a.ultimo_avviso = a.ricevuti;
+        }
+        let (fatti, totale) = (a.ricevuti, a.totale);
+        drop(g);
+        if avviso {
+            self.notifica(format!("PROG {peer} in {id} {fatti} {totale}"));
+        }
+    }
+
+    fn ricevi_fine(&self, peer: &str, r: &[u8]) {
+        let Ok(testo) = std::str::from_utf8(r) else { return };
+        let Some((id, attesa)) = testo.split_once(' ') else { return };
+        let Some(mut a) = self.in_arrivo.lock().unwrap().remove(&(peer.to_string(), id.to_string())) else { return };
+        let _ = std::io::Write::flush(&mut a.file);
+        drop(a.file);
+        let calcolata = a.impronta.finalize().to_hex();
+        if a.ricevuti != a.totale || calcolata.as_str() != attesa.trim() {
+            let _ = std::fs::remove_file(&a.parziale);
+            self.notifica(format!("FERR {peer} {id} {}", in_esadecimale("allegato corrotto (impronta diversa), scartato".as_bytes())));
+            return;
+        }
+        if std::fs::rename(&a.parziale, &a.finale).is_err() {
+            let _ = std::fs::remove_file(&a.parziale);
+            return;
+        }
+        let nome_hex = in_esadecimale(a.nome.as_bytes());
+        let percorso_hex = in_esadecimale(a.finale.to_string_lossy().as_bytes());
+        self.registra_riga(peer, &format!("fin {} {id} {} {} {nome_hex} {percorso_hex}", a.ts, a.totale, a.mime));
+        if !self.contatti.lock().unwrap().iter().any(|(c, _)| c == peer) {
+            self.notifica(format!("NEW {peer}"));
+        }
+        self.notifica(format!("FILE {peer} in {} {id} {} {} {nome_hex} {percorso_hex}", a.ts, a.totale, a.mime));
+    }
+
+    /// La sessione è caduta: gli allegati a metà vengono buttati.
+    fn abbandona_in_arrivo(&self, peer: &str) {
+        let mut g = self.in_arrivo.lock().unwrap();
+        let chiavi: Vec<_> = g.keys().filter(|(p, _)| p == peer).cloned().collect();
+        for k in chiavi {
+            if let Some(a) = g.remove(&k) {
+                let _ = std::fs::remove_file(&a.parziale);
+                self.notifica(format!("FERR {peer} {} {}", k.1, in_esadecimale("trasferimento interrotto".as_bytes())));
+            }
+        }
+    }
+
     // --- persistenza ---------------------------------------------------------
+    fn registra_riga(&self, addr: &str, riga: &str) {
+        use std::io::Write;
+        let dir = self.dati.join("cronologia");
+        let _ = std::fs::create_dir_all(&dir);
+        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(dir.join(format!("{addr}.log"))) {
+            let _ = writeln!(f, "{riga}");
+        }
+    }
+
     fn registra(&self, addr: &str, direzione: &str, ts: u64, testo: &[u8]) {
         use std::io::Write;
         let dir = self.dati.join("cronologia");
@@ -358,6 +576,34 @@ impl Stato {
                     }
                 }
             }
+            "SENDFILE" => {
+                // SENDFILE <addr> <percorso hex> [mime]
+                let addr = it.next().unwrap_or("").to_string();
+                let resto = it.next().unwrap_or("");
+                let (hex, mime) = resto.split_once(' ').unwrap_or((resto, ""));
+                let percorso = match da_hex(hex) {
+                    Ok(b) => PathBuf::from(String::from_utf8_lossy(&b).to_string()),
+                    Err(_) => {
+                        let _ = tx.send("ERR percorso non valido\n".into());
+                        return;
+                    }
+                };
+                let mime = mime.to_string();
+                let st = self.clone();
+                let txc = tx.clone();
+                tokio::spawn(async move {
+                    match st.invia_file_a(&addr, &percorso, &mime).await {
+                        Ok(()) => {
+                            let _ = txc.send("OK\n".into());
+                        }
+                        Err(e) => {
+                            let msg = in_esadecimale(e.to_string().as_bytes());
+                            st.notifica(format!("FERR {} - {msg}", con_suffisso(&addr)));
+                            let _ = txc.send(format!("ERR {e}\n"));
+                        }
+                    }
+                });
+            }
             _ => {
                 let _ = tx.send("ERR comando sconosciuto\n".into());
             }
@@ -417,6 +663,66 @@ fn carica_contatti(dati: &Path) -> Vec<(String, String)> {
             .collect(),
         Err(_) => Vec::new(),
     }
+}
+
+/// Nome di file ricevuto reso innocuo: niente cartelle, niente nascosti,
+/// niente caratteri di controllo, lunghezza limitata.
+fn nome_sicuro(nome: &str) -> String {
+    let base = nome.rsplit(['/', '\\']).next().unwrap_or("");
+    let mut pulito: String = base
+        .chars()
+        .map(|c| if c.is_control() || matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') { '_' } else { c })
+        .collect();
+    pulito = pulito.trim().trim_start_matches('.').to_string();
+    if pulito.chars().count() > 120 {
+        let (stem, ext) = match pulito.rfind('.') {
+            Some(i) if pulito.len() - i <= 10 => (pulito[..i].to_string(), pulito[i..].to_string()),
+            _ => (pulito.clone(), String::new()),
+        };
+        pulito = stem.chars().take(110).collect::<String>() + &ext;
+    }
+    if pulito.is_empty() { "file".to_string() } else { pulito }
+}
+
+/// Tipo MIME accettato solo se è un token semplice (es. `image/jpeg`).
+fn mime_sicuro(mime: &str) -> String {
+    let m = mime.trim().to_ascii_lowercase();
+    let ok = !m.is_empty()
+        && m.len() <= 80
+        && m.contains('/')
+        && m.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '/' | '.' | '+' | '-' | '_'));
+    if ok { m } else { "application/octet-stream".to_string() }
+}
+
+fn id_valido(id: &str) -> bool {
+    (1..=32).contains(&id.len()) && id.chars().all(|c| c.is_ascii_hexdigit())
+}
+
+fn nuovo_id() -> String {
+    let mut b = [0u8; 8];
+    getrandom::fill(&mut b).expect("generatore casuale di sistema");
+    in_esadecimale(&b)
+}
+
+/// Sottocartella degli allegati per contatto (prime 16 lettere dell'indirizzo).
+fn cartella_contatto(peer: &str) -> String {
+    peer.chars().filter(|c| c.is_ascii_alphanumeric()).take(16).collect()
+}
+
+/// `cartella/nome`, oppure `nome (2).ext`, `nome (3).ext`… se esiste già.
+fn percorso_libero(cartella: &Path, nome: &str) -> PathBuf {
+    let primo = cartella.join(nome);
+    if !primo.exists() {
+        return primo;
+    }
+    let (stem, ext) = match nome.rfind('.') {
+        Some(i) if i > 0 => (&nome[..i], &nome[i..]),
+        _ => (nome, ""),
+    };
+    (2..10_000)
+        .map(|n| cartella.join(format!("{stem} ({n}){ext}")))
+        .find(|p| !p.exists())
+        .unwrap_or(primo)
 }
 
 fn da_hex(testo: &str) -> Risultato<Vec<u8>> {
@@ -519,6 +825,39 @@ mod prove {
         let ricevuto = leggi_frame(&mut b).await.unwrap().unwrap();
         h.await.unwrap();
         assert_eq!(ricevuto, atteso);
+    }
+
+    #[test]
+    fn nomi_di_file_resi_innocui() {
+        assert_eq!(nome_sicuro("../../etc/passwd"), "passwd");
+        assert_eq!(nome_sicuro("C:\\Windows\\evil.exe"), "evil.exe");
+        assert_eq!(nome_sicuro(".bashrc"), "bashrc");
+        assert_eq!(nome_sicuro("foto vacanze.jpg"), "foto vacanze.jpg");
+        assert_eq!(nome_sicuro("a\nb\u{0}c.txt"), "a_b_c.txt");
+        assert_eq!(nome_sicuro(""), "file");
+        assert_eq!(nome_sicuro("..."), "file");
+        let lungo = format!("{}.pdf", "x".repeat(300));
+        let r = nome_sicuro(&lungo);
+        assert!(r.ends_with(".pdf") && r.chars().count() <= 120);
+    }
+
+    #[test]
+    fn mime_e_id_validati() {
+        assert_eq!(mime_sicuro("image/JPEG"), "image/jpeg");
+        assert_eq!(mime_sicuro("text/html; charset=x"), "application/octet-stream");
+        assert_eq!(mime_sicuro(""), "application/octet-stream");
+        assert!(id_valido("0123abcd") && !id_valido("../x") && !id_valido(""));
+        assert_eq!(nuovo_id().len(), 16);
+    }
+
+    #[test]
+    fn percorso_libero_non_sovrascrive() {
+        let d = std::env::temp_dir().join(format!("nyct-prova-{}", nuovo_id()));
+        std::fs::create_dir_all(&d).unwrap();
+        assert_eq!(percorso_libero(&d, "a.txt"), d.join("a.txt"));
+        std::fs::write(d.join("a.txt"), b"1").unwrap();
+        assert_eq!(percorso_libero(&d, "a.txt"), d.join("a (2).txt"));
+        std::fs::remove_dir_all(&d).unwrap();
     }
 
     #[tokio::test]
