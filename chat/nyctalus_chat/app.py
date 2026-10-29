@@ -86,7 +86,7 @@ MANUALE_URL = os.environ.get(
 AVATAR_COLORI = ["#5aa9ff", "#7f6cff", "#38c6a4", "#e0794b", "#d45b8e",
                  "#c9a227", "#4bb3e0", "#8a86ff"]
 
-CSS = b"""
+CSS_TMPL = """
 .chat-root { background: #0a0e1a; }
 
 /* le ListBox/ScrolledWindow non devono mostrare il bianco del tema */
@@ -135,12 +135,15 @@ row.contatto:hover { background: rgba(90,169,255,0.08); }
 .conv-testa .nome { font-size: 15px; }
 .conv-testa .sotto { color: #6b7797; font-size: 11px; }
 .conv-testa .sotto.on { color: #37d08a; }
-/* sfondo conversazione: velo di colore e profondita' (stile chat moderne) */
-.conversazione { padding: 10px 6px;
+/* sfondo chat: trama a pipistrelli + velo di colore, su tutta l'area */
+.chat-bg {
     background-color: #0a0e1a;
     background-image:
+        url('@SFONDO@'),
         radial-gradient(circle at 20% 0%, rgba(90,169,255,0.08), rgba(0,0,0,0) 45%),
-        radial-gradient(circle at 85% 100%, rgba(127,108,255,0.08), rgba(0,0,0,0) 45%); }
+        radial-gradient(circle at 85% 100%, rgba(127,108,255,0.08), rgba(0,0,0,0) 45%);
+    background-repeat: repeat, no-repeat, no-repeat; }
+.conversazione { padding: 10px 6px; }
 
 .bolla { padding: 9px 13px; border-radius: 17px; margin: 3px 12px;
          box-shadow: 0 1px 2px rgba(0,0,0,0.30); }
@@ -153,7 +156,7 @@ row.contatto:hover { background: rgba(90,169,255,0.08); }
 .bolla-out .ora { color: rgba(255,255,255,0.55); }
 
 /* benvenuto / stato vuoto */
-.vuoto-wrap { background: #0a0e1a; }
+.vuoto-wrap { background: transparent; }
 .vuoto-bat { font-size: 54px; }
 .vuoto-tit { color: #e6ecff; font-weight: 700; font-size: 17px; }
 .vuoto-sub { color: #6b7797; font-size: 13px; }
@@ -169,6 +172,17 @@ row.contatto:hover { background: rgba(90,169,255,0.08); }
 .send:hover { background: #3b7cf0; }
 .send:disabled { background: #1b2740; color: #4a5676; }
 """
+
+SFONDO = Path(__file__).resolve().parent / "assets" / "sfondo.svg"
+
+
+def _css():
+    """CSS con il percorso dello sfondo iniettato (GTK vuole un file://…)."""
+    try:
+        sfondo = SFONDO.as_uri()
+    except Exception:            # noqa: BLE001
+        sfondo = ""
+    return CSS_TMPL.replace("@SFONDO@", sfondo)
 
 
 def ora_hhmm(ts):
@@ -215,7 +229,7 @@ class Chat(Gtk.Window):
         self.filtro = ""
 
         prov = Gtk.CssProvider()
-        prov.load_from_data(CSS)
+        prov.load_from_data(_css().encode())
         Gtk.StyleContext.add_provider_for_screen(
             Gdk.Screen.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.get_style_context().add_class("chat-root")
@@ -242,7 +256,7 @@ class Chat(Gtk.Window):
     def _lato(self):
         lato = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         lato.get_style_context().add_class("sidebar")
-        lato.set_size_request(290, -1)
+        lato.set_size_request(258, -1)
 
         # intestazione: logo + nome app + "+"
         testa = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
@@ -334,6 +348,7 @@ class Chat(Gtk.Window):
         # pila: stato vuoto / conversazione
         self.pila = Gtk.Stack()
         self.pila.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+        self.pila.get_style_context().add_class("chat-bg")   # trama su tutta l'area
         destra.pack_start(self.pila, True, True, 0)
 
         self.pila.add_named(self._pannello_vuoto(), "vuoto")
@@ -384,7 +399,7 @@ class Chat(Gtk.Window):
         for f in self.testa_avatar_slot.get_children():
             self.testa_avatar_slot.remove(f)
         self.testa_conv.set_visible(False)
-        self.comp.set_sensitive(False)
+        self.comp.set_visible(False)      # compositore solo a chat aperta (stile Telegram)
         if hasattr(self, "pila"):
             self.pila.set_visible_child_name("vuoto")
 
@@ -527,6 +542,8 @@ class Chat(Gtk.Window):
             return
         self.attivo = riga.addr
         self.comp.set_sensitive(True)
+        self.comp.set_visible(True)          # il compositore compare con la chat
+        self.comp.show_all()
         self.testa_conv.set_visible(True)
         self._aggiorna_testa()
         for figlio in self.conv.get_children():
