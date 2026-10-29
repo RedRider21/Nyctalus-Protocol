@@ -16,14 +16,19 @@ gestisce gli allegati. Installazione: **`MANUALE-INSTALLAZIONE.md`**, capitolo 2
 
 In Termux scrivi `nyctalus-mobile` e apri nel browser l'indirizzo che stampa
 (`http://127.0.0.1:18731/?t=…`). Con l'app Nyctalus basta toccare l'icona: compare la **schermata di benvenuto** col logo,
-e l'app avvia Nyctalus in Termux. Sotto ci sono le funzioni, come il mini menu del PC:
+e l'app avvia Nyctalus in Termux. Sotto il nome «Nyctalus · Anonymous Protocol» c'è una
+fila di pulsanti, come il mini menu del PC:
 
-| Casella | Cosa apre |
+| Pulsante | Cosa apre |
 |---|---|
 | 💬 **Chat** | la chat. Si accende quando la scritta dice «● Nyctalus è pronto» |
-| 🌐 **Browser** | il browser: **🦇 modalità Nyctalus** (anonimo, siti `.nyct`) oppure navigazione normale |
+| 🌐 **Browser** | il browser: **🦇 modalità Nyctalus** (anonimo, siti `.nyct`) oppure navigazione normale; parte da DuckDuckGo |
 | 📁 **File** | in arrivo: invio e ricezione di file attraverso Nyctalus |
-| ℹ️ **Info e manuali** | il sito del progetto con i manuali online (anche toccando il logo) |
+| ℹ️ **Info** | il sito del progetto con i manuali online (anche toccando il logo) |
+
+Il **tasto indietro** riporta sempre al punto di partenza: dalla conversazione all'elenco
+delle chat, dall'elenco a questa schermata; dal browser, chiudendo l'ultima scheda. La chat
+resta aperta dietro, quindi ritoccando 💬 ci si rientra subito.
 I pulsanti per Termux (installa/aggiorna Termux, installa/aggiorna Nyctalus, apri Termux,
 comando di avvio) sono sotto **Strumenti ▾**. Le foto e i video scattati dalla chat con l'app restano nella sua cartella
 privata (non finiscono nella galleria) e si cancellano dopo un giorno.

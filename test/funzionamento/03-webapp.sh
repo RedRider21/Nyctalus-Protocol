@@ -29,6 +29,9 @@ open(sys.argv[2],'wb').write(b'\x89PNG\r\n\x1a\n'+k(b'IHDR',struct.pack('>IIBBBB
   sleep 0.05
 done
 command -v ffmpeg >/dev/null && ffmpeg -v error -f lavfi -i testsrc2=size=320x240:rate=10:duration=2 -pix_fmt yuv420p "$G/VID_prova.mp4"
+# tante foto più vecchie (come un telefono vero): la griglia non deve schiacciare le caselle
+V="$TMP/galleria/Vecchie"; mkdir -p "$V"
+for k in $(seq -w 1 60); do cp "$G/IMG_1e88e5.png" "$V/OLD_$k.png"; touch -d "2 days ago" "$V/OLD_$k.png"; done
 NYCTALUS_GALLERIA="$TMP/galleria" NYCTALUS_GALLERIA_SOLO=1 HOME="$H" NYCTALUS_BIN="$BIN" python3 "$ROOT/mobile/orchestratore/nyctalus_mobile.py" > "$TMP/o.log" 2>&1 & PIDS+=($!)
 [ -n "$(attendi_regex "$TMP/o.log" 'servizi pronti' 40)" ] || { fail "servizi non avviati"; exit 1; }
 U="http://127.0.0.1:19733"
@@ -50,6 +53,7 @@ cat > "$TMP/passi.json" <<EOF
  ["js","'IO ' + [...document.querySelectorAll('#messaggi .msg')].map(m=>m.className.split(' ')[1]+':'+(m.querySelector('img')?'FOTO':'TESTO')).join(',')"],
  ["js","S.exif=false; apriGalleria(); 'galleria'"],["attendi",2],
  ["js","'TILE ' + document.querySelectorAll('#foglio .tile[data-i]').length"],
+ ["js","(()=>{const t=[...document.querySelectorAll('#foglio .tile')]; const brutte=t.filter(x=>x.offsetWidth<40||Math.abs(x.offsetHeight-x.offsetWidth)>2); return 'QUADRATE ' + (t.length-brutte.length) + '/' + t.length + (brutte.length?(' es. '+brutte[0].offsetWidth+'x'+brutte[0].offsetHeight):'')})()"],
  ["js","(()=>{const t=document.querySelectorAll('#foglio .tile[data-i] img'); return 'MINI ' + [...t].filter(i=>i.complete&&i.naturalWidth>0).length})()"],
  ["js","(()=>{const t=document.querySelectorAll('#foglio .tile[data-i]'); t[1].click(); t[3].click(); return 'NUMERI ' + [...document.querySelectorAll('#foglio .tile.scelta .num')].map(n=>n.textContent).join(',')})()"],
  ["js","'BOTTONE ' + document.querySelector('#foglio .invia-gal').textContent"],
@@ -75,6 +79,7 @@ IO=$(r IO)
 for atteso in "out:TESTO" "in:TESTO" "out:FOTO" "in:FOTO"; do
   echo "$IO" | grep -q "$atteso" && pass "a se stessi attraverso la rete: $atteso" || fail "manca $atteso ($IO)"
 done
+Q=$(r QUADRATE); [ -n "$Q" ] && [ "${Q%%/*}" = "$(echo "$Q" | cut -d/ -f2 | cut -d' ' -f1)" ] && pass "caselle della galleria tutte quadrate anche con molte foto ($Q)" || fail "caselle schiacciate: $Q"
 [ "$(r TILE)" -ge 6 ] && pass "selettore: griglia con le foto e i video recenti ($(r TILE))" || fail "griglia della galleria: $(r TILE)"
 [ "$(r MINI)" -ge 5 ] && pass "miniature caricate dal telefono" || fail "miniature: $(r MINI)"
 [ "$(r NUMERI)" = "1,2" ] && pass "selezione numerata come Telegram (1, 2)" || fail "numerazione: $(r NUMERI)"

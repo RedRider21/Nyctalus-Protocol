@@ -195,11 +195,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @media (min-width: 760px) { #foglio.galleria { width: 540px; height: 70vh; } }
 .testa-gal { display: flex; justify-content: space-between; align-items: baseline; padding: 0 18px 10px; font-weight: 700; font-size: 17px; }
 .testa-gal .conta { color: var(--accento); font-size: 14px; font-weight: 600; }
-.griglia-gal { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 0 3px 3px; align-content: start; }
+/* Altezza delle righe ESPLICITA (--lato, calcolata dalla web-app sulla larghezza vera):
+   con tante righe in un contenitore ad altezza fissa la griglia altrimenti le comprimeva
+   quasi a zero (caselle schiacciate e cerchi impilati). */
+.griglia-gal { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: var(--lato, calc((100vw - 12px) / 3)); gap: 3px; padding: 0 3px 3px; align-content: start; }
 /* casella quadrata col «padding» al 100%: funziona anche sulle WebView vecchie senza aspect-ratio */
-.tile { position: relative; display: block; width: 100%; border: 0; padding: 0; overflow: hidden;
+.tile { position: relative; display: block; width: 100%; height: var(--lato, calc((100vw - 12px) / 3)); border: 0; padding: 0; overflow: hidden;
   background: rgba(var(--rgb), .10); border-radius: 2px; }
-.tile::before { content: ""; display: block; padding-top: 100%; }
 .tile img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block;
   opacity: 0; transition: transform .15s ease, opacity .2s ease; }
 .tile.pronta img { opacity: 1; }

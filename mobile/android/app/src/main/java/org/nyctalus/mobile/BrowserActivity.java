@@ -340,10 +340,10 @@ public class BrowserActivity extends Activity {
     private String mobileUa;
 
     private static final int ACC = 0xFF0a84ff;
-    private static final String SEARCH = "https://www.google.com/search?q=";
+    private static final String SEARCH = "https://duckduckgo.com/?q=";
 
     /** Dove porta la casa finché non si sceglie una pagina iniziale. */
-    private static final String HOME_PREDEFINITA = "https://www.google.com/";
+    private static final String HOME_PREDEFINITA = "https://duckduckgo.com/";
 
     /** Il browser desktop. Non è la stringa di un altro browser: è quella con cui questi
      *  siti si comportavano bene qui, e cambiarla cambierebbe l'impaginazione dei siti che

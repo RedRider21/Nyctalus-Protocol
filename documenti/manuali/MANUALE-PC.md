@@ -16,7 +16,7 @@ Installazione: `MANUALE-INSTALLAZIONE.md`. La chat ha il suo manuale: `MANUALE-C
 
 ## 1. Il launcher (pannello da desktop)
 
-Si avvia con `./avvia-launcher.sh`. È un piccolo pannello **senza bordi**, che puoi
+Installato, è nel menu delle applicazioni come **«Nyctalus»** (o col comando `nyctalus-launcher`); dalla cartella scompattata `./avvia-launcher.sh`; dai sorgenti `strumenti/avvia-launcher.sh` (dopo il riordino non sta più in `launcher/` ma in `pc/launcher/`). È un piccolo pannello **senza bordi**, che puoi
 **trascinare** ovunque sullo schermo con il tasto sinistro.
 
 | Bottone | Cosa fa |

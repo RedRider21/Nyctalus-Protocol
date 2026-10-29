@@ -192,8 +192,8 @@ public class MainActivity extends Activity {
         t.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
         t.setLetterSpacing(0.08f);
         r.addView(t);
-        TextView sub = testo("CHAT ANONIMA", C_ACCENTO, 12);
-        sub.setLetterSpacing(0.35f);
+        TextView sub = testo("Anonymous Protocol", C_ACCENTO, 13);
+        sub.setLetterSpacing(0.18f);
         sub.setPadding(0, dp(4), 0, 0);
         r.addView(sub);
 
@@ -203,25 +203,18 @@ public class MainActivity extends Activity {
         stato.setLayoutParams(sp);
         r.addView(stato);
 
-        // le funzioni, come il mini menu del PC
-        LinearLayout caselle1 = riga(), caselle2 = riga();
-        pulsanteEntra = casella("💬", "Chat", C_ACCENTO, v -> entra());
+        // le funzioni, come il mini menu del PC: una fila di pulsanti piatti, tutti uguali
+        LinearLayout griglia = riga();
+        ((LinearLayout.LayoutParams) griglia.getLayoutParams()).topMargin = dp(20);
+        pulsanteEntra = casella("💬", "Chat", v -> entra());
         pulsanteEntra.setAlpha(pronto ? 1f : 0.55f);
-        caselle1.addView(pulsanteEntra);
-        caselle1.addView(casella("🌐", "Browser", 0xFF2f9e6e, v -> sceltaBrowser()));
-        View file = casella("📁", "File · presto", 0xFF8a6cf2, v -> avviso(
+        griglia.addView(pulsanteEntra);
+        griglia.addView(casella("🌐", "Browser", v -> sceltaBrowser()));
+        View file = casella("📁", "File", v -> avviso(
                 "Il gestore dei file (invio e ricezione attraverso Nyctalus) è in preparazione."));
         file.setAlpha(0.45f);
-        caselle2.addView(file);
-        caselle2.addView(casella("ℹ️", "Info e manuali", 0xFFe0a63a, v -> apriBrowser(SITO, false)));
-        ((LinearLayout.LayoutParams) caselle1.getLayoutParams()).topMargin = dp(18);
-        ((LinearLayout.LayoutParams) caselle2.getLayoutParams()).topMargin = dp(10);
-        LinearLayout griglia = new LinearLayout(this);
-        griglia.setOrientation(LinearLayout.VERTICAL);
-        griglia.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
-        griglia.addView(caselle1);
-        griglia.addView(caselle2);
+        griglia.addView(file);
+        griglia.addView(casella("ℹ️", "Info", v -> apriBrowser(SITO, false)));
         r.addView(griglia);
         r.addView(spazio());
 
@@ -494,26 +487,31 @@ public class MainActivity extends Activity {
         return cmd;
     }
 
-    /** Una casella del menu: icona grande e nome, sul colore della funzione. */
-    private View casella(String icona, String nome, int colore, View.OnClickListener cl) {
+    /** Un pulsante del menu: piatto, tutti dello stesso colore, icona sopra e nome sotto. */
+    private View casella(String icona, String nome, View.OnClickListener cl) {
         LinearLayout c = new LinearLayout(this);
         c.setOrientation(LinearLayout.VERTICAL);
         c.setGravity(Gravity.CENTER);
-        c.setPadding(dp(8), dp(14), dp(8), dp(12));
+        c.setPadding(dp(4), dp(10), dp(4), dp(8));
         GradientDrawable g = new GradientDrawable();
-        g.setCornerRadius(dp(18));
-        g.setColor((colore & 0x00FFFFFF) | 0x26000000);
-        g.setStroke(dp(1), (colore & 0x00FFFFFF) | 0x66000000);
-        c.setBackground(g);
-        TextView i = testo(icona, C_TESTO, 30);
-        TextView n = testo(nome, C_TESTO, 14);
-        n.setPadding(0, dp(6), 0, 0);
+        g.setCornerRadius(dp(14));
+        g.setColor(C_SCHEDA);
+        g.setStroke(dp(1), C_BORDO);
+        GradientDrawable maschera = new GradientDrawable();
+        maschera.setCornerRadius(dp(14));
+        maschera.setColor(0xFFFFFFFF);
+        c.setBackground(new android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf((C_ACCENTO & 0x00FFFFFF) | 0x40000000), g, maschera));
+        TextView i = testo(icona, C_TESTO, 20);
+        TextView n = testo(nome, C_TENUE, 11);
+        n.setLetterSpacing(0.04f);
+        n.setPadding(0, dp(4), 0, 0);
         c.addView(i);
         c.addView(n);
         c.setClickable(true);
         c.setOnClickListener(cl);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        lp.setMargins(dp(5), 0, dp(5), 0);
+        lp.setMargins(dp(4), 0, dp(4), 0);
         c.setLayoutParams(lp);
         return c;
     }
@@ -624,7 +622,14 @@ public class MainActivity extends Activity {
     }
 
     // ----------------------------------------------------------- WEB-APP -----
+    /** Tasto indietro dalla chat (alla sua prima schermata): si torna alla splash. */
+    private void tornaAllAvvio() {
+        setContentView(costruisciAvvio());
+        if (pronto) imposta("● Nyctalus è pronto — scegli cosa aprire");
+    }
+
     private void mostraWeb() {
+        if (web != null) { runOnUiThread(() -> setContentView(web)); return; }   // già pronta: si rientra
         if (caricata) return;
         caricata = true;
         runOnUiThread(() -> {
@@ -654,6 +659,9 @@ public class MainActivity extends Activity {
                 @Override
                 public void onReceivedError(WebView v, WebResourceRequest req, WebResourceError err) {
                     if (req != null && req.isForMainFrame()) {
+                        WebView vecchia = web;
+                        web = null;
+                        if (vecchia != null) vecchia.post(vecchia::destroy);
                         caricata = false;
                         pronto = false;
                         entraAppenaPronto = false;
@@ -846,8 +854,9 @@ public class MainActivity extends Activity {
 
     @Override
     public boolean onKeyDown(int tasto, KeyEvent e) {
-        if (tasto == KeyEvent.KEYCODE_BACK && web != null && web.canGoBack()) {
-            web.goBack();
+        if (tasto == KeyEvent.KEYCODE_BACK && web != null && web.getParent() != null) {
+            if (web.canGoBack()) web.goBack();      // dentro la chat (es. da una conversazione all'elenco)
+            else tornaAllAvvio();                   // dall'elenco: di nuovo alla schermata di partenza
             return true;
         }
         return super.onKeyDown(tasto, e);

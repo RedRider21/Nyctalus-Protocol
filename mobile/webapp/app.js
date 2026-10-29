@@ -448,6 +448,9 @@ async function apriGalleria() {
 
   f.append(el("div", "maniglia"), testa, griglia, schede, barraInvio);
   $("velo").classList.remove("nascosto"); f.classList.remove("nascosto");
+  // lato delle caselle in pixel, dalla larghezza vera della griglia (3 colonne, 2 spazi da 3px)
+  const misura = () => { const w = griglia.clientWidth - 6; if (w > 0) griglia.style.setProperty("--lato", Math.floor((w - 6) / 3) + "px"); };
+  misura(); window.addEventListener("resize", misura);
 
   let dati = { disponibile: false, voci: [], altre: false };
   try { dati = await (await fetch("/api/galleria?da=0&n=30")).json(); } catch (e) { /* niente */ }
