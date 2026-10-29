@@ -1,0 +1,16 @@
+{
+  "name": "Nyctalus",
+  "short_name": "Nyctalus",
+  "description": "Chat .nyct senza server e senza metadati",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0e1a",
+  "theme_color": "#0e1424",
+  "lang": "it",
+  "icons": [
+    {"src": "icone/icona-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icone/icona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

@@ -1,0 +1,181 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+   Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+   Web-app di Nyctalus per il telefono: stile Telegram mobile, temi come sul PC. */
+
+/* --- temi (stessi colori della chat GTK) -------------------------------------- */
+:root, [data-tema="notte"] {
+  --bg: #0a0e1a; --sidebar: #0c1120; --panel: #0e1424; --testo: #e6ecff; --tenue: #6b7797;
+  --accento: #5aa9ff; --rgb: 90,169,255; --invia: #2f6fe0; --invia2: #3b7cf0;
+  --bolla-in: #1b2740; --bolla-in-testo: #e6ecff; --out1: #2f6fe0; --out2: #3f82f2;
+  --trama: url("sfondo-scuro.svg");
+}
+[data-tema="ardesia"] {
+  --bg: #0e1621; --sidebar: #17212b; --panel: #17212b; --testo: #f5f5f5; --tenue: #7f91a4;
+  --accento: #6ab3f3; --rgb: 106,179,243; --invia: #3390ec; --invia2: #4aa0f0;
+  --bolla-in: #182533; --bolla-in-testo: #f5f5f5; --out1: #2b5278; --out2: #33618d;
+  --trama: url("sfondo-scuro.svg");
+}
+[data-tema="viola"] {
+  --bg: #120f1c; --sidebar: #1a1626; --panel: #1a1626; --testo: #f1edff; --tenue: #8a82a6;
+  --accento: #9d85ff; --rgb: 157,133,255; --invia: #7a5cf0; --invia2: #8b70f5;
+  --bolla-in: #241f35; --bolla-in-testo: #f1edff; --out1: #6b4fe0; --out2: #8a6cf2;
+  --trama: url("sfondo-scuro.svg");
+}
+[data-tema="chiaro"] {
+  --bg: #eef1f6; --sidebar: #ffffff; --panel: #ffffff; --testo: #1a2233; --tenue: #7d889c;
+  --accento: #2f6fe0; --rgb: 47,111,224; --invia: #2f6fe0; --invia2: #3b7cf0;
+  --bolla-in: #ffffff; --bolla-in-testo: #1a2233; --out1: #2f6fe0; --out2: #4a86f0;
+  --trama: url("sfondo-chiaro.svg");
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--testo);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif; font-size: 15px;
+  overscroll-behavior: none; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.nascosto { display: none !important; }
+
+/* --- impianto: due schermate (telefono) o due colonne (schermi larghi) ------- */
+#app { display: flex; height: 100%; overflow: hidden; position: relative; }
+.schermo { display: flex; flex-direction: column; height: 100%; width: 100%; position: absolute; inset: 0;
+  transition: transform .22s ease; background: var(--sidebar); }
+#schermo-chat { transform: translateX(100%); background: var(--bg); }
+#app.in-chat #schermo-lista { transform: translateX(-28%); }
+#app.in-chat #schermo-chat { transform: translateX(0); }
+@media (min-width: 760px) {
+  .schermo { position: relative; transform: none !important; }
+  #schermo-lista { width: 340px; flex: 0 0 340px; border-right: 1px solid rgba(var(--rgb), .14); }
+  #schermo-chat { flex: 1; }
+  #indietro { display: none; }
+}
+
+/* --- barra in alto ----------------------------------------------------------- */
+.barra { display: flex; align-items: center; gap: 8px; padding: 8px 10px; min-height: 58px;
+  background: var(--panel); border-bottom: 1px solid rgba(var(--rgb), .12); flex: 0 0 auto; }
+.barra h1 { font-size: 19px; margin: 0; flex: 1; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.barra h1 img { width: 30px; height: 30px; }
+.icona-btn { background: none; border: 0; width: 40px; height: 40px; border-radius: 50%; font-size: 21px;
+  color: var(--tenue); display: grid; place-items: center; flex: 0 0 auto; }
+.icona-btn:active, .icona-btn:hover { background: rgba(var(--rgb), .14); color: var(--testo); }
+.stato-rete { font-size: 12px; padding: 7px 14px; background: rgba(var(--rgb), .12); color: var(--testo);
+  display: flex; gap: 8px; align-items: center; }
+.stato-rete button { margin-left: auto; background: var(--invia); color: #fff; border: 0; border-radius: 14px; padding: 4px 12px; }
+.ricerca { padding: 8px 12px; background: var(--panel); }
+.ricerca input { width: 100%; border: 0; border-radius: 20px; padding: 9px 16px; background: var(--bg); color: var(--testo); font-size: 15px; outline: none; }
+
+/* --- elenco chat ------------------------------------------------------------- */
+#elenco { flex: 1; overflow-y: auto; }
+.riga { display: flex; gap: 12px; align-items: center; padding: 9px 14px; cursor: pointer; user-select: none; }
+.riga:active, .riga:hover { background: rgba(var(--rgb), .08); }
+.riga.attiva { background: rgba(var(--rgb), .18); }
+.avatar { width: 52px; height: 52px; flex: 0 0 52px; border-radius: 50%; display: grid; place-items: center;
+  color: #fff; font-weight: 700; font-size: 20px; position: relative; }
+.avatar.piccolo { width: 40px; height: 40px; flex-basis: 40px; font-size: 16px; }
+.avatar.online::after { content: ""; position: absolute; right: 1px; bottom: 1px; width: 13px; height: 13px;
+  border-radius: 50%; background: #37d08a; border: 2.5px solid var(--sidebar); }
+.riga .centro { flex: 1; min-width: 0; }
+.riga .alto, .riga .basso { display: flex; align-items: center; gap: 6px; }
+.riga .nome { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.riga .ora { font-size: 12px; color: var(--tenue); }
+.riga .anteprima { color: var(--tenue); font-size: 14px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 3px; }
+.badge { background: var(--invia); color: #fff; border-radius: 11px; font-size: 12px; font-weight: 700; padding: 1px 7px; min-width: 22px; text-align: center; }
+.vuoto { text-align: center; color: var(--tenue); padding: 40px 30px; line-height: 1.5; }
+.vuoto .pipistrello { font-size: 64px; display: block; margin-bottom: 10px; }
+.fab { position: absolute; right: 18px; bottom: 22px; width: 56px; height: 56px; border-radius: 50%; border: 0;
+  background: var(--invia); color: #fff; font-size: 24px; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+#mio-id { padding: 10px 14px; border-top: 1px solid rgba(var(--rgb), .12); font-size: 12px; color: var(--tenue); }
+#mio-id code { color: var(--accento); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 3px; }
+
+/* --- conversazione ----------------------------------------------------------- */
+.testa-chat { cursor: default; }
+.testa-chat .chi { flex: 1; min-width: 0; }
+.testa-chat .nome { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.testa-chat .sotto { font-size: 13px; color: var(--tenue); }
+.testa-chat .sotto.on { color: #37d08a; }
+#messaggi { flex: 1; overflow-y: auto; padding: 10px 8px 14px; background-color: var(--bg);
+  background-image: var(--trama), radial-gradient(circle at 20% 0%, rgba(var(--rgb), .10), transparent 45%);
+  background-repeat: repeat, no-repeat; background-size: 200px 200px, 100% 100%; }
+[data-sfondo="velo"] #messaggi { background-image: radial-gradient(circle at 20% 0%, rgba(var(--rgb), .12), transparent 45%), radial-gradient(circle at 85% 100%, rgba(var(--rgb), .09), transparent 45%); background-size: auto; }
+[data-sfondo="tinta"] #messaggi { background-image: none; }
+#benvenuto { flex: 1; display: grid; place-items: center; text-align: center; color: var(--tenue); padding: 20px;
+  background-color: var(--bg); background-image: var(--trama); background-size: 200px 200px; }
+#benvenuto .pipistrello { font-size: 72px; }
+#benvenuto h2 { color: var(--testo); font-size: 19px; margin: 8px 0; }
+.giorno { text-align: center; margin: 10px 0 6px; }
+.giorno span { background: rgba(0,0,0,.28); color: #fff; font-size: 12px; padding: 3px 10px; border-radius: 12px; }
+[data-tema="chiaro"] .giorno span { background: rgba(0,0,0,.12); color: var(--testo); }
+.msg { display: flex; margin: 3px 4px; }
+.msg.out { justify-content: flex-end; }
+.bolla { max-width: 82%; padding: 7px 11px 5px; border-radius: 17px; box-shadow: 0 1px 2px rgba(0,0,0,.25);
+  position: relative; word-wrap: break-word; overflow-wrap: anywhere; user-select: none; }
+.in .bolla { background: var(--bolla-in); color: var(--bolla-in-testo); border-bottom-left-radius: 5px; }
+.out .bolla { background: linear-gradient(135deg, var(--out1), var(--out2)); color: #fff; border-bottom-right-radius: 5px; }
+.bolla .testo { white-space: pre-wrap; line-height: 1.35; }
+.bolla .ora { float: right; font-size: 11px; margin: 6px 0 0 10px; opacity: .6; }
+/* foto e video a tutta bolla */
+.bolla.media { padding: 0; overflow: hidden; background: none !important; box-shadow: none; }
+.bolla.media img, .bolla.media video { display: block; max-width: 100%; max-height: 360px; border-radius: 14px; }
+.bolla.media .ora { position: absolute; right: 8px; bottom: 8px; margin: 0; opacity: 1; background: rgba(0,0,0,.45);
+  color: #fff; padding: 2px 7px; border-radius: 9px; }
+.bolla.media .durata { position: absolute; left: 8px; top: 8px; background: rgba(0,0,0,.45); color: #fff;
+  font-size: 11px; padding: 2px 7px; border-radius: 9px; }
+.bolla.media video:not([controls]) { cursor: pointer; }
+.bolla.media .play { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.bolla.media .play span { width: 54px; height: 54px; border-radius: 50%; background: rgba(0,0,0,.45);
+  display: grid; place-items: center; color: #fff; font-size: 22px; padding-left: 4px; }
+/* scheda file con cerchio colorato */
+.file { display: flex; gap: 12px; align-items: center; min-width: 200px; padding: 2px 0 4px; }
+.cerchio { width: 48px; height: 48px; flex: 0 0 48px; border-radius: 50%; display: grid; place-items: center;
+  color: #fff; font-weight: 800; font-size: 12px; position: relative; border: 0; }
+.cerchio svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.file .nomef { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 190px; }
+.file .dett { font-size: 12px; opacity: .75; margin-top: 2px; }
+.avviso { text-align: center; color: #f0b45a; font-size: 13px; margin: 6px; }
+
+/* --- compositore --------------------------------------------------------------- */
+#compositore { display: flex; align-items: flex-end; gap: 6px; padding: 8px; background: var(--panel);
+  border-top: 1px solid rgba(var(--rgb), .12); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+#testo { flex: 1; resize: none; border: 0; border-radius: 22px; padding: 11px 16px; background: var(--bg);
+  color: var(--testo); font: inherit; max-height: 140px; outline: none; }
+#invia { width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--invia); color: #fff; font-size: 18px; flex: 0 0 46px; }
+#invia:disabled { background: rgba(var(--rgb), .18); color: var(--tenue); }
+
+/* --- foglio dal basso (menu della pressione lunga, graffetta) ---------------- */
+#velo { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 20; }
+#foglio { position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; background: var(--panel); border-radius: 18px 18px 0 0;
+  padding: 8px 0 max(10px, env(safe-area-inset-bottom)); box-shadow: 0 -6px 24px rgba(0,0,0,.35); max-height: 80vh; overflow-y: auto; }
+@media (min-width: 760px) { #foglio { left: 50%; width: 420px; transform: translateX(-50%); bottom: 20px; border-radius: 16px; } }
+#foglio .maniglia { width: 38px; height: 4px; border-radius: 2px; background: rgba(var(--rgb), .3); margin: 2px auto 8px; }
+#foglio .titolo { padding: 6px 20px 10px; font-weight: 700; }
+#foglio .voce { display: flex; align-items: center; gap: 18px; width: 100%; padding: 13px 22px; background: none; border: 0; text-align: left; font-size: 16px; }
+#foglio .voce:active, #foglio .voce:hover { background: rgba(var(--rgb), .12); }
+#foglio .voce .ic { width: 24px; text-align: center; font-size: 19px; }
+#foglio .voce.pericolosa { color: #ef5b5b; }
+#foglio .griglia { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 8px 14px 6px; }
+#foglio .griglia button { background: none; border: 0; display: flex; flex-direction: column; align-items: center; gap: 7px; font-size: 13px; padding: 8px 0; }
+#foglio .griglia .tondo { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 24px; color: #fff; }
+
+/* --- finestre di dialogo -------------------------------------------------------- */
+#dialogo { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(0,0,0,.5); padding: 18px; }
+#dialogo .scatola { background: var(--panel); border-radius: 16px; padding: 18px; width: 100%; max-width: 420px; max-height: 88vh; overflow-y: auto; }
+#dialogo h3 { margin: 0 0 12px; font-size: 18px; }
+#dialogo p { color: var(--tenue); line-height: 1.45; margin: 14px 0 10px; }
+#dialogo input[type=text] { width: 100%; padding: 11px 14px; border-radius: 12px; border: 1px solid rgba(var(--rgb), .25);
+  background: var(--bg); color: var(--testo); font-size: 15px; margin-bottom: 10px; outline: none; }
+#dialogo input[type=text]:focus { border-color: var(--accento); }
+#dialogo .pulsanti { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+#dialogo .pulsanti button { border: 0; border-radius: 10px; padding: 9px 18px; background: rgba(var(--rgb), .14); font-weight: 600; }
+#dialogo .pulsanti .primario { background: var(--invia); color: #fff; }
+#dialogo .pulsanti .pericoloso { background: #d64545; color: #fff; }
+#dialogo label.spunta { display: flex; gap: 10px; align-items: center; color: var(--testo); margin: 8px 0; }
+.miniature { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; margin-bottom: 10px; }
+.miniature img, .miniature video { width: 100%; height: 110px; object-fit: cover; border-radius: 10px; display: block; }
+.miniature.una { grid-template-columns: 1fr; }
+.miniature.una img, .miniature.una video { height: auto; max-height: 300px; object-fit: contain; }
+.scelta-tema { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+.scelta-tema button { border: 2px solid transparent; border-radius: 12px; padding: 12px 8px; background: rgba(var(--rgb), .1); }
+.scelta-tema button.sel { border-color: var(--accento); }
+.codice-id { background: var(--bg); border-radius: 10px; padding: 10px 12px; font-family: monospace; font-size: 12px;
+  word-break: break-all; color: var(--accento); margin-bottom: 10px; user-select: all; }
+.toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: rgba(20,24,36,.92); color: #fff;
+  padding: 9px 16px; border-radius: 18px; z-index: 40; font-size: 14px; }

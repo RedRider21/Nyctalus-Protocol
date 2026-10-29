@@ -1,0 +1,64 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#0e1424">
+<title>Nyctalus</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone/icona-192.png">
+<link rel="stylesheet" href="stile.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- schermata 1: elenco delle chat -->
+  <section id="schermo-lista" class="schermo">
+    <header class="barra">
+      <button class="icona-btn" id="btn-menu" title="Impostazioni">☰</button>
+      <h1><img src="logo.svg" alt="">Nyctalus</h1>
+      <button class="icona-btn" id="btn-cerca" title="Cerca">🔍</button>
+    </header>
+    <div id="stato-rete" class="stato-rete nascosto"><span id="stato-testo"></span><button id="btn-avvia" class="nascosto">Avvia</button></div>
+    <div id="ricerca" class="ricerca nascosto"><input id="campo-cerca" type="search" placeholder="Cerca…" autocomplete="off"></div>
+    <div id="elenco"></div>
+    <div id="mio-id">Il tuo Contact ID <code id="mio-id-valore">…</code></div>
+    <button class="fab" id="btn-nuovo" title="Aggiungi contatto">✏️</button>
+  </section>
+
+  <!-- schermata 2: conversazione -->
+  <section id="schermo-chat" class="schermo">
+    <div id="benvenuto">
+      <div><div class="pipistrello">🦇</div><h2>Le tue conversazioni, cifrate e senza metadati</h2>
+      <div>Scegli una chat o aggiungi un contatto con ✏️</div></div>
+    </div>
+    <header class="barra testa-chat nascosto" id="testa-chat">
+      <button class="icona-btn" id="indietro" title="Indietro">←</button>
+      <div id="testa-avatar"></div>
+      <div class="chi"><div class="nome" id="testa-nome"></div><div class="sotto" id="testa-stato"></div></div>
+      <button class="icona-btn" id="btn-altro" title="Altro">⋮</button>
+    </header>
+    <div id="messaggi" class="nascosto"></div>
+    <footer id="compositore" class="nascosto">
+      <button class="icona-btn" id="btn-allega" title="Allega">📎</button>
+      <textarea id="testo" rows="1" placeholder="Messaggio"></textarea>
+      <button id="invia" disabled title="Invia">➤</button>
+    </footer>
+  </section>
+</div>
+
+<!-- input nascosti per fotocamera, galleria e file (il telefono apre la sua fotocamera) -->
+<input type="file" id="in-foto" accept="image/*" capture="environment" class="nascosto">
+<input type="file" id="in-video" accept="video/*" capture="environment" class="nascosto">
+<input type="file" id="in-galleria" accept="image/*,video/*" multiple class="nascosto">
+<input type="file" id="in-file" multiple class="nascosto">
+
+<div id="velo" class="nascosto"></div>
+<div id="foglio" class="nascosto"></div>
+<div id="dialogo" class="nascosto"><div class="scatola" id="dialogo-scatola"></div></div>
+
+<script src="app.js"></script>
+</body>
+</html>

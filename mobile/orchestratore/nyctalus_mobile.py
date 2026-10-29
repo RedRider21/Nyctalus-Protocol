@@ -526,7 +526,7 @@ async def instrada(req, lettore, scrittore):
         resto = {k: v for k, v in req.query.items() if k != "t"}
         dest = req.percorso + ("?" + urllib.parse.urlencode(resto) if resto else "")
         return await rispondi(scrittore, "303 See Other", b"",
-                              extra="Location: %s\r\nSet-Cookie: nyct=%s; Path=/; HttpOnly; SameSite=Strict\r\n"
+                              extra="Location: %s\r\nSet-Cookie: nyct=%s; Path=/; Max-Age=31536000; HttpOnly; SameSite=Strict\r\n"
                               % (dest, req.query["t"]))
     if not SEGRETO.verifica(req.cookie("nyct")):
         return await rispondi(scrittore, "403 Forbidden",

@@ -1,0 +1,47 @@
+<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Nyctalus Protocol">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#63d0e0"/>
+      <stop offset="1" stop-color="#8a86ff"/>
+    </linearGradient>
+    <radialGradient id="bg" cx="0.5" cy="0.36" r="0.75">
+      <stop offset="0" stop-color="#1b2136"/>
+      <stop offset="1" stop-color="#0d1017"/>
+    </radialGradient>
+  </defs>
+  <!-- distintivo -->
+  <circle cx="64" cy="64" r="60" fill="url(#bg)"/>
+  <circle cx="64" cy="64" r="60" fill="none" stroke="url(#g)" stroke-width="2.5" opacity="0.85"/>
+  <!-- onde dell'ecolocalizzazione / segnale -->
+  <g fill="none" stroke="url(#g)" stroke-width="2.6" stroke-linecap="round" opacity="0.5">
+    <path d="M53 38 Q64 30 75 38"/>
+    <path d="M47 31 Q64 20 81 31"/>
+  </g>
+  <!-- nottola -->
+  <g fill="url(#g)">
+    <path d="M60.5 51 L58.7 41 L63.4 50 Z"/>
+    <path d="M67.5 51 L69.3 41 L64.6 50 Z"/>
+    <ellipse cx="64" cy="58" rx="4.6" ry="9"/>
+    <path d="M64 56
+             C 74 52 82 52 88 55
+             C 96 50 104 50 110 46
+             C 106 54 107 57 103 61
+             C 99 58 96 59 93 65
+             C 91 61 89 60 86 62
+             C 82 66 79 67 75 70
+             C 71 64 68 63 64 64 Z"/>
+    <path d="M64 56
+             C 54 52 46 52 40 55
+             C 32 50 24 50 18 46
+             C 22 54 21 57 25 61
+             C 29 58 32 59 35 65
+             C 37 61 39 60 42 62
+             C 46 66 49 67 53 70
+             C 57 64 60 63 64 64 Z"/>
+  </g>
+  <!-- nodi della ragnatela alle punte delle ali -->
+  <g fill="#8a86ff">
+    <circle cx="110" cy="46" r="3.2"/>
+    <circle cx="18" cy="46" r="3.2"/>
+  </g>
+</svg>
