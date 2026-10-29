@@ -15,6 +15,40 @@ Sito e manuale: **https://redrider21.github.io/Nyctalus-Protocol/**
 
 ---
 
+## Come appare
+
+<sub>Screenshot su dati dimostrativi (contatti e foto inventati). Si rifanno con <code>strumenti/crea-screenshot.sh</code>.</sub>
+
+### Sul PC (Linux)
+
+<p align="center">
+  <img src="documenti/immagini/pc-launcher.png" alt="Mini menu da desktop"><br>
+  <sub><b>Mini menu da desktop</b>: logo (sito e manuali), Browser, Chat, File (in arrivo), impostazioni</sub>
+</p>
+
+<p align="center">
+  <img src="documenti/immagini/pc-chat.png" width="860" alt="Chat .nyct sul PC"><br>
+  <sub><b>Chat <code>.nyct</code></b> in stile Telegram: senza server e senza metadati, con foto, video, audio e file</sub>
+</p>
+
+<table align="center"><tr>
+<td align="center" width="50%"><img src="documenti/immagini/pc-allegati.png" alt="Selettore degli allegati"><br><sub><b>Allegati</b>: galleria con selezione numerata, didascalia, foto senza metadati</sub></td>
+<td align="center" width="50%"><img src="documenti/immagini/pc-browser.png" alt="Browser"><br><sub><b>Browser</b>: navigazione normale o <b>Stealth</b> (rete Nyctalus), siti <code>.nyct</code></sub></td>
+</tr></table>
+
+### Sul telefono (Android)
+
+<table align="center"><tr>
+<td align="center"><img src="documenti/immagini/tel-elenco.png" width="200" alt="Elenco delle chat"><br><sub>Elenco delle chat</sub></td>
+<td align="center"><img src="documenti/immagini/tel-chat.png" width="200" alt="Conversazione"><br><sub>Conversazione</sub></td>
+<td align="center"><img src="documenti/immagini/tel-allegati.png" width="200" alt="Galleria degli allegati"><br><sub>Galleria degli allegati</sub></td>
+<td align="center"><img src="documenti/immagini/tel-impostazioni.png" width="200" alt="Impostazioni"><br><sub>Temi, rete, codice di rete</sub></td>
+</tr></table>
+
+<sub>L'app Android (APK) avvia Nyctalus in Termux e apre Chat, Browser (con modalità 🦇 Nyctalus) e manuali. Come installare: <a href="documenti/manuali/SCELTE-OPERATIVE.md">Scelte operative</a>.</sub>
+
+---
+
 ## L'idea in una frase
 
 Ogni utente è anche un nodo, così la rete diventa più veloce man mano che cresce.
