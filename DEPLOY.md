@@ -34,6 +34,9 @@ per **verificare** sicurezza e anonimato [SICUREZZA.md](SICUREZZA.md).
   # su sistemi più vecchi: gir1.2-webkit2-4.0
   # opzionale, per i tasti rapidi GLOBALI del launcher:
   sudo apt install gir1.2-keybinder-3.0
+  # opzionale, per la chat: fotocamera (foto/video), lettore audio, miniature video
+  sudo apt install gir1.2-gstreamer-1.0 gstreamer1.0-gtk3 gstreamer1.0-plugins-good \
+                   gstreamer1.0-plugins-ugly gstreamer1.0-libav ffmpeg
   ```
   Il **launcher** e la **chat** richiedono solo GTK 3 (non WebKit).
 - Avvio:

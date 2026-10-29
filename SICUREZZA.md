@@ -109,6 +109,13 @@ nella cartella. Le foto JPEG/PNG partono **senza EXIF** (niente GPS). Resta un
 rischio generale, comune a tutte le chat: le anteprime usano i decodificatori di
 immagini del sistema (gdk-pixbuf), quindi tenete il sistema aggiornato.
 
+**Fotocamera e microfono.** Si accendono solo su un'azione esplicita («Scatta una
+foto» / «Registra un video») e si spengono chiudendo quella finestra; foto e
+video restano in una cartella locale (`~/.cache/nyctalus-chat/fotocamera/`) e
+partono solo dopo la conferma nella finestra di anteprima. Le foto della webcam
+non contengono EXIF; quelle scelte dal disco vengono ripulite per impostazione
+predefinita.
+
 ---
 
 ## 3. Cosa serve l'uno (e cosa **non** basta da soli)

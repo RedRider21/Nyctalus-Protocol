@@ -74,6 +74,9 @@ Nyctalus — pacchetto da usare
 Servono:  python3 + PyGObject (GTK3) + WebKit2GTK (solo per il browser)
   Debian/Ubuntu:  sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
   Opzionale (tasti rapidi GLOBALI del launcher):  sudo apt install gir1.2-keybinder-3.0
+  Opzionale (chat: fotocamera, audio, miniature video):
+    sudo apt install gir1.2-gstreamer-1.0 gstreamer1.0-gtk3 gstreamer1.0-plugins-good \
+                     gstreamer1.0-plugins-ugly gstreamer1.0-libav ffmpeg
 
 Avvio:
   ./avvia-launcher.sh     → apre il pannello: logo (sito/guida), Browser, Chat,

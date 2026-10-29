@@ -68,15 +68,29 @@ ti propone di aggiungerlo per rispondere.
 
 ## 4. Allegati: file, foto, video, audio, documenti
 
-- **Inviare**: apri la chat con un contatto e premi la **graffetta 📎** accanto al
-  campo di scrittura (puoi sceglierne più d'uno, con i filtri Immagini / Video /
-  Audio / Documenti / Archivi), oppure **trascina i file** dentro la conversazione.
-- **Foto**: compaiono con l'**anteprima**; un clic le apre a grandezza piena.
-- **Altri file**: una scheda con icona, nome e dimensione, e i pulsanti **Apri** e
-  **Mostra nella cartella**. Durante il trasferimento vedi la **barra di
-  avanzamento**.
+- **Inviare**: apri la chat con un contatto e premi la **graffetta 📎**. Si apre un
+  menu con:
+  - **Scatta una foto** / **Registra un video** — dalla webcam, con l'anteprima
+    dal vivo; nel video viene registrato anche l'audio del microfono (il timer
+    rosso mostra la durata, «Ferma e usa» chiude la registrazione);
+  - **Foto o video** e **File** — per sceglierne dal disco (anche più d'uno).
+
+  In alternativa puoi **trascinare i file** dentro la conversazione.
+- **Prima di inviare** compare l'**anteprima** (come «Invia foto» di Telegram):
+  miniature, una **didascalia** facoltativa (arriva come messaggio subito dopo) e
+  l'opzione per togliere i metadati dalle foto.
+- **Come si vedono in chat**:
+  - **foto** a tutta bolla con l'ora sopra; un clic le apre a grandezza piena;
+  - **video** con la miniatura, il tasto ▶ e la durata; un clic li apre nel
+    lettore del sistema;
+  - **audio** con il pulsante ▶/⏸: si ascoltano **dentro la chat**;
+  - **altri file** con il cerchio colorato dell'estensione (PDF, ZIP, DOCX…);
+  - durante il trasferimento, un **anello** mostra l'avanzamento.
 - **Dove finiscono**: in `~/.nyctalus-chat/allegati/<contatto>/`.
 - **Limite**: 200 MB per file (si cambia con l'opzione `--max-file` del motore).
+- **Fotocamera**: si accende **solo** quando scegli «Scatta una foto» o «Registra
+  un video», e si spegne appena chiudi quella finestra. Servono GStreamer e
+  ffmpeg (vedi `DEPLOY.md`); senza, queste due voci restano disattivate.
 
 **Sicurezza degli allegati**
 - Viaggiano nella **stessa sessione cifrata e autenticata** dei messaggi; alla
@@ -103,6 +117,23 @@ ti propone di aggiungerlo per rispondere.
   la ritrovi come l'hai lasciata.
 - Finché non apri una conversazione vedi solo il benvenuto col pipistrello; il
   campo per scrivere compare quando selezioni un contatto.
+
+---
+
+### Menu del tasto destro (e i tre puntini ⋮)
+
+Come in Telegram, con il **tasto destro**:
+- **su un contatto** dell'elenco (o con **⋮** in alto nella conversazione):
+  Apri la chat · Segna come letto/non letto · Fissa in alto · Rinomina… · Copia
+  il Contact ID · **Cancella cronologia** · **Elimina la chat**;
+- **su un messaggio**: Copia testo · Inoltra (a un altro contatto) · **Elimina
+  per me**; sugli allegati anche Apri · Mostra nella cartella · Salva con nome….
+
+«Elimina» e «Cancella» chiedono conferma e agiscono **solo sul tuo computer**:
+non c'è un server che possa cancellare i messaggi dall'altra parte.
+
+Nell'elenco vedi per ogni chat l'**ultimo messaggio**, l'ora (o il giorno), il
+**numero di messaggi non letti** e il 📌 delle chat fissate, che restano in cima.
 
 ---
 
