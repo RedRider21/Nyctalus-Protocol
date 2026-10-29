@@ -1532,5 +1532,15 @@
   "chat.cerca": "Cerca…",
   "chat.benvenuto": "Le tue conversazioni, cifrate e senza metadati",
   "chat.id_tip": "È il tuo indirizzo nella rete: condividilo per farti raggiungere.\nNon è segreto. La chiave privata resta in ~/.nyctalus-chat.",
-  "chat.aiuto": "Manuale (apre nel browser)"
+  "chat.aiuto": "Manuale (apre nel browser)",
+  "chat.aspetto": "Aspetto: tema e sfondo",
+  "chat.tema": "Tema",
+  "chat.sfondo": "Sfondo",
+  "chat.tema.notte": "Notte (blu)",
+  "chat.tema.ardesia": "Ardesia (stile Telegram)",
+  "chat.tema.viola": "Viola notturno",
+  "chat.tema.chiaro": "Chiaro",
+  "chat.sfondo.pipistrelli": "Trama a pipistrelli",
+  "chat.sfondo.velo": "Velo di colore",
+  "chat.sfondo.tinta": "Tinta unita"
 }

@@ -13,6 +13,7 @@ con un semplice protocollo a righe di testo:
 Testi e soprannomi viaggiano in esadecimale, per restare al sicuro da spazi e
 a-capo nel protocollo a righe.
 """
+import json
 import os
 import socket
 import subprocess
@@ -51,6 +52,16 @@ _ITA = {
     "chat.contatti": "Contatti",
     "chat.cerca": "Cerca…",
     "chat.aggiungi": "Aggiungi contatto",
+    "chat.aspetto": "Aspetto: tema e sfondo",
+    "chat.tema": "Tema",
+    "chat.sfondo": "Sfondo",
+    "chat.tema.notte": "Notte (blu)",
+    "chat.tema.ardesia": "Ardesia (stile Telegram)",
+    "chat.tema.viola": "Viola notturno",
+    "chat.tema.chiaro": "Chiaro",
+    "chat.sfondo.pipistrelli": "Trama a pipistrelli",
+    "chat.sfondo.velo": "Velo di colore",
+    "chat.sfondo.tinta": "Tinta unita",
     "chat.aiuto": "Manuale (apre nel browser)",
     "chat.il_mio_id": "Il tuo Contact ID",
     "chat.id_tip": "È il tuo indirizzo nella rete: condividilo per farti raggiungere.\nNon è segreto. La chiave privata resta in ~/.nyctalus-chat.",
@@ -87,7 +98,7 @@ AVATAR_COLORI = ["#5aa9ff", "#7f6cff", "#38c6a4", "#e0794b", "#d45b8e",
                  "#c9a227", "#4bb3e0", "#8a86ff"]
 
 CSS_TMPL = """
-.chat-root { background: #0a0e1a; }
+.chat-root { background: @BG@; }
 
 /* le ListBox/ScrolledWindow non devono mostrare il bianco del tema */
 scrolledwindow, scrolledwindow viewport, list, list > row {
@@ -96,93 +107,150 @@ scrolledwindow, scrolledwindow viewport, list, list > row {
 }
 
 /* --- colonna sinistra --- */
-.sidebar { background: #0c1120; border-right: 1px solid rgba(90,169,255,0.12); }
+.sidebar { background: @SIDEBAR@; border-right: 1px solid rgba(@RGB@,0.14); }
 .sidebar-testa { padding: 14px 16px 10px 16px; }
-.app-nome { color: #e6ecff; font-weight: 800; font-size: 15px; }
-.app-sotto { color: #5aa9ff; font-size: 11px; }
+.app-nome { color: @TEXT@; font-weight: 800; font-size: 15px; }
+.app-sotto { color: @ACCENT@; font-size: 11px; }
 .cerca { margin: 0 12px 8px 12px; }
-.cerca entry, entry.cerca { background: #0a0e1a; color: #e6ecff; border-radius: 10px;
-        border: 1px solid rgba(90,169,255,0.16); padding: 6px 10px; }
-.sezione { color: #6b7797; font-size: 11px; font-weight: 700; letter-spacing: .4px;
+.cerca entry, entry.cerca { background: @BG@; color: @TEXT@; border-radius: 10px;
+        border: 1px solid rgba(@RGB@,0.18); padding: 6px 10px; }
+.sezione { color: @MUTED@; font-size: 11px; font-weight: 700; letter-spacing: .4px;
            padding: 4px 16px; }
 
 row.contatto { padding: 7px 12px; border-radius: 12px; margin: 1px 8px; }
-row.contatto:selected { background: rgba(90,169,255,0.18); box-shadow: inset 3px 0 0 #5aa9ff; }
-row.contatto:hover { background: rgba(90,169,255,0.08); }
-.nome { color: #e6ecff; font-weight: 600; }
-.stato-riga { color: #6b7797; font-size: 11px; }
+row.contatto:selected { background: rgba(@RGB@,0.20); box-shadow: inset 3px 0 0 @ACCENT@; }
+row.contatto:hover { background: rgba(@RGB@,0.09); }
+.nome { color: @TEXT@; font-weight: 600; }
+.stato-riga { color: @MUTED@; font-size: 11px; }
 
 .avatar { color: #ffffff; font-weight: 700; border-radius: 22px;
           min-width: 38px; min-height: 38px; }
 .avatar.grande { min-width: 44px; min-height: 44px; border-radius: 26px; font-size: 17px; }
-.avatar.online { box-shadow: 0 0 0 2px #0c1120, 0 0 0 4px #37d08a; }
+.avatar.online { box-shadow: 0 0 0 2px @SIDEBAR@, 0 0 0 4px #37d08a; }
 .av0{background:#5aa9ff}.av1{background:#7f6cff}.av2{background:#38c6a4}.av3{background:#e0794b}
 .av4{background:#d45b8e}.av5{background:#c9a227}.av6{background:#4bb3e0}.av7{background:#8a86ff}
 
 /* card del Contact ID */
-.idcard { background: #0a0e1a; border-top: 1px solid rgba(90,169,255,0.12); padding: 12px 14px; }
-.idcard .etich { color: #6b7797; font-size: 11px; font-weight: 700; }
-.idcard .valore { color: #5aa9ff; font-family: monospace; font-size: 11px; }
-.pill { background: rgba(90,169,255,0.14); color: #cfe0ff; border: none;
+.idcard { background: @BG@; border-top: 1px solid rgba(@RGB@,0.14); padding: 12px 14px; }
+.idcard .etich { color: @MUTED@; font-size: 11px; font-weight: 700; }
+.idcard .valore { color: @ACCENT@; font-family: monospace; font-size: 11px; }
+.pill { background: rgba(@RGB@,0.15); color: @PILLTXT@; border: none;
         border-radius: 9px; padding: 4px 10px; }
-.pill:hover { background: rgba(90,169,255,0.24); }
-.piu { background: #2f6fe0; color: #fff; border: none; border-radius: 10px;
-       min-width: 34px; min-height: 30px; font-weight: 800; }
-.piu:hover { background: #3b7cf0; }
+.pill:hover { background: rgba(@RGB@,0.26); }
+.piu { background: @SEND@; color: #fff; border: none; border-radius: 9px;
+       padding: 4px 10px; min-width: 0; min-height: 0; font-weight: 800; }
+.piu:hover { background: @SENDH@; }
 
 /* --- colonna destra --- */
-.conv-testa { background: #0e1424; border-bottom: 1px solid rgba(90,169,255,0.12); padding: 10px 16px; }
+.conv-testa { background: @PANEL@; border-bottom: 1px solid rgba(@RGB@,0.14); padding: 10px 16px; }
 .conv-testa .nome { font-size: 15px; }
-.conv-testa .sotto { color: #6b7797; font-size: 11px; }
+.conv-testa .sotto { color: @MUTED@; font-size: 11px; }
 .conv-testa .sotto.on { color: #37d08a; }
-/* sfondo chat: trama a pipistrelli + velo di colore, su tutta l'area */
+/* sfondo chat: scelto dall'utente, su tutta l'area */
 .chat-bg {
-    background-color: #0a0e1a;
-    background-image:
-        url('@SFONDO@'),
-        radial-gradient(circle at 20% 0%, rgba(90,169,255,0.08), rgba(0,0,0,0) 45%),
-        radial-gradient(circle at 85% 100%, rgba(127,108,255,0.08), rgba(0,0,0,0) 45%);
-    background-repeat: repeat, no-repeat, no-repeat; }
+    background-color: @BG@;
+    background-image: @CHATIMG@;
+    background-repeat: @CHATREP@; }
 .conversazione { padding: 10px 6px; }
 
 .bolla { padding: 9px 13px; border-radius: 17px; margin: 3px 12px;
-         box-shadow: 0 1px 2px rgba(0,0,0,0.30); }
-.bolla-in  { background-color: #1b2740; color: #e6ecff; border-radius: 17px 17px 17px 5px; }
+         box-shadow: 0 1px 2px rgba(0,0,0,@SHADOW@); }
+.bolla-in  { background-color: @BUBIN@; color: @BUBINTXT@; border-radius: 17px 17px 17px 5px; }
 .bolla-out { color: #ffffff; border-radius: 17px 17px 5px 17px;
-             background-image: linear-gradient(135deg, #2f6fe0, #3f82f2); }
+             background-image: linear-gradient(135deg, @OUT1@, @OUT2@); }
 .bolla .testo { font-size: 13px; }
 .bolla .ora { font-size: 10px; }
-.bolla-in  .ora { color: rgba(230,236,255,0.40); }
-.bolla-out .ora { color: rgba(255,255,255,0.55); }
+.bolla-in  .ora { color: @MUTED@; }
+.bolla-out .ora { color: rgba(255,255,255,0.60); }
 
 /* benvenuto / stato vuoto */
 .vuoto-wrap { background: transparent; }
 .vuoto-bat { font-size: 54px; }
-.vuoto-tit { color: #e6ecff; font-weight: 700; font-size: 17px; }
-.vuoto-sub { color: #6b7797; font-size: 13px; }
-.hint { color: #6b7797; font-size: 12px; }
+.vuoto-tit { color: @TEXT@; font-weight: 700; font-size: 17px; }
+.vuoto-sub { color: @MUTED@; font-size: 13px; }
+.hint { color: @MUTED@; font-size: 12px; }
 
 /* compositore */
-.compositore { background: #0e1424; border-top: 1px solid rgba(90,169,255,0.12); padding: 10px; }
-.compositore entry { background: #0a0e1a; color: #e6ecff; border-radius: 20px;
-                     border: 1px solid rgba(90,169,255,0.18); padding: 10px 16px; }
-.compositore entry:focus { border-color: #5aa9ff; }
-.send { background: #2f6fe0; color: #fff; border: none; border-radius: 21px;
+.compositore { background: @PANEL@; border-top: 1px solid rgba(@RGB@,0.14); padding: 10px; }
+.compositore entry { background: @BG@; color: @TEXT@; border-radius: 20px;
+                     border: 1px solid rgba(@RGB@,0.20); padding: 10px 16px; }
+.compositore entry:focus { border-color: @ACCENT@; }
+.send { background: @SEND@; color: #fff; border: none; border-radius: 21px;
         min-width: 42px; min-height: 42px; font-size: 16px; }
-.send:hover { background: #3b7cf0; }
-.send:disabled { background: #1b2740; color: #4a5676; }
+.send:hover { background: @SENDH@; }
+.send:disabled { background: rgba(@RGB@,0.15); color: @MUTED@; }
 """
 
+# Temi: tutti i colori dell'interfaccia. RGB = colore d'accento in "r,g,b" per i veli.
+TEMI = {
+    "notte": {   # blu notte Nyctalus (predefinito)
+        "BG": "#0a0e1a", "SIDEBAR": "#0c1120", "PANEL": "#0e1424", "TEXT": "#e6ecff",
+        "MUTED": "#6b7797", "ACCENT": "#5aa9ff", "RGB": "90,169,255", "PILLTXT": "#cfe0ff",
+        "SEND": "#2f6fe0", "SENDH": "#3b7cf0", "BUBIN": "#1b2740", "BUBINTXT": "#e6ecff",
+        "OUT1": "#2f6fe0", "OUT2": "#3f82f2", "SHADOW": "0.30", "TRAMA": "0.05",
+    },
+    "ardesia": {   # nero-ardesia, alla Telegram
+        "BG": "#0e1621", "SIDEBAR": "#17212b", "PANEL": "#17212b", "TEXT": "#f5f5f5",
+        "MUTED": "#7f91a4", "ACCENT": "#6ab3f3", "RGB": "106,179,243", "PILLTXT": "#d6e9fb",
+        "SEND": "#3390ec", "SENDH": "#4aa0f0", "BUBIN": "#182533", "BUBINTXT": "#f5f5f5",
+        "OUT1": "#2b5278", "OUT2": "#33618d", "SHADOW": "0.35", "TRAMA": "0.05",
+    },
+    "viola": {   # viola notturno (come il Telegram degli screenshot)
+        "BG": "#120f1c", "SIDEBAR": "#1a1626", "PANEL": "#1a1626", "TEXT": "#f1edff",
+        "MUTED": "#8a82a6", "ACCENT": "#9d85ff", "RGB": "157,133,255", "PILLTXT": "#e2dbff",
+        "SEND": "#7a5cf0", "SENDH": "#8b70f5", "BUBIN": "#241f35", "BUBINTXT": "#f1edff",
+        "OUT1": "#6b4fe0", "OUT2": "#8a6cf2", "SHADOW": "0.35", "TRAMA": "0.05",
+    },
+    "chiaro": {   # chiaro, per il giorno
+        "BG": "#eef1f6", "SIDEBAR": "#ffffff", "PANEL": "#ffffff", "TEXT": "#1a2233",
+        "MUTED": "#7d889c", "ACCENT": "#2f6fe0", "RGB": "47,111,224", "PILLTXT": "#1f4fae",
+        "SEND": "#2f6fe0", "SENDH": "#3b7cf0", "BUBIN": "#ffffff", "BUBINTXT": "#1a2233",
+        "OUT1": "#2f6fe0", "OUT2": "#4a86f0", "SHADOW": "0.10", "TRAMA": "0.07",
+    },
+}
+TEMA_DEF = "notte"
+
+SFONDI = ("pipistrelli", "velo", "tinta")
+SFONDO_DEF = "pipistrelli"
 SFONDO = Path(__file__).resolve().parent / "assets" / "sfondo.svg"
 
 
-def _css():
-    """CSS con il percorso dello sfondo iniettato (GTK vuole un file://…)."""
+def _url_trama(tema):
+    """La trama a pipistrelli, ricolorata per il tema (scuro o chiaro)."""
     try:
-        sfondo = SFONDO.as_uri()
+        svg = SFONDO.read_text(encoding="utf-8")
     except Exception:            # noqa: BLE001
-        sfondo = ""
-    return CSS_TMPL.replace("@SFONDO@", sfondo)
+        return ""
+    chiaro = tema.get("BG", "").lower() in ("#eef1f6",)
+    colore = "#3a4a6e" if chiaro else "#9fb4e6"
+    svg = svg.replace("#9fb4e6", colore).replace('fill-opacity="0.05"', 'fill-opacity="%s"' % tema["TRAMA"])
+    dest = Path(GLib.get_user_cache_dir()) / "nyctalus-chat"
+    try:
+        dest.mkdir(parents=True, exist_ok=True)
+        f = dest / ("trama-%s.svg" % colore.strip("#"))
+        f.write_text(svg, encoding="utf-8")
+        return f.as_uri()
+    except Exception:            # noqa: BLE001
+        return SFONDO.as_uri()
+
+
+def _css(nome_tema=TEMA_DEF, nome_sfondo=SFONDO_DEF):
+    """CSS completo per il tema e lo sfondo scelti."""
+    tema = TEMI.get(nome_tema, TEMI[TEMA_DEF])
+    rgb = tema["RGB"]
+    velo = ("radial-gradient(circle at 20%% 0%%, rgba(%s,0.10), rgba(0,0,0,0) 45%%), "
+            "radial-gradient(circle at 85%% 100%%, rgba(%s,0.08), rgba(0,0,0,0) 45%%)") % (rgb, rgb)
+    if nome_sfondo == "pipistrelli":
+        img = "url('%s'), %s" % (_url_trama(tema), velo)
+        rep = "repeat, no-repeat, no-repeat"
+    elif nome_sfondo == "velo":
+        img, rep = velo, "no-repeat, no-repeat"
+    else:
+        img, rep = "none", "no-repeat"
+    css = CSS_TMPL.replace("@CHATIMG@", img).replace("@CHATREP@", rep)
+    for k, v in tema.items():
+        css = css.replace("@%s@" % k, v)
+    return css
 
 
 def ora_hhmm(ts):
@@ -214,7 +282,6 @@ def fai_avatar(nome, addr, grande=False):
 class Chat(Gtk.Window):
     def __init__(self):
         super().__init__(title=_t("chat.titolo"))
-        self.set_default_size(880, 600)
         try:
             self.set_icon_name("nyctalus")
         except Exception:        # noqa: BLE001
@@ -228,13 +295,23 @@ class Chat(Gtk.Window):
         self.sock = None
         self.filtro = ""
 
-        prov = Gtk.CssProvider()
-        prov.load_from_data(_css().encode())
+        # aspetto (tema + sfondo) ricordato fra un avvio e l'altro
+        self.ui = self._carica_ui()
+        self.prov = Gtk.CssProvider()
         Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+            Gdk.Screen.get_default(), self.prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        self._applica_aspetto()
         self.get_style_context().add_class("chat-root")
+        # dimensione/stato della finestra come all'ultima chiusura
+        self.set_default_size(int(self.ui.get("larghezza", 880)), int(self.ui.get("altezza", 600)))
+        if self.ui.get("massimizzata"):
+            self.maximize()
+        self._salva_dim_pendente = 0
+        self.connect("configure-event", self._finestra_cambiata)
+        self.connect("window-state-event", self._stato_finestra)
 
         self._costruisci()
+        self.connect("delete-event", lambda *_a: (self._salva_dimensioni(), False)[1])
         self.connect("destroy", Gtk.main_quit)
         self.show_all()
         self._mostra_vuoto()
@@ -279,6 +356,10 @@ class Chat(Gtk.Window):
         aiuto.set_tooltip_text(_t("chat.aiuto")); aiuto.set_valign(Gtk.Align.CENTER)
         aiuto.connect("clicked", self._apri_manuale)
         testa.pack_end(aiuto, False, False, 0)
+        aspetto = Gtk.Button(label="⚙"); aspetto.get_style_context().add_class("pill")
+        aspetto.set_tooltip_text(_t("chat.aspetto")); aspetto.set_valign(Gtk.Align.CENTER)
+        aspetto.connect("clicked", self._menu_aspetto)
+        testa.pack_end(aspetto, False, False, 0)
         lato.pack_start(testa, False, False, 0)
 
         # ricerca
@@ -305,6 +386,7 @@ class Chat(Gtk.Window):
         self.vuoto_contatti.get_style_context().add_class("hint")
         self.vuoto_contatti.set_justify(Gtk.Justification.CENTER)
         self.vuoto_contatti.set_line_wrap(True)
+        self.vuoto_contatti.set_max_width_chars(24)
         lato.pack_start(self.vuoto_contatti, False, False, 10)
 
         # card Contact ID
@@ -318,6 +400,7 @@ class Chat(Gtk.Window):
         self.mio_id = Gtk.Label(label="…", xalign=0)
         self.mio_id.get_style_context().add_class("valore")
         self.mio_id.set_ellipsize(Pango.EllipsizeMode.MIDDLE)
+        self.mio_id.set_max_width_chars(16)   # non allarga la colonna
         self.mio_id.set_selectable(True)
         riga.pack_start(self.mio_id, True, True, 0)
         self.btn_copia = Gtk.Button(label=_t("chat.copia"))
@@ -509,6 +592,7 @@ class Chat(Gtk.Window):
         col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         et = Gtk.Label(label=nome, xalign=0); et.get_style_context().add_class("nome")
         et.set_ellipsize(Pango.EllipsizeMode.END)
+        et.set_max_width_chars(18)
         riga.etichetta = et
         st = Gtk.Label(label=_t("chat.offline"), xalign=0); st.get_style_context().add_class("stato-riga")
         riga.stato = st
@@ -645,6 +729,84 @@ class Chat(Gtk.Window):
                 self._cmd("ADD %s %s" % (addr, nome.encode().hex()))
                 self._upsert_contatto(_con_suffisso(addr), nome)
         d.destroy()
+
+    # --- aspetto: temi e sfondi -------------------------------------------------
+    def _file_ui(self):
+        return Path.home() / ".nyctalus-chat" / "ui.json"
+
+    def _carica_ui(self):
+        try:
+            d = json.loads(self._file_ui().read_text(encoding="utf-8"))
+        except Exception:        # noqa: BLE001
+            d = {}
+        if d.get("tema") not in TEMI:
+            d["tema"] = TEMA_DEF
+        if d.get("sfondo") not in SFONDI:
+            d["sfondo"] = SFONDO_DEF
+        return d
+
+    def _salva_ui(self):
+        try:
+            self._file_ui().parent.mkdir(parents=True, exist_ok=True)
+            self._file_ui().write_text(json.dumps(self.ui, indent=2), encoding="utf-8")
+        except Exception:        # noqa: BLE001
+            pass
+
+    def _finestra_cambiata(self, *_a):
+        # salva poco dopo l'ultimo ridimensionamento (non a ogni pixel)
+        if self._salva_dim_pendente:
+            GLib.source_remove(self._salva_dim_pendente)
+        self._salva_dim_pendente = GLib.timeout_add(600, self._salva_dimensioni)
+        return False
+
+    def _stato_finestra(self, _w, ev):
+        self.ui["massimizzata"] = bool(ev.new_window_state & Gdk.WindowState.MAXIMIZED)
+        self._salva_ui()
+        return False
+
+    def _salva_dimensioni(self):
+        self._salva_dim_pendente = 0
+        if not self.ui.get("massimizzata"):   # da massimizzata non sovrascrive la misura normale
+            w, h = self.get_size()
+            if w > 200 and h > 200:
+                self.ui["larghezza"], self.ui["altezza"] = w, h
+        self._salva_ui()
+        return False
+
+    def _applica_aspetto(self):
+        self.prov.load_from_data(_css(self.ui["tema"], self.ui["sfondo"]).encode())
+
+    def _menu_aspetto(self, bottone):
+        menu = Gtk.Menu()
+
+        def sezione(titolo):
+            t = Gtk.MenuItem(label=titolo)
+            t.set_sensitive(False)
+            menu.append(t)
+
+        def gruppo(chiave, valori):
+            primo = None
+            for v in valori:
+                voce = Gtk.RadioMenuItem.new_with_label_from_widget(primo, _t("chat.%s.%s" % (chiave, v)))
+                primo = primo or voce
+                voce.set_active(self.ui[chiave] == v)
+                voce.connect("toggled", self._scelto_aspetto, chiave, v)
+                menu.append(voce)
+
+        sezione(_t("chat.tema"))
+        gruppo("tema", list(TEMI))
+        menu.append(Gtk.SeparatorMenuItem())
+        sezione(_t("chat.sfondo"))
+        gruppo("sfondo", list(SFONDI))
+        menu.show_all()
+        menu.popup_at_widget(bottone, Gdk.Gravity.SOUTH_WEST, Gdk.Gravity.NORTH_WEST, None)
+
+    def _scelto_aspetto(self, voce, chiave, valore):
+        if not voce.get_active() or self.ui.get(chiave) == valore:
+            return
+        self.ui[chiave] = valore
+        self._salva_ui()
+        self._applica_aspetto()
 
     def _apri_manuale(self, _w):
         """Apre il manuale nel browser Nyctalus; se non c'è, nel browser di

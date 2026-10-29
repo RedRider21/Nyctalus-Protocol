@@ -1532,5 +1532,15 @@
   "chat.cerca": "Search…",
   "chat.benvenuto": "Your conversations, encrypted and metadata-free",
   "chat.id_tip": "It's your address on the network: share it so people can reach you.\nIt's not secret. The private key stays in ~/.nyctalus-chat.",
-  "chat.aiuto": "Manual (opens in the browser)"
+  "chat.aiuto": "Manual (opens in the browser)",
+  "chat.aspetto": "Appearance: theme and background",
+  "chat.tema": "Theme",
+  "chat.sfondo": "Background",
+  "chat.tema.notte": "Night (blue)",
+  "chat.tema.ardesia": "Slate (Telegram-like)",
+  "chat.tema.viola": "Night violet",
+  "chat.tema.chiaro": "Light",
+  "chat.sfondo.pipistrelli": "Bat pattern",
+  "chat.sfondo.velo": "Colour veil",
+  "chat.sfondo.tinta": "Solid colour"
 }
