@@ -22,7 +22,7 @@ elif [ -x "$QUI/../target/release/nyctalus" ]; then BIN="$QUI/../target/release/
 else BIN="$(command -v nyctalus || true)"; fi
 [ -n "$BIN" ] || { echo "✗ binario 'nyctalus' non trovato"; exit 1; }
 
-if [ -d "$QUI/chat" ]; then PYBASE="$QUI"; else PYBASE="$QUI/.."; fi
+if [ -d "$QUI/chat" ]; then PYBASE="$QUI"; else PYBASE="$QUI/../pc"; fi   # pacchetto | progetto
 export PYTHONPATH="$PYBASE/chat:$PYBASE/browser${PYTHONPATH:+:$PYTHONPATH}"
 
 python3 -c 'import gi; gi.require_version("Gtk","3.0")' 2>/dev/null || {

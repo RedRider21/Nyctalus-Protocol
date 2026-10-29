@@ -636,9 +636,10 @@ class Browser(FunzioniExtra, Gtk.Window):
     def _trova_binario(self):
         """Percorso del binario `nyctalus`: nel pacchetto (bin/), nel target di
         sviluppo, o nel PATH."""
-        base = Path(__file__).resolve().parents[2]      # cartella che contiene browser/
+        base = Path(__file__).resolve().parents[2]      # pacchetto, o pc/ nel progetto
         for cand in (base / "bin" / "nyctalus",
-                     base / "target" / "release" / "nyctalus"):
+                     base / "target" / "release" / "nyctalus",
+                     base.parent / "target" / "release" / "nyctalus"):
             if cand.exists():
                 return str(cand)
         return shutil.which("nyctalus")

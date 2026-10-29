@@ -4,7 +4,7 @@
 # Verificare sicurezza e anonimato
 
 Questo documento spiega **cosa si può verificare da soli** (con gli strumenti
-qui indicati e lo script [`scripts/verifica.sh`](scripts/verifica.sh)) e **cosa
+qui indicati e lo script [`strumenti/verifica.sh`](strumenti/verifica.sh)) e **cosa
 invece richiede una verifica indipendente** prima di considerare Nyctalus sicuro
 per dati reali. Niente di qui sostituisce un **audit** di crittografi terzi.
 
@@ -16,7 +16,7 @@ per dati reali. Niente di qui sostituisce un **audit** di crittografi terzi.
 ## 1. Verifiche automatiche (subito, in locale)
 
 ```sh
-./scripts/verifica.sh
+./strumenti/verifica.sh
 ```
 Controlla, e riporta PASS/FAIL:
 
@@ -95,7 +95,7 @@ il tunnel già cifrato, un **secondo handshake Noise NK** verso quell'indirizzo 
 solo chi possiede la chiave privata del `.nyct` dichiarato lo conclude, quindi un
 impostore che conosce l'indirizzo di un tuo contatto **non** riesce a spacciarsi
 per lui. Il test `cargo test` include la prova che un impostore viene respinto; a
-livello end-to-end lo si vede con `scripts/demo-chat.sh` (i messaggi arrivano con
+livello end-to-end lo si vede con `strumenti/demo-chat.sh` (i messaggi arrivano con
 l'indirizzo autenticato del mittente). *Nota:* resta la verifica umana del Contact
 ID (scambiatevelo per un canale fidato, come si fa con le onion di Ricochet).
 
@@ -146,7 +146,7 @@ funzionamento, usabilità e stabilità — **non** per proteggere dati reali.
 
 | Verifica | Strumento |
 |---|---|
-| Correttezza/regressioni | `cargo test`, `./scripts/verifica.sh` |
+| Correttezza/regressioni | `cargo test`, `./strumenti/verifica.sh` |
 | IP/DNS leak | `curl --socks5-hostname …`, `https://ip.me`, monitor DNS |
 | Traffico sul filo | **Wireshark**, `tcpdump` |
 | Nodi raggiungibili | `nyctalus nodes --probe` |

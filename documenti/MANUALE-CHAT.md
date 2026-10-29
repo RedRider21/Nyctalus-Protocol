@@ -19,7 +19,7 @@ servizio del destinatario). Modello simile a Ricochet/Cwtch.
 - Oppure da terminale:
   ```sh
   ./avvia-chat.sh          # nel pacchetto
-  ./scripts/avvia-chat.sh  # in sviluppo
+  ./strumenti/avvia-chat.sh  # in sviluppo
   ```
 
 La **finestra si apre subito**. La rete, però, ha bisogno di qualche secondo per
@@ -152,7 +152,7 @@ sulla stessa rete**.
 
 **Provare la chat da solo** (due finestre sul tuo computer, come due persone):
 ```sh
-./scripts/demo-chat.sh
+./strumenti/demo-chat.sh
 ```
 Aggiungi in ciascuna finestra l'indirizzo dell'altra e scrivetevi.
 

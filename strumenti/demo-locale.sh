@@ -7,7 +7,7 @@
 # Nyctalus Browser già puntato sul sito. Chiudendo il browser (o con Ctrl-C) si
 # ferma e pulisce tutto.
 #
-#   ./scripts/demo-locale.sh
+#   ./strumenti/demo-locale.sh
 #
 # Richiede: il binario `nyctalus` (lo compila se manca) e, per il browser,
 # python3 + PyGObject (GTK3) + WebKit2GTK. Senza il browser puoi comunque usare
@@ -16,7 +16,7 @@ set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="$ROOT/target/release/nyctalus"
-BROWSER_DIR="$ROOT/browser"
+BROWSER_DIR="$ROOT/pc/browser"
 SOCKS_PORT="${SOCKS_PORT:-1080}"
 WORK="$(mktemp -d /tmp/nyctalus-demo.XXXXXX)"
 PIDS=()
@@ -39,7 +39,7 @@ fi
 
 # --- porta SOCKS libera ------------------------------------------------------
 if ss -ltn 2>/dev/null | grep -q ":$SOCKS_PORT\b"; then
-  err "la porta SOCKS $SOCKS_PORT è occupata. Chiudi il processo o usa SOCKS_PORT=1081 ./scripts/demo-locale.sh"
+  err "la porta SOCKS $SOCKS_PORT è occupata. Chiudi il processo o usa SOCKS_PORT=1081 ./strumenti/demo-locale.sh"
   exit 1
 fi
 

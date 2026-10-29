@@ -145,8 +145,8 @@ _ITA = {
 
 CTRL_HOST = os.environ.get("NYCTALUS_CHAT_HOST", "127.0.0.1")
 CTRL_PORT = int(os.environ.get("NYCTALUS_CHAT_PORT", "1091"))
-RADICE = Path(__file__).resolve().parents[2]      # cartella progetto / pacchetto
-LOGO = RADICE / "logo.svg"
+RADICE = Path(__file__).resolve().parents[2]      # radice del pacchetto, o pc/ nel progetto
+LOGO = next((b / "logo.svg" for b in (RADICE, RADICE.parent) if (b / "logo.svg").exists()), RADICE / "logo.svg")
 # Manuale online (Pages). Il pulsante « ? » lo apre nel browser Nyctalus.
 MANUALE_URL = os.environ.get(
     "NYCTALUS_MANUALE_URL", "https://redrider21.github.io/Nyctalus-Protocol/#chat")

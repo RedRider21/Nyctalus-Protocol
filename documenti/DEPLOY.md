@@ -5,7 +5,7 @@
 
 Come **installare**, **configurare** e **mettere in piedi una rete** Nyctalus per i
 test, e come far collegare i tester. Per il funzionamento del protocollo vedi
-[README.md](README.md); per i livelli e il modello di minaccia [SPECIFICA.md](SPECIFICA.md);
+[README.md](../README.md); per i livelli e il modello di minaccia [SPECIFICA.md](SPECIFICA.md);
 per **verificare** sicurezza e anonimato [SICUREZZA.md](SICUREZZA.md).
 
 > ⚠️ **Prototipo non ancora verificato da revisori indipendenti.** Usalo per
@@ -41,13 +41,13 @@ per **verificare** sicurezza e anonimato [SICUREZZA.md](SICUREZZA.md).
   Il **launcher** e la **chat** richiedono solo GTK 3 (non WebKit).
 - Avvio:
   ```sh
-  ./scripts/demo-locale-nav-normal.sh      # browser in navigazione normale
-  ./scripts/demo-chat.sh                    # chat: due finestre in locale
+  ./strumenti/demo-locale-nav-normal.sh      # browser in navigazione normale
+  ./strumenti/demo-chat.sh                    # chat: due finestre in locale
   ```
 
 ### Per una prova completa in locale (tutto in uno)
 ```sh
-./scripts/demo-locale.sh
+./strumenti/demo-locale.sh
 ```
 Avvia 4 nodi locali, pubblica un sito `.nyct` dimostrativo, avvia il demone e
 apre il browser. Serve a **provare subito** il software su una sola macchina —
@@ -198,7 +198,7 @@ apre comunque, ma su una rete di prova **locale** (non raggiungi altre persone).
 
 **Avvio (uso reale):**
 ```sh
-./avvia-chat.sh          # nel pacchetto; oppure scripts/avvia-chat.sh in sviluppo
+./avvia-chat.sh          # nel pacchetto; oppure strumenti/avvia-chat.sh in sviluppo
 ```
 Fa tutto da sé: avvia/riusa il proxy SOCKS, pubblica il tuo servizio `.nyct`, avvia
 il motore e apre la finestra. Al primo avvio crea la tua identità in
@@ -208,7 +208,7 @@ indirizzo; scrivi.
 
 **Provarla da solo su un PC** (due identità, due finestre, rete locale):
 ```sh
-./scripts/demo-chat.sh
+./strumenti/demo-chat.sh
 ```
 
 **A mano** (se vuoi controllare i pezzi): servono `nyctalus start` (il SOCKS),
@@ -222,10 +222,10 @@ indirizzo; scrivi.
 
 | Vuoi… | Fai così |
 |---|---|
-| Provare tutto su un PC | `./scripts/demo-locale.sh` |
-| Provare la **chat** su un PC | `./scripts/demo-chat.sh` (due finestre) |
+| Provare tutto su un PC | `./strumenti/demo-locale.sh` |
+| Provare la **chat** su un PC | `./strumenti/demo-chat.sh` (due finestre) |
 | Usare la **chat** per davvero | `./avvia-chat.sh` (serve la rete condivisa, §3–4) |
-| Solo il browser normale | `./scripts/demo-locale-nav-normal.sh` |
+| Solo il browser normale | `./strumenti/demo-locale-nav-normal.sh` |
 | Una rete condivisa per i tester | §3 (nodi pubblici + directory pubblicata) + §4 (config dei client) |
 | Più anonimato (più lento) | `--hops 4` o `5`, `--circuits 3`+ |
 | Nascondere i tempi | `--cover 5` su demone e nodi |

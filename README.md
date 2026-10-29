@@ -60,7 +60,7 @@ tempi. Nyctalus appiattisce entrambe.
 ### Celle a lunghezza fissa
 
 Dentro un circuito, i dati non viaggiano come pacchetti di lunghezza variabile,
-ma spezzati in **celle tutte della stessa dimensione** (`crates/nyctalus/src/cella.rs`):
+ma spezzati in **celle tutte della stessa dimensione** (`motore/nyctalus/src/cella.rs`):
 
 ```
 ┌─────────┬─────────┬────────────┬───────────────┬──────────────────────┐
@@ -114,7 +114,7 @@ Tutti i quadri del circuito e del rendezvous — dati, LINK, **pacchetto di
 apertura Sphinx** e tunnel `.nyct` — hanno ora la **stessa taglia** (1372 byte).
 **Limite rimasto:** il ritmo del cover va **tarato con misure reali** (costo in
 banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
-[STATO.md](STATO.md) §H.
+[STATO.md](documenti/STATO.md) §H.
 
 ## Architettura a livelli
 
@@ -143,10 +143,26 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 
 - **Rumore di fondo (cover traffic) + celle a lunghezza fissa**: tutti i quadri del circuito e del rendezvous hanno la **stessa taglia** (1372 byte); celle fittizie opzionali (`--cover`) in **entrambe le direzioni** mascherano *quando* si invia.
 - **Browser dedicato** (clone di Firefox): parte normale, lo **stealth** (rete Nyctalus) si accende col bottone e **avvia da solo i servizi** (rete pubblica configurata o rete di prova locale); i `.nyct` attivano lo stealth automaticamente.
-- **Chat `.nyct`** (senza server, senza metadati): ogni utente è un indirizzo `.nyct` (il suo Contact ID); motore in Rust (`nyctalus chat`) + finestra GTK. Oltre all'anonimato di rete e alla cifratura E2E, **chi scrive è autenticato crittograficamente** (un secondo handshake Noise NK dentro il tunnel: solo chi possiede la chiave privata dell'indirizzo dichiarato lo conclude), quindi nessuno può spacciarsi per un contatto. Grafica in **stile Telegram** con temi e sfondi, **menu del tasto destro** e **allegati di ogni tipo** come in Telegram (foto e video a tutta bolla, audio ascoltabile nella chat, documenti, **foto e video dalla webcam**; verifica d'integrità BLAKE3, foto inviate senza EXIF). Guida: [MANUALE-CHAT.md](MANUALE-CHAT.md).
+- **Chat `.nyct`** (senza server, senza metadati): ogni utente è un indirizzo `.nyct` (il suo Contact ID); motore in Rust (`nyctalus chat`) + finestra GTK. Oltre all'anonimato di rete e alla cifratura E2E, **chi scrive è autenticato crittograficamente** (un secondo handshake Noise NK dentro il tunnel: solo chi possiede la chiave privata dell'indirizzo dichiarato lo conclude), quindi nessuno può spacciarsi per un contatto. Grafica in **stile Telegram** con temi e sfondi, **menu del tasto destro** e **allegati di ogni tipo** come in Telegram (foto e video a tutta bolla, audio ascoltabile nella chat, documenti, **foto e video dalla webcam**; verifica d'integrità BLAKE3, foto inviate senza EXIF). Guida: [MANUALE-CHAT.md](documenti/MANUALE-CHAT.md).
 - **Mini-launcher da desktop**: pannello senza bordi, trascinabile, con bottoni quadrati (orizzontale/verticale), **dimensione regolabile** e **tasti rapidi configurabili**, per lanciare Browser e Chat. Client grafici (browser, launcher, chat) in **Python+GTK3**; il motore resta in **Rust**.
 
-**In arrivo** (vedi [STATO.md](STATO.md)): taratura del rumore di fondo su rete reale, rotazione dei guard e ripresa dai circuiti caduti, descrittore firmato dei servizi, simulazione contro Tor con **Shadow**, gestore file grafico, **versione mobile** (PWA servita dal motore in Termux, browser mobile dal clone Chrome di NovaOS).
+**In arrivo** (vedi [STATO.md](documenti/STATO.md)): taratura del rumore di fondo su rete reale, rotazione dei guard e ripresa dai circuiti caduti, descrittore firmato dei servizi, simulazione contro Tor con **Shadow**, gestore file grafico, **versione mobile** (PWA servita dal motore in Termux, browser mobile dal clone Chrome di NovaOS).
+
+## Come è organizzato il progetto
+
+```
+nyctalus protocol/
+├── motore/          il motore in Rust: nyctalus-core (protocollo) + nyctalus (demone, nodi, chat)
+├── pc/              i programmi per il computer (Python+GTK3): browser/, chat/, launcher/
+├── mobile/          il telefono: orchestratore/ (Python in Termux), webapp/ (PWA),
+│                    termux/ (installatore), android/ (APK)
+├── strumenti/       script di sviluppo: demo, avvio della chat, creazione delle installazioni
+├── test/            tutte le prove di funzionamento e di sicurezza: test/esegui-tutti.sh
+├── documenti/       visione, specifica, stato dei lavori, deploy, sicurezza, manuali
+└── installazioni/   GENERATA da strumenti/crea-installazioni.sh: cosa installare e dove
+    ├── PC-Linux/    archivio pronto + istruzioni
+    └── Android/     archivio per Termux + APK + istruzioni passo-passo
+```
 
 ## Compilare
 
@@ -165,8 +181,8 @@ Nyctalus è, come Tor, un demone con interfaccia a riga di comando (in inglese);
 il browser è solo uno dei client. I comandi (`start`, `status`, `nodes`, `site`,
 `browse`, `monitor`, `exec`, `node`, `authority`, `directory`, …) sono elencati
 da `nyctalus help`. Per **installare, configurare e mettere in piedi una rete**
-vedi **[DEPLOY.md](DEPLOY.md)**; per **verificare** sicurezza e anonimato
-**[SICUREZZA.md](SICUREZZA.md)**. Esempi:
+vedi **[DEPLOY.md](documenti/DEPLOY.md)**; per **verificare** sicurezza e anonimato
+**[SICUREZZA.md](documenti/SICUREZZA.md)**. Esempi:
 
 ### Proxy SOCKS5 (un salto — non ancora anonimo)
 
@@ -317,14 +333,14 @@ nyctalus send --to IP:4433 --fingerprint <FINGERPRINT> --recipient <ADDRESS>.nyc
 
 ### Client grafici (browser, chat, launcher)
 
-I client grafici sono in Python+GTK3 e stanno in `browser/`, `chat/`, `launcher/`.
+I client grafici sono in Python+GTK3 e stanno in `pc/browser/`, `pc/chat/`, `pc/launcher/`.
 ```sh
-./scripts/demo-locale.sh     # browser stealth su un sito .nyct di prova
-./scripts/demo-chat.sh       # chat: due finestre (due identità) in locale
-./launcher/nyctalus-launcher # il pannello da cui lanci browser e chat
+./strumenti/demo-locale.sh     # browser stealth su un sito .nyct di prova
+./strumenti/demo-chat.sh       # chat: due finestre (due identità) in locale
+./pc/launcher/nyctalus-launcher # il pannello da cui lanci browser e chat
 ```
 Per l'uso reale (rete condivisa) usa `avvia-chat.sh`; la guida passo-passo della
-chat è in [MANUALE-CHAT.md](MANUALE-CHAT.md). Dentro la chat, il pulsante **?**
+chat è in [MANUALE-CHAT.md](documenti/MANUALE-CHAT.md). Dentro la chat, il pulsante **?**
 apre il manuale nel browser.
 
 ## Cosa promette e cosa no
@@ -339,11 +355,11 @@ chi si identifica da solo (login, dati personali).
 
 ## Documenti
 
-- [VISIONE.md](VISIONE.md) — l'idea, le scelte, il percorso verso il protocollo di riferimento
-- [SPECIFICA.md](SPECIFICA.md) — modello di minaccia, livelli, formati dei pacchetti
-- [STATO.md](STATO.md) — punto dei lavori e cose da fare
-- [DEPLOY.md](DEPLOY.md) — installare, configurare, mettere in piedi una rete, opzioni
-- [SICUREZZA.md](SICUREZZA.md) — come verificare sicurezza e anonimato (e cosa serve un audit)
+- [VISIONE.md](documenti/VISIONE.md) — l'idea, le scelte, il percorso verso il protocollo di riferimento
+- [SPECIFICA.md](documenti/SPECIFICA.md) — modello di minaccia, livelli, formati dei pacchetti
+- [STATO.md](documenti/STATO.md) — punto dei lavori e cose da fare
+- [DEPLOY.md](documenti/DEPLOY.md) — installare, configurare, mettere in piedi una rete, opzioni
+- [SICUREZZA.md](documenti/SICUREZZA.md) — come verificare sicurezza e anonimato (e cosa serve un audit)
 
 ## Il nome
 

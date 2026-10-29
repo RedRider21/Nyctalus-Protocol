@@ -39,9 +39,20 @@ except Exception:                # noqa: BLE001
     def _t(key, **kw):
         return key
 
-RADICE = Path(__file__).resolve().parents[2]      # cartella del progetto / pacchetto
+RADICE = Path(__file__).resolve().parents[2]      # radice del pacchetto, o pc/ nel progetto
 CARTELLA_BROWSER = RADICE / "browser"
-LOGO = RADICE / "logo.svg"
+
+
+def _cerca(*relativi):
+    """Primo file esistente fra radice del pacchetto e radice del progetto."""
+    for base in (RADICE, RADICE.parent):
+        for rel in relativi:
+            if (base / rel).exists():
+                return base / rel
+    return RADICE / relativi[0]
+
+
+LOGO = _cerca("logo.svg")
 PAGES = "https://redrider21.github.io/Nyctalus-Protocol/"
 CONF_DIR = Path.home() / ".nyctalus-launcher"
 CONF = CONF_DIR / "config.json"
@@ -324,7 +335,7 @@ class Launcher(Gtk.Window):
 
     def _apri_chat(self):
         # lo script porta su l'intero stack (motore + servizio + finestra).
-        for candidato in (RADICE / "avvia-chat.sh", RADICE / "scripts" / "avvia-chat.sh"):
+        for candidato in (RADICE / "avvia-chat.sh", RADICE.parent / "strumenti" / "avvia-chat.sh"):
             if candidato.exists():
                 self._lancia(["bash", str(candidato)])
                 return

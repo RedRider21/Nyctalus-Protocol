@@ -1,5 +1,5 @@
 target/
 *.swp
-pacchetto/
+installazioni/
 __pycache__/
 *.pyc

@@ -51,7 +51,7 @@
 
 ## 3. Livello flusso (L2) ✅
 
-Codice: `crates/nyctalus-core/src/` — moduli `chiavi`, `etichette`, `cifratura`, `ricomposizione`, `flusso`.
+Codice: `motore/nyctalus-core/src/` — moduli `chiavi`, `etichette`, `cifratura`, `ricomposizione`, `flusso`.
 
 ### 3.1 Flussi
 Un **flusso** è una sequenza ordinata di byte che va **in una sola direzione**. Una conversazione usa due flussi con `id_flusso` diversi, uno per direzione. Ogni flusso ha:
@@ -86,10 +86,10 @@ etichetta(i) = primi 8 byte di BLAKE3-keyed(chiave_etichette, i_LE64)
 Nel circuito (stream QUIC ordinato) il numero di sequenza usato come nonce **non viaggia in chiaro**: ogni nodo lo ricostruisce con un contatore locale per direzione (bit alto = ritorno). Così lo stesso pacchetto non espone alcun valore comune fra una tratta e l'altra. L'ID di circuito esplicito per tratta arriverà con la multiplazione (§ multiplexing, punto D).
 
 ### 3.3-ter Multiplazione dei flussi (punto D) ✅
-Un **solo circuito** trasporta più connessioni dell'applicazione. Dentro gli strati a cipolla viaggiano **celle** `[flusso u16][comando u8][dati]` (`crates/nyctalus/src/cella.rs`): `APRI host:porta`, `DATI`, `CHIUDI`, e in ritorno `APERTO`/`RIFIUTATO`. Solo client e uscita interpretano le celle; i relè vedono un unico canale di byte cifrati e non distinguono i flussi. Lato client un task scrittore serializza l'andata (nonce unico) e un lettore smista il ritorno al flusso giusto; l'uscita apre una connessione TCP per flusso.
+Un **solo circuito** trasporta più connessioni dell'applicazione. Dentro gli strati a cipolla viaggiano **celle** `[flusso u16][comando u8][dati]` (`motore/nyctalus/src/cella.rs`): `APRI host:porta`, `DATI`, `CHIUDI`, e in ritorno `APERTO`/`RIFIUTATO`. Solo client e uscita interpretano le celle; i relè vedono un unico canale di byte cifrati e non distinguono i flussi. Lato client un task scrittore serializza l'andata (nonce unico) e un lettore smista il ritorno al flusso giusto; l'uscita apre una connessione TCP per flusso.
 
 ### 3.3-quater Conflux: splitting su più strade (punto E2) ✅
-Più circuiti che condividono **guard e uscita** (intermedi diversi) formano un *gruppo* identificato da un `set_id` da 16 byte, comunicato all'uscita nel primo quadro (LINK, dentro l'onion). Ogni cella riceve una **sequenza end-to-end** a 8 byte (dentro l'onion, invisibile ai relè) e viene spezzata sui circuiti a rotazione; il ricevitore la **ricompone** nell'ordine originale (`crates/nyctalus/src/conflux.rs`, `Riordina`). Così un singolo flusso usa la banda di più strade. Limiti del prototipo: guard/uscita fissi per la sessione, nessuna gestione della morte di un circuito.
+Più circuiti che condividono **guard e uscita** (intermedi diversi) formano un *gruppo* identificato da un `set_id` da 16 byte, comunicato all'uscita nel primo quadro (LINK, dentro l'onion). Ogni cella riceve una **sequenza end-to-end** a 8 byte (dentro l'onion, invisibile ai relè) e viene spezzata sui circuiti a rotazione; il ricevitore la **ricompone** nell'ordine originale (`motore/nyctalus/src/conflux.rs`, `Riordina`). Così un singolo flusso usa la banda di più strade. Limiti del prototipo: guard/uscita fissi per la sessione, nessuna gestione della morte di un circuito.
 
 ### 3.4 Formato del pacchetto ✅
 ```
@@ -160,7 +160,7 @@ Si adotta **Sphinx** (Danezis–Goldberg 2009), il formato usato da Nym e Lightn
 ## 5. Stretta di mano e chiavi
 
 ### 5.1 Tra i due estremi (L2) ✅
-Codice: `crates/nyctalus-core/src/stretta.rs`.
+Codice: `motore/nyctalus-core/src/stretta.rs`.
 
 - **Schema:** `Noise_NK_25519_ChaChaPoly_BLAKE2s` (libreria `snow`), con prologo `"Nyctalus v0 2026-09-27 stretta di mano"`.
   ```text
@@ -186,8 +186,8 @@ Le chiavi dei singoli salti saranno incorporate nell'intestazione Sphinx: una so
 
 ## 6. Siti interni e punto d'incontro 📐
 
-- ✅ **Indirizzo `.nyct`** (`crates/nyctalus-core/src/indirizzo.rs`): `base32(chiave_pubblica[32] ‖ controllo[2] ‖ versione[1]) + ".nyct"`, 56 caratteri più il suffisso, come gli `.onion` v3. Il controllo sono i primi 2 byte di `BLAKE3-derive_key("Nyctalus indirizzi v0 controllo", chiave ‖ versione)` e intercetta gli errori di battitura. La chiave è quella X25519 della stretta di mano NK (§5.1): l'indirizzo **è** la chiave con cui si autentica il servizio. Esempio: `azcmipyj6qnj3sxljokv4wqnljonwrwer5ntsj7tkprjkn4tbu3puwqa.nyct`.
-- ✅ **Punto d'incontro** (`crates/nyctalus/src/incontro.rs`, comandi `site`/`browse` + integrazione nel proxy SOCKS): un servizio si **registra** presso un nodo punto d'incontro con la sua chiave pubblica (il `.nyct`); il client chiede di essere **collegato** a quel `.nyct` e il nodo fa da **ponte opaco** (non vede il contenuto). Client e servizio fanno la **stretta Noise NK end-to-end** (§5.1: l'indirizzo *è* la chiave con cui si autentica il servizio) e sopra la sessione viaggia HTTP; il servizio serve una cartella di file (HTML5/JS/immagini…), in keep-alive.
+- ✅ **Indirizzo `.nyct`** (`motore/nyctalus-core/src/indirizzo.rs`): `base32(chiave_pubblica[32] ‖ controllo[2] ‖ versione[1]) + ".nyct"`, 56 caratteri più il suffisso, come gli `.onion` v3. Il controllo sono i primi 2 byte di `BLAKE3-derive_key("Nyctalus indirizzi v0 controllo", chiave ‖ versione)` e intercetta gli errori di battitura. La chiave è quella X25519 della stretta di mano NK (§5.1): l'indirizzo **è** la chiave con cui si autentica il servizio. Esempio: `azcmipyj6qnj3sxljokv4wqnljonwrwer5ntsj7tkprjkn4tbu3puwqa.nyct`.
+- ✅ **Punto d'incontro** (`motore/nyctalus/src/incontro.rs`, comandi `site`/`browse` + integrazione nel proxy SOCKS): un servizio si **registra** presso un nodo punto d'incontro con la sua chiave pubblica (il `.nyct`); il client chiede di essere **collegato** a quel `.nyct` e il nodo fa da **ponte opaco** (non vede il contenuto). Client e servizio fanno la **stretta Noise NK end-to-end** (§5.1: l'indirizzo *è* la chiave con cui si autentica il servizio) e sopra la sessione viaggia HTTP; il servizio serve una cartella di file (HTML5/JS/immagini…), in keep-alive.
   - **Scelta del punto d'incontro:** deterministica dall'indirizzo `.nyct` e dall'elenco firmato (`rendezvous.rs`: ordine da `BLAKE3(chiave ‖ epoca ‖ indice)`), con rotazione per epoca (giorno). Servizio e client vi arrivano senza descrittore.
   - **Modo onion (predefinito):** client e servizio raggiungono il punto d'incontro con un **circuito a più salti**. L'uscita del circuito, tolto il proprio strato, riconosce il controllo (marca `NYCTRDV1`, che la distingue da un LINK conflux) e **cuce i due circuiti**: così il punto d'incontro vede solo l'ultimo relè, non gli IP di client e servizio.
   - **Modo diretto:** con `--rendezvous IP:PORT --fingerprint` si usa una connessione diretta a salto singolo (per prove con un solo nodo); quel nodo vede gli IP.
@@ -196,12 +196,12 @@ Le chiavi dei singoli salti saranno incorporate nell'intestazione Sphinx: una so
 - Un web server tradizionale (Nginx, Apache…) può stare dietro al demone come alternativa al server di file incorporato.
 
 ### 6.1 Ponte verso i siti `.onion` di Tor ✅ (via Tor di sistema)
-✅ **Implementato** (`crates/nyctalus/src/ponte.rs`): l'uscita riconosce gli indirizzi `.onion` e li raggiunge tramite **un Tor già presente sul sistema**, aprendo un tunnel al suo proxy SOCKS5 (default `127.0.0.1:9050`, opzione `--tor-socks`). Scelta volutamente **leggera**: non si incorpora il client Tor Arti (enorme e da bootstrappare), si riusa il Tor del sistema (es. quello di NexusSec). Dal nodo ponte in poi valgono le regole e la lentezza di Tor. Incorporare Arti come alternativa resta un possibile sviluppo futuro.
+✅ **Implementato** (`motore/nyctalus/src/ponte.rs`): l'uscita riconosce gli indirizzi `.onion` e li raggiunge tramite **un Tor già presente sul sistema**, aprendo un tunnel al suo proxy SOCKS5 (default `127.0.0.1:9050`, opzione `--tor-socks`). Scelta volutamente **leggera**: non si incorpora il client Tor Arti (enorme e da bootstrappare), si riusa il Tor del sistema (es. quello di NexusSec). Dal nodo ponte in poi valgono le regole e la lentezza di Tor. Incorporare Arti come alternativa resta un possibile sviluppo futuro.
 
 ---
 
 ## 7. Rumore di fondo 📐
-- ✅ **Celle a lunghezza fissa** (`crates/nyctalus/src/cella.rs`): ogni cella del circuito ha la **stessa dimensione** sul filo (`LUNGHEZZA` = intestazione + `CAPACITA`), con la lunghezza reale in un campo interno e il resto a zero. Così un osservatore non deduce la lunghezza dei contenuti e — condizione necessaria per il rumore di fondo — una cella fittizia è **indistinguibile** da una vera.
+- ✅ **Celle a lunghezza fissa** (`motore/nyctalus/src/cella.rs`): ogni cella del circuito ha la **stessa dimensione** sul filo (`LUNGHEZZA` = intestazione + `CAPACITA`), con la lunghezza reale in un campo interno e il resto a zero. Così un osservatore non deduce la lunghezza dei contenuti e — condizione necessaria per il rumore di fondo — una cella fittizia è **indistinguibile** da una vera.
 - ✅ **Celle fittizie (cover traffic)** a ritmo di **Poisson** (`cmd::RIEMPIMENTO`), in **entrambe le direzioni**: in salita dal client (demone `--cover HZ`) e in discesa dal nodo d'uscita (`node --cover HZ`); l'altro estremo le scarta. Mascherano *quando* si invia davvero. Il traffico inoltrato per conto di altri utenti funziona già da copertura naturale.
 - ✅ **Riempimento del LINK**: il primo quadro conflux (set_id) è riempito alla dimensione di un'unità dati, così non si distingue per lunghezza.
 - 📐 Da fare: riempimento del pacchetto di **apertura Sphinx** e uniformità dei quadri del tunnel rendezvous (sottosistema separato); **taratura** della frequenza con misure reali (costo in banda contro beneficio).
@@ -212,7 +212,7 @@ Le chiavi dei singoli salti saranno incorporate nell'intestazione Sphinx: una so
 
 ### 8.1 Porta e mimetizzazione
 - **Porta predefinita: UDP 443**, configurabile. Il trasporto è QUIC (UDP), e HTTP/3 vive proprio su UDP 443: il traffico Nyctalus si confonde con un normale sito moderno o una videochiamata. La **porta 80 non si usa**: è HTTP in chiaro su TCP e ci farebbe dare nell'occhio.
-- ✅ **Offuscamento implementato** (`crates/nyctalus-core/src/offuscamento.rs`, `crates/nyctalus/src/trasporto.rs`): con una chiave di rete condivisa, ogni datagramma UDP è avvolto con ChaCha20 (nonce casuale per datagramma); sul filo è indistinguibile da rumore, quindi niente firma QUIC per il DPI. Attivabile con `--obfuscation`/`obfuscation`. Limiti attuali: niente resistenza al probing attivo né shaping dei tempi (rumore di fondo), che restano da fare.
+- ✅ **Offuscamento implementato** (`motore/nyctalus-core/src/offuscamento.rs`, `motore/nyctalus/src/trasporto.rs`): con una chiave di rete condivisa, ogni datagramma UDP è avvolto con ChaCha20 (nonce casuale per datagramma); sul filo è indistinguibile da rumore, quindi niente firma QUIC per il DPI. Attivabile con `--obfuscation`/`obfuscation`. Limiti attuali: niente resistenza al probing attivo né shaping dei tempi (rumore di fondo), che restano da fare.
 - Il collegamento tra nodi usa QUIC con una stretta di mano TLS 1.3 **indistinguibile da quella dei browser comuni**.
 - Un nodo sondato da un censore risponde come un normale sito web; solo chi presenta un segreto valido accede al protocollo, come fanno WebTunnel e obfs4.
 - Dove UDP è bloccato, ripiego su **TCP 443** travestito da HTTPS classico.
@@ -233,7 +233,7 @@ Una VPN **non** aggiunge anonimato al protocollo: sposta soltanto la fiducia su 
 
 ## 9. Elenco dei nodi ✅ (prototipo) / ❓ (governance)
 
-✅ **Implementato** (`crates/nyctalus-core/src/elenco.rs`): elenco testuale firmato da un'**autorità Ed25519**; ogni voce = `indirizzo, chiave X25519, impronta TLS`. Client e nodi verificano la firma e ne ricavano le identità. È il meccanismo che rende possibile l'**autenticazione dei collegamenti** (§3-bis): il client pinna il guard, ogni relè pinna il nodo a valle cercandone l'impronta nell'elenco. Comandi: `nyctalus autorita`, `nyctalus elenco`, e `--elenco/--autorita` su nodi e client.
+✅ **Implementato** (`motore/nyctalus-core/src/elenco.rs`): elenco testuale firmato da un'**autorità Ed25519**; ogni voce = `indirizzo, chiave X25519, impronta TLS`. Client e nodi verificano la firma e ne ricavano le identità. È il meccanismo che rende possibile l'**autenticazione dei collegamenti** (§3-bis): il client pinna il guard, ogni relè pinna il nodo a valle cercandone l'impronta nell'elenco. Comandi: `nyctalus autorita`, `nyctalus elenco`, e `--elenco/--autorita` su nodi e client.
 
 ❓ **Da decidere (governance):** chi gestisce l'autorità e come si aggiorna l'elenco. Opzioni:
 Chi pubblica l'elenco firmato dei nodi e delle loro chiavi. Opzioni:
@@ -263,7 +263,7 @@ Regola: **nessuna primitiva inventata**. Si usano solo costruzioni pubbliche e a
 
 ## 11. Programma di prova ✅
 
-`crates/nyctalus` (eseguibile `nyctalus`) trasferisce un file tra due estremi:
+`motore/nyctalus` (eseguibile `nyctalus`) trasferisce un file tra due estremi:
 - **L0:** QUIC (quinn + rustls, backend ring, solo TLS 1.3). Il certificato è autofirmato e il mittente lo accetta solo se la sua impronta BLAKE3 coincide con quella attesa (pinning).
 - **L2:** frammenti cifrati di `nyctalus-core`, distribuiti a turno su k corsie, cioè k stream QUIC unidirezionali in parallelo, con il controllo del flusso di §4.4.
 - **Stretta di mano:** Noise NK su un primo stream bidirezionale QUIC (§5.1). Il ricevitore stampa la sua chiave pubblica (`--destinatario`); con `--identita FILE` la chiave resta la stessa tra un avvio e l'altro.

@@ -8,7 +8,7 @@
 # scrivetevi: tutto resta sulla tua macchina. Chiudendo (o con Ctrl-C) si ferma
 # e pulisce tutto.
 #
-#   ./scripts/demo-chat.sh
+#   ./strumenti/demo-chat.sh
 #
 # Richiede: il binario `nyctalus` (lo compila se manca) + python3 + PyGObject
 # (GTK3). È solo una rete di prova locale: NON dà anonimato reale.
@@ -79,7 +79,7 @@ echo "   In ciascuna premi « + », incolla l'indirizzo dell'ALTRA e scrivetevi.
 echo "   (rete di prova LOCALE: nessun anonimato reale)"
 echo
 
-export PYTHONPATH="$ROOT/chat:$ROOT/browser"
+export PYTHONPATH="$ROOT/pc/chat:$ROOT/pc/browser"
 NYCTALUS_CHAT_PORT=1091 python3 -m nyctalus_chat > "$WORK/ui-alice.log" 2>&1 & PIDS+=($!)
 NYCTALUS_CHAT_PORT=1092 python3 -m nyctalus_chat > "$WORK/ui-bob.log"   2>&1 & PIDS+=($!)
 

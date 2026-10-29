@@ -5,14 +5,14 @@
 # Avvia il Nyctalus Browser in NAVIGAZIONE NORMALE (come un browser qualunque,
 # senza rete di prova né demone). Lo stealth (rete Nyctalus) si accende col
 # bottone in alto a destra; richiede però un demone attivo con proxy SOCKS
-# (per la rete di prova completa, usa invece ./scripts/demo-locale.sh).
+# (per la rete di prova completa, usa invece ./strumenti/demo-locale.sh).
 #
-#   ./scripts/demo-locale-nav-normal.sh                 # pagina iniziale
-#   ./scripts/demo-locale-nav-normal.sh example.com     # apre un sito
+#   ./strumenti/demo-locale-nav-normal.sh                 # pagina iniziale
+#   ./strumenti/demo-locale-nav-normal.sh example.com     # apre un sito
 set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BROWSER_DIR="$ROOT/browser"
+BROWSER_DIR="$ROOT/pc/browser"
 
 err() { printf '\033[1;31m✗ %s\033[0m\n' "$*" >&2; }
 
