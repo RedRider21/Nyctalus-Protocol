@@ -31,9 +31,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      # L'Android SDK è già installato sulle macchine di GitHub ($ANDROID_HOME): niente
+      # android-actions/setup-android (la v3 si blocca cercando il pacchetto «tools», ritirato).
       - name: Pacchetti SDK
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+        run: |
+          SDKM="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)"
+          yes | "$SDKM" --sdk_root="$ANDROID_HOME" --install "platforms;android-34" "build-tools;34.0.0" > /dev/null
       - name: Compila
         run: bash strumenti/compila-apk.sh
       - uses: actions/upload-artifact@v4
