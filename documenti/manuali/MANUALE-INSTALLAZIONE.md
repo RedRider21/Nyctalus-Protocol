@@ -1,0 +1,162 @@
+<!--
+SPDX-License-Identifier: AGPL-3.0-or-later
+Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+-->
+
+# Manuale d'installazione
+
+> ⚠️ **Prototipo** non ancora verificato da revisori indipendenti: usalo per provare
+> funzionamento, usabilità e stabilità, **non** per proteggere dati reali.
+
+Tutto ciò che si installa sta nella cartella **`installazioni/`**, una sottocartella per
+dispositivo (la crea `strumenti/crea-installazioni.sh` partendo dai sorgenti):
+
+| Dispositivo | Cartella | Cosa contiene |
+|---|---|---|
+| PC Linux (x86_64) | `installazioni/PC-Linux/` | `Nyctalus-PC-Linux.tar.gz` — motore + browser + chat + launcher |
+| Telefono Android | `installazioni/Android/` | `nyctalus-termux.tar.gz` (dentro Termux) · `Nyctalus.apk` (quando disponibile) |
+| Manuali | `installazioni/Manuali/` | questi manuali |
+
+---
+
+## 1. PC Linux
+
+### 1.1 Cosa installare dal sistema
+Debian, Ubuntu, Linux Mint e derivate:
+```sh
+sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
+```
+Facoltativi:
+```sh
+sudo apt install gir1.2-keybinder-3.0                  # tasti rapidi GLOBALI del launcher
+sudo apt install gir1.2-gstreamer-1.0 gstreamer1.0-gtk3 \
+     gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly \
+     gstreamer1.0-libav ffmpeg                          # fotocamera, audio, miniature video
+```
+Sui sistemi più vecchi `gir1.2-webkit2-4.0` al posto di `-4.1`.
+
+### 1.2 Installare
+Nessun installatore: si estrae e si usa.
+```sh
+tar xzf Nyctalus-PC-Linux.tar.gz        # crea la cartella Nyctalus/
+cd Nyctalus
+```
+
+### 1.3 Avviare
+| Comando | Cosa fa |
+|---|---|
+| `./avvia-launcher.sh` | il pannello da cui parte tutto (logo → guida, Browser, Chat) |
+| `./avvia-browser.sh` | solo il browser |
+| `./avvia-chat.sh` | solo la chat (motore + servizio `.nyct` + finestra) |
+
+Uso dei programmi: **`MANUALE-PC.md`** e **`MANUALE-CHAT.md`**.
+
+### 1.4 Disinstallare
+Cancella la cartella `Nyctalus/`. I dati personali stanno nella home, in cartelle a parte:
+`~/.nyctalus-chat` (identità, contatti, messaggi, allegati), `~/.nyctalus-browser`,
+`~/.nyctalus-launcher`, `~/.cache/nyctalus-chat`. Cancellale solo se vuoi perdere
+identità e chat.
+
+---
+
+## 2. Telefono Android
+
+Nyctalus sul telefono funziona come **Termux-NexusSEC-OS**: dentro **Termux** gira il
+motore (lo stesso del PC) con un piccolo servizio, e l'interfaccia è una **web-app in
+stile Telegram**, che apri nel browser del telefono oppure nell'app **Nyctalus**.
+
+**Convive con gli altri progetti in Termux:** usa solo la cartella `~/nyctalus`, i dati
+in `~/.nyctalus-mobile` e `~/.nyctalus-chat`, porte del blocco **18xxx**, comandi che
+iniziano con `nyctalus-`; installa **solo i pacchetti che mancano** e **non aggiorna
+mai** quelli già presenti; in `termux.properties` aggiunge una sola riga, senza
+riscrivere il file.
+
+### 2.1 Cosa scaricare
+1. **Termux** — **non** dal Play Store (versione vecchia e ferma):
+   - F-Droid: <https://f-droid.org/packages/com.termux/>
+   - oppure GitHub: <https://github.com/termux/termux-app/releases> → il file
+     `termux-app_…_arm64-v8a.apk` (quasi tutti i telefoni recenti sono *arm64-v8a*).
+
+   Se usi già Termux per altri progetti, va bene quello che hai.
+2. **`nyctalus-termux.tar.gz`** dalla cartella `installazioni/Android/`.
+3. Facoltativa: **`Nyctalus.apk`**, l'app a schermo intero. Senza, usi il browser del
+   telefono (funziona allo stesso modo).
+
+### 2.2 Portare l'archivio nel telefono
+L'archivio deve finire nella cartella **Download** del telefono. Scegli il modo più comodo:
+- **cavo USB**: collega il telefono al PC, scegli «Trasferimento file», copia
+  `nyctalus-termux.tar.gz` nella cartella `Download`;
+- **mandalo a te stesso** (mail, Telegram «Messaggi salvati», Drive…) e sul telefono
+  salvalo in Download;
+- **in rete locale** (PC e telefono sulla stessa Wi-Fi): sul PC, dalla cartella
+  `installazioni/Android/`, lancia `python3 -m http.server 8080`; in Termux
+  `curl -O http://IP-DEL-PC:8080/nyctalus-termux.tar.gz` (poi al punto 2.3 usa questo
+  file al posto di quello in Download). Alcune reti aziendali lo bloccano.
+
+### 2.3 Installare (una volta sola)
+In Termux:
+```sh
+termux-setup-storage          # appare la richiesta di accesso ai file: concedila
+cd ~
+tar xzf ~/storage/downloads/nyctalus-termux.tar.gz
+bash nyctalus-termux/installa.sh
+```
+- `termux-setup-storage` crea `~/storage/downloads` (la tua cartella Download) e
+  permette anche di vedere le **foto del telefono** nel selettore degli allegati.
+- Se l'archivio non contiene già il motore compilato per il telefono, l'installatore lo
+  **compila sul telefono**: scarica Rust (~300 MB) e impiega 10-30 minuti, **solo la
+  prima volta**. Meglio sotto Wi-Fi e col telefono in carica.
+- Opzione: `bash nyctalus-termux/installa.sh --avvio-automatico` fa partire Nyctalus
+  all'accensione (serve l'app **Termux:Boot**).
+
+### 2.4 Avviare
+```sh
+nyctalus-mobile
+```
+Stampa un indirizzo come `http://127.0.0.1:18731/?t=…`: tienilo premuto, copialo e
+**aprilo in Chrome** sul telefono. La prima volta il browser ricorda l'accesso; dal
+menu di Chrome puoi **«Aggiungi a schermata Home»** per avere l'icona Nyctalus.
+
+Con l'**app Nyctalus** non serve copiare indirizzi: avvia il servizio in Termux da sola
+(la prima volta Android chiede il permesso «Esegui comandi in Termux»: concedilo).
+
+| Comando | Cosa fa |
+|---|---|
+| `nyctalus-mobile` | avvia (in primo piano; Ctrl-C per fermare) |
+| `nyctalus-mobile --sfondo` | avvia in sottofondo |
+| `nyctalus-mobile --stato` | dice se è attivo e ristampa l'indirizzo da aprire |
+| `nyctalus-mobile --ferma` | ferma tutto |
+
+Uso dell'app: **`MANUALE-TELEFONO.md`** e **`MANUALE-CHAT.md`**.
+
+### 2.5 Disinstallare
+```sh
+bash ~/nyctalus/disinstalla.sh
+```
+Toglie **solo** Nyctalus (programma, comando, avvio automatico). Chiede prima di
+cancellare i tuoi dati (identità, contatti, messaggi). **Non** disinstalla pacchetti come
+python o rust, che potrebbero servire ad altri progetti.
+
+---
+
+## 3. La rete: prova locale o condivisa
+
+Senza configurazione, PC e telefono avviano una **rete di prova locale**: tutto
+funziona, ma solo su quel dispositivo, e non raggiungi altre persone. Per parlare
+davvero con altri serve la **rete condivisa** (nodi pubblici + elenco firmato): si
+configura con `directory_url` e `authority`
+- sul PC in `~/.nyctalus-browser/config.json`;
+- sul telefono in `~/.nyctalus-mobile/config.json`.
+
+Come mettere in piedi la rete: **`DEPLOY.md`**.
+
+## 4. Problemi frequenti
+
+| Sintomo | Causa e rimedio |
+|---|---|
+| «porte già usate da un altro programma» | un altro progetto usa una delle porte 18xxx: cambiale in `~/.nyctalus-mobile/config.json` → `"porte": {…}` |
+| la web-app dice «Accesso negato» | apri l'indirizzo con `?t=…` stampato da `nyctalus-mobile --stato` |
+| nel selettore allegati non vedo le foto | in Termux: `termux-setup-storage` e consenti l'accesso ai file |
+| le miniature dei video non compaiono | facoltativo: `pkg install ffmpeg` |
+| la chat dice «rete di prova LOCALE» | normale senza configurazione: vedi il capitolo 3 |
+| sul PC la fotocamera è disattivata | installa i pacchetti GStreamer del punto 1.1 |

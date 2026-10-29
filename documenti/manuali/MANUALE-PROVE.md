@@ -1,0 +1,73 @@
+<!--
+SPDX-License-Identifier: AGPL-3.0-or-later
+Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+-->
+
+# Manuale delle prove (funzionamento e sicurezza)
+
+Tutte le prove stanno nella cartella **`test/`** dei sorgenti e si rifanno quando
+serve, ad esempio dopo ogni modifica o prima di distribuire una versione.
+
+```sh
+test/esegui-tutti.sh                  # tutte le prove, con riepilogo finale
+test/esegui-tutti.sh sicurezza        # solo sicurezza  (= strumenti/verifica.sh)
+test/esegui-tutti.sh funzionamento    # solo funzionamento
+bash test/sicurezza/04-impostore-chat.sh   # una prova sola
+NYCT_TIENI=1 test/esegui-tutti.sh     # conserva i log delle prove, per indagare
+```
+
+Esito: ogni verifica stampa **PASS** / **FAIL** / **SALTA**; alla fine il riepilogo
+per prova e il totale. Il comando termina con errore se anche una sola verifica fallisce.
+
+**Le prove sono sicure da lanciare:**
+- usano solo **cartelle temporanee** (`/tmp/nyctalus-test.*`), sempre ripulite;
+- usano **porte dedicate 19xxx**, diverse da sviluppo (1080…) e telefono (18xxx);
+- **non toccano i tuoi dati** (identità, chat) né gli altri programmi;
+- **non accendono mai la webcam**: la fotocamera si prova con sorgenti video/audio
+  finte di GStreamer;
+- chiudono tutti i processi che avviano.
+
+**Requisiti:** Rust (`cargo`), Python 3. Facoltativi, altrimenti la prova viene
+**SALTATA**: `google-chrome` (web-app), un display grafico + GStreamer (fotocamera),
+`ffmpeg` (video).
+
+---
+
+## Prove di sicurezza (`test/sicurezza/`)
+
+| Prova | Cosa verifica |
+|---|---|
+| `01-directory-firmata` | l'elenco dei nodi firmato è accettato; manomesso o firmato da un'altra autorità è **rifiutato** |
+| `02-offuscamento` | con la chiave di rete il nodo risponde, senza resta muto (trasporto camuffato) |
+| `03-segreto-controllo` | la porta di controllo della chat risponde solo a chi ha il **segreto** (sbagliato o assente → rifiutato) |
+| `04-impostore-chat` | **attacco dal vivo**: chi si spaccia per un contatto senza averne la chiave viene sfidato e buttato fuori; nessun messaggio falso consegnato né salvato |
+| `05-orchestratore` | il servizio del telefono: niente accesso senza segreto (anche WebSocket), niente file di sistema (`/etc/passwd`), niente `../` fuori dalla web-app, niente comandi da altri siti, nomi caricati ripuliti, caricamenti enormi rifiutati |
+
+## Prove di funzionamento (`test/funzionamento/`)
+
+| Prova | Cosa verifica |
+|---|---|
+| `00-test-automatici` | tutti i test del motore (`cargo test`): crittografia, celle, conflux, rendezvous, chat |
+| `01-chat-e-allegati` | su una **rete di prova** (4 nodi, circuiti a 3 salti): testo nei due sensi, identità autenticata, allegati da 3 MB e immagini **identici al byte** (SHA-256), avanzamento, cronologia |
+| `02-orchestratore` | il servizio del telefono avvia rete e chat, ponte WebSocket verso il motore, caricamento e lettura a pezzi (Range), arresto senza processi orfani |
+| `03-webapp` | la web-app in Chrome a misura di telefono: elenco, cache IndexedDB, conversazione in fondo, pressione lunga, foto senza EXIF, **selettore allegati** (griglia, selezione numerata, «Invia (2)»), messaggi e foto a se stessi **attraverso la rete** |
+| `04-fotocamera` | foto (JPEG) e video (H.264 + audio AAC, file chiuso bene) dalla fotocamera della chat, finestra di anteprima d'invio |
+| `05-installatore-termux` | installatore in un **Termux simulato**: tutto in `~/nyctalus`, nessun pacchetto superfluo né `pkg upgrade`, `termux.properties` intatto e senza righe doppie, avvio automatico solo se chiesto, `nyctalus-mobile` avvia/ferma, disinstallazione che **non tocca gli altri progetti**, comandi omonimi altrui non sovrascritti |
+| `06-installazioni` | la cartella `installazioni/`: pacchetti e LEGGIMI per ogni dispositivo, **nessun dato personale** dentro, il pacchetto PC si estrae e parte, quello Android contiene tutto il necessario |
+
+## Aggiungere una prova
+
+Un file `NN-nome.sh` in `test/sicurezza/` o `test/funzionamento/` che inizia con
+`. "$(dirname "$0")/../lib.sh"` e usa le funzioni comuni:
+
+| Funzione | A cosa serve |
+|---|---|
+| `titolo`, `pass`, `fail`, `salta`, `verifica` | intestazione ed esiti |
+| `assicura_binario` | compila il motore se manca o è vecchio |
+| `rete_di_prova BASE` | autorità + 4 nodi sulle porte BASE…BASE+3 (variabili `SEC` `PUB` `DIR`) |
+| `identita NOME BACKEND CONTROLLO SOCKS [SEGRETO]` | motore della chat + servizio `.nyct`; indirizzo in `$ADDR` (non chiamarla dentro `$(...)`) |
+| `controllo PORTA SEGRETO ATTESA COMANDI…` | parla con il motore della chat (`NYCT_FINO=regex` per fermarsi alla risposta) |
+| `attendi_regex FILE REGEX [sec]` | aspetta una riga in un log |
+
+Ogni processo avviato va aggiunto a `PIDS` (`… & PIDS+=($!)`): la libreria lo chiude a
+fine prova.

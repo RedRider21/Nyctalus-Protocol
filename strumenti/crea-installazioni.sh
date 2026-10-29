@@ -2,19 +2,22 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 #
-# Crea la cartella installazioni/: per ogni dispositivo, il pacchetto da
-# installare e le istruzioni. È separata dallo sviluppo (motore/, pc/, mobile/…)
-# e si rigenera da zero ogni volta.
+# Crea la cartella installazioni/: per ogni dispositivo il pacchetto completo da
+# copiare, scompattare e installare, con le istruzioni. È separata dallo
+# sviluppo e si rigenera da zero ogni volta.
 #
 #   installazioni/
-#   ├── LEGGIMI.txt                  quale pacchetto per quale dispositivo
+#   ├── LEGGIMI.txt                    quale pacchetto per quale dispositivo
+#   ├── Nyctalus-completo.zip          TUTTO (PC + Android + manuali), da copiare in un colpo
 #   ├── PC-Linux/
-#   │   ├── Nyctalus-PC-Linux.tar.gz  motore + browser + chat + launcher
+#   │   ├── Nyctalus-PC-Linux.zip       scompatta → ./installa.sh
 #   │   └── LEGGIMI.txt
-#   └── Android/
-#       ├── nyctalus-termux.tar.gz    da installare dentro Termux
-#       ├── Nyctalus.apk              l'app (se è già stata compilata)
-#       └── LEGGIMI.txt               passo-passo
+#   ├── Android/
+#   │   ├── nyctalus-termux.tar.gz      per Termux (si apre senza installare nulla)
+#   │   ├── nyctalus-termux.zip         lo stesso, in zip
+#   │   ├── Nyctalus.apk                l'app (se è già stata compilata)
+#   │   └── LEGGIMI.txt
+#   └── Manuali/                       installazione, PC, telefono, chat, prove, deploy, sicurezza
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/installazioni"
@@ -23,11 +26,34 @@ trap 'rm -rf "$LAVORO"' EXIT
 
 say() { printf '\033[1;36m» %s\033[0m\n' "$*"; }
 
+# zip che conserva i permessi Unix (gli script restano eseguibili dopo lo scompattamento)
+crea_zip() { # crea_zip CARTELLA FILE.zip   (dentro lo zip la cartella stessa è la radice)
+  python3 - "$1" "$2" <<'PY'
+import os, sys, zipfile
+src, dst = os.path.abspath(sys.argv[1]), sys.argv[2]
+base = os.path.dirname(src)
+with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+    for radice, cartelle, files in os.walk(src):
+        cartelle.sort()
+        for nome in sorted(files):
+            p = os.path.join(radice, nome)
+            info = zipfile.ZipInfo.from_file(p, os.path.relpath(p, base))   # porta con sé i permessi
+            info.compress_type = zipfile.ZIP_DEFLATED
+            with open(p, "rb") as f:
+                z.writestr(info, f.read(), compresslevel=9)
+PY
+}
+manuali_in() { # copia i manuali in una cartella
+  mkdir -p "$1"
+  cp "$ROOT"/documenti/manuali/*.md "$ROOT/documenti/DEPLOY.md" "$ROOT/documenti/SICUREZZA.md" "$1/"
+}
+
 say "Compilo il motore per il PC (release)…"
 ( cd "$ROOT" && cargo build --release -p nyctalus )
 
 rm -rf "$OUT"
 mkdir -p "$OUT/PC-Linux" "$OUT/Android"
+manuali_in "$OUT/Manuali"
 
 # ============================== PC Linux ==============================
 say "PC-Linux: assemblo il pacchetto"
@@ -37,59 +63,51 @@ cp "$ROOT/target/release/nyctalus" "$P/bin/nyctalus"
 cp -r "$ROOT/pc/browser/nyctalus_browser" "$ROOT/pc/browser/nxs_i18n" "$P/browser/"
 cp -r "$ROOT/pc/launcher/nyctalus_launcher" "$P/launcher/"
 cp -r "$ROOT/pc/chat/nyctalus_chat" "$P/chat/"
-cp "$ROOT/strumenti/avvia-chat.sh" "$P/avvia-chat.sh"
+cp "$ROOT/strumenti/avvia-chat.sh" "$ROOT/pc/installa.sh" "$ROOT/pc/disinstalla.sh" "$P/"
 cp "$ROOT/logo.svg" "$ROOT/LICENSE" "$P/"
-cp "$ROOT/documenti/DEPLOY.md" "$ROOT/documenti/SICUREZZA.md" "$ROOT/documenti/MANUALE-CHAT.md" "$P/"
+manuali_in "$P/Manuali"
 find "$P" -name __pycache__ -type d -prune -exec rm -rf {} +
 
-cat > "$P/avvia-launcher.sh" <<'EOF'
+for prog in launcher browser; do
+  modulo="nyctalus_$prog"; extra=""; [ "$prog" = launcher ] && extra='$QUI/launcher:'
+  cat > "$P/avvia-$prog.sh" <<EOF
 #!/usr/bin/env bash
-# Avvia il mini-launcher di Nyctalus (il pannello da cui parte tutto).
+# Avvia il $prog di Nyctalus (funziona anche lanciato dal menu o da un collegamento).
 set -u
-QUI="$(cd "$(dirname "$0")" && pwd)"
-export PATH="$QUI/bin:$PATH"
-export PYTHONPATH="$QUI/launcher:$QUI/browser${PYTHONPATH:+:$PYTHONPATH}"
-exec python3 -m nyctalus_launcher "$@"
+QUI="\$(cd "\$(dirname "\$(readlink -f "\$0")")" && pwd)"
+export PATH="\$QUI/bin:\$PATH"
+export PYTHONPATH="${extra}\$QUI/browser\${PYTHONPATH:+:\$PYTHONPATH}"
+exec python3 -m $modulo "\$@"
 EOF
-cat > "$P/avvia-browser.sh" <<'EOF'
-#!/usr/bin/env bash
-# Avvia solo il browser di Nyctalus (lo stealth avvia da sé i servizi).
-set -u
-QUI="$(cd "$(dirname "$0")" && pwd)"
-export PATH="$QUI/bin:$PATH"
-export PYTHONPATH="$QUI/browser${PYTHONPATH:+:$PYTHONPATH}"
-exec python3 -m nyctalus_browser "$@"
+done
+chmod +x "$P"/*.sh "$P/bin/nyctalus"
+
+cat > "$P/LEGGIMI.txt" <<'EOF'
+Nyctalus per PC Linux
+=====================
+
+⚠️  Prototipo non ancora verificato da revisori indipendenti: usalo per provare,
+    non per proteggere dati reali.
+
+INSTALLARE
+   ./installa.sh                    controlla i pacchetti di sistema (chiede prima
+                                    di installare), copia il programma in
+                                    ~/.local/share/nyctalus, crea le voci nel menu
+                                    delle applicazioni e i comandi nyctalus-*
+   ./installa.sh --avvio-automatico  in più, il launcher parte all'accesso
+
+USARE
+   Dal menu delle applicazioni: «Nyctalus», «Nyctalus Browser», «Nyctalus Chat»
+   oppure:  nyctalus-launcher · nyctalus-browser · nyctalus-chat
+   Senza installare: ./avvia-launcher.sh · ./avvia-browser.sh · ./avvia-chat.sh
+
+DISINSTALLARE
+   ~/.local/share/nyctalus/disinstalla.sh   (toglie solo Nyctalus; i dati solo se confermi)
+
+Manuali nella cartella Manuali/ (inizia da LEGGIMI.md e MANUALE-INSTALLAZIONE.md).
 EOF
-chmod +x "$P/avvia-launcher.sh" "$P/avvia-browser.sh" "$P/avvia-chat.sh"
-( cd "$LAVORO" && tar czf "$OUT/PC-Linux/Nyctalus-PC-Linux.tar.gz" Nyctalus )
-
-cat > "$OUT/PC-Linux/LEGGIMI.txt" <<'EOF'
-Nyctalus per PC Linux (Debian/Ubuntu/Mint…, x86_64)
-==================================================
-
-⚠️  Prototipo non ancora verificato da revisori indipendenti: usalo per provare
-    funzionamento, usabilità e stabilità, NON per proteggere dati reali.
-
-1) Pacchetti di sistema
-     sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
-   facoltativi:
-     sudo apt install gir1.2-keybinder-3.0                        # tasti rapidi globali
-     sudo apt install gir1.2-gstreamer-1.0 gstreamer1.0-gtk3 \
-          gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly \
-          gstreamer1.0-libav ffmpeg                               # fotocamera, audio, miniature
-
-2) Estrai l'archivio dove vuoi (es. nella tua home)
-     tar xzf Nyctalus-PC-Linux.tar.gz
-     cd Nyctalus
-
-3) Avvia
-     ./avvia-launcher.sh     il pannello: logo (guida), Browser, Chat
-     ./avvia-browser.sh      solo il browser
-     ./avvia-chat.sh         solo la chat
-
-Guide incluse: MANUALE-CHAT.md (la chat), DEPLOY.md (rete condivisa e
-opzioni), SICUREZZA.md (come verificare).
-EOF
+crea_zip "$P" "$OUT/PC-Linux/Nyctalus-PC-Linux.zip"
+cp "$P/LEGGIMI.txt" "$OUT/PC-Linux/LEGGIMI.txt"
 
 # ============================== Android ==============================
 say "Android: assemblo il pacchetto per Termux"
@@ -97,21 +115,20 @@ A="$LAVORO/nyctalus-termux"
 mkdir -p "$A/sorgenti"
 cp -r "$ROOT/mobile/orchestratore" "$ROOT/mobile/webapp" "$A/"
 cp "$ROOT/mobile/termux/installa.sh" "$ROOT/mobile/termux/disinstalla.sh" "$ROOT/mobile/termux/nyctalus-mobile" "$A/"
-# sorgenti del motore: in Termux si compila (se non c'è già un binario per telefono)
 cp "$ROOT/Cargo.toml" "$ROOT/Cargo.lock" "$A/sorgenti/"
 cp -r "$ROOT/motore" "$A/sorgenti/"
-# il profilo di sviluppo del PC (disco quasi pieno) non serve sul telefono
+manuali_in "$A/Manuali"
 find "$A" -name __pycache__ -type d -prune -exec rm -rf {} +
 for t in aarch64-linux-android aarch64-unknown-linux-musl; do
   if [ -x "$ROOT/target/$t/release/nyctalus" ]; then
     mkdir -p "$A/bin"; cp "$ROOT/target/$t/release/nyctalus" "$A/bin/nyctalus"
-    say "Android: incluso il motore precompilato ($t)"
-    break
+    say "Android: incluso il motore precompilato ($t)"; break
   fi
 done
 chmod +x "$A/installa.sh" "$A/disinstalla.sh" "$A/nyctalus-mobile"
 cp "$ROOT/LICENSE" "$A/"
 ( cd "$LAVORO" && tar czf "$OUT/Android/nyctalus-termux.tar.gz" nyctalus-termux )
+crea_zip "$A" "$OUT/Android/nyctalus-termux.zip"
 
 APK=""
 for c in "$ROOT/mobile/android/app/build/outputs/apk/release/app-release.apk" \
@@ -119,79 +136,65 @@ for c in "$ROOT/mobile/android/app/build/outputs/apk/release/app-release.apk" \
          "$ROOT/mobile/android/Nyctalus.apk"; do
   [ -f "$c" ] && { cp "$c" "$OUT/Android/Nyctalus.apk"; APK=1; break; }
 done
-
 MOTORE_PRONTO="no"; [ -d "$A/bin" ] && MOTORE_PRONTO="sì"
+
 cat > "$OUT/Android/LEGGIMI.txt" <<EOF
 Nyctalus per Android (telefono)
 ===============================
 
 ⚠️  Prototipo: per provare funzionamento e usabilità, NON per dati reali.
 
-Nyctalus sul telefono funziona come Termux-NexusSEC-OS: dentro TERMUX gira il
-motore (lo stesso del PC) con un piccolo servizio, e l'interfaccia è una
-web-app in stile Telegram (nel browser del telefono, o nell'app Nyctalus).
-Convive con gli altri progetti in Termux: usa solo ~/nyctalus, porte 18xxx,
-comandi "nyctalus-…", e non aggiorna i pacchetti di sistema.
+Funziona come Termux-NexusSEC-OS: dentro TERMUX gira il motore con un piccolo
+servizio, l'interfaccia è una web-app in stile Telegram (nel browser del
+telefono o nell'app Nyctalus). Convive con gli altri progetti in Termux.
 
 COSA SCARICARE
-  1. Termux — NON dal Play Store (versione vecchia):
-       F-Droid:  https://f-droid.org/packages/com.termux/
-       oppure GitHub: https://github.com/termux/termux-app/releases
-       → file "termux-app_…+github-debug_arm64-v8a.apk" (quasi tutti i
-         telefoni recenti sono arm64-v8a)
-     Se usi già Termux per altri progetti, va bene quello che hai.
-  2. Questo archivio: nyctalus-termux.tar.gz
-$( [ -n "$APK" ] && echo "  3. L'app: Nyctalus.apk (facoltativa: senza, usi il browser del telefono)" \
-               || echo "  3. L'app Nyctalus.apk: NON ancora compilata (arriverà con la compilazione
-     automatica su GitHub). Nel frattempo si usa il browser del telefono." )
+  1. Termux — NON dal Play Store:  https://f-droid.org/packages/com.termux/
+     oppure https://github.com/termux/termux-app/releases  (file …arm64-v8a.apk)
+  2. nyctalus-termux.tar.gz  (o .zip: è lo stesso; il .tar.gz si apre senza
+     installare nulla, lo .zip richiede «pkg install unzip»)
+$( [ -n "$APK" ] && echo "  3. Nyctalus.apk — l'app (facoltativa)" || echo "  3. Nyctalus.apk — non ancora compilata: per ora si usa il browser del telefono" )
 
-INSTALLAZIONE (una volta sola)
-  a) Copia nyctalus-termux.tar.gz nella cartella Download del telefono.
+INSTALLARE
+  a) Copia nyctalus-termux.tar.gz nella cartella Download del telefono
+     (cavo USB, oppure mandalo a te stesso e salvalo in Download).
   b) In Termux:
-       termux-setup-storage            (consenti l'accesso ai file)
+       termux-setup-storage
        cd ~
        tar xzf ~/storage/downloads/nyctalus-termux.tar.gz
        bash nyctalus-termux/installa.sh
      Motore già compilato nell'archivio: $MOTORE_PRONTO
-     (se "no", l'installatore lo compila sul telefono: scarica Rust
-      ~300 MB e impiega 10-30 minuti, solo la prima volta)
+     (se «no», la prima volta lo compila sul telefono: ~300 MB e 10-30 minuti)
 
-USO
-  In Termux:   nyctalus-mobile
-  Stampa un indirizzo tipo  http://127.0.0.1:18731/?t=…  → aprilo nel browser
-  del telefono (Chrome): la prima volta il browser ricorda l'accesso.
-  Dal menu del browser puoi "Aggiungere a schermata Home" → icona Nyctalus.
-  Con l'app Nyctalus.apk non serve copiare indirizzi: fa tutto da sola.
+USARE
+  nyctalus-mobile   → apri nel browser l'indirizzo http://127.0.0.1:18731/?t=… che stampa
+  nyctalus-mobile --stato · --ferma
+  Disinstallare: bash ~/nyctalus/disinstalla.sh   (toglie solo Nyctalus)
 
-  nyctalus-mobile --stato   dice se è attivo e l'indirizzo da aprire
-  nyctalus-mobile --ferma   ferma tutto
-  Disinstallare:  bash ~/nyctalus/disinstalla.sh   (toglie solo Nyctalus)
-
-NOTA SULLA RETE
-  Senza configurazione parte una rete di prova LOCALE (solo sul telefono): la
-  chat si apre, ma per parlare con altre persone serve la rete condivisa
-  (vedi DEPLOY.md, ~/.nyctalus-mobile/config.json: directory_url + authority).
+Manuali: cartella Manuali/ (MANUALE-INSTALLAZIONE.md, MANUALE-TELEFONO.md).
 EOF
 
 cat > "$OUT/LEGGIMI.txt" <<'EOF'
 Nyctalus — cosa installare e dove
 =================================
 
-  Dispositivo                 Cartella      Cosa contiene
-  --------------------------  ------------  -----------------------------------------
-  PC Linux (x86_64)           PC-Linux/     Nyctalus-PC-Linux.tar.gz + LEGGIMI.txt
-                                            motore + browser + chat + launcher
-  Telefono Android            Android/      nyctalus-termux.tar.gz (dentro Termux)
-                                            Nyctalus.apk (l'app, quando disponibile)
-                                            + LEGGIMI.txt passo-passo
+  Dispositivo           Cartella     Cosa prendere                  Poi
+  --------------------  -----------  -----------------------------  ----------------------------
+  PC Linux (x86_64)     PC-Linux/    Nyctalus-PC-Linux.zip          scompatta → ./installa.sh
+  Telefono Android      Android/     nyctalus-termux.tar.gz (+APK)  in Termux → installa.sh
+  Tutto in un colpo     —            Nyctalus-completo.zip          contiene tutte le cartelle
 
-In ogni cartella il LEGGIMI.txt spiega i passi. Windows e macOS: per ora solo il
-motore a riga di comando (compilazione automatica su GitHub); le interfacce
-grafiche arriveranno.
+Istruzioni passo-passo: il LEGGIMI.txt di ogni cartella e Manuali/MANUALE-INSTALLAZIONE.md.
+Windows e macOS: per ora solo il motore a riga di comando; le interfacce arriveranno.
 
 ⚠️  Prototipo non ancora verificato da revisori indipendenti: usalo per provare,
     non per proteggere dati reali.
 EOF
+
+say "Archivio completo"
+mkdir -p "$LAVORO/Nyctalus-completo"
+cp -r "$OUT/LEGGIMI.txt" "$OUT/PC-Linux" "$OUT/Android" "$OUT/Manuali" "$LAVORO/Nyctalus-completo/"
+crea_zip "$LAVORO/Nyctalus-completo" "$OUT/Nyctalus-completo.zip"
 
 echo
 say "Pronto: $OUT"

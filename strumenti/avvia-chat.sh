@@ -15,7 +15,7 @@
 #
 # Chiudendo la finestra (o con Ctrl-C) si ferma e pulisce tutto.
 set -u
-QUI="$(cd "$(dirname "$0")" && pwd)"
+QUI="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"   # anche se lanciato da un collegamento
 
 if   [ -x "$QUI/bin/nyctalus" ];               then BIN="$QUI/bin/nyctalus"
 elif [ -x "$QUI/../target/release/nyctalus" ]; then BIN="$QUI/../target/release/nyctalus"
