@@ -66,7 +66,47 @@ ti propone di aggiungerlo per rispondere.
 
 ---
 
-## 4. Serve una rete condivisa
+## 4. Allegati: file, foto, video, audio, documenti
+
+- **Inviare**: apri la chat con un contatto e premi la **graffetta 📎** accanto al
+  campo di scrittura (puoi sceglierne più d'uno, con i filtri Immagini / Video /
+  Audio / Documenti / Archivi), oppure **trascina i file** dentro la conversazione.
+- **Foto**: compaiono con l'**anteprima**; un clic le apre a grandezza piena.
+- **Altri file**: una scheda con icona, nome e dimensione, e i pulsanti **Apri** e
+  **Mostra nella cartella**. Durante il trasferimento vedi la **barra di
+  avanzamento**.
+- **Dove finiscono**: in `~/.nyctalus-chat/allegati/<contatto>/`.
+- **Limite**: 200 MB per file (si cambia con l'opzione `--max-file` del motore).
+
+**Sicurezza degli allegati**
+- Viaggiano nella **stessa sessione cifrata e autenticata** dei messaggi; alla
+  fine il destinatario controlla l'**impronta BLAKE3** di tutto il file: se anche
+  un solo byte non torna, il file viene **scartato**.
+- Il **nome** del file ricevuto viene ripulito (niente percorsi come
+  `../../`, niente file nascosti), e un file con lo stesso nome non viene mai
+  sovrascritto.
+- **Apri** funziona direttamente solo per i tipi innocui (foto, video, audio,
+  PDF, testo). Programmi, script e archivi **non vengono mai aperti da soli**: la
+  chat ti mostra la cartella e decidi tu.
+- **Foto senza metadati**: per impostazione predefinita le foto JPEG/PNG vengono
+  inviate **senza dati EXIF** (niente posizione GPS né modello del telefono). Si
+  può disattivare dal menu ⚙.
+
+---
+
+## 5. Aspetto e finestra
+
+- Menu **⚙** in alto: scegli il **tema** (Notte, Ardesia stile Telegram, Viola
+  notturno, Chiaro) e lo **sfondo** della chat (trama a pipistrelli, velo di
+  colore, tinta unita).
+- La finestra si ricorda **dimensione, posizione** e se era **massimizzata**:
+  la ritrovi come l'hai lasciata.
+- Finché non apri una conversazione vedi solo il benvenuto col pipistrello; il
+  campo per scrivere compare quando selezioni un contatto.
+
+---
+
+## 6. Serve una rete condivisa
 
 La chat è a **due parti**: per parlarvi, **tu e l'altra persona dovete essere
 sulla stessa rete**.
@@ -87,7 +127,7 @@ Aggiungi in ciascuna finestra l'indirizzo dell'altra e scrivetevi.
 
 ---
 
-## 5. Sicurezza in due righe
+## 7. Sicurezza in due righe
 
 - I messaggi sono **cifrati end-to-end**; i relay della rete non vedono il
   contenuto e non conoscono gli IP di mittente e destinatario.
@@ -103,7 +143,7 @@ Aggiungi in ciascuna finestra l'indirizzo dell'altra e scrivetevi.
 
 ---
 
-## 6. Dove stanno i tuoi dati
+## 8. Dove stanno i tuoi dati
 
 Tutto in `~/.nyctalus-chat/`:
 
@@ -111,7 +151,9 @@ Tutto in `~/.nyctalus-chat/`:
 |---|---|
 | `identita` | la tua chiave (identità) — **il tuo Contact ID**. Tienila al sicuro. |
 | `contatti` | l'elenco dei contatti che hai aggiunto (indirizzo + soprannome). |
-| `cronologia/<addr>.log` | lo storico dei messaggi con ciascun contatto. |
+| `cronologia/<addr>.log` | lo storico dei messaggi (e degli allegati) con ciascun contatto. |
+| `allegati/<contatto>/` | i file ricevuti. |
+| `ui.json` | tema, sfondo, dimensione e posizione della finestra. |
 
 Per **cambiare identità** da zero, chiudi la chat ed elimina `identita` (perderai
 il vecchio Contact ID). Per fare pulizia di una conversazione, cancella il

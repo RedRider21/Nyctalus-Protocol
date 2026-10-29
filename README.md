@@ -127,7 +127,7 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 
 ## A che punto siamo
 
-**Fatto e testato** (84 test automatici):
+**Fatto e testato** (87 test automatici):
 - **L2 — nucleo del protocollo:** frammentazione, etichette segrete rotanti (BLAKE3), cifratura end-to-end (ChaCha20-Poly1305) con pacchetti di lunghezza fissa, ricomposizione con limiti anti-DoS.
 - **Stretta di mano Noise NK:** i due estremi si accordano sul segreto senza farlo mai viaggiare; forward secrecy; il mittente resta anonimo.
 - **Indirizzi `.nyct`:** la chiave pubblica di un servizio in base32, con controllo anti-errori di battitura.
@@ -143,17 +143,17 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 
 - **Rumore di fondo (cover traffic) + celle a lunghezza fissa**: tutti i quadri del circuito e del rendezvous hanno la **stessa taglia** (1372 byte); celle fittizie opzionali (`--cover`) in **entrambe le direzioni** mascherano *quando* si invia.
 - **Browser dedicato** (clone di Firefox): parte normale, lo **stealth** (rete Nyctalus) si accende col bottone e **avvia da solo i servizi** (rete pubblica configurata o rete di prova locale); i `.nyct` attivano lo stealth automaticamente.
-- **Chat `.nyct`** (senza server, senza metadati): ogni utente è un indirizzo `.nyct` (il suo Contact ID); motore in Rust (`nyctalus chat`) + finestra GTK. Oltre all'anonimato di rete e alla cifratura E2E, **chi scrive è autenticato crittograficamente** (un secondo handshake Noise NK dentro il tunnel: solo chi possiede la chiave privata dell'indirizzo dichiarato lo conclude), quindi nessuno può spacciarsi per un contatto. Guida: [MANUALE-CHAT.md](MANUALE-CHAT.md).
+- **Chat `.nyct`** (senza server, senza metadati): ogni utente è un indirizzo `.nyct` (il suo Contact ID); motore in Rust (`nyctalus chat`) + finestra GTK. Oltre all'anonimato di rete e alla cifratura E2E, **chi scrive è autenticato crittograficamente** (un secondo handshake Noise NK dentro il tunnel: solo chi possiede la chiave privata dell'indirizzo dichiarato lo conclude), quindi nessuno può spacciarsi per un contatto. Grafica in **stile Telegram** con temi e sfondi, e **allegati di ogni tipo** (foto con anteprima, video, audio, documenti; verifica d'integrità BLAKE3, foto inviate senza EXIF). Guida: [MANUALE-CHAT.md](MANUALE-CHAT.md).
 - **Mini-launcher da desktop**: pannello senza bordi, trascinabile, con bottoni quadrati (orizzontale/verticale), **dimensione regolabile** e **tasti rapidi configurabili**, per lanciare Browser e Chat. Client grafici (browser, launcher, chat) in **Python+GTK3**; il motore resta in **Rust**.
 
-**In arrivo** (vedi [STATO.md](STATO.md)): taratura del rumore di fondo su rete reale, rotazione dei guard e ripresa dai circuiti caduti, descrittore firmato dei servizi, simulazione contro Tor con **Shadow**, gestore file grafico.
+**In arrivo** (vedi [STATO.md](STATO.md)): taratura del rumore di fondo su rete reale, rotazione dei guard e ripresa dai circuiti caduti, descrittore firmato dei servizi, simulazione contro Tor con **Shadow**, gestore file grafico, **versione mobile** (PWA servita dal motore in Termux, browser mobile dal clone Chrome di NovaOS).
 
 ## Compilare
 
 Serve [Rust](https://rustup.rs) (profilo minimal sufficiente):
 
 ```sh
-cargo test              # 84 test
+cargo test              # 87 test
 cargo build --release   # produce target/release/nyctalus
 ```
 

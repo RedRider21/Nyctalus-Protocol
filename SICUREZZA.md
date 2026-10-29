@@ -99,6 +99,16 @@ livello end-to-end lo si vede con `scripts/demo-chat.sh` (i messaggi arrivano co
 l'indirizzo autenticato del mittente). *Nota:* resta la verifica umana del Contact
 ID (scambiatevelo per un canale fidato, come si fa con le onion di Ricochet).
 
+**Allegati.** Viaggiano nella stessa sessione autenticata; il destinatario
+verifica l'impronta **BLAKE3** dell'intero file e scarta tutto se non torna (o se
+arrivano più byte del dichiarato). I nomi ricevuti sono ripuliti (niente `../`,
+niente file nascosti, nessuna sovrascrittura) — c'è un test apposito
+(`nomi_di_file_resi_innocui`). La finestra apre direttamente solo i tipi innocui
+(immagini, video, audio, PDF, testo); eseguibili e archivi vengono solo mostrati
+nella cartella. Le foto JPEG/PNG partono **senza EXIF** (niente GPS). Resta un
+rischio generale, comune a tutte le chat: le anteprime usano i decodificatori di
+immagini del sistema (gdk-pixbuf), quindi tenete il sistema aggiornato.
+
 ---
 
 ## 3. Cosa serve l'uno (e cosa **non** basta da soli)

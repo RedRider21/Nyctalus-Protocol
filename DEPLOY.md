@@ -77,6 +77,7 @@ Il binario `nyctalus` fa tutto, con sotto-comandi (`nyctalus help` per l'elenco)
 - `--socks IP:PORTA` (demone): dove ascolta il proxy (default `127.0.0.1:1080`).
 - `--control IP:PORTA` (demone): porta di controllo per `monitor` (default `127.0.0.1:1090`).
 - `--tor-socks IP:PORTA` (nodo): proxy del Tor di sistema per raggiungere i `.onion` (default `127.0.0.1:9050`).
+- `--max-file MB` (chat): dimensione massima degli allegati inviati e accettati. **Min 1, max 4096, default 200.**
 
 ---
 
