@@ -63,7 +63,9 @@ CSS = """/* SPDX-License-Identifier: AGPL-3.0-or-later
 .indice-manuali a:hover { opacity: 1; background: rgba(127,127,127,.12); }
 .indice-manuali a.qui { opacity: 1; font-weight: 600; background: color-mix(in srgb, var(--acc2) 18%, transparent); }
 .manuale-doc article { min-width: 0; line-height: 1.6; }
-.manuale-doc article h1 { margin-top: 0; }
+.manuale-doc article h1 { margin-top: 0; font-size: 2rem; line-height: 1.25; letter-spacing: 0; }
+.manuale-doc article h2 { font-size: 1.4rem; }
+.manuale-doc article h3 { font-size: 1.12rem; }
 .manuale-doc article h2 { margin-top: 2em; padding-top: .4em; border-top: 1px solid rgba(127,127,127,.25); }
 .manuale-doc table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14.5px; display: block; overflow-x: auto; }
 .manuale-doc th, .manuale-doc td { border: 1px solid rgba(127,127,127,.3); padding: 7px 10px; text-align: left; vertical-align: top; }
@@ -77,7 +79,7 @@ CSS = """/* SPDX-License-Identifier: AGPL-3.0-or-later
 
 def titolo_di(testo, nome):
     m = re.search(r"^#\s+(.+)$", testo, re.M)
-    return m.group(1).strip() if m else nome
+    return m.group(1).replace("`", "").strip() if m else nome
 
 
 def main():
