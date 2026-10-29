@@ -9,6 +9,7 @@
 #   telefono: elenco chat, conversazione, galleria allegati, impostazioni (web-app)
 # La schermata di benvenuto e il browser dell'app Android si fotografano dal telefono
 # (qui non c'è un emulatore): mettili in documenti/immagini/ come tel-app.png e tel-browser.png.
+# Il sito (ramo gh-pages) usa le stesse immagini in immagini/: dopo averle rifatte, copiale lì.
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="$ROOT/target/release/nyctalus"
