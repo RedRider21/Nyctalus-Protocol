@@ -40,4 +40,7 @@ v() { grep -oE "^$1 .*" "$TMP/s.txt" | cut -d' ' -f2-; }
 [ "$(v numeri)" = "1,2" ] && pass "selezione numerata come Telegram (1, 2)" || fail "numerazione: $(v numeri)"
 [ "$(v bottone)" = "Invia (2)" ] && [ "$(v barra)" = "True" ] && pass "didascalia + «Invia (2)» al posto delle schede" || fail "barra di invio: $(v bottone) $(v barra)"
 [ -n "$(v ordine)" ] && pass "ordine di invio = ordine di tocco ($(v ordine))" || fail "ordine dei file scelti"
+# tasto destro su una foto in chat: il menu (e «Elimina per me») riguarda QUELLA foto
+PYTHONPATH="$ROOT/pc/chat:$ROOT/pc/browser" timeout 30 python3 "$STRUMENTI/prova_menu_riga.py" > "$TMP/m.txt" 2>&1
+while read -r esito resto; do case "$esito" in OK) pass "$resto" ;; KO) fail "$resto" ;; esac; done < "$TMP/m.txt"
 [ "$KO" -eq 0 ]

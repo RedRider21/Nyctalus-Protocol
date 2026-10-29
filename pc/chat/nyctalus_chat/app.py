@@ -473,6 +473,23 @@ def senza_metadati(percorso, mime):
         return percorso
 
 
+def riga_dell_evento(elenco, ev):
+    """La riga dell'elenco su cui si è cliccato.
+
+    Si parte dal widget che ha ricevuto il clic e si risale fino alla sua riga. NON si usa
+    la coordinata ev.y: per le foto, i video e i cerchi dei file (aree di disegno con una
+    finestra propria) è relativa a quell'area e non all'elenco, e indicava un'altra riga —
+    con «Elimina per me» si cancellava il messaggio sbagliato."""
+    w = Gtk.get_event_widget(ev)
+    while w is not None and not isinstance(w, Gtk.ListBoxRow):
+        w = w.get_parent()
+    if w is not None and w.get_parent() is elenco:
+        return w
+    if ev.window == elenco.get_window():          # clic sull'elenco stesso: la coordinata è sua
+        return elenco.get_row_at_y(int(ev.y))
+    return None
+
+
 def anteprima_da_riga(grezza):
     """(ts, testo breve) da una riga di cronologia: testo o allegato."""
     p = grezza.split(" ")
@@ -1017,7 +1034,7 @@ class Chat(Gtk.Window):
     def _click_lista(self, _w, ev):
         if ev.type != Gdk.EventType.BUTTON_PRESS or ev.button != 3:
             return False
-        riga = self.lista.get_row_at_y(int(ev.y))
+        riga = riga_dell_evento(self.lista, ev)
         if riga is None:
             return False
         self._menu_contatto(riga.addr).popup_at_pointer(ev)
@@ -1026,7 +1043,7 @@ class Chat(Gtk.Window):
     def _click_conversazione(self, _w, ev):
         if ev.type != Gdk.EventType.BUTTON_PRESS or ev.button != 3:
             return False
-        riga = self.conv.get_row_at_y(int(ev.y))
+        riga = riga_dell_evento(self.conv, ev)
         if riga is None or not getattr(riga, "grezza", None):
             return False
         self._menu_messaggio(riga).popup_at_pointer(ev)
