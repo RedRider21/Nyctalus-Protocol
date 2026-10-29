@@ -41,6 +41,7 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 | `02-offuscamento` | con la chiave di rete il nodo risponde, senza resta muto (trasporto camuffato) |
 | `03-segreto-controllo` | la porta di controllo della chat risponde solo a chi ha il **segreto** (sbagliato o assente → rifiutato) |
 | `04-impostore-chat` | **attacco dal vivo**: chi si spaccia per un contatto senza averne la chiave viene sfidato e buttato fuori; nessun messaggio falso consegnato né salvato |
+| `06-browser-mobile` | browser dell'app in modalità Nyctalus: processo separato, nessun permesso sensibile, verifica col gettone, `.nyct` solo in rete, nessuna uscita verso altre app, WebRTC spento, download e traduzione in rete; **inoltratore**: pagina di verifica, niente connessioni a rete ferma, UDP rifiutato, indirizzi locali (127.x, localhost, 192.168.x, 10.x, ::1) rifiutati, sito vero raggiunto attraverso la rete |
 | `05-orchestratore` | il servizio del telefono: niente accesso senza segreto (anche WebSocket), niente file di sistema (`/etc/passwd`), niente `../` fuori dalla web-app, niente comandi da altri siti, nomi caricati ripuliti, caricamenti enormi rifiutati |
 
 ## Prove di funzionamento (`test/funzionamento/`)

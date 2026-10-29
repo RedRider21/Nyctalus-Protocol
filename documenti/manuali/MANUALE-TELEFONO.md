@@ -15,8 +15,15 @@ gestisce gli allegati. Installazione: **`MANUALE-INSTALLAZIONE.md`**, capitolo 2
 ## 1. Avvio
 
 In Termux scrivi `nyctalus-mobile` e apri nel browser l'indirizzo che stampa
-(`http://127.0.0.1:18731/?t=…`). Con l'app Nyctalus basta toccare l'icona: compare la **splash** col logo, l'app avvia
-Nyctalus in Termux e, quando la scritta dice «● Nyctalus è pronto», tocchi **Entra**.
+(`http://127.0.0.1:18731/?t=…`). Con l'app Nyctalus basta toccare l'icona: compare la **schermata di benvenuto** col logo,
+e l'app avvia Nyctalus in Termux. Sotto ci sono le funzioni, come il mini menu del PC:
+
+| Casella | Cosa apre |
+|---|---|
+| 💬 **Chat** | la chat. Si accende quando la scritta dice «● Nyctalus è pronto» |
+| 🌐 **Browser** | il browser: **🦇 modalità Nyctalus** (anonimo, siti `.nyct`) oppure navigazione normale |
+| 📁 **File** | in arrivo: invio e ricezione di file attraverso Nyctalus |
+| ℹ️ **Info e manuali** | il sito del progetto con i manuali online (anche toccando il logo) |
 I pulsanti per Termux (installa/aggiorna Termux, installa/aggiorna Nyctalus, apri Termux,
 comando di avvio) sono sotto **Strumenti ▾**. Le foto e i video scattati dalla chat con l'app restano nella sua cartella
 privata (non finiscono nella galleria) e si cancellano dopo un giorno.
@@ -26,6 +33,26 @@ In cima all'elenco una striscia ti dice a che punto è la rete:
 - **Rete di prova LOCALE**: funziona solo sul telefono. Per parlare con altri importa un
   **codice di rete** (vedi sotto);
 - **Nyctalus è fermo** con il bottone **Avvia**.
+
+## 1-bis. Il browser (solo nell'app)
+
+È il browser di NovaOS in stile Chrome: schede, incognito, preferiti, cronologia, trova nella
+pagina, traduzione, modalità lettura, sito desktop, download. In più ha la **modalità
+Nyctalus**: il pulsante **🦇** a sinistra della barra, oppure la voce in cima al menu ⋮.
+
+- **🦇 ON (verde):** tutto il traffico del browser passa dalla rete Nyctalus e il sito non vede
+  il tuo indirizzo. Si aprono anche i siti `.nyct`.
+- **Prima di aprire qualunque pagina il browser verifica** che il traffico passi davvero
+  dalla rete. Se Nyctalus non è acceso o il telefono non lo permette, **non apre nulla** e lo
+  spiega.
+- In questa modalità le schede sono tutte in incognito: niente cronologia, niente cache né
+  archivi dei siti, cookie cancellati quando esci. Sono spenti anche WebRTC, fotocamera,
+  microfono e posizione. La ricerca usa DuckDuckGo invece di Google. Non si passano indirizzi
+  ad altre app. Download e traduzione passano anche loro dalla rete (i download finiscono in
+  `Android/data/org.nyctalus.mobile/files/Download`).
+- Il browser gira in un processo separato: chiudendolo, la volta dopo riparte normale.
+- Serve Android 9 o successivo, con «Android System WebView» o Chrome aggiornati.
+- I siti `.nyct` fuori dalla modalità Nyctalus sono bloccati, come sul PC.
 
 ## 2. Le chat (schermata principale)
 

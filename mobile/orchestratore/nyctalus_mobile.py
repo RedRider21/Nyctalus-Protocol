@@ -54,7 +54,8 @@ WEBAPP = Path(os.environ.get("NYCTALUS_WEBAPP", Path(__file__).resolve().parent.
 # Termux (es. NexusSEC sulla 8000, Tor sulla 9050, proxy SOCKS sulla 1080).
 # Tutte modificabili in ~/.nyctalus-mobile/config.json → "porte": {...}.
 PORTE_DEFAULT = {"http": 18731, "controllo": 18091, "backend": 18082, "socks": 18080,
-                 "socks_locale": 18086, "monitor": 18596, "nodi": [18840, 18841, 18842, 18843]}
+                 "socks_locale": 18086, "monitor": 18596, "nodi": [18840, 18841, 18842, 18843],
+                 "socks_browser": 18733}
 
 
 def leggi_config():
@@ -170,6 +171,7 @@ class Servizi:
     def info(self):
         return {"stato": self.stato, "dettaglio": self.dettaglio, "modalita": self.modalita,
                 "rete": leggi_config().get("nome_rete", ""),
+                "socks_browser": int(PORTE["socks_browser"]),
                 "indirizzo": self.indirizzo, "binario": bool(trova_binario())}
 
     def _lancia(self, argomenti, log_file, env=None):
@@ -819,11 +821,127 @@ async def servi_statico(scrittore, req):
     await servi_file(scrittore, req, f)
 
 
+# --- inoltratore SOCKS per il browser dell'app -------------------------------------------
+# Il browser (modalità Nyctalus) manda TUTTO qui. Da qui il traffico entra nella rete
+# Nyctalus attraverso il SOCKS del demone. In più:
+#  - una pagina di VERIFICA che esiste solo qui (http://verifica.nyctalus.invalid/…): il
+#    browser la chiede prima di navigare; se non arriva, il traffico non passa da noi e il
+#    browser non apre nulla («chiuso in caso di errore»);
+#  - niente indirizzi locali (127.x, 10.x, 192.168.x, localhost…): i siti non devono poter
+#    raggiungere i servizi del telefono o della rete di casa attraverso il browser.
+DOMINIO_VERIFICA = "verifica.nyctalus.invalid"
+
+
+def indirizzo_locale(host):
+    import ipaddress
+    h = host.strip("[]").lower()
+    if h in ("localhost", "localhost.localdomain") or h.endswith(".localhost") or h.endswith(".local"):
+        return True
+    try:
+        ip = ipaddress.ip_address(h)
+    except ValueError:
+        return False
+    return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_unspecified or ip.is_multicast or ip.is_reserved
+
+
+async def _socks_rispondi(scrittore, codice):
+    scrittore.write(bytes([5, codice, 0, 1, 0, 0, 0, 0, 0, 0]))
+    await scrittore.drain()
+
+
+async def _incanala(da, a):
+    try:
+        while True:
+            blocco = await da.read(65536)
+            if not blocco:
+                break
+            a.write(blocco)
+            await a.drain()
+    except Exception:            # noqa: BLE001
+        pass
+    finally:
+        try:
+            a.close()
+        except Exception:        # noqa: BLE001
+            pass
+
+
+async def socks_browser(lettore, scrittore):
+    try:
+        testa = await asyncio.wait_for(lettore.readexactly(2), 10)
+        if testa[0] != 5:
+            return scrittore.close()
+        metodi = await lettore.readexactly(testa[1])
+        if 0 not in metodi:
+            scrittore.write(b"\x05\xff")
+            return scrittore.close()
+        scrittore.write(b"\x05\x00")
+        ver, cmd, _r, atyp = await asyncio.wait_for(lettore.readexactly(4), 10)
+        if atyp == 1:
+            host = socket.inet_ntop(socket.AF_INET, await lettore.readexactly(4))
+        elif atyp == 4:
+            host = socket.inet_ntop(socket.AF_INET6, await lettore.readexactly(16))
+        elif atyp == 3:
+            host = (await lettore.readexactly((await lettore.readexactly(1))[0])).decode("ascii", "replace")
+        else:
+            return await _socks_rispondi(scrittore, 8)
+        porta = int.from_bytes(await lettore.readexactly(2), "big")
+        if ver != 5 or cmd != 1:                       # solo CONNECT (niente UDP: niente fughe)
+            return await _socks_rispondi(scrittore, 7)
+        if host.lower() == DOMINIO_VERIFICA:
+            await _socks_rispondi(scrittore, 0)
+            richiesta = await asyncio.wait_for(lettore.readuntil(b"\r\n"), 10)
+            percorso = richiesta.split(b" ")[1].decode("ascii", "replace") if b" " in richiesta else "/"
+            corpo = ("<!doctype html><title>nyctalus-ok</title><body>nyctalus-ok %s</body>"
+                     % re.sub(r"[^A-Za-z0-9/_-]", "", percorso)[:80]).encode()
+            scrittore.write(b"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nCache-Control: no-store\r\n"
+                            b"Content-Length: %d\r\nConnection: close\r\n\r\n" % len(corpo) + corpo)
+            await scrittore.drain()
+            return scrittore.close()
+        if indirizzo_locale(host):
+            return await _socks_rispondi(scrittore, 2)        # vietato dalle regole
+        if SERVIZI.stato != "pronto":
+            return await _socks_rispondi(scrittore, 1)        # rete non pronta: nessuna scorciatoia
+        sopra = int(PORTE["socks"] if SERVIZI.modalita == "pubblica" else PORTE["socks_locale"])
+        r2, w2 = await asyncio.wait_for(asyncio.open_connection("127.0.0.1", sopra), 10)
+        w2.write(b"\x05\x01\x00")
+        await w2.drain()
+        if await asyncio.wait_for(r2.readexactly(2), 30) != b"\x05\x00":
+            w2.close()
+            return await _socks_rispondi(scrittore, 1)
+        h = host.encode("ascii", "ignore")      # (Chromium manda già i nomi in punycode)
+        w2.write(b"\x05\x01\x00\x03" + bytes([len(h)]) + h + porta.to_bytes(2, "big"))
+        await w2.drain()
+        risposta = await asyncio.wait_for(r2.readexactly(4), 60)
+        coda = {1: 6, 4: 18}.get(risposta[3])
+        coda = (await r2.readexactly(coda)) if coda else (await r2.readexactly((await r2.readexactly(1))[0] + 2))
+        if risposta[1] != 0:
+            w2.close()
+            return await _socks_rispondi(scrittore, risposta[1])
+        await _socks_rispondi(scrittore, 0)
+        await asyncio.gather(_incanala(lettore, w2), _incanala(r2, scrittore))
+    except (asyncio.IncompleteReadError, asyncio.TimeoutError, ConnectionError):
+        try:
+            scrittore.close()
+        except Exception:        # noqa: BLE001
+            pass
+    except Exception as e:       # noqa: BLE001
+        log("inoltratore del browser:", repr(e))
+        try:
+            scrittore.close()
+        except Exception:        # noqa: BLE001
+            pass
+
+
 async def principale():
     segreto = SEGRETO.crea_se_manca()
     for d in (DATI, INVIO, CACHE):
         d.mkdir(parents=True, exist_ok=True)
     server = await asyncio.start_server(gestisci, "127.0.0.1", PORTA_HTTP)
+    try:
+        await asyncio.start_server(socks_browser, "127.0.0.1", int(PORTE["socks_browser"]))
+    except OSError as e:
+        log("inoltratore del browser non avviato (porta %s): %s" % (PORTE["socks_browser"], e))
     log("Nyctalus mobile %s — http://127.0.0.1:%d/?t=%s" % (VERSIONE, PORTA_HTTP, segreto))
     log("web-app da: %s" % WEBAPP)
     if os.environ.get("NYCTALUS_AVVIO_AUTOMATICO", "1") == "1":

@@ -1,0 +1,16 @@
+<!--
+  Uscita dallo schermo intero: quattro angoli che si chiudono verso il centro (le punte
+  guardano dentro), il segno convenzionale del «torna alla vista normale».
+
+  È un disegno e non un carattere perché il glifo usato prima (⤢) non esiste in tutti i
+  caratteri di sistema: dove manca non si vede nulla, e il pulsante resta un cerchio vuoto.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M5,16h3v3h2v-5H5v2zM8,8H5v2h5V5H8v3zM14,19h2v-3h3v-2h-5v5zM16,8V5h-2v5h5V8h-3z" />
+</vector>

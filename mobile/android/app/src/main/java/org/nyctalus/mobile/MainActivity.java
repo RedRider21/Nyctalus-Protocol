@@ -77,7 +77,9 @@ public class MainActivity extends Activity {
     private TextView stato;
     private String segreto;
     private boolean caricata = false, pronto = false, entraAppenaPronto = false, inPausa = false;
-    private Button pulsanteEntra;
+    private View pulsanteEntra;      // la casella «Chat»: si accende quando Nyctalus è pronto
+    private int portaSocksBrowser = 18733;
+    private static final String SITO = "https://redrider21.github.io/Nyctalus-Protocol/";
     private volatile boolean avviando = false, provatoInPrimoPiano = false;
 
     private ValueCallback<Uri[]> attesaFile;
@@ -154,7 +156,8 @@ public class MainActivity extends Activity {
     // ------------------------------------------------------------- AVVIO -----
     /**
      * Splash: logo grande al centro (compare in dissolvenza e poi «respira» piano), nome,
-     * stato e il pulsante «Entra»: si entra solo toccandolo. Gli strumenti di Termux
+     * stato e le caselle delle funzioni, come il mini menu del PC: Chat, Browser, File
+     * (in arrivo), Info e manuali. Si entra solo toccandole. Gli strumenti di Termux
      * stanno raccolti sotto «Strumenti ▾».
      */
     private View costruisciAvvio() {
@@ -200,14 +203,26 @@ public class MainActivity extends Activity {
         stato.setLayoutParams(sp);
         r.addView(stato);
 
-        pulsanteEntra = bottone("Entra", true, v -> entra());
-        pulsanteEntra.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
-        pulsanteEntra.setPadding(dp(64), dp(14), dp(64), dp(14));
-        LinearLayout.LayoutParams ep = avvolgi();
-        ep.topMargin = dp(18);
-        pulsanteEntra.setLayoutParams(ep);
+        // le funzioni, come il mini menu del PC
+        LinearLayout caselle1 = riga(), caselle2 = riga();
+        pulsanteEntra = casella("💬", "Chat", C_ACCENTO, v -> entra());
         pulsanteEntra.setAlpha(pronto ? 1f : 0.55f);
-        r.addView(pulsanteEntra);
+        caselle1.addView(pulsanteEntra);
+        caselle1.addView(casella("🌐", "Browser", 0xFF2f9e6e, v -> sceltaBrowser()));
+        View file = casella("📁", "File · presto", 0xFF8a6cf2, v -> avviso(
+                "Il gestore dei file (invio e ricezione attraverso Nyctalus) è in preparazione."));
+        file.setAlpha(0.45f);
+        caselle2.addView(file);
+        caselle2.addView(casella("ℹ️", "Info e manuali", 0xFFe0a63a, v -> apriBrowser(SITO, false)));
+        ((LinearLayout.LayoutParams) caselle1.getLayoutParams()).topMargin = dp(18);
+        ((LinearLayout.LayoutParams) caselle2.getLayoutParams()).topMargin = dp(10);
+        LinearLayout griglia = new LinearLayout(this);
+        griglia.setOrientation(LinearLayout.VERTICAL);
+        griglia.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        griglia.addView(caselle1);
+        griglia.addView(caselle2);
+        r.addView(griglia);
         r.addView(spazio());
 
         // strumenti (come il pannello di Termux-NexusSEC-OS), raccolti sotto «Strumenti ▾»
@@ -261,7 +276,8 @@ public class MainActivity extends Activity {
                     a.start();
                 }).start();
         alone.animate().alpha(1f).setDuration(1400).start();
-        for (View v : new View[]{t, sub, stato, pulsanteEntra}) {
+        logo.setOnClickListener(v -> apriBrowser(SITO, false));     // come il logo del mini menu del PC
+        for (View v : new View[]{t, sub, stato, griglia}) {
             v.setTranslationY(dp(14));
             float fine = v.getAlpha();
             v.setAlpha(0f);
@@ -337,7 +353,15 @@ public class MainActivity extends Activity {
             c.setReadTimeout(1500);
             c.setRequestProperty("Cookie", "nyct=" + segreto);
             c.setInstanceFollowRedirects(false);
-            return c.getResponseCode() == 200;
+            if (c.getResponseCode() != 200) return false;
+            try (java.io.InputStream in = c.getInputStream()) {
+                java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = in.read(buf)) > 0) b.write(buf, 0, n);
+                portaSocksBrowser = new org.json.JSONObject(b.toString("UTF-8")).optInt("socks_browser", portaSocksBrowser);
+            } catch (Exception ignorata) { }
+            return true;
         } catch (IOException e) {
             return false;
         } finally {
@@ -347,7 +371,7 @@ public class MainActivity extends Activity {
 
     private void servizioPronto() {
         pronto = true;
-        imposta("● Nyctalus è pronto — tocca Entra");
+        imposta("● Nyctalus è pronto — scegli cosa aprire");
         runOnUiThread(() -> { if (pulsanteEntra != null) pulsanteEntra.animate().alpha(1f).setDuration(300).start(); });
         if (entraAppenaPronto) mostraWeb();
     }
@@ -468,6 +492,50 @@ public class MainActivity extends Activity {
                 + "(am start -n org.nyctalus.mobile/.MainActivity >/dev/null 2>&1 || true)"
                 + " || { echo; echo '✗ Installazione non riuscita: leggi i messaggi qui sopra.'; cd ~; rm -rf \"$D\"; }";
         return cmd;
+    }
+
+    /** Una casella del menu: icona grande e nome, sul colore della funzione. */
+    private View casella(String icona, String nome, int colore, View.OnClickListener cl) {
+        LinearLayout c = new LinearLayout(this);
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setGravity(Gravity.CENTER);
+        c.setPadding(dp(8), dp(14), dp(8), dp(12));
+        GradientDrawable g = new GradientDrawable();
+        g.setCornerRadius(dp(18));
+        g.setColor((colore & 0x00FFFFFF) | 0x26000000);
+        g.setStroke(dp(1), (colore & 0x00FFFFFF) | 0x66000000);
+        c.setBackground(g);
+        TextView i = testo(icona, C_TESTO, 30);
+        TextView n = testo(nome, C_TESTO, 14);
+        n.setPadding(0, dp(6), 0, 0);
+        c.addView(i);
+        c.addView(n);
+        c.setClickable(true);
+        c.setOnClickListener(cl);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        lp.setMargins(dp(5), 0, dp(5), 0);
+        c.setLayoutParams(lp);
+        return c;
+    }
+
+    /** Browser: normale, o in modalità Nyctalus (tutto il traffico nella rete). */
+    private void sceltaBrowser() {
+        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle("Browser")
+                .setItems(new String[]{
+                        "🦇  Modalità Nyctalus — anonimo, siti .nyct" + (pronto ? "" : " (avvia prima Nyctalus)"),
+                        "🌐  Navigazione normale"},
+                        (d, k) -> apriBrowser(null, k == 0))
+                .setNegativeButton("Annulla", null).show();
+    }
+
+    /** Il browser (derivato da quello di NovaOS) gira in un processo suo: vedi BrowserActivity. */
+    private void apriBrowser(String url, boolean nyctalus) {
+        Intent i = new Intent(this, BrowserActivity.class);
+        if (url != null) i.putExtra("url", url);
+        i.putExtra("nyctalus", nyctalus);
+        i.putExtra("porta_socks", portaSocksBrowser);
+        startActivity(i);
     }
 
     /** Gli aggiornamenti dal repository arriveranno quando il progetto sarà pubblicato. */
@@ -674,6 +742,12 @@ public class MainActivity extends Activity {
         public void tema(String id) {
             if (id != null && id.matches("[a-z]{1,20}"))
                 getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("tema", id).apply();
+        }
+
+        @JavascriptInterface
+        public void apriBrowser(String url, boolean nyctalus) {
+            if (url == null || !(url.startsWith("http://") || url.startsWith("https://"))) return;
+            runOnUiThread(() -> MainActivity.this.apriBrowser(url, nyctalus));
         }
 
         @JavascriptInterface

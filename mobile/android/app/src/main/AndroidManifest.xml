@@ -39,6 +39,16 @@
             </intent-filter>
         </activity>
 
+        <!-- Il browser (derivato da NovaOS) in un PROCESSO SEPARATO: il proxy della WebView
+             vale per processo, così la modalità Nyctalus non tocca la chat. -->
+        <activity
+            android:name=".BrowserActivity"
+            android:process=":browser"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+
         <service
             android:name=".ServizioPacchetto"
             android:exported="false"

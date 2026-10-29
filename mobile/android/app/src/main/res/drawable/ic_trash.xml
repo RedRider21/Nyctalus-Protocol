@@ -1,0 +1,12 @@
+<!--
+  Elimina: il coperchio, la maniglia e il corpo del cestino.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M9,3h6v2h5v2H4V5h5zM6.4,8.6h11.2l-1,12.4H7.4z" />
+</vector>

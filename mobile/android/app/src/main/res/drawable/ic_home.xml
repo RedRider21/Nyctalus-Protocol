@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Casa. Il disegno è di tratto, non di riempimento: le icone della barra sono tutte
+  linee dello stesso spessore, così la fila resta uniforme.
+  Il colore è nero e serve solo da sagoma: la tinta vera la dà il codice
+  (ImageView.setColorFilter), che è l'unico a sapere se NovaOS è in chiaro o in scuro.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M3.2 11.4 L12 4.1 L20.8 11.4 M5.9 9.6 V19.9 H18.1 V9.6"
+        android:fillColor="#00000000"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.9"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
