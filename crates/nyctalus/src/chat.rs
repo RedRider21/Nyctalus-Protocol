@@ -315,7 +315,7 @@ impl Stato {
             inviati += n as u64;
             if inviati - ultimo >= PASSO_AVANZAMENTO || inviati == totale {
                 ultimo = inviati;
-                self.notifica(format!("PROG {addr} out {id} {inviati} {totale}"));
+                self.notifica(format!("PROG {addr} out {id} {inviati} {totale} {mime} {nome_hex}"));
             }
         }
         if inviati != totale {
@@ -367,7 +367,12 @@ impl Stato {
             InArrivo { file, parziale, finale, nome, mime, totale, ricevuti: 0, impronta: blake3::Hasher::new(), ts, ultimo_avviso: 0 },
         );
         drop(g);
-        self.notifica(format!("PROG {peer} in {id} 0 {totale}"));
+        let (m, n) = {
+            let g = self.in_arrivo.lock().unwrap();
+            let a = &g[&(peer.to_string(), id.to_string())];
+            (a.mime.clone(), in_esadecimale(a.nome.as_bytes()))
+        };
+        self.notifica(format!("PROG {peer} in {id} 0 {totale} {m} {n}"));
     }
 
     fn ricevi_blocco(&self, peer: &str, r: &[u8]) {
@@ -393,9 +398,10 @@ impl Stato {
             a.ultimo_avviso = a.ricevuti;
         }
         let (fatti, totale) = (a.ricevuti, a.totale);
+        let (m, n) = (a.mime.clone(), in_esadecimale(a.nome.as_bytes()));
         drop(g);
         if avviso {
-            self.notifica(format!("PROG {peer} in {id} {fatti} {totale}"));
+            self.notifica(format!("PROG {peer} in {id} {fatti} {totale} {m} {n}"));
         }
     }
 

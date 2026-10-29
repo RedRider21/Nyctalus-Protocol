@@ -29,6 +29,8 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E402
 
+from nyctalus_chat import media  # noqa: E402
+
 try:
     from nxs_i18n import t as _t_base
 except Exception:                # noqa: BLE001
@@ -53,6 +55,25 @@ _ITA = {
     "chat.contatti": "Contatti",
     "chat.cerca": "Cerca…",
     "chat.aggiungi": "Aggiungi contatto",
+    "chat.allega.foto_cam": "Scatta una foto",
+    "chat.allega.video_cam": "Registra un video",
+    "chat.allega.media": "Foto o video",
+    "chat.allega.file": "File",
+    "chat.filtro.media": "Foto e video",
+    "chat.cam.titolo_foto": "Scatta una foto",
+    "chat.cam.titolo_video": "Registra un video",
+    "chat.cam.scatta": "📷  Scatta",
+    "chat.cam.registra": "●  Registra",
+    "chat.cam.stop": "■  Ferma e usa",
+    "chat.cam.annulla": "Annulla",
+    "chat.cam.errore": "Fotocamera non disponibile",
+    "chat.cam.attendi": "Un attimo, la fotocamera si sta avviando…",
+    "chat.ant.titolo": "Invia %d file",
+    "chat.ant.titolo1": "Invia",
+    "chat.ant.didascalia": "Aggiungi una didascalia…",
+    "chat.ant.exif": "Togli i metadati dalle foto (posizione GPS, fotocamera)",
+    "chat.ant.invia": "Invia",
+    "chat.ant.annulla": "Annulla",
     "chat.menu.altro": "Altre azioni",
     "chat.menu.apri": "Apri la chat",
     "chat.menu.letto": "Segna come letto",
@@ -239,11 +260,38 @@ menu check, menu radio { color: @ACCENT@; }
            font-size: 20px; padding: 2px 10px; }
 .puntini:hover { color: @TEXT@; background: rgba(@RGB@,0.12); }
 
+/* finestre di dialogo intonate al tema (aggiungi, rinomina, conferme, invio, fotocamera) */
+dialog, messagedialog, dialog > box, messagedialog > box { background-color: @PANEL@; color: @TEXT@; }
+dialog label, messagedialog label { color: @TEXT@; }
+messagedialog .dialog-vbox label:not(:first-child) { color: @MUTED@; }
+dialog entry, messagedialog entry { background-color: @BG@; color: @TEXT@; border: 1px solid rgba(@RGB@,0.25);
+                                    border-radius: 10px; padding: 8px 12px; box-shadow: none; }
+dialog entry:focus { border-color: @ACCENT@; }
+dialog button, messagedialog button { background-color: rgba(@RGB@,0.14); background-image: none; color: @TEXT@;
+                                      border: none; border-radius: 9px; padding: 6px 16px; box-shadow: none; text-shadow: none; }
+dialog button:hover, messagedialog button:hover { background-color: rgba(@RGB@,0.26); }
+dialog button.suggested-action { background-color: @SEND@; color: #ffffff; }
+dialog button.suggested-action:hover { background-color: @SENDH@; }
+dialog button.destructive-action, messagedialog button.destructive-action { background-color: #d64545; color: #ffffff; }
+dialog checkbutton { color: @TEXT@; }
+dialog check { background-color: @BG@; border: 1px solid rgba(@RGB@,0.35); border-radius: 4px; }
+dialog check:checked { background-color: @SEND@; color: #ffffff; }
+dialog list, dialog list row { background-color: transparent; color: @TEXT@; }
+dialog list row:selected { background-color: rgba(@RGB@,0.22); }
+.fotocamera { background-color: #000000; }
+
+/* allegati in stile Telegram */
+.bolla.foto { padding: 0; background-color: transparent; background-image: none; box-shadow: none; }
+.bolla.allegato { padding: 9px 14px 7px 10px; }
+.cam-stato { color: @MUTED@; }
+.cam-scatto { background: @SEND@; color: #ffffff; border: none; border-radius: 18px; padding: 6px 18px; font-weight: 700; }
+.cam-scatto.registrando { background: #e04848; }
+.anteprima-invio entry { border-radius: 10px; padding: 8px 12px; }
+
 /* allegati */
 .graffetta { background: transparent; border: none; box-shadow: none; color: @MUTED@;
              font-size: 18px; padding: 4px 6px; min-width: 0; }
 .graffetta:hover { color: @ACCENT@; }
-.bolla.allegato { padding: 6px; }
 .anteprima { border-radius: 12px; }
 .icona-file { font-size: 28px; padding: 2px 4px; }
 .nome-file { font-weight: 600; }
@@ -343,6 +391,11 @@ FILTRI = (
                    "*.xls", "*.xlsx", "*.ppt", "*.pptx", "*.rtf", "*.md", "*.csv")),
     ("archivi", ("*.zip", "*.7z", "*.tar", "*.gz", "*.xz", "*.rar")),
 )
+
+
+def mime_di(percorso):
+    tipo, _incerto = Gio.content_type_guess(percorso, None)
+    return Gio.content_type_get_mime_type(tipo) or "application/octet-stream"
 
 
 def apribile(mime):
@@ -471,6 +524,7 @@ class Chat(Gtk.Window):
         self.filtro = ""
         self.trasferimenti = {}  # id → (riga, barra, etichetta) delle bolle in corso
         self.ultimo = {}         # addr → (ts, testo d'anteprima) per l'elenco
+        self.lettore = media.LettoreAudio()
 
         # aspetto (tema + sfondo) ricordato fra un avvio e l'altro
         self.ui = self._carica_ui()
@@ -641,7 +695,7 @@ class Chat(Gtk.Window):
         graffetta = Gtk.Button(label="📎")
         graffetta.get_style_context().add_class("graffetta")
         graffetta.set_tooltip_text(_t("chat.allega"))
-        graffetta.connect("clicked", self._scegli_file)
+        graffetta.connect("clicked", self._menu_graffetta)
         self.comp.pack_start(graffetta, False, False, 0)
         self.ingresso = Gtk.Entry()
         self.ingresso.set_placeholder_text(_t("chat.scrivi"))
@@ -780,7 +834,9 @@ class Chat(Gtk.Window):
         elif tipo == "PROG" and len(parti) >= 6:
             # PROG <addr> <in|out> <id> <fatti> <totale>
             if parti[1] == self.attivo:
-                self._avanzamento(parti[2], parti[3], int(parti[4]), int(parti[5]))
+                mime = parti[6] if len(parti) >= 8 else ""
+                nome = _da_hex(parti[7]) if len(parti) >= 8 else ""
+                self._avanzamento(parti[2], parti[3], int(parti[4]), int(parti[5]), mime, nome)
         elif tipo == "FERR" and len(parti) >= 4:
             # FERR <addr> <id|-> <messaggio hex>
             if parti[1] == self.attivo:
@@ -1209,68 +1265,96 @@ class Chat(Gtk.Window):
         bolla.pack_start(et, False, False, 0)
         self._chiudi_bolla(riga, bolla, ts)
 
-    # --- allegati ----------------------------------------------------------------
+    # --- allegati (stile Telegram) ---------------------------------------------
     def _bolla_allegato(self, direzione, ts, ident, dim, mime, nome, percorso, grezza=None):
-        """Foto: anteprima cliccabile. Altri tipi: scheda con icona, nome,
-        dimensione e i pulsanti Apri / Mostra nella cartella."""
+        """Foto e video a tutta bolla con l'ora sopra; audio con lettore nella
+        chat; gli altri file con il cerchio colorato dell'estensione."""
         self._togli_trasferimento(ident)
-        riga, bolla = self._nuova_bolla(direzione, ts, "allegato")
-        riga.grezza, riga.allegato = grezza, (percorso, mime, nome)
         esiste = bool(percorso) and os.path.isfile(percorso)
-        anteprima = None
-        if esiste and mime in TIPI_ANTEPRIMA:
-            try:
-                px = GdkPixbuf.Pixbuf.new_from_file_at_scale(percorso, 280, 280, True)
-                anteprima = Gtk.Image.new_from_pixbuf(px)
-            except Exception:    # noqa: BLE001
-                anteprima = None
-        if anteprima is not None:
-            scatola = Gtk.EventBox()
-            scatola.add(anteprima)
-            scatola.get_style_context().add_class("anteprima")
-            scatola.set_tooltip_text("%s · %s" % (nome, dimensione_leggibile(dim)))
-            scatola.connect("button-press-event",   # sinistro apre; destro passa al menu
-                            lambda _w, ev: ev.button == 1 and (self._apri_allegato(percorso, mime) or True))
-            bolla.pack_start(scatola, False, False, 0)
-        else:
-            scheda = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-            icona = Gtk.Label(label=icona_tipo(mime))
-            icona.get_style_context().add_class("icona-file")
-            scheda.pack_start(icona, False, False, 0)
-            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-            n = Gtk.Label(label=nome, xalign=0); n.get_style_context().add_class("nome-file")
-            n.set_ellipsize(Pango.EllipsizeMode.MIDDLE); n.set_max_width_chars(30)
-            info = dimensione_leggibile(dim) if esiste else _t("chat.file_mancante")
-            d = Gtk.Label(label=info, xalign=0); d.get_style_context().add_class("dim-file")
-            col.pack_start(n, False, False, 0); col.pack_start(d, False, False, 0)
-            scheda.pack_start(col, True, True, 0)
-            bolla.pack_start(scheda, False, False, 0)
-            if esiste:
-                tasti = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-                if apribile(mime):
-                    a = Gtk.Button(label=_t("chat.apri")); a.get_style_context().add_class("pill")
-                    a.connect("clicked", lambda *_a: self._apri_allegato(percorso, mime))
-                    tasti.pack_start(a, False, False, 0)
-                c = Gtk.Button(label=_t("chat.mostra_cartella")); c.get_style_context().add_class("pill")
-                c.connect("clicked", lambda *_a: self._mostra_cartella(percorso))
-                tasti.pack_start(c, False, False, 0)
-                bolla.pack_start(tasti, False, False, 0)
+        ora = ora_hhmm(ts)
+        visuale = esiste and (mime in TIPI_ANTEPRIMA or mime.startswith("video/"))
+        riga, bolla = self._nuova_bolla(direzione, ts, "foto" if visuale else "allegato")
+        riga.grezza, riga.allegato = grezza, (percorso, mime, nome)
+        if visuale and mime in TIPI_ANTEPRIMA and media.dimensione_logica(percorso):
+            w, h = media.dimensione_logica(percorso)
+            img = media.ImmagineArrotondata(percorso, w, h, ora=ora)
+            self._cliccabile(img, lambda: self._apri_allegato(percorso, mime))
+            img.set_tooltip_text("%s · %s" % (nome, dimensione_leggibile(dim)))
+            bolla.pack_start(img, False, False, 0)
+            return self._chiudi_bolla(riga, bolla, None)
+        if visuale and mime.startswith("video/"):
+            img = media.ImmagineArrotondata(None, media.LATO_FOTO, int(media.LATO_FOTO * 9 / 16), ora=ora, play=True)
+            self._cliccabile(img, lambda: self._apri_allegato(percorso, mime))
+            img.set_tooltip_text("%s · %s" % (nome, dimensione_leggibile(dim)))
+
+            def pronta(jpg, durata, img=img):
+                if jpg:
+                    info = media.dimensione_logica(jpg)
+                    img.imposta(jpg, *(info or (img.w, img.h)))
+                img.durata = media.durata_leggibile(durata) or dimensione_leggibile(dim)
+                img.queue_draw()
+            media.miniatura_video(percorso, pronta)
+            bolla.pack_start(img, False, False, 0)
+            return self._chiudi_bolla(riga, bolla, None)
+
+        # scheda: cerchio colorato + nome + dettagli
+        fam = media.famiglia(mime, nome)
+        audio = esiste and fam == "audio" and self.lettore.disponibile()
+        cerchio = media.CerchioFile(media.COLORI_TIPO[fam], media.estensione(nome),
+                                    simbolo="play" if audio else None)
+        scheda = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        scheda.pack_start(cerchio, False, False, 0)
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        col.set_valign(Gtk.Align.CENTER)
+        n = Gtk.Label(label=nome, xalign=0); n.get_style_context().add_class("nome-file")
+        n.set_ellipsize(Pango.EllipsizeMode.MIDDLE); n.set_max_width_chars(28)
+        dettagli = dimensione_leggibile(dim) + ("" if fam == "audio" else " · " + media.estensione(nome))
+        d = Gtk.Label(label=dettagli if esiste else _t("chat.file_mancante"), xalign=0)
+        d.get_style_context().add_class("dim-file")
+        col.pack_start(n, False, False, 0); col.pack_start(d, False, False, 0)
+        scheda.pack_start(col, True, True, 0)
+        bolla.pack_start(scheda, False, False, 0)
+        if audio:
+            def aggiorna(frazione, pos, durata, suona, cerchio=cerchio, d=d):
+                if suona is not None:
+                    cerchio.imposta(None, "pausa" if suona else "play")
+                if pos is not None and durata:
+                    d.set_text("%s / %s" % (media.durata_leggibile(pos), media.durata_leggibile(durata)))
+                elif suona is False:
+                    d.set_text(dettagli)
+            media.durata_in_sottofondo(percorso, lambda s: s and d.set_text(
+                "%s · %s" % (media.durata_leggibile(s), dimensione_leggibile(dim))))
+            self._cliccabile(cerchio, lambda: self.lettore.alterna(percorso, aggiorna))
+        elif esiste:
+            self._cliccabile(cerchio, lambda: self._apri_allegato(percorso, mime))
         self._chiudi_bolla(riga, bolla, ts)
 
-    def _avanzamento(self, direzione, ident, fatti, totale):
-        """Bolla con barra di avanzamento finché l'allegato non è completo."""
+    def _cliccabile(self, area, azione):
+        """Clic sinistro → azione; il destro prosegue verso il menu del messaggio."""
+        area.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+        area.connect("button-press-event", lambda _w, ev: ev.button == 1 and (azione() or True))
+        area.connect("realize", lambda w: w.get_window().set_cursor(
+            Gdk.Cursor.new_from_name(w.get_display(), "pointer")))
+
+    def _avanzamento(self, direzione, ident, fatti, totale, mime="", nome=""):
+        """Bolla del file in viaggio: cerchio con l'anello di avanzamento."""
         if ident not in self.trasferimenti:
             riga, bolla = self._nuova_bolla(direzione, None, "allegato")
+            fam = media.famiglia(mime, nome)
+            cerchio = media.CerchioFile(media.COLORI_TIPO[fam], media.estensione(nome or "file"))
+            scheda = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+            scheda.pack_start(cerchio, False, False, 0)
+            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); col.set_valign(Gtk.Align.CENTER)
+            n = Gtk.Label(label=nome or "…", xalign=0); n.get_style_context().add_class("nome-file")
+            n.set_ellipsize(Pango.EllipsizeMode.MIDDLE); n.set_max_width_chars(28)
             et = Gtk.Label(xalign=0); et.get_style_context().add_class("dim-file")
-            barra = Gtk.ProgressBar(); barra.get_style_context().add_class("barra")
-            barra.set_size_request(220, -1)
-            bolla.pack_start(et, False, False, 0)
-            bolla.pack_start(barra, False, False, 0)
+            col.pack_start(n, False, False, 0); col.pack_start(et, False, False, 0)
+            scheda.pack_start(col, True, True, 0)
+            bolla.pack_start(scheda, False, False, 0)
             self._chiudi_bolla(riga, bolla, None)
-            self.trasferimenti[ident] = (riga, barra, et)
-        _riga, barra, et = self.trasferimenti[ident]
-        frazione = (fatti / totale) if totale else 1.0
-        barra.set_fraction(min(1.0, frazione))
+            self.trasferimenti[ident] = (riga, cerchio, et)
+        _riga, cerchio, et = self.trasferimenti[ident]
+        cerchio.imposta(min(1.0, (fatti / totale) if totale else 1.0))
         verbo = _t("chat.invio_in_corso") if direzione == "out" else _t("chat.ricezione")
         et.set_text("%s %s / %s" % (verbo, dimensione_leggibile(fatti), dimensione_leggibile(totale)))
 
@@ -1308,36 +1392,76 @@ class Chat(Gtk.Window):
         except Exception:        # noqa: BLE001
             pass
 
-    def _scegli_file(self, _w):
+    # --- graffetta: menu, scelta, fotocamera, anteprima --------------------------
+    def _menu_graffetta(self, bottone):
         if not self.attivo:
             return
+        menu = self._nuovo_menu()
+        cam = media.fotocamera_disponibile()
+        self._voce(menu, _t("chat.allega.foto_cam"), lambda: self._scatta("foto"), icona="camera-photo-symbolic")
+        self._voce(menu, _t("chat.allega.video_cam"), lambda: self._scatta("video"), icona="camera-video-symbolic")
+        if not cam:
+            for v in menu.get_children():
+                v.set_sensitive(False)
+        menu.append(Gtk.SeparatorMenuItem())
+        self._voce(menu, _t("chat.allega.media"), lambda: self._scegli_file("media"), icona="image-x-generic-symbolic")
+        self._voce(menu, _t("chat.allega.file"), lambda: self._scegli_file("tutti"), icona="text-x-generic-symbolic")
+        menu.show_all()
+        menu.popup_at_widget(bottone, Gdk.Gravity.NORTH_WEST, Gdk.Gravity.SOUTH_WEST, None)
+
+    def _scegli_file(self, tipo):
         d = Gtk.FileChooserNative.new(_t("chat.allega"), self, Gtk.FileChooserAction.OPEN, None, None)
         d.set_select_multiple(True)
-        for chiave, schemi in FILTRI:
+        filtri = (("media", ("image/*", "video/*")),) + FILTRI if tipo == "media" else FILTRI
+        for chiave, schemi in filtri:
             f = Gtk.FileFilter(); f.set_name(_t("chat.filtro." + chiave))
             for sch in schemi:
                 (f.add_mime_type if "/" in sch else f.add_pattern)(sch)
             d.add_filter(f)
-        if d.run() == Gtk.ResponseType.ACCEPT:
-            for percorso in d.get_filenames():
-                self._invia_file(percorso)
+        percorsi = d.get_filenames() if d.run() == Gtk.ResponseType.ACCEPT else []
         d.destroy()
+        if percorsi:
+            self._prepara_invio(percorsi)
 
     def _file_trascinati(self, _w, ctx, _x, _y, dati, _info, tempo):
-        if self.attivo:
-            for uri in dati.get_uris() or []:
-                try:
-                    percorso, _h = GLib.filename_from_uri(uri)
-                except Exception:    # noqa: BLE001
-                    continue
-                if os.path.isfile(percorso):
-                    self._invia_file(percorso)
+        percorsi = []
+        for uri in dati.get_uris() or []:
+            try:
+                p, _h = GLib.filename_from_uri(uri)
+            except Exception:    # noqa: BLE001
+                continue
+            if os.path.isfile(p):
+                percorsi.append(p)
         Gtk.drag_finish(ctx, True, False, tempo)
+        if self.attivo and percorsi:
+            GLib.idle_add(lambda: (self._prepara_invio(percorsi), False)[1])
 
-    def _invia_file(self, percorso):
-        tipo, _incerto = Gio.content_type_guess(percorso, None)
-        mime = Gio.content_type_get_mime_type(tipo) or "application/octet-stream"
-        if self.ui.get("senza_exif", True):
+    def _scatta(self, modalita):
+        testi = {k: _t("chat.cam." + k) for k in ("titolo_foto", "titolo_video", "scatta", "registra",
+                                                  "stop", "annulla", "errore", "attendi")}
+        cam = media.Fotocamera(self, modalita, testi)
+        ok = cam.run() == Gtk.ResponseType.OK and cam.risultato
+        risultato = cam.risultato
+        cam.destroy()
+        if ok:
+            self._prepara_invio([risultato])
+
+    def _prepara_invio(self, percorsi):
+        """Anteprima con didascalia (come Telegram), poi l'invio vero."""
+        voci = [(p, mime_di(p)) for p in percorsi]
+        testi = {k: _t("chat.ant." + k) for k in ("titolo", "titolo1", "didascalia", "exif", "invia", "annulla")}
+        dlg = media.AnteprimaInvio(self, voci, testi, self.ui.get("senza_exif", True), dimensione_leggibile)
+        if dlg.run() == Gtk.ResponseType.OK and self.attivo:
+            senza_exif = dlg.senza_exif()
+            for p, m in voci:
+                self._invia_file(p, m, senza_exif)
+            if dlg.didascalia():
+                self._cmd("SEND %s %s" % (self.attivo, dlg.didascalia().encode().hex()))
+        dlg.destroy()
+
+    def _invia_file(self, percorso, mime=None, senza_exif=True):
+        mime = mime or mime_di(percorso)
+        if senza_exif:
             percorso = senza_metadati(percorso, mime)
         self._cmd("SENDFILE %s %s %s" % (self.attivo, percorso.encode().hex(), mime))
 
