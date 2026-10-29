@@ -471,7 +471,26 @@ public class BrowserActivity extends Activity {
         pCard = CARD; pCap = CAP; pTxt = TXT; pDim = DIM;
     }
 
+    private static boolean cartellaWebImpostata = false;
+
     @Override protected void onCreate(Bundle b) {
+        // Processo separato (":browser"): da Android 9 due processi della stessa app NON
+        // possono usare la WebView con la stessa cartella dati (la chat la usa nel processo
+        // principale) — senza questa riga Android chiude il browser appena parte.
+        if (!cartellaWebImpostata && android.os.Build.VERSION.SDK_INT >= 28) {
+            try { WebView.setDataDirectorySuffix("browser"); } catch (Exception e) { Log.w(TAG, "cartella WebView", e); }
+            cartellaWebImpostata = true;
+        }
+        // «Scatola nera»: se il browser si chiude per un errore, l'app lo mostra alla
+        // riapertura (MainActivity.mostraErroreBrowser), così si può riferire.
+        final Thread.UncaughtExceptionHandler prima = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((th, ex) -> {
+            try (java.io.PrintWriter pw = new java.io.PrintWriter(new java.io.File(getFilesDir(), "errore-browser.txt"))) {
+                pw.println("Android " + android.os.Build.VERSION.RELEASE + " (API " + android.os.Build.VERSION.SDK_INT + ")");
+                ex.printStackTrace(pw);
+            } catch (Exception ignorata) { }
+            if (prima != null) prima.uncaughtException(th, ex);
+        });
         super.onCreate(b);
         initTheme();   // palette in base al tema di NovaOS, prima di costruire la UI
 

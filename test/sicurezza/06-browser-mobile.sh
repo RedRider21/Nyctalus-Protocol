@@ -11,6 +11,7 @@ assicura_binario
 J="$ROOT/mobile/android/app/src/main/java/org/nyctalus/mobile"; B="$J/BrowserActivity.java"; M="$ROOT/mobile/android/app/src/main/AndroidManifest.xml"
 
 # --- codice ------------------------------------------------------------------------------
+grep -q 'WebView.setDataDirectorySuffix("browser")' "$B" && pass "processo del browser con cartella WebView propria (senza, Android 9+ lo chiude all'avvio)" || fail "manca setDataDirectorySuffix: il browser si chiude appena parte"
 grep -A3 'android:name=".BrowserActivity"' "$M" | grep -q 'android:process=":browser"' \
   && pass "browser in un processo separato (il proxy non tocca la chat)" || fail "browser nello stesso processo"
 ! grep -qE 'permission\.(CAMERA|RECORD_AUDIO|ACCESS_FINE_LOCATION)' "$M" && pass "nessun permesso di fotocamera, microfono o posizione" || fail "permessi sensibili nel manifest"

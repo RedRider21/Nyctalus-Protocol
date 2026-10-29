@@ -386,6 +386,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        mostraErroreBrowser();
         if (inPausa && !caricata && !avviando) {
             inPausa = false;
             new Thread(() -> { if (attendi(12000)) servizioPronto(); }).start();
@@ -514,6 +515,30 @@ public class MainActivity extends Activity {
         lp.setMargins(dp(4), 0, dp(4), 0);
         c.setLayoutParams(lp);
         return c;
+    }
+
+    /** Se il browser si è chiuso per un errore, lo si dice (con il testo da copiare e riferire). */
+    private void mostraErroreBrowser() {
+        java.io.File f = new java.io.File(getFilesDir(), "errore-browser.txt");
+        if (!f.exists()) return;
+        String testo;
+        try {
+            byte[] b = new byte[(int) Math.min(f.length(), 65536)];
+            try (java.io.FileInputStream in = new java.io.FileInputStream(f)) {
+                int n = 0, letti;
+                while (n < b.length && (letti = in.read(b, n, b.length - n)) > 0) n += letti;
+                testo = new String(b, 0, n, "UTF-8");
+            }
+        } catch (Exception e) {
+            testo = "(non leggibile)";
+        }
+        f.delete();
+        final String t = testo.length() > 4000 ? testo.substring(0, 4000) : testo;
+        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle("Il browser si è chiuso per un errore")
+                .setMessage(t)
+                .setPositiveButton("Copia il testo", (d, k) -> { copiaNegliAppunti(t); avviso("Copiato: mandalo a chi sviluppa"); })
+                .setNegativeButton("Chiudi", null).show();
     }
 
     /** Browser: normale, o in modalità Nyctalus (tutto il traffico nella rete). */
