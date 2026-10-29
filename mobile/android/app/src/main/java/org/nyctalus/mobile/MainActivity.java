@@ -68,9 +68,10 @@ public class MainActivity extends Activity {
     private static final int RICHIESTA_PERMESSO = 1, RICHIESTA_FILE = 2;
     private static final long ATTESA_MAX_MS = 40000;
 
-    // colori del tema «Notte» della web-app
-    private static final int C_SFONDO = 0xFF0A0E1A, C_ACCENTO = 0xFF5AA9FF, C_TENUE = 0xFF6B7797,
-            C_SCHEDA = 0xFF0E1424, C_BORDO = 0xFF1B2740, C_SU_ACCENTO = 0xFFFFFFFF;
+    private static final String GITHUB = "https://github.com/RedRider21/Nyctalus-Protocol";
+
+    // colori della schermata d'avvio: quelli del tema scelto nella web-app (ponte tema())
+    private int C_SFONDO, C_ACCENTO, C_TENUE, C_SCHEDA, C_BORDO, C_TESTO, C_SU_ACCENTO = 0xFFFFFFFF;
 
     private WebView web;
     private TextView stato;
@@ -84,6 +85,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        caricaTema();
         getWindow().setStatusBarColor(C_SFONDO);
         getWindow().setNavigationBarColor(C_SFONDO);
         segreto = segreto();
@@ -101,6 +103,24 @@ public class MainActivity extends Activity {
     public void onRequestPermissionsResult(int richiesta, String[] permessi, int[] esiti) {
         super.onRequestPermissionsResult(richiesta, permessi, esiti);
         if (richiesta == RICHIESTA_PERMESSO) new Thread(this::avvia).start();
+    }
+
+    /** Stessi colori dei temi della web-app (Notte, Ardesia, Viola, Chiaro). */
+    private void caricaTema() {
+        switch (getSharedPreferences(PREFS, MODE_PRIVATE).getString("tema", "notte")) {
+            case "ardesia":
+                C_SFONDO = 0xFF0E1621; C_ACCENTO = 0xFF6AB3F3; C_TENUE = 0xFF7F91A4;
+                C_SCHEDA = 0xFF17212B; C_BORDO = 0xFF22303D; C_TESTO = 0xFFF5F5F5; break;
+            case "viola":
+                C_SFONDO = 0xFF120F1C; C_ACCENTO = 0xFF9D85FF; C_TENUE = 0xFF8A82A6;
+                C_SCHEDA = 0xFF1A1626; C_BORDO = 0xFF2A2440; C_TESTO = 0xFFF1EDFF; break;
+            case "chiaro":
+                C_SFONDO = 0xFFEEF1F6; C_ACCENTO = 0xFF2F6FE0; C_TENUE = 0xFF7D889C;
+                C_SCHEDA = 0xFFFFFFFF; C_BORDO = 0xFFDDE3EC; C_TESTO = 0xFF1A2233; break;
+            default:
+                C_SFONDO = 0xFF0A0E1A; C_ACCENTO = 0xFF5AA9FF; C_TENUE = 0xFF6B7797;
+                C_SCHEDA = 0xFF0E1424; C_BORDO = 0xFF1B2740; C_TESTO = 0xFFE6ECFF; break;
+        }
     }
 
     /** Segreto d'accesso dell'app: creato una volta, conservato nelle preferenze private. */
@@ -145,7 +165,7 @@ public class MainActivity extends Activity {
         logo.setLayoutParams(lp);
         r.addView(logo);
 
-        TextView t = testo("Nyctalus", C_ACCENTO, 30);
+        TextView t = testo("Nyctalus", C_TESTO, 30);
         t.setTypeface(t.getTypeface(), Typeface.BOLD);
         r.addView(t);
         TextView sub = testo("chat anonima", C_TENUE, 14);
@@ -165,13 +185,23 @@ public class MainActivity extends Activity {
         r.addView(entra);
         r.addView(spazio());
 
-        LinearLayout riga1 = riga(), riga2 = riga();
-        riga1.addView(cella("⌨  Apri Termux", v -> apriTermux()));
+        // pannello comandi (come Termux-NexusSEC-OS): Termux, Nyctalus, aggiornamenti
+        LinearLayout riga1 = riga(), riga2 = riga(), riga3 = riga(), riga4 = riga();
         riga1.addView(cella("⬇  Installa Termux", v -> installaTermux()));
-        riga2.addView(cella("📋  Copia il comando di avvio", v -> copiaComando()));
-        ((LinearLayout.LayoutParams) riga2.getLayoutParams()).topMargin = dp(10);
-        r.addView(riga1);
-        r.addView(riga2);
+        riga1.addView(cella("↻  Aggiorna Termux", v -> aggiornaTermux()));
+        riga2.addView(cella("🦇  Installa / aggiorna Nyctalus in Termux", v -> installaNyctalus()));
+        riga3.addView(cella("⌨  Apri Termux", v -> apriTermux()));
+        riga3.addView(cella("📋  Comando di avvio", v -> copiaComando()));
+        Button gh = cella("☁  Aggiornamenti da GitHub (presto)", v -> aggiornamentiGithub());
+        gh.setAlpha(0.45f);
+        riga4.addView(gh);
+        for (LinearLayout x : new LinearLayout[]{riga1, riga2, riga3, riga4}) {
+            ((LinearLayout.LayoutParams) x.getLayoutParams()).topMargin = dp(8);
+            r.addView(x);
+        }
+        TextView versione = testo("versione " + versioneApp(), C_TENUE, 11);
+        versione.setPadding(0, dp(10), 0, 0);
+        r.addView(versione);
         return r;
     }
 
@@ -299,12 +329,131 @@ public class MainActivity extends Activity {
         else avviso("Termux non è installato: installalo da F-Droid.");
     }
 
+    /** Termux non sta sul Play Store (versione vecchia e ferma): F-Droid o GitHub. */
     private void installaTermux() {
-        try {
-            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://f-droid.org/packages/com.termux/")));
-        } catch (Exception e) {
-            avviso("Apri: f-droid.org/packages/com.termux");
+        scegli(termuxInstallato() ? "Termux è già installato. Reinstallarlo da:" : "Scarica e installa Termux da:",
+                new String[]{"F-Droid (consigliato)", "GitHub (file …arm64-v8a.apk)"},
+                k -> apriPagina(k == 0 ? "https://f-droid.org/packages/com.termux/"
+                                      : "https://github.com/termux/termux-app/releases/latest"),
+                "Dopo l'installazione apri Termux una volta e aspetta che finisca di prepararsi.");
+    }
+
+    private void aggiornaTermux() {
+        scegli("Aggiorna Termux", new String[]{
+                "L'app Termux (pagina F-Droid)",
+                "I pacchetti di Termux (pkg upgrade)"}, k -> {
+            if (k == 0) { apriPagina("https://f-droid.org/packages/com.termux/"); return; }
+            conferma("Aggiornare tutti i pacchetti di Termux?",
+                    "«pkg upgrade» aggiorna i pacchetti di TUTTO Termux, anche quelli usati da altri "
+                  + "progetti. Di solito va bene, ma se un altro progetto dipende da una versione "
+                  + "precisa, meglio farlo a mano. L'aggiornamento si vede in Termux.",
+                    () -> eseguiInTermux("yes | pkg upgrade -y; echo; echo 'Aggiornamento finito: puoi tornare nell app Nyctalus.'",
+                            false, "Aggiornamento dei pacchetti in corso in Termux."));
+        }, null);
+    }
+
+    /**
+     * Installa (o aggiorna) Nyctalus in Termux col pacchetto che l'app porta con sé:
+     * l'app lo serve su 127.0.0.1 per qualche minuto, Termux lo scarica, ne verifica
+     * l'impronta SHA-256, lancia l'installatore (che convive con gli altri progetti),
+     * avvia il servizio e riporta qui. L'installazione si vede in Termux.
+     */
+    private void installaNyctalus() {
+        if (!termuxInstallato()) { installaTermux(); return; }
+        if (!ServitorePacchetto.presente(this)) {
+            avviso("Questa versione dell'app non contiene il pacchetto: usa nyctalus-termux.tar.gz (vedi manuale).");
+            return;
         }
+        final ServitorePacchetto sp;
+        try {
+            sp = new ServitorePacchetto(this);
+            sp.start();
+        } catch (Exception e) {
+            avviso("Impossibile preparare il pacchetto: " + e.getMessage());
+            return;
+        }
+        String cmd = "D=$(mktemp -d) && cd \"$D\" && "
+                + "{ command -v curl >/dev/null 2>&1 || pkg install -y curl; } && "
+                + "echo '» Scarico Nyctalus dall app…' && "
+                + "curl -fsS " + sp.indirizzo() + " -o n.tar.gz && "
+                + "echo '" + sp.impronta + "  n.tar.gz' | sha256sum -c --quiet && "
+                + "tar xzf n.tar.gz && bash nyctalus-termux/installa.sh && cd ~ && rm -rf \"$D\" && "
+                + comandoAvvio() + " && "
+                + "echo && echo '✓ Fatto: torno nell app Nyctalus…' && sleep 2 && "
+                + "(am start -n org.nyctalus.mobile/.MainActivity >/dev/null 2>&1 || true)"
+                + " || { echo; echo '✗ Installazione non riuscita: leggi i messaggi qui sopra.'; cd ~; rm -rf \"$D\"; }";
+        provatoInPrimoPiano = true;
+        entraAppenaPronto = true;
+        eseguiInTermux(cmd, true, null);
+        imposta("Installazione in corso in Termux…\nAlla fine l'app torna qui da sola.");
+    }
+
+    /** Gli aggiornamenti dal repository arriveranno quando il progetto sarà pubblicato. */
+    private void aggiornamentiGithub() {
+        avviso("In arrivo: gli aggiornamenti da GitHub si attivano quando il progetto sarà pubblicato. "
+             + "Per ora aggiorna installando la nuova APK e poi «Installa / aggiorna Nyctalus».");
+    }
+
+    /**
+     * Esegue un comando in una sessione VISIBILE di Termux (si vede l'avanzamento).
+     * Lo copia anche negli appunti: se Termux non lo esegue (la prima volta manca
+     * «allow-external-apps», che l'installatore di Nyctalus abilita), basta incollarlo.
+     */
+    private void eseguiInTermux(String cmd, boolean spiega, String messaggio) {
+        copiaNegliAppunti(cmd);
+        try {
+            Intent i = new Intent();
+            i.setComponent(new ComponentName(TERMUX, "com.termux.app.RunCommandService"));
+            i.setAction("com.termux.RUN_COMMAND");
+            i.putExtra("com.termux.RUN_COMMAND_PATH", "/data/data/com.termux/files/usr/bin/bash");
+            i.putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-lc", cmd});
+            i.putExtra("com.termux.RUN_COMMAND_WORKDIR", "/data/data/com.termux/files/home");
+            i.putExtra("com.termux.RUN_COMMAND_BACKGROUND", false);
+            i.putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0");   // nuova sessione, in primo piano
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(i);
+            else startService(i);
+        } catch (Exception ignorata) { }
+        apriTermux();
+        if (spiega) {
+            avviso("Se in Termux non parte nulla (succede solo la prima volta): tieni premuto → Incolla → Invio. "
+                 + "Il comando è già negli appunti.");
+        } else if (messaggio != null) {
+            avviso(messaggio);
+        }
+    }
+
+    private void apriPagina(String url) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        } catch (Exception e) {
+            avviso("Apri: " + url);
+        }
+    }
+
+    private String versioneApp() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Exception e) {
+            return "?";
+        }
+    }
+
+    private interface Scelta { void fatta(int k); }
+
+    private void scegli(String titolo, String[] voci, Scelta s, String nota) {
+        android.app.AlertDialog.Builder b = new android.app.AlertDialog.Builder(this,
+                android.R.style.Theme_DeviceDefault_Dialog_Alert);
+        b.setTitle(titolo).setItems(voci, (d, k) -> s.fatta(k)).setNegativeButton("Annulla", null);
+        android.app.AlertDialog d = b.create();
+        d.show();
+        if (nota != null) avviso(nota);
+    }
+
+    private void conferma(String titolo, String testo, Runnable si) {
+        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(titolo).setMessage(testo)
+                .setPositiveButton("Procedi", (d, k) -> si.run())
+                .setNegativeButton("Annulla", null).show();
     }
 
     /** Ripiego sempre valido: il comando negli appunti, da incollare in Termux. */
@@ -426,6 +575,13 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void esci() {
             runOnUiThread(() -> finishAndRemoveTask());
+        }
+
+        /** La web-app comunica il tema scelto: la schermata d'avvio userà gli stessi colori. */
+        @JavascriptInterface
+        public void tema(String id) {
+            if (id != null && id.matches("[a-z]{1,20}"))
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("tema", id).apply();
         }
 
         @JavascriptInterface

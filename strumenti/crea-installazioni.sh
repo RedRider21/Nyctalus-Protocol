@@ -111,29 +111,20 @@ cp "$P/LEGGIMI.txt" "$OUT/PC-Linux/LEGGIMI.txt"
 
 # ============================== Android ==============================
 say "Android: assemblo il pacchetto per Termux"
+bash "$ROOT/strumenti/pacchetto-termux.sh" "$LAVORO"
 A="$LAVORO/nyctalus-termux"
-mkdir -p "$A/sorgenti"
-cp -r "$ROOT/mobile/orchestratore" "$ROOT/mobile/webapp" "$A/"
-cp "$ROOT/mobile/termux/installa.sh" "$ROOT/mobile/termux/disinstalla.sh" "$ROOT/mobile/termux/nyctalus-mobile" "$A/"
-cp "$ROOT/Cargo.toml" "$ROOT/Cargo.lock" "$A/sorgenti/"
-cp -r "$ROOT/motore" "$A/sorgenti/"
-manuali_in "$A/Manuali"
-find "$A" -name __pycache__ -type d -prune -exec rm -rf {} +
-for t in aarch64-linux-android aarch64-unknown-linux-musl; do
-  if [ -x "$ROOT/target/$t/release/nyctalus" ]; then
-    mkdir -p "$A/bin"; cp "$ROOT/target/$t/release/nyctalus" "$A/bin/nyctalus"
-    say "Android: incluso il motore precompilato ($t)"; break
-  fi
-done
-chmod +x "$A/installa.sh" "$A/disinstalla.sh" "$A/nyctalus-mobile"
-cp "$ROOT/LICENSE" "$A/"
-( cd "$LAVORO" && tar czf "$OUT/Android/nyctalus-termux.tar.gz" nyctalus-termux )
+cp "$LAVORO/nyctalus-termux.tar.gz" "$OUT/Android/"
 crea_zip "$A" "$OUT/Android/nyctalus-termux.zip"
 
+# l'app: si compila se c'è un Android SDK (porta con sé lo stesso pacchetto Termux)
+if [ -d "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}/build-tools" ]; then
+  say "Android: compilo l'app (APK)"
+  NYCTALUS_PACCHETTO="$LAVORO/nyctalus-termux.tar.gz" bash "$ROOT/strumenti/compila-apk.sh"
+fi
 APK=""
-for c in "$ROOT/mobile/android/app/build/outputs/apk/release/app-release.apk" \
-         "$ROOT/mobile/android/app/build/outputs/apk/debug/app-debug.apk" \
-         "$ROOT/mobile/android/Nyctalus.apk"; do
+for c in "$ROOT/mobile/android/Nyctalus.apk" \
+         "$ROOT/mobile/android/app/build/outputs/apk/release/app-release.apk" \
+         "$ROOT/mobile/android/app/build/outputs/apk/debug/app-debug.apk"; do
   [ -f "$c" ] && { cp "$c" "$OUT/Android/Nyctalus.apk"; APK=1; break; }
 done
 MOTORE_PRONTO="no"; [ -d "$A/bin" ] && MOTORE_PRONTO="sì"
@@ -153,9 +144,19 @@ COSA SCARICARE
      oppure https://github.com/termux/termux-app/releases  (file …arm64-v8a.apk)
   2. nyctalus-termux.tar.gz  (o .zip: è lo stesso; il .tar.gz si apre senza
      installare nulla, lo .zip richiede «pkg install unzip»)
-$( [ -n "$APK" ] && echo "  3. Nyctalus.apk — l'app (facoltativa)" || echo "  3. Nyctalus.apk — non ancora compilata: per ora si usa il browser del telefono" )
+$( [ -n "$APK" ] && echo "  3. Nyctalus.apk — l'app (consigliata: contiene già tutto il necessario)" || echo "  3. Nyctalus.apk — non ancora compilata: per ora si usa il browser del telefono" )
 
-INSTALLARE
+INSTALLARE CON L'APP (il modo più semplice)
+  1) Installa Termux, aprilo una volta e aspetta che finisca di prepararsi.
+  2) Installa Nyctalus.apk e aprila: concedi «Esegui comandi in Termux».
+  3) Tocca «🦇 Installa / aggiorna Nyctalus in Termux». L'installazione si vede in
+     Termux; alla fine si torna nell'app da sola. Solo la PRIMA volta Termux può
+     non partire da solo: tieni premuto in Termux → Incolla → Invio (il comando è
+     già negli appunti).
+  Nell'app ci sono anche: Installa Termux, Aggiorna Termux, Apri Termux,
+  Comando di avvio. Gli aggiornamenti da GitHub arriveranno più avanti.
+
+INSTALLARE A MANO (senza app, si usa il browser)
   a) Copia nyctalus-termux.tar.gz nella cartella Download del telefono
      (cavo USB, oppure mandalo a te stesso e salvalo in Download).
   b) In Termux:

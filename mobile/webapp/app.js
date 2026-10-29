@@ -9,6 +9,10 @@
 // I dati altrui finiscono SEMPRE in textContent (mai innerHTML).
 "use strict";
 
+// dentro l'app Android (APK) la pagina ha il ponte window.NyctalusHost: appunti e
+// condivisione passano da lì, perché nella WebView le API del browser non sempre ci sono
+const HOST = window.NyctalusHost || null;
+
 // ---------- utilità ---------------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 const enc = new TextEncoder(), dec = new TextDecoder();
@@ -597,10 +601,6 @@ function inoltra(testo, file) {
   apriFoglio("Inoltra a…", voci);
 }
 
-// dentro l'app Android (APK) la pagina ha il ponte window.NyctalusHost: appunti e
-// condivisione passano da lì, perché nella WebView le API del browser non sempre ci sono
-const HOST = window.NyctalusHost || null;
-
 async function copia(testo) {
   if (HOST) { HOST.copia(String(testo)); toast("Copiato"); return; }
   try { await navigator.clipboard.writeText(testo); toast("Copiato"); }
@@ -668,7 +668,8 @@ function impostazioni() {
   const bf = el("button", "pericoloso", "■ Ferma rete"); bf.onclick = async () => { await post("/api/servizi/ferma"); controllaServizi(); toast("Nyctalus fermato"); };
   servizi.append(ba, bf);
   dialogo("Impostazioni", [el("p", "", "Il tuo Contact ID — dallo agli amici perché ti scrivano (non è segreto):"), id, bott,
-    el("p", "", "Tema"), temi, el("p", "", "Sfondo della chat"), sfondi, l, el("p", "", "Rete Nyctalus"), servizi], [["Chiudi", null, "primario"]]);
+    el("p", "", "Tema"), temi, el("p", "", "Sfondo della chat"), sfondi, l, el("p", "", "Rete Nyctalus"), servizi],
+    HOST ? [["Esci dall'app", () => HOST.esci()], ["Chiudi", null, "primario"]] : [["Chiudi", null, "primario"]]);
 }
 
 function applicaAspetto() {
@@ -676,6 +677,7 @@ function applicaAspetto() {
   document.documentElement.dataset.sfondo = S.sfondo;
   const pannello = getComputedStyle(document.documentElement).getPropertyValue("--panel").trim();
   document.querySelector('meta[name="theme-color"]').content = pannello || "#0e1424";
+  if (HOST && HOST.tema) HOST.tema(S.tema);      // la schermata d'avvio dell'app usa gli stessi colori
 }
 
 // ---------- pulsanti fissi e avvio ----------------------------------------------------------

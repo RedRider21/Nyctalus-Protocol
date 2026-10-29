@@ -55,7 +55,7 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 | `05-installatore-termux` | installatore in un **Termux simulato**: tutto in `~/nyctalus`, nessun pacchetto superfluo né `pkg upgrade`, `termux.properties` intatto e senza righe doppie, avvio automatico solo se chiesto, `nyctalus-mobile` avvia/ferma, disinstallazione che **non tocca gli altri progetti**, comandi omonimi altrui non sovrascritti |
 | `06-installazioni` | la cartella `installazioni/`: pacchetti e LEGGIMI per ogni dispositivo, **nessun dato personale** dentro, il pacchetto PC si estrae e parte, quello Android contiene tutto il necessario |
 | `07-installatore-pc` | installatore del PC in una HOME finta: menu e comandi, nessun sudo superfluo, cose altrui intatte, disinstallazione pulita |
-| `08-app-android` | app Android: niente permesso fotocamera, scatti privati, nomi di file filtrati; il comando che l'app fa eseguire a Termux scrive il **suo segreto** (600) e il servizio già acceso lo accetta, il vecchio no; compila l'APK se c'è un Android SDK (`ANDROID_HOME`) |
+| `08-app-android` | app Android: niente permesso fotocamera, scatti privati, nomi di file filtrati; il comando che l'app fa eseguire a Termux scrive il **suo segreto** (600) e il servizio già acceso lo accetta, il vecchio no; «Installa Nyctalus in Termux» in un **Termux simulato** (pacchetto con impronta sbagliata rifiutato, installazione, `allow-external-apps`, ritorno all'app, niente `pkg upgrade`); compila l'APK se c'è un Android SDK (`ANDROID_HOME`) e controlla che contenga il pacchetto |
 
 ## Aggiungere una prova
 

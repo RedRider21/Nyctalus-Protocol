@@ -83,6 +83,34 @@ riscrivere il file.
    del telefono (funziona allo stesso modo). Per installarla Android chiede di consentire
    «Installa app sconosciute» all'app con cui la apri (File, Chrome…).
 
+### 2.1-bis Il modo più semplice: con l'app
+`Nyctalus.apk` contiene già il pacchetto per Termux, quindi **non serve copiare archivi**:
+1. installa **Termux**, aprilo una volta e aspetta che finisca di prepararsi;
+2. installa **`Nyctalus.apk`** e aprila; concedi il permesso «Esegui comandi in Termux»;
+3. tocca **«🦇 Installa / aggiorna Nyctalus in Termux»**. Termux si apre e mostra
+   l'installazione (lo stesso installatore del punto 2.3, che convive con gli altri
+   progetti); alla fine l'app torna davanti da sola ed entra nella chat.
+
+Solo la **prima volta** Termux può non eseguire il comando da solo (manca ancora
+l'impostazione `allow-external-apps`, che l'installatore poi aggiunge): in Termux tieni
+premuto → **Incolla** → Invio. Il comando è già negli appunti.
+
+Come funziona: l'app serve il pacchetto per qualche minuto su `127.0.0.1`, a un indirizzo
+casuale; Termux lo scarica con `curl` e ne **verifica l'impronta SHA-256** prima di
+installarlo (un pacchetto diverso viene rifiutato e non si installa nulla).
+
+Gli altri pulsanti dell'app:
+
+| Pulsante | Cosa fa |
+|---|---|
+| ⬇ Installa Termux | apre F-Droid (consigliato) o la pagina GitHub di Termux |
+| ↻ Aggiorna Termux | l'app Termux (F-Droid) oppure i pacchetti (`pkg upgrade`, chiede conferma: vale per **tutti** i progetti in Termux) |
+| 🦇 Installa / aggiorna Nyctalus | come sopra; per aggiornare: installa la nuova APK e ritocca il pulsante |
+| ⌨ Apri Termux · 📋 Comando di avvio | apre Termux; copia il comando che avvia Nyctalus |
+| ☁ Aggiornamenti da GitHub | in arrivo, quando il progetto sarà pubblicato |
+
+Se preferisci fare a mano, segui i punti qui sotto.
+
 ### 2.2 Portare l'archivio nel telefono
 L'archivio deve finire nella cartella **Download** del telefono. Scegli il modo più comodo:
 - **cavo USB**: collega il telefono al PC, scegli «Trasferimento file», copia

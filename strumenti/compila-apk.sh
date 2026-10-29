@@ -33,9 +33,13 @@ VCODE=$(grep -oE "versionCode [0-9]+" "$AND/app/build.gradle" | grep -oE '[0-9]+
 # aapt2 vuole il nome del pacchetto nel manifest (con Gradle sta in «namespace»)
 sed 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.nyctalus.mobile">#' \
   "$APP/AndroidManifest.xml" > "$L/AndroidManifest.xml"
+# l'app porta con sé il pacchetto per Termux (pulsante «Installa Nyctalus in Termux»)
+mkdir -p "$L/assets"
+if [ -s "${NYCTALUS_PACCHETTO:-}" ]; then cp "$NYCTALUS_PACCHETTO" "$L/assets/nyctalus-termux.tar.gz"
+else bash "$ROOT/strumenti/pacchetto-termux.sh" "$L/pacchetto" >/dev/null; cp "$L/pacchetto/nyctalus-termux.tar.gz" "$L/assets/"; fi
 "$BT/aapt2" compile --dir "$APP/res" -o "$L/res.zip"
 "$BT/aapt2" link -I "$JAR" --manifest "$L/AndroidManifest.xml" -o "$L/base.apk" --java "$L/gen" \
-  --min-sdk-version 24 --target-sdk-version 34 --version-code "$VCODE" --version-name "$VNAME" "$L/res.zip"
+  --min-sdk-version 24 --target-sdk-version 34 --version-code "$VCODE" --version-name "$VNAME" -A "$L/assets" "$L/res.zip"
 
 mkdir -p "$L/classi" "$L/dex"
 mapfile -t SORGENTI < <(find "$L/gen" "$APP/java" -name '*.java')     # (il percorso può contenere spazi)

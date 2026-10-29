@@ -58,10 +58,64 @@ sleep 1.1
 [ "$(codice "$VECCHIO")" != 200 ] && pass "il segreto vecchio non vale più" || fail "segreto vecchio ancora valido"
 [ "$(codice "")" != 200 ] && pass "senza segreto: accesso negato" || fail "accesso senza segreto"
 
+# --- «Installa / aggiorna Nyctalus in Termux», in un Termux simulato ---
+# Il comando è ricostruito dal codice Java; il pacchetto è servito come lo serve l'app
+# (127.0.0.1, indirizzo casuale) e l'impronta SHA-256 deve corrispondere.
+assicura_binario
+python3 - "$J" > "$TMP/inst.tpl" <<'PY'
+import re, sys
+s = open(sys.argv[1]).read()
+corpo = re.search(r'String cmd = (.*?);\n', s, re.S).group(1)
+avvio = re.search(r'private String comandoAvvio\(\) \{(.*?)\}', s, re.S).group(1)
+def unisci(c):
+    out = []
+    for lit, ident in re.findall(r'"((?:[^"\\]|\\.)*)"|([A-Za-z_][\w.]*(?:\(\))?)', c):
+        if lit or (not ident): out.append(lit.replace('\\"', '"').replace("\\\\", "\\"))
+        elif ident == "sp.indirizzo()": out.append("@URL@")
+        elif ident == "sp.impronta": out.append("@HASH@")
+        elif ident == "comandoAvvio()": out.append(unisci(avvio.split("return", 1)[1]))
+        elif ident == "segreto": out.append("@SEGRETO@")
+    return "".join(out)
+print(unisci(corpo))
+PY
+grep -q "installa.sh" "$TMP/inst.tpl" && pass "comando d'installazione estratto" || fail "comando d'installazione non trovato"
+PK="$TMP/pk"; mkdir -p "$PK/nyctalus-termux/bin"
+cp -r "$ROOT/mobile/orchestratore" "$ROOT/mobile/webapp" "$PK/nyctalus-termux/"
+cp "$ROOT/mobile/termux/installa.sh" "$ROOT/mobile/termux/disinstalla.sh" "$ROOT/mobile/termux/nyctalus-mobile" "$PK/nyctalus-termux/"
+cp "$BIN" "$PK/nyctalus-termux/bin/nyctalus"
+( cd "$PK" && tar czf servito.tar.gz nyctalus-termux )
+HASH=$(sha256sum "$PK/servito.tar.gz" | cut -d' ' -f1); CASUALE=$(python3 -c 'import secrets;print(secrets.token_hex(16))')
+mkdir -p "$PK/web" && cp "$PK/servito.tar.gz" "$PK/web/$CASUALE"
+python3 -m http.server 19735 --bind 127.0.0.1 --directory "$PK/web" > /dev/null 2>&1 & PIDS+=($!)
+H2="$TMP/home2"; P2="$TMP/usr2"; F2="$TMP/finti2"; mkdir -p "$H2/.termux" "$P2/bin" "$F2"
+printf 'extra-keys = [[ESC]]\n' > "$H2/.termux/termux.properties"
+printf '#!/bin/sh\necho "$*" >> "%s/pkg.txt"\n' "$TMP" > "$F2/pkg"
+printf '#!/bin/sh\n[ "$1" = "-s" ] || exit 1\ncase "$2" in python|termux-tools) exit 0 ;; *) exit 1 ;; esac\n' > "$F2/dpkg"
+printf '#!/bin/sh\nexec python3 "$@"\n' > "$F2/python"
+printf '#!/bin/sh\necho "$*" >> "%s/am.txt"\n' "$TMP" > "$F2/am"
+printf '#!/bin/sh\necho "--sfondo" >> "%s/avvii2.txt"\n' "$TMP" > "$F2/nyctalus-mobile"
+chmod +x "$F2"/*
+SEG2=$(python3 -c 'import secrets;print(secrets.token_hex(16))')
+istanza() { sed -e "s#@URL@#http://127.0.0.1:19735/$1#" -e "s#@HASH@#$2#" -e "s#@SEGRETO@#$SEG2#" "$TMP/inst.tpl"; }
+sleep 0.5
+env HOME="$H2" PREFIX="$P2" PATH="$F2:$PATH" bash -c "$(istanza "$CASUALE" 0000000000000000000000000000000000000000000000000000000000000000)" > "$TMP/manomesso.log" 2>&1
+[ ! -e "$H2/nyctalus" ] && grep -q "non riuscita" "$TMP/manomesso.log" && pass "impronta diversa: pacchetto rifiutato, nulla installato" || fail "pacchetto manomesso accettato"
+env HOME="$H2" PREFIX="$P2" PATH="$F2:$PATH" bash -c "$(istanza "$CASUALE" "$HASH")" > "$TMP/inst.log" 2>&1
+[ -x "$H2/nyctalus/bin/nyctalus" ] && [ -f "$H2/nyctalus/webapp/index.html" ] && pass "Nyctalus installato in ~/nyctalus dal pacchetto dell'app" || fail "installazione dall'app: $(tail -3 "$TMP/inst.log")"
+grep -q "allow-external-apps = true" "$H2/.termux/termux.properties" && grep -q "^extra-keys" "$H2/.termux/termux.properties" \
+  && pass "allow-external-apps abilitato, resto di termux.properties intatto" || fail "termux.properties"
+[ "$(cat "$H2/.nyctalus-mobile/token" 2>/dev/null)" = "$SEG2" ] && pass "segreto dell'app scritto dopo l'installazione" || fail "segreto non scritto dopo l'installazione"
+grep -q -- "-n org.nyctalus.mobile/.MainActivity" "$TMP/am.txt" 2>/dev/null && pass "alla fine riporta in primo piano l'app" || fail "l'app non viene riaperta"
+! grep -q upgrade "$TMP/pkg.txt" 2>/dev/null && pass "nessun pkg upgrade durante l'installazione" || fail "pkg upgrade lanciato"
+T0=$(find /tmp -maxdepth 2 -name n.tar.gz -newer "$TMP/inst.tpl" 2>/dev/null | head -1)
+[ -z "$T0" ] && pass "cartelle temporanee rimosse (anche dopo il rifiuto)" || fail "rimasto: $T0"
+
 # --- compilazione (solo se c'è un Android SDK) ---
 if [ -d "${ANDROID_HOME:-/nessuno}/build-tools" ]; then
   APK="$ROOT/mobile/android/Nyctalus.apk"
   bash "$ROOT/strumenti/compila-apk.sh" > "$TMP/c.log" 2>&1 && [ -s "$APK" ] && pass "APK compilata e firmata ($(du -h "$APK" | cut -f1))" || fail "compilazione APK: $(tail -3 "$TMP/c.log")"
+  python3 -c "import zipfile,sys;sys.exit(0 if 'assets/nyctalus-termux.tar.gz' in zipfile.ZipFile(sys.argv[1]).namelist() else 1)" "$APK" \
+    && pass "l'APK contiene il pacchetto per Termux" || fail "pacchetto Termux assente dall'APK"
 else
   salta "compilazione APK: nessun Android SDK (imposta ANDROID_HOME)"
 fi
