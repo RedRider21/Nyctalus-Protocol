@@ -114,6 +114,30 @@ grep -q -- "-n org.nyctalus.mobile/.MainActivity" "$TMP/am.txt" 2>/dev/null && p
 T0=$(find /tmp -maxdepth 2 -name n.tar.gz -newer "$TMP/inst.tpl" 2>/dev/null | head -1)
 [ -z "$T0" ] && pass "cartelle temporanee rimosse (anche dopo il rifiuto)" || fail "rimasto: $T0"
 
+# --- il servitore Java vero dell'app (ServitorePacchetto), su JVM con finte classi Android ---
+if java --list-modules 2>/dev/null | grep -q '^jdk.compiler'; then
+  JV="$TMP/jv"; mkdir -p "$JV/src/android/content/res" "$JV/src/org/nyctalus/mobile" "$JV/out"
+  echo 'package android.content; public class Context { public android.content.res.AssetManager getAssets(){ return new android.content.res.AssetManager(); } public Context getApplicationContext(){ return this; } }' > "$JV/src/android/content/Context.java"
+  echo 'package android.content.res; public class AssetManager { public java.io.InputStream open(String n) throws java.io.IOException { return new java.io.FileInputStream(System.getProperty("pacchetto")); } }' > "$JV/src/android/content/res/AssetManager.java"
+  echo 'package org.nyctalus.mobile; public class Prova { public static void main(String[] a) throws Exception { ServitorePacchetto sp = new ServitorePacchetto(new android.content.Context()); sp.start(); System.out.println(sp.indirizzo() + " " + sp.impronta); System.out.flush(); sp.join(); System.out.println("FINITO"); } }' > "$JV/src/org/nyctalus/mobile/Prova.java"
+  cp "$A/java/org/nyctalus/mobile/ServitorePacchetto.java" "$JV/src/org/nyctalus/mobile/"
+  mapfile -t JS < <(find "$JV/src" -name '*.java')
+  if java -m jdk.compiler/com.sun.tools.javac.Main -nowarn -d "$JV/out" "${JS[@]}" 2>"$JV/err"; then
+    java -Dpacchetto="$PK/servito.tar.gz" -cp "$JV/out" org.nyctalus.mobile.Prova > "$JV/log" 2>&1 & PIDS+=($!)
+    for i in $(seq 1 30); do [ -s "$JV/log" ] && break; sleep 0.2; done
+    read -r JURL JH < "$JV/log"
+    [ "$(curl -s -o /dev/null -w '%{http_code}' "${JURL%/*}/indovino")" = 404 ] && pass "servitore dell'app: indirizzo sbagliato → 404" || fail "servitore: indirizzo sbagliato servito"
+    curl -fsS --retry 5 --retry-connrefused --max-time 60 "$JURL" -o "$JV/n.tar.gz" && [ "$JH" = "$HASH" ] && echo "$JH  $JV/n.tar.gz" | sha256sum -c --quiet \
+      && pass "servitore dell'app: pacchetto consegnato integro (SHA-256)" || fail "servitore: consegna o impronta"
+    for i in $(seq 1 40); do grep -q FINITO "$JV/log" && break; sleep 0.2; done
+    grep -q FINITO "$JV/log" && pass "servitore dell'app: si spegne da solo dopo la consegna" || fail "servitore ancora acceso dopo la consegna"
+  else
+    fail "servitore dell'app non compila: $(head -3 "$JV/err")"
+  fi
+else
+  salta "servitore Java: JDK con compilatore assente"
+fi
+
 # --- compilazione (solo se c'è un Android SDK) ---
 if [ -d "${ANDROID_HOME:-/nessuno}/build-tools" ]; then
   APK="$ROOT/mobile/android/Nyctalus.apk"

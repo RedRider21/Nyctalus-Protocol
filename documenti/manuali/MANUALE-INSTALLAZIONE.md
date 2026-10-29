@@ -97,7 +97,10 @@ premuto → **Incolla** → Invio. Il comando è già negli appunti.
 
 Come funziona: l'app serve il pacchetto per qualche minuto su `127.0.0.1`, a un indirizzo
 casuale; Termux lo scarica con `curl` e ne **verifica l'impronta SHA-256** prima di
-installarlo (un pacchetto diverso viene rifiutato e non si installa nulla).
+installarlo (un pacchetto diverso viene rifiutato e non si installa nulla). Durante il
+trasferimento compare la notifica «Nyctalus — Passo il pacchetto a Termux…»: serve a non
+far «congelare» l'app da Android mentre Termux è in primo piano (problema delle versioni
+fino alla 0.3, in cui `curl` restava appeso o falliva). Sparisce da sola a consegna fatta.
 
 Se in Termux compare *«nyctalus-mobile: No such file or directory»* (APK 0.2), Nyctalus
 non è ancora installato: tocca prima «🦇 Installa / aggiorna Nyctalus». Dalla 0.3 il

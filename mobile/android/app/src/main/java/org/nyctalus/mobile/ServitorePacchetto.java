@@ -21,7 +21,8 @@ import java.security.SecureRandom;
  * dell'archivio: per qualche minuto l'app serve il pacchetto su 127.0.0.1, a una porta
  * libera e a un indirizzo casuale (128 bit), e Termux lo scarica con curl. Il comando
  * di installazione controlla anche l'impronta SHA-256, quindi un altro programma non
- * potrebbe sostituire il pacchetto. Serve solo quel file, poi si spegne da solo.
+ * potrebbe sostituire il pacchetto. Serve solo quel file e si spegne appena l'ha
+ * consegnato per intero (o dopo 15 minuti). Intanto ServizioPacchetto tiene sveglia l'app.
  */
 class ServitorePacchetto extends Thread {
 
@@ -32,6 +33,7 @@ class ServitorePacchetto extends Thread {
     private final ServerSocket server;
     final String percorso, impronta;
     final int porta;
+    private long dimensione;
 
     ServitorePacchetto(Context ctx) throws Exception {
         this.ctx = ctx.getApplicationContext();
@@ -42,7 +44,7 @@ class ServitorePacchetto extends Thread {
         try (InputStream in = ctx.getAssets().open(NOME)) {
             byte[] buf = new byte[65536];
             int n;
-            while ((n = in.read(buf)) > 0) md.update(buf, 0, n);
+            while ((n = in.read(buf)) > 0) { md.update(buf, 0, n); dimensione += n; }
         }
         impronta = esadecimale(md.digest());
         server = new ServerSocket(0, 4, InetAddress.getByName("127.0.0.1"));
@@ -68,10 +70,13 @@ class ServitorePacchetto extends Thread {
     public void run() {
         long fine = System.currentTimeMillis() + DURATA_MS;
         try {
-            while (System.currentTimeMillis() < fine) {
+            while (System.currentTimeMillis() < fine && !isInterrupted()) {
                 try (Socket s = server.accept()) {
                     s.setSoTimeout(5000);
-                    servi(s);
+                    if (servi(s)) {
+                        dormi(3000);    // lascia a curl il tempo di chiudere
+                        return;         // consegnato: missione compiuta
+                    }
                 } catch (SocketTimeoutException attesa) {
                     // nessuno: si ricontrolla la scadenza
                 } catch (Exception ignorata) { }
@@ -81,7 +86,12 @@ class ServitorePacchetto extends Thread {
         }
     }
 
-    private void servi(Socket s) throws Exception {
+    private static void dormi(long ms) {
+        try { Thread.sleep(ms); } catch (InterruptedException ignorata) { }
+    }
+
+    /** True se ha consegnato il pacchetto per intero. */
+    private boolean servi(Socket s) throws Exception {
         InputStream in = s.getInputStream();
         StringBuilder riga = new StringBuilder();
         int c;
@@ -89,9 +99,10 @@ class ServitorePacchetto extends Thread {
         OutputStream out = s.getOutputStream();
         if (!riga.toString().startsWith("GET /" + percorso + " ")) {
             out.write("HTTP/1.0 404 Not Found\r\nContent-Length: 0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
-            return;
+            return false;
         }
-        out.write(("HTTP/1.0 200 OK\r\nContent-Type: application/gzip\r\nConnection: close\r\n\r\n")
+        out.write(("HTTP/1.0 200 OK\r\nContent-Type: application/gzip\r\nContent-Length: " + dimensione
+                + "\r\nConnection: close\r\n\r\n")
                 .getBytes(StandardCharsets.US_ASCII));
         try (InputStream a = ctx.getAssets().open(NOME)) {
             byte[] buf = new byte[65536];
@@ -99,6 +110,7 @@ class ServitorePacchetto extends Thread {
             while ((n = a.read(buf)) > 0) out.write(buf, 0, n);
         }
         out.flush();
+        return true;
     }
 
     private static String esadecimale(byte[] b) {

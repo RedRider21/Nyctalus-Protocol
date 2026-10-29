@@ -375,8 +375,14 @@ public class MainActivity extends Activity {
 
     private ServitorePacchetto avviaServitore() {
         try {
+            ServitorePacchetto vecchio = ServizioPacchetto.attivo;
+            if (vecchio != null) vecchio.interrupt();
             ServitorePacchetto sp = new ServitorePacchetto(this);
             sp.start();
+            ServizioPacchetto.attivo = sp;
+            Intent i = new Intent(this, ServizioPacchetto.class);
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(i);
+            else startService(i);
             return sp;
         } catch (Exception e) {
             avviso("Impossibile preparare il pacchetto: " + e.getMessage());
@@ -389,7 +395,8 @@ public class MainActivity extends Activity {
         String cmd = "D=$(mktemp -d) && cd \"$D\" && "
                 + "{ command -v curl >/dev/null 2>&1 || pkg install -y curl; } && "
                 + "echo '» Scarico Nyctalus dall app…' && "
-                + "curl -fsS " + sp.indirizzo() + " -o n.tar.gz && "
+                + "curl -fsS --retry 5 --retry-connrefused --retry-delay 1 --connect-timeout 5 --max-time 300 "
+                + sp.indirizzo() + " -o n.tar.gz && "
                 + "echo '" + sp.impronta + "  n.tar.gz' | sha256sum -c --quiet && "
                 + "tar xzf n.tar.gz && bash nyctalus-termux/installa.sh && cd ~ && rm -rf \"$D\" && "
                 + comandoAvvio() + " && "

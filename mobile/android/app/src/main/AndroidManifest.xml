@@ -4,6 +4,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Solo mentre Termux scarica il pacchetto dall'app (vedi ServizioPacchetto). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <!-- Per chiedere a Termux di avviare Nyctalus (intent RUN_COMMAND).
          Va abbinato a "allow-external-apps = true" in ~/.termux/termux.properties,
          riga che l'installatore di Nyctalus aggiunge da solo. -->
@@ -35,6 +38,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".ServizioPacchetto"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <!-- Foto scattate dalla chat: restano nella cartella PRIVATA dell'app (non nella
              galleria del telefono); la fotocamera ci scrive con un permesso temporaneo. -->
