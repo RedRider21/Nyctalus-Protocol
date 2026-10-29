@@ -102,3 +102,12 @@ footer a{color:var(--acc)}
 .scatto.stretta img{width:auto;max-width:100%;margin:0 auto}
 .scatto figcaption{font-size:.86rem;color:var(--tenue);margin-top:8px;text-align:center;line-height:1.45}
 @media (max-width:760px){.galleria-pc{grid-template-columns:1fr}.galleria-tel{grid-template-columns:1fr 1fr}}
+
+/* torna su: in basso a sinistra, compare scorrendo */
+.torna-su{position:fixed;left:18px;bottom:18px;z-index:30;width:44px;height:44px;border-radius:50%;
+  border:1px solid var(--bordo);background:color-mix(in srgb,var(--sup) 92%,transparent);color:var(--testo);
+  font-size:20px;line-height:1;cursor:pointer;box-shadow:var(--ombra);backdrop-filter:blur(8px);
+  opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .25s,transform .25s,background .2s}
+.torna-su.visibile{opacity:.92;transform:none;pointer-events:auto}
+.torna-su:hover{opacity:1;background:var(--sup2)}
+@media (max-width:760px){.torna-su{left:12px;bottom:12px;width:40px;height:40px}}

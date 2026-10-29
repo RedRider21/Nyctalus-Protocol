@@ -112,6 +112,13 @@ firewall del PC blocca le porte: apri TCP 18800 e UDP 4701-4704 verso la rete lo
 </ul>
 </article>
 </main>
+<button class="torna-su" id="torna-su" type="button" title="Torna su" aria-label="Torna su">↑</button>
+<script>
+(function(){var b=document.getElementById('torna-su');
+function aggiorna(){b.classList.toggle('visibile',window.scrollY>500);}
+window.addEventListener('scroll',aggiorna,{passive:true});aggiorna();
+b.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});})();
+</script>
 <script>
 (function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
 if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
