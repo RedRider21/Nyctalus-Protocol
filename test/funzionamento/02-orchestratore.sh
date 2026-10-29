@@ -17,10 +17,9 @@ HOME="$H" NYCTALUS_BIN="$BIN" python3 "$ROOT/mobile/orchestratore/nyctalus_mobil
 OPID=$!; PIDS+=($OPID)
 [ -n "$(attendi_regex "$TMP/o.log" 'servizi pronti' 40)" ] && pass "servizi avviati (rete di prova + chat + servizio .nyct)" || { fail "servizi non avviati: $(tail -2 "$TMP/o.log")"; exit 1; }
 python3 "$STRUMENTI/prova_orchestratore.py" 19732 "$TOK" > "$TMP/r.txt" 2>&1
-cat "$TMP/r.txt" | while read -r esito resto; do
+while read -r esito resto; do          # niente pipe: i conteggi restano in questa shell
   case "$esito" in OK) pass "$resto" ;; KO) fail "$resto" ;; esac
-done
-grep -q '^KO' "$TMP/r.txt" && KO=$((KO+1))
+done < "$TMP/r.txt"
 kill "$OPID"; sleep 1.5
 N=$(pgrep -fc -- "--data $H/.nyctalus-chat" || true)
 [ "$N" = "0" ] && pass "fermato: nessun processo orfano" || fail "processi rimasti dopo l'arresto: $N"
