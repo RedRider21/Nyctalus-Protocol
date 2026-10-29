@@ -26,7 +26,7 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango  # noqa: E402
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E402
 
 try:
     from nxs_i18n import t as _t_base
@@ -52,6 +52,19 @@ _ITA = {
     "chat.contatti": "Contatti",
     "chat.cerca": "Cerca…",
     "chat.aggiungi": "Aggiungi contatto",
+    "chat.allega": "Allega file, foto, video…",
+    "chat.apri": "Apri",
+    "chat.mostra_cartella": "Mostra nella cartella",
+    "chat.file_mancante": "file non più disponibile",
+    "chat.invio_in_corso": "Invio",
+    "chat.ricezione": "Ricezione",
+    "chat.senza_exif": "Foto senza metadati (posizione GPS, fotocamera)",
+    "chat.filtro.tutti": "Tutti i file",
+    "chat.filtro.immagini": "Immagini",
+    "chat.filtro.video": "Video",
+    "chat.filtro.audio": "Audio",
+    "chat.filtro.documenti": "Documenti",
+    "chat.filtro.archivi": "Archivi",
     "chat.aspetto": "Aspetto: tema e sfondo",
     "chat.tema": "Tema",
     "chat.sfondo": "Sfondo",
@@ -179,6 +192,26 @@ row.contatto:hover { background: rgba(@RGB@,0.09); }
         min-width: 42px; min-height: 42px; font-size: 16px; }
 .send:hover { background: @SENDH@; }
 .send:disabled { background: rgba(@RGB@,0.15); color: @MUTED@; }
+
+/* allegati */
+.graffetta { background: transparent; border: none; box-shadow: none; color: @MUTED@;
+             font-size: 18px; padding: 4px 6px; min-width: 0; }
+.graffetta:hover { color: @ACCENT@; }
+.bolla.allegato { padding: 6px; }
+.anteprima { border-radius: 12px; }
+.icona-file { font-size: 28px; padding: 2px 4px; }
+.nome-file { font-weight: 600; }
+.dim-file { font-size: 11px; opacity: 0.75; }
+progressbar.barra trough { min-height: 5px; border-radius: 3px; background: rgba(@RGB@,0.20); }
+progressbar.barra progress { min-height: 5px; border-radius: 3px; background: @ACCENT@; }
+.avviso { color: #f0b45a; font-size: 12px; padding: 4px 12px; }
+
+/* barre di scorrimento sottili e intonate al tema; niente tratteggi di GTK */
+scrollbar, scrollbar trough { background: transparent; border: none; }
+scrollbar slider { background: rgba(@RGB@,0.35); min-width: 6px; min-height: 30px;
+                   border-radius: 3px; border: none; }
+scrollbar slider:hover { background: rgba(@RGB@,0.55); }
+scrolledwindow undershoot, scrolledwindow overshoot { background: none; border: none; box-shadow: none; }
 """
 
 # Temi: tutti i colori dell'interfaccia. RGB = colore d'accento in "r,g,b" per i veli.
@@ -253,6 +286,72 @@ def _css(nome_tema=TEMA_DEF, nome_sfondo=SFONDO_DEF):
     return css
 
 
+# --- allegati: tipi, icone, apertura sicura -----------------------------------
+TIPI_ANTEPRIMA = ("image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp")
+FILTRI = (
+    ("tutti", ("*",)),
+    ("immagini", ("image/*",)),
+    ("video", ("video/*",)),
+    ("audio", ("audio/*",)),
+    ("documenti", ("application/pdf", "text/*", "*.odt", "*.ods", "*.odp", "*.doc", "*.docx",
+                   "*.xls", "*.xlsx", "*.ppt", "*.pptx", "*.rtf", "*.md", "*.csv")),
+    ("archivi", ("*.zip", "*.7z", "*.tar", "*.gz", "*.xz", "*.rar")),
+)
+
+
+def apribile(mime):
+    """Tipi che si possono aprire direttamente senza rischio di eseguire
+    codice: media, PDF, testo semplice. Il resto va solo mostrato in cartella."""
+    return (mime.startswith(("image/", "video/", "audio/")) and mime != "image/svg+xml") \
+        or mime in ("application/pdf", "text/plain")
+
+
+def icona_tipo(mime):
+    if mime.startswith("image/"):
+        return "🖼"
+    if mime.startswith("video/"):
+        return "🎬"
+    if mime.startswith("audio/"):
+        return "🎵"
+    if mime == "application/pdf" or mime.startswith("text/") or "document" in mime or "sheet" in mime:
+        return "📄"
+    if any(k in mime for k in ("zip", "compressed", "tar", "x-7z", "rar")):
+        return "🗜"
+    return "📦"
+
+
+def dimensione_leggibile(n):
+    try:
+        n = float(n)
+    except Exception:            # noqa: BLE001
+        return ""
+    for unita in ("B", "KB", "MB", "GB"):
+        if n < 1024 or unita == "GB":
+            return ("%d %s" % (n, unita)) if unita == "B" else ("%.1f %s" % (n, unita))
+        n /= 1024
+
+
+def senza_metadati(percorso, mime):
+    """Per le foto JPEG/PNG: ricodifica (ruotata correttamente) senza i
+    metadati EXIF — niente posizione GPS né modello del telefono. Se qualcosa
+    va storto si invia l'originale."""
+    if mime not in ("image/jpeg", "image/png"):
+        return percorso
+    try:
+        px = GdkPixbuf.Pixbuf.new_from_file(percorso)
+        px = px.apply_embedded_orientation() or px
+        cartella = Path(GLib.get_user_cache_dir()) / "nyctalus-chat" / "invio"
+        cartella.mkdir(parents=True, exist_ok=True)
+        dest = cartella / os.path.basename(percorso)
+        if mime == "image/jpeg":
+            px.savev(str(dest), "jpeg", ["quality"], ["92"])
+        else:
+            px.savev(str(dest), "png", [], [])
+        return str(dest)
+    except Exception:            # noqa: BLE001
+        return percorso
+
+
 def ora_hhmm(ts):
     try:
         return datetime.fromtimestamp(int(ts)).strftime("%H:%M")
@@ -294,6 +393,7 @@ class Chat(Gtk.Window):
         self.righe_contatto = {} # addr -> Gtk.ListBoxRow
         self.sock = None
         self.filtro = ""
+        self.trasferimenti = {}  # id → (riga, barra, etichetta) delle bolle in corso
 
         # aspetto (tema + sfondo) ricordato fra un avvio e l'altro
         self.ui = self._carica_ui()
@@ -304,6 +404,8 @@ class Chat(Gtk.Window):
         self.get_style_context().add_class("chat-root")
         # dimensione/stato della finestra come all'ultima chiusura
         self.set_default_size(int(self.ui.get("larghezza", 880)), int(self.ui.get("altezza", 600)))
+        if isinstance(self.ui.get("x"), int) and isinstance(self.ui.get("y"), int):
+            self.move(self.ui["x"], self.ui["y"])     # dove l'avevi lasciata
         if self.ui.get("massimizzata"):
             self.maximize()
         self._salva_dim_pendente = 0
@@ -443,10 +545,19 @@ class Chat(Gtk.Window):
         self.conv.get_style_context().add_class("conversazione")
         self.scorri_conv.add(self.conv)
         self.pila.add_named(self.scorri_conv, "conv")
+        # trascina qui i file per inviarli (come in Telegram)
+        self.scorri_conv.drag_dest_set(Gtk.DestDefaults.ALL, [], Gdk.DragAction.COPY)
+        self.scorri_conv.drag_dest_add_uri_targets()
+        self.scorri_conv.connect("drag-data-received", self._file_trascinati)
 
         # compositore
         self.comp = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         self.comp.get_style_context().add_class("compositore")
+        graffetta = Gtk.Button(label="📎")
+        graffetta.get_style_context().add_class("graffetta")
+        graffetta.set_tooltip_text(_t("chat.allega"))
+        graffetta.connect("clicked", self._scegli_file)
+        self.comp.pack_start(graffetta, False, False, 0)
         self.ingresso = Gtk.Entry()
         self.ingresso.set_placeholder_text(_t("chat.scrivi"))
         self.ingresso.connect("activate", lambda _w: self._invia())
@@ -560,9 +671,27 @@ class Chat(Gtk.Window):
             addr, ts, hx = parti[1], parti[2], parti[3]
             if addr == self.attivo:
                 self._bolla("out", _da_hex(hx), ts)
+        elif tipo == "P" and len(parti) >= 8 and parti[1] in ("fin", "fout"):
+            # P fin|fout <ts> <id> <dim> <mime> <nome hex> <percorso hex>
+            self._bolla_allegato("out" if parti[1] == "fout" else "in", parti[2], parti[3],
+                                 parti[4], parti[5], _da_hex(parti[6]), _da_hex(parti[7]))
         elif tipo == "P" and len(parti) >= 4:
             direzione, ts, hx = parti[1], parti[2], parti[3]
             self._bolla("out" if direzione == "out" else "in", _da_hex(hx), ts)
+        elif tipo == "FILE" and len(parti) >= 9:
+            # FILE <addr> <in|out> <ts> <id> <dim> <mime> <nome hex> <percorso hex>
+            if parti[1] == self.attivo:
+                self._bolla_allegato(parti[2], parti[3], parti[4], parti[5], parti[6],
+                                     _da_hex(parti[7]), _da_hex(parti[8]))
+        elif tipo == "PROG" and len(parti) >= 6:
+            # PROG <addr> <in|out> <id> <fatti> <totale>
+            if parti[1] == self.attivo:
+                self._avanzamento(parti[2], parti[3], int(parti[4]), int(parti[5]))
+        elif tipo == "FERR" and len(parti) >= 4:
+            # FERR <addr> <id|-> <messaggio hex>
+            if parti[1] == self.attivo:
+                self._togli_trasferimento(parti[2])
+                self._avviso_inline("⚠ " + _da_hex(parti[3]))
         elif tipo == "NEW" and len(parti) >= 2:
             self._contatto_sconosciuto(parti[1])
         return False
@@ -632,6 +761,7 @@ class Chat(Gtk.Window):
         self._aggiorna_testa()
         for figlio in self.conv.get_children():
             self.conv.remove(figlio)
+        self.trasferimenti = {}
         self.pila.set_visible_child_name("conv")
         self._cmd("HIST %s" % self.attivo)
         self.ingresso.grab_focus()
@@ -660,29 +790,171 @@ class Chat(Gtk.Window):
         self._dialogo_aggiungi(preimposta=addr, info=_t("chat.aggiungi_sconosciuto"))
 
     # --- messaggi --------------------------------------------------------------
-    def _bolla(self, direzione, testo, ts):
+    def _nuova_bolla(self, direzione, ts, extra=None):
+        """Crea riga + bolla (allineata a destra se nostra) e restituisce
+        (riga, bolla) per riempirla; l'ora va in fondo alla bolla."""
         riga = Gtk.ListBoxRow()
         riga.set_selectable(False)
         contenitore = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        bolla = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        bolla = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         bolla.get_style_context().add_class("bolla")
         bolla.get_style_context().add_class("bolla-out" if direzione == "out" else "bolla-in")
+        if extra:
+            bolla.get_style_context().add_class(extra)
+        if direzione == "out":
+            contenitore.pack_end(bolla, False, False, 0)
+        else:
+            contenitore.pack_start(bolla, False, False, 0)
+        riga.add(contenitore)
+        return riga, bolla
+
+    def _chiudi_bolla(self, riga, bolla, ts):
+        if ts is not None:
+            oraet = Gtk.Label(label=ora_hhmm(ts), xalign=1); oraet.get_style_context().add_class("ora")
+            bolla.pack_start(oraet, False, False, 0)
+        riga.show_all()
+        self.conv.add(riga)
+        GLib.idle_add(self._scorri_in_fondo)
+
+    def _bolla(self, direzione, testo, ts):
+        riga, bolla = self._nuova_bolla(direzione, ts)
         et = Gtk.Label(label=testo, xalign=0); et.get_style_context().add_class("testo")
         et.set_line_wrap(True)
         et.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
         et.set_max_width_chars(46)
         et.set_selectable(True)
         bolla.pack_start(et, False, False, 0)
-        oraet = Gtk.Label(label=ora_hhmm(ts), xalign=1); oraet.get_style_context().add_class("ora")
-        bolla.pack_start(oraet, False, False, 0)
-        if direzione == "out":
-            contenitore.pack_end(bolla, False, False, 0)
+        self._chiudi_bolla(riga, bolla, ts)
+
+    # --- allegati ----------------------------------------------------------------
+    def _bolla_allegato(self, direzione, ts, ident, dim, mime, nome, percorso):
+        """Foto: anteprima cliccabile. Altri tipi: scheda con icona, nome,
+        dimensione e i pulsanti Apri / Mostra nella cartella."""
+        self._togli_trasferimento(ident)
+        riga, bolla = self._nuova_bolla(direzione, ts, "allegato")
+        esiste = bool(percorso) and os.path.isfile(percorso)
+        anteprima = None
+        if esiste and mime in TIPI_ANTEPRIMA:
+            try:
+                px = GdkPixbuf.Pixbuf.new_from_file_at_scale(percorso, 280, 280, True)
+                anteprima = Gtk.Image.new_from_pixbuf(px)
+            except Exception:    # noqa: BLE001
+                anteprima = None
+        if anteprima is not None:
+            scatola = Gtk.EventBox()
+            scatola.add(anteprima)
+            scatola.get_style_context().add_class("anteprima")
+            scatola.set_tooltip_text("%s · %s" % (nome, dimensione_leggibile(dim)))
+            scatola.connect("button-press-event", lambda *_a: self._apri_allegato(percorso, mime))
+            bolla.pack_start(scatola, False, False, 0)
         else:
-            contenitore.pack_start(bolla, False, False, 0)
-        riga.add(contenitore)
-        riga.show_all()
+            scheda = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            icona = Gtk.Label(label=icona_tipo(mime))
+            icona.get_style_context().add_class("icona-file")
+            scheda.pack_start(icona, False, False, 0)
+            col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            n = Gtk.Label(label=nome, xalign=0); n.get_style_context().add_class("nome-file")
+            n.set_ellipsize(Pango.EllipsizeMode.MIDDLE); n.set_max_width_chars(30)
+            info = dimensione_leggibile(dim) if esiste else _t("chat.file_mancante")
+            d = Gtk.Label(label=info, xalign=0); d.get_style_context().add_class("dim-file")
+            col.pack_start(n, False, False, 0); col.pack_start(d, False, False, 0)
+            scheda.pack_start(col, True, True, 0)
+            bolla.pack_start(scheda, False, False, 0)
+            if esiste:
+                tasti = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+                if apribile(mime):
+                    a = Gtk.Button(label=_t("chat.apri")); a.get_style_context().add_class("pill")
+                    a.connect("clicked", lambda *_a: self._apri_allegato(percorso, mime))
+                    tasti.pack_start(a, False, False, 0)
+                c = Gtk.Button(label=_t("chat.mostra_cartella")); c.get_style_context().add_class("pill")
+                c.connect("clicked", lambda *_a: self._mostra_cartella(percorso))
+                tasti.pack_start(c, False, False, 0)
+                bolla.pack_start(tasti, False, False, 0)
+        self._chiudi_bolla(riga, bolla, ts)
+
+    def _avanzamento(self, direzione, ident, fatti, totale):
+        """Bolla con barra di avanzamento finché l'allegato non è completo."""
+        if ident not in self.trasferimenti:
+            riga, bolla = self._nuova_bolla(direzione, None, "allegato")
+            et = Gtk.Label(xalign=0); et.get_style_context().add_class("dim-file")
+            barra = Gtk.ProgressBar(); barra.get_style_context().add_class("barra")
+            barra.set_size_request(220, -1)
+            bolla.pack_start(et, False, False, 0)
+            bolla.pack_start(barra, False, False, 0)
+            self._chiudi_bolla(riga, bolla, None)
+            self.trasferimenti[ident] = (riga, barra, et)
+        _riga, barra, et = self.trasferimenti[ident]
+        frazione = (fatti / totale) if totale else 1.0
+        barra.set_fraction(min(1.0, frazione))
+        verbo = _t("chat.invio_in_corso") if direzione == "out" else _t("chat.ricezione")
+        et.set_text("%s %s / %s" % (verbo, dimensione_leggibile(fatti), dimensione_leggibile(totale)))
+
+    def _togli_trasferimento(self, ident):
+        voce = self.trasferimenti.pop(ident, None)
+        if voce is not None:
+            try:
+                self.conv.remove(voce[0])
+            except Exception:    # noqa: BLE001
+                pass
+
+    def _avviso_inline(self, testo):
+        riga = Gtk.ListBoxRow(); riga.set_selectable(False)
+        et = Gtk.Label(label=testo); et.get_style_context().add_class("avviso")
+        et.set_line_wrap(True); et.set_max_width_chars(60)
+        riga.add(et); riga.show_all()
         self.conv.add(riga)
         GLib.idle_add(self._scorri_in_fondo)
+
+    def _apri_allegato(self, percorso, mime):
+        """Apre con il programma di sistema solo i tipi innocui; gli altri
+        (eseguibili, script, archivi…) si mostrano nella cartella."""
+        if not os.path.isfile(percorso):
+            return
+        if not apribile(mime):
+            return self._mostra_cartella(percorso)
+        try:
+            Gtk.show_uri_on_window(self, GLib.filename_to_uri(percorso, None), Gdk.CURRENT_TIME)
+        except Exception:        # noqa: BLE001
+            self._mostra_cartella(percorso)
+
+    def _mostra_cartella(self, percorso):
+        try:
+            Gtk.show_uri_on_window(self, GLib.filename_to_uri(os.path.dirname(percorso), None), Gdk.CURRENT_TIME)
+        except Exception:        # noqa: BLE001
+            pass
+
+    def _scegli_file(self, _w):
+        if not self.attivo:
+            return
+        d = Gtk.FileChooserNative.new(_t("chat.allega"), self, Gtk.FileChooserAction.OPEN, None, None)
+        d.set_select_multiple(True)
+        for chiave, schemi in FILTRI:
+            f = Gtk.FileFilter(); f.set_name(_t("chat.filtro." + chiave))
+            for sch in schemi:
+                (f.add_mime_type if "/" in sch else f.add_pattern)(sch)
+            d.add_filter(f)
+        if d.run() == Gtk.ResponseType.ACCEPT:
+            for percorso in d.get_filenames():
+                self._invia_file(percorso)
+        d.destroy()
+
+    def _file_trascinati(self, _w, ctx, _x, _y, dati, _info, tempo):
+        if self.attivo:
+            for uri in dati.get_uris() or []:
+                try:
+                    percorso, _h = GLib.filename_from_uri(uri)
+                except Exception:    # noqa: BLE001
+                    continue
+                if os.path.isfile(percorso):
+                    self._invia_file(percorso)
+        Gtk.drag_finish(ctx, True, False, tempo)
+
+    def _invia_file(self, percorso):
+        tipo, _incerto = Gio.content_type_guess(percorso, None)
+        mime = Gio.content_type_get_mime_type(tipo) or "application/octet-stream"
+        if self.ui.get("senza_exif", True):
+            percorso = senza_metadati(percorso, mime)
+        self._cmd("SENDFILE %s %s %s" % (self.attivo, percorso.encode().hex(), mime))
 
     def _scorri_in_fondo(self):
         adj = self.scorri_conv.get_vadjustment()
@@ -770,6 +1042,8 @@ class Chat(Gtk.Window):
             w, h = self.get_size()
             if w > 200 and h > 200:
                 self.ui["larghezza"], self.ui["altezza"] = w, h
+            x, y = self.get_position()
+            self.ui["x"], self.ui["y"] = int(x), int(y)
         self._salva_ui()
         return False
 
@@ -798,6 +1072,11 @@ class Chat(Gtk.Window):
         menu.append(Gtk.SeparatorMenuItem())
         sezione(_t("chat.sfondo"))
         gruppo("sfondo", list(SFONDI))
+        menu.append(Gtk.SeparatorMenuItem())
+        exif = Gtk.CheckMenuItem(label=_t("chat.senza_exif"))
+        exif.set_active(self.ui.get("senza_exif", True))
+        exif.connect("toggled", lambda v: (self.ui.__setitem__("senza_exif", v.get_active()), self._salva_ui()))
+        menu.append(exif)
         menu.show_all()
         menu.popup_at_widget(bottone, Gdk.Gravity.SOUTH_WEST, Gdk.Gravity.NORTH_WEST, None)
 

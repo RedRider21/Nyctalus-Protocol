@@ -1542,5 +1542,18 @@
   "chat.tema.chiaro": "Hell",
   "chat.sfondo.pipistrelli": "Fledermausmuster",
   "chat.sfondo.velo": "Farbschleier",
-  "chat.sfondo.tinta": "Einfarbig"
+  "chat.sfondo.tinta": "Einfarbig",
+  "chat.allega": "Dateien, Fotos, Videos anhängen…",
+  "chat.apri": "Öffnen",
+  "chat.mostra_cartella": "Im Ordner zeigen",
+  "chat.file_mancante": "Datei nicht mehr verfügbar",
+  "chat.invio_in_corso": "Senden",
+  "chat.ricezione": "Empfangen",
+  "chat.senza_exif": "Fotos ohne Metadaten (GPS-Ort, Kamera)",
+  "chat.filtro.tutti": "Alle Dateien",
+  "chat.filtro.immagini": "Bilder",
+  "chat.filtro.video": "Videos",
+  "chat.filtro.audio": "Audio",
+  "chat.filtro.documenti": "Dokumente",
+  "chat.filtro.archivi": "Archive"
 }

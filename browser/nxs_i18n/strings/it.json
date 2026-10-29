@@ -1542,5 +1542,18 @@
   "chat.tema.chiaro": "Chiaro",
   "chat.sfondo.pipistrelli": "Trama a pipistrelli",
   "chat.sfondo.velo": "Velo di colore",
-  "chat.sfondo.tinta": "Tinta unita"
+  "chat.sfondo.tinta": "Tinta unita",
+  "chat.allega": "Allega file, foto, video…",
+  "chat.apri": "Apri",
+  "chat.mostra_cartella": "Mostra nella cartella",
+  "chat.file_mancante": "file non più disponibile",
+  "chat.invio_in_corso": "Invio",
+  "chat.ricezione": "Ricezione",
+  "chat.senza_exif": "Foto senza metadati (posizione GPS, fotocamera)",
+  "chat.filtro.tutti": "Tutti i file",
+  "chat.filtro.immagini": "Immagini",
+  "chat.filtro.video": "Video",
+  "chat.filtro.audio": "Audio",
+  "chat.filtro.documenti": "Documenti",
+  "chat.filtro.archivi": "Archivi"
 }

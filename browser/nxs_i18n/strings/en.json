@@ -1542,5 +1542,18 @@
   "chat.tema.chiaro": "Light",
   "chat.sfondo.pipistrelli": "Bat pattern",
   "chat.sfondo.velo": "Colour veil",
-  "chat.sfondo.tinta": "Solid colour"
+  "chat.sfondo.tinta": "Solid colour",
+  "chat.allega": "Attach files, photos, videos…",
+  "chat.apri": "Open",
+  "chat.mostra_cartella": "Show in folder",
+  "chat.file_mancante": "file no longer available",
+  "chat.invio_in_corso": "Sending",
+  "chat.ricezione": "Receiving",
+  "chat.senza_exif": "Photos without metadata (GPS location, camera)",
+  "chat.filtro.tutti": "All files",
+  "chat.filtro.immagini": "Images",
+  "chat.filtro.video": "Videos",
+  "chat.filtro.audio": "Audio",
+  "chat.filtro.documenti": "Documents",
+  "chat.filtro.archivi": "Archives"
 }

@@ -1542,5 +1542,18 @@
   "chat.tema.chiaro": "Claro",
   "chat.sfondo.pipistrelli": "Trama de murciélagos",
   "chat.sfondo.velo": "Velo de color",
-  "chat.sfondo.tinta": "Color liso"
+  "chat.sfondo.tinta": "Color liso",
+  "chat.allega": "Adjuntar archivos, fotos, vídeos…",
+  "chat.apri": "Abrir",
+  "chat.mostra_cartella": "Mostrar en la carpeta",
+  "chat.file_mancante": "archivo ya no disponible",
+  "chat.invio_in_corso": "Enviando",
+  "chat.ricezione": "Recibiendo",
+  "chat.senza_exif": "Fotos sin metadatos (ubicación GPS, cámara)",
+  "chat.filtro.tutti": "Todos los archivos",
+  "chat.filtro.immagini": "Imágenes",
+  "chat.filtro.video": "Vídeos",
+  "chat.filtro.audio": "Audio",
+  "chat.filtro.documenti": "Documentos",
+  "chat.filtro.archivi": "Archivos comprimidos"
 }

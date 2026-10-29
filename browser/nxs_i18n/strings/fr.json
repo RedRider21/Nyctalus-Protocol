@@ -1542,5 +1542,18 @@
   "chat.tema.chiaro": "Clair",
   "chat.sfondo.pipistrelli": "Motif chauves-souris",
   "chat.sfondo.velo": "Voile de couleur",
-  "chat.sfondo.tinta": "Couleur unie"
+  "chat.sfondo.tinta": "Couleur unie",
+  "chat.allega": "Joindre fichiers, photos, vidéos…",
+  "chat.apri": "Ouvrir",
+  "chat.mostra_cartella": "Afficher dans le dossier",
+  "chat.file_mancante": "fichier plus disponible",
+  "chat.invio_in_corso": "Envoi",
+  "chat.ricezione": "Réception",
+  "chat.senza_exif": "Photos sans métadonnées (position GPS, appareil)",
+  "chat.filtro.tutti": "Tous les fichiers",
+  "chat.filtro.immagini": "Images",
+  "chat.filtro.video": "Vidéos",
+  "chat.filtro.audio": "Audio",
+  "chat.filtro.documenti": "Documents",
+  "chat.filtro.archivi": "Archives"
 }
