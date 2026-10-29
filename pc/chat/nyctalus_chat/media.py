@@ -12,6 +12,7 @@ import math
 import os
 import shutil
 import subprocess
+import queue
 import threading
 import time
 from pathlib import Path
@@ -245,25 +246,31 @@ def miniatura_video(percorso, pronto):
     """Estrae in un thread un fotogramma e la durata; chiama pronto(jpg, durata)
     nel thread di GTK. Risultati in cache (per percorso+data di modifica)."""
     def lavoro():
-        jpg, durata = None, None
-        try:
-            st = os.stat(percorso)
-            chiave = hashlib.sha1(("%s|%d|%d" % (percorso, st.st_size, int(st.st_mtime))).encode()).hexdigest()
-            cartella = CACHE / "miniature"
-            cartella.mkdir(parents=True, exist_ok=True)
-            dest = cartella / (chiave + ".jpg")
-            durata = _ffprobe_durata(percorso)
-            if not dest.exists() and shutil.which("ffmpeg"):
-                istante = "1" if (durata or 0) > 2 else "0"
-                subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", istante, "-i", percorso,
-                                "-frames:v", "1", "-vf", "scale=640:-2", str(dest)],
-                               capture_output=True, timeout=20)
-            if dest.exists():
-                jpg = str(dest)
-        except Exception:        # noqa: BLE001
-            pass
+        jpg, durata = miniatura_video_subito(percorso)
         GLib.idle_add(lambda: (pronto(jpg, durata), False)[1])
     threading.Thread(target=lavoro, daemon=True).start()
+
+
+def miniatura_video_subito(percorso):
+    """Come miniatura_video ma nel thread chiamante: → (jpg o None, durata o None)."""
+    jpg, durata = None, None
+    try:
+        st = os.stat(percorso)
+        chiave = hashlib.sha1(("%s|%d|%d" % (percorso, st.st_size, int(st.st_mtime))).encode()).hexdigest()
+        cartella = CACHE / "miniature"
+        cartella.mkdir(parents=True, exist_ok=True)
+        dest = cartella / (chiave + ".jpg")
+        durata = _ffprobe_durata(percorso)
+        if not dest.exists() and shutil.which("ffmpeg"):
+            istante = "1" if (durata or 0) > 2 else "0"
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", istante, "-i", percorso,
+                            "-frames:v", "1", "-vf", "scale=640:-2", str(dest)],
+                           capture_output=True, timeout=20)
+        if dest.exists():
+            jpg = str(dest)
+    except Exception:        # noqa: BLE001
+        pass
+    return jpg, durata
 
 
 def durata_in_sottofondo(percorso, pronto):
@@ -642,6 +649,10 @@ class SelettoreAllegati(Gtk.Dialog):
     def __init__(self, genitore, testi, exif_predefinito):
         super().__init__(title=testi["titolo"], transient_for=genitore, modal=True)
         self.t, self.scelti, self.tile, self.azione = testi, [], [], None
+        # anteprime un po' alla volta, in sottofondo, nell'ordine delle caselle (prima
+        # quelle in alto): con migliaia di foto la finestra resta reattiva
+        self._coda, self._chiuso = queue.Queue(), False
+        self.connect("destroy", lambda *_a: setattr(self, "_chiuso", True))
         self.get_style_context().add_class("selettore-allegati")
         self.set_default_size(620, 600)
         area = self.get_content_area()
@@ -710,12 +721,24 @@ class SelettoreAllegati(Gtk.Dialog):
             self.tile.append(tile)
             self.griglia.add(tile)
             tile.show()
-            if video:
-                miniatura_video(p, lambda jpg, d, t=tile: (setattr(t, "durata", durata_leggibile(d)),
-                                                          jpg and t.imposta_pixbuf(_px(jpg)), t.queue_draw()))
+            self._coda.put(tile)
+        for _ in range(2):                      # due anteprime per volta
+            threading.Thread(target=self._prepara_anteprime, daemon=True).start()
+
+    def _prepara_anteprime(self):
+        while not self._chiuso:
+            try:
+                t = self._coda.get_nowait()
+            except queue.Empty:
+                return
+            if t.video:
+                jpg, d = miniatura_video_subito(t.percorso)
+                px = _px(jpg) if jpg else None
+                GLib.idle_add(lambda t=t, px=px, d=d: (setattr(t, "durata", durata_leggibile(d)),
+                                                       px and t.imposta_pixbuf(px), t.queue_draw(), False)[3])
             else:
-                threading.Thread(target=lambda t=tile: (lambda px: GLib.idle_add(
-                    lambda: (t.imposta_pixbuf(px), False)[1]))(_px(t.percorso)), daemon=True).start()
+                px = _px(t.percorso)
+                GLib.idle_add(lambda t=t, px=px: (t.imposta_pixbuf(px), False)[1])
 
     def _tocca(self, tile):
         if tile.percorso in self.scelti:

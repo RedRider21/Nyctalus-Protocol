@@ -13,9 +13,13 @@ dispositivo (la crea `strumenti/crea-installazioni.sh` partendo dai sorgenti):
 
 | Dispositivo | Cartella | Cosa contiene |
 |---|---|---|
-| PC Linux (x86_64) | `installazioni/PC-Linux/` | `Nyctalus-PC-Linux.tar.gz` — motore + browser + chat + launcher |
+| PC Linux (x86_64) | `installazioni/PC-Linux/` | `Nyctalus-PC-Linux.zip`: motore, browser, chat, launcher, `nyctalus-rete`; l'installatore chiede il **ruolo** |
+| Server / VPS (nodi) | `installazioni/Server-Linux/` | `Nyctalus-Server-Linux.zip`: solo il motore, per i nodi della rete (`MANUALE-SERVER.md`) |
 | Telefono Android | `installazioni/Android/` | `nyctalus-termux.tar.gz` (dentro Termux) · `Nyctalus.apk` (l'app, facoltativa) |
 | Manuali | `installazioni/Manuali/` | questi manuali |
+
+Prima di iniziare: **cosa installare e dove** dipende da cosa vuoi fare. Lo spiega
+`SCELTE-OPERATIVE.md` (client, nodo server, gestore della rete).
 
 ---
 
@@ -41,6 +45,11 @@ Nessun installatore: si estrae e si usa.
 tar xzf Nyctalus-PC-Linux.tar.gz        # crea la cartella Nyctalus/
 cd Nyctalus
 ```
+
+All'inizio l'installatore chiede **cosa stai installando**:
+**1) Client** (il caso normale), **2) Gestore** (come il client, in più gestisci una rete),
+**3) Nodo server** (la macchina fa da nodo: vedi `MANUALE-SERVER.md`). Senza domande:
+`./installa.sh --ruolo client --si`.
 
 ### 1.3 Avviare
 | Comando | Cosa fa |
@@ -182,13 +191,16 @@ python o rust, che potrebbero servire ad altri progetti.
 ## 3. La rete: prova locale o condivisa
 
 Senza configurazione, PC e telefono avviano una **rete di prova locale**: tutto
-funziona, ma solo su quel dispositivo, e non raggiungi altre persone. Per parlare
-davvero con altri serve la **rete condivisa** (nodi pubblici + elenco firmato): si
-configura con `directory_url` e `authority`
-- sul PC in `~/.nyctalus-browser/config.json`;
-- sul telefono in `~/.nyctalus-mobile/config.json`.
+funziona, ma solo su quel dispositivo, e non raggiungi altre persone. Per parlare con
+gli altri ci si collega a una **rete condivisa** col **codice di rete** (`NYCT1:…`) che
+dà chi la gestisce:
+- **PC:** `nyctalus-rete importa NYCT1:…`, poi riapri chat e browser
+  (`nyctalus-rete importa --prova` per tornare alla rete di prova);
+- **telefono:** ⚙ Impostazioni → **Rete condivisa** → **Importa codice**.
 
-Come mettere in piedi la rete: **`DEPLOY.md`**.
+Per provare **telefono ↔ PC** senza server: sul PC `nyctalus-rete casa` (rete di casa).
+Come mettere in piedi una rete vera: `SCELTE-OPERATIVE.md`, `MANUALE-SERVER.md`,
+`MANUALE-GESTORE-RETE.md`.
 
 ## 4. Problemi frequenti
 

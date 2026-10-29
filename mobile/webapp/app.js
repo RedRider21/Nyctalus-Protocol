@@ -135,7 +135,7 @@ async function controllaServizi() {
   btn.classList.add("nascosto");
   if (info.stato === "pronto") {
     barra.classList.toggle("nascosto", info.modalita !== "locale");
-    testo.textContent = "Rete di prova LOCALE: per parlare con altre persone configura la rete condivisa";
+    testo.textContent = "Rete di prova LOCALE: per parlare con altre persone importa un codice di rete (⚙ → Rete condivisa)";
   } else if (info.stato === "avvio") {
     barra.classList.remove("nascosto"); testo.textContent = "⏳ Avvio della rete… " + (info.dettaglio || "");
   } else {
@@ -146,6 +146,8 @@ async function controllaServizi() {
   if (info.stato !== "pronto") setTimeout(controllaServizi, 1500);
 }
 const post = (url) => fetch(url, { method: "POST" }).then((r) => r.json()).catch(() => ({}));
+const postJson = (url, dati) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(dati) }).then((r) => r.json()).catch(() => ({ errore: "servizio non raggiungibile" }));
 
 // ---------- eventi dal motore ----------------------------------------------------------
 function evento(riga) {
@@ -447,8 +449,8 @@ async function apriGalleria() {
   f.append(el("div", "maniglia"), testa, griglia, schede, barraInvio);
   $("velo").classList.remove("nascosto"); f.classList.remove("nascosto");
 
-  let dati = { disponibile: false, voci: [] };
-  try { dati = await (await fetch("/api/galleria")).json(); } catch (e) { /* niente */ }
+  let dati = { disponibile: false, voci: [], altre: false };
+  try { dati = await (await fetch("/api/galleria?da=0&n=30")).json(); } catch (e) { /* niente */ }
   if (!dati.voci.length) {
     const v = el("div", "vuoto-gal", dati.disponibile ? "Nessuna foto o video recente."
       : "Per vedere qui le foto del telefono, in Termux scrivi:  termux-setup-storage  e consenti l'accesso ai file.");
@@ -458,7 +460,7 @@ async function apriGalleria() {
   // non scarica e decodifica decine di immagini insieme
   const coda = []; let inCorso = 0;
   const pompa = () => {
-    while (inCorso < 4 && coda.length) {
+    while (inCorso < 3 && coda.length) {
       const [t, img, v] = coda.shift(); inCorso++;
       const fatto = () => { inCorso--; pompa(); };
       img.onload = () => { t.classList.add("pronta"); fatto(); };
@@ -472,7 +474,11 @@ async function apriGalleria() {
   }), { root: griglia, rootMargin: "300px 0px" }) : null;
   f._chiudi = () => { coda.length = 0; if (osservatore) osservatore.disconnect(); };
 
-  dati.voci.forEach((v, i) => {
+  // a pagine: con migliaia di foto si costruiscono solo le caselle che servono
+  let mostrate = 0, caricando = false, altre = dati.altre;
+  const sentinella = el("div", "sentinella-gal");
+  const aggiungi = (voci) => voci.forEach((v) => {
+    const i = mostrate++;
     const t = el("button", "tile"); t.dataset.i = i; t._voce = v;
     const img = el("img"); img.decoding = "async"; img.alt = v.nome;
     t._carica = [t, img, v];
@@ -481,8 +487,25 @@ async function apriGalleria() {
     if (v.mime.startsWith("video/")) t.appendChild(el("span", "video-gal", "▶"));
     t.appendChild(el("span", "num"));
     t.onclick = () => { const k = sel.indexOf(v); k >= 0 ? sel.splice(k, 1) : sel.push(v); aggiorna(); };
-    griglia.appendChild(t);
+    griglia.insertBefore(t, sentinella);
   });
+  griglia.appendChild(sentinella);
+  aggiungi(dati.voci);
+  const altrePagine = async () => {
+    if (caricando || !altre || !f.classList.contains("galleria")) return;
+    caricando = true;
+    try {
+      const d = await (await fetch("/api/galleria?da=" + mostrate + "&n=30")).json();
+      altre = d.altre; aggiungi(d.voci); aggiorna();
+    } catch (e) { altre = false; }
+    caricando = false;
+  };
+  if ("IntersectionObserver" in window) {
+    const fine = new IntersectionObserver((x) => { if (x.some((y) => y.isIntersecting)) altrePagine(); },
+      { root: griglia, rootMargin: "600px 0px" });
+    fine.observe(sentinella);
+    const prima = f._chiudi; f._chiudi = () => { fine.disconnect(); if (prima) prima(); };
+  }
 
   invia.onclick = async () => {
     const dest = S.attivo, testo = did.value.trim(), scelte = sel.slice();
@@ -702,7 +725,7 @@ function impostazioni() {
     let info;
     try { info = await (await fetch("/api/stato")).json(); } catch (e) { return mostraRete("errore", "Servizio non raggiungibile"); }
     if (info.stato === "pronto") mostraRete("pronto", info.modalita === "locale"
-      ? "Attiva — rete di prova locale (solo su questo dispositivo)" : "Attiva — rete condivisa");
+      ? "Attiva — rete di prova locale (solo su questo dispositivo)" : "Attiva — rete «" + (info.rete || "condivisa") + "»");
     else if (info.stato === "avvio") mostraRete("avvio", "Avvio in corso… " + (info.dettaglio || ""));
     else if (info.stato === "errore") mostraRete("errore", "Errore: " + (info.dettaglio || "sconosciuto"));
     else mostraRete("fermo", "Ferma");
@@ -710,9 +733,35 @@ function impostazioni() {
   ba.onclick = async () => { mostraRete("avvio", "Avvio in corso…"); await post("/api/servizi/avvia"); controllaServizi(); leggiRete(); };
   bf.onclick = async () => { mostraRete("avvio", "Arresto in corso…"); await post("/api/servizi/ferma"); controllaServizi(); leggiRete(); };
   mostraRete("avvio", "Controllo…"); leggiRete();
+
+  // rete condivisa: si entra con il CODICE DI RETE che dà chi gestisce la rete
+  const condivisa = el("div", "pulsanti"); condivisa.style.justifyContent = "flex-start";
+  const quale = el("p", "nota-rete", "…");
+  const bi = el("button", "", "📥 Importa codice"), bp = el("button", "nascosto", "↩ Rete di prova");
+  condivisa.append(bi, bp);
+  fetch("/api/rete").then((r) => r.json()).then((x) => {
+    quale.textContent = x.condivisa ? "Collegato a «" + (x.nome || "rete condivisa") + "»."
+      : "Ora usi la rete di prova: solo su questo dispositivo. Con un codice di rete parli con gli altri.";
+    bp.classList.toggle("nascosto", !x.condivisa);
+  }).catch(() => {});
+  bi.onclick = () => {
+    const area = el("textarea"); area.placeholder = "NYCT1:…"; area.rows = 4; area.className = "campo-codice";
+    dialogo("Importa codice di rete", [el("p", "", "Incolla il codice che ti ha dato chi gestisce la rete (per la rete di casa: lo mostra il PC con «nyctalus-rete casa»)."), area],
+      [["Annulla", null], ["Collegati", async () => {
+        const r = await postJson("/api/rete", { codice: area.value });
+        if (r.ok) { toast("Collegato a «" + r.nome + "»: riavvio la rete…"); controllaServizi(); }
+        else toast("✗ " + (r.errore || "codice non accettato"));
+      }, "primario"]]);
+    setTimeout(() => area.focus(), 50);
+  };
+  bp.onclick = async () => {
+    const r = await postJson("/api/rete", { prova: true });
+    if (r.ok) { toast("Torno alla rete di prova…"); controllaServizi(); } else toast("✗ " + (r.errore || "non riuscito"));
+  };
   const giro = setInterval(() => { if (!statoRete.isConnected || $("dialogo").classList.contains("nascosto")) clearInterval(giro); else leggiRete(); }, 1000);
   dialogo("Impostazioni", [el("p", "", "Il tuo Contact ID — dallo agli amici perché ti scrivano (non è segreto):"), id, bott,
-    el("p", "", "Tema"), temi, el("p", "", "Sfondo della chat"), sfondi, l, el("p", "", "Rete Nyctalus"), statoRete, servizi],
+    el("p", "", "Tema"), temi, el("p", "", "Sfondo della chat"), sfondi, l, el("p", "", "Rete Nyctalus"), statoRete, servizi,
+    el("p", "", "Rete condivisa"), quale, condivisa],
     HOST ? [["Esci dall'app", () => HOST.esci()], ["Chiudi", null, "primario"]] : [["Chiudi", null, "primario"]]);
 }
 

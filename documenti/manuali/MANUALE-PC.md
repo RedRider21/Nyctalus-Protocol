@@ -73,6 +73,17 @@ messaggi, allegati, fotocamera, menu del tasto destro, temi) è in **`MANUALE-CH
 
 ---
 
+### Collegarsi a una rete condivisa
+Senza configurazione chat e browser usano una rete di prova solo sul PC. Per una rete
+condivisa serve il **codice di rete** dato da chi la gestisce:
+```sh
+nyctalus-rete importa NYCT1:…     # poi chiudi e riapri chat e browser
+nyctalus-rete stato               # a quale rete sei collegato
+nyctalus-rete importa --prova     # torna alla rete di prova
+nyctalus-rete casa                # rete di casa su questo PC (prova telefono ↔ PC)
+```
+Gestire una rete propria: `MANUALE-GESTORE-RETE.md`.
+
 ## 4. Dove stanno i dati
 
 | Cartella | Contenuto |
@@ -80,6 +91,7 @@ messaggi, allegati, fotocamera, menu del tasto destro, temi) è in **`MANUALE-CH
 | `~/.nyctalus-chat/` | identità (Contact ID), contatti, cronologia, allegati, aspetto della chat |
 | `~/.nyctalus-browser/` | impostazioni, preferiti e cronologia del browser (solo in modalità normale) |
 | `~/.nyctalus-launcher/` | posizione e impostazioni del pannello |
+| `~/.nyctalus-rete/` | solo per chi **gestisce** una rete: chiavi dell'autorità (copia di sicurezza!), nodi, elenco firmato, rete di casa |
 | `~/.cache/nyctalus-chat/` | miniature, foto e video della fotocamera prima dell'invio |
 
 ## 5. Verificare che tutto funzioni

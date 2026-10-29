@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+#
+# Gestione dei nodi Nyctalus installati su questo server.
+#   nyctalus-server stato     servizi attivi e porte
+#   nyctalus-server righe     le righe d'elenco da mandare al gestore della rete
+#   nyctalus-server avvia | ferma | riavvia
+#   nyctalus-server log [PORTA]   ultimi messaggi dei nodi
+set -u
+R="${NYCTALUS_RADICE:-}"
+CONF=""
+for c in "${XDG_DATA_HOME:-$HOME/.local/share}/nyctalus-server/server.conf" "$R/etc/nyctalus/server.conf"; do
+  [ -f "$c" ] && { CONF="$c"; break; }
+done
+[ -n "$CONF" ] || { echo "✗ nessun nodo installato su questo server (manca server.conf)"; exit 1; }
+# shellcheck disable=SC1090
+. "$CONF"
+NYCTALUS_STATO="$R${NYCTALUS_STATO:-}"      # (R vuota sui server veri)
+SC=(systemctl); [ "${NYCTALUS_SERVIZIO:-sistema}" = utente ] && SC=(systemctl --user)
+read -r -a PORTE <<< "${NYCTALUS_PORTE:-}"
+UNITA=(); for p in "${PORTE[@]}"; do UNITA+=("nyctalus-nodo@$p"); done
+
+case "${1:-stato}" in
+  stato)
+    echo "Nodi Nyctalus su questo server (IP annunciato: $NYCTALUS_IP)"
+    for u in "${UNITA[@]}"; do
+      s=$("${SC[@]}" is-active "$u" 2>/dev/null); printf '  %-24s %s\n' "$u" "${s:-sconosciuto}"
+    done ;;
+  righe) cat "$NYCTALUS_STATO"/nodo-*/riga-elenco.txt ;;
+  avvia|ferma|riavvia)
+    az=$(case "$1" in avvia) echo start ;; ferma) echo stop ;; riavvia) echo restart ;; esac)
+    "${SC[@]}" "$az" "${UNITA[@]}" && echo "✓ $1: ${UNITA[*]}" ;;
+  log)
+    J=(journalctl --no-pager); [ "${NYCTALUS_SERVIZIO:-sistema}" = utente ] && J+=(--user)
+    if [ -n "${2:-}" ]; then "${J[@]}" -u "nyctalus-nodo@$2" -n 50
+    else for u in "${UNITA[@]}"; do "${J[@]}" -u "$u" -n 8; done; fi ;;
+  *) sed -n '4,10p' "$0" | sed 's/^# \{0,1\}//' ;;
+esac

@@ -86,6 +86,12 @@ Il binario `nyctalus` fa tutto, con sotto-comandi (`nyctalus help` per l'elenco)
 
 ## 3. Mettere in piedi una rete per i test (condivisa, reale)
 
+> **Modo semplice (consigliato):** pacchetto `installazioni/Server-Linux` sui server
+> (`MANUALE-SERVER.md`) e strumento `nyctalus-rete` sul PC del gestore
+> (`MANUALE-GESTORE-RETE.md`): fanno da soli i passi qui sotto, con nodi come servizi
+> systemd e un **codice di rete** da dare ai client. Quadro: `SCELTE-OPERATIVE.md`.
+> Qui sotto restano i comandi a mano, per chi vuole capire o personalizzare.
+
 Perché **più persone** provino la **stessa** rete, servono nodi su **server
 pubblici** (con IP pubblico) e una directory firmata **pubblicata**.
 
@@ -100,8 +106,9 @@ nyctalus authority
 ### 3.2 I nodi (su ogni server pubblico)
 Su ciascun VPS/server, con la porta aperta sul firewall:
 ```sh
-nyctalus node --listen 0.0.0.0:4601
+nyctalus node --listen 0.0.0.0:4601 --data /var/lib/nyctalus/nodo-4601 --announce IP_PUBBLICO:4601
 #   directory entry:   IP_PUBBLICO:4601,<x25519>,<impronta>
+# --data: identità conservata, la riga resta uguale ai riavvii (senza, cambia ogni volta)
 ```
 Copia la **riga `directory entry`** di ogni nodo.
 (Opzionale: aggiungi `--obfuscation <HEX>` uguale su tutti per il camuffamento,

@@ -1,0 +1,419 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+"""nyctalus-rete — gestire una rete Nyctalus condivisa e collegarcisi.
+
+Per il GESTORE della rete (chi la tiene in piedi):
+  nyctalus-rete crea [--nome NOME]       crea l'autorità (chiavi che firmano l'elenco)
+  nyctalus-rete aggiungi RIGA… | --file F aggiunge i nodi (righe «IP:PORTA,chiave,impronta»)
+  nyctalus-rete togli IP:PORTA           toglie un nodo
+  nyctalus-rete elenco                   mostra rete, nodi e stato dell'elenco
+  nyctalus-rete firma                    firma l'elenco dei nodi → directory.txt
+  nyctalus-rete verifica                 prova a raggiungere ogni nodo
+  nyctalus-rete codice --url URL         il CODICE DI RETE da dare ai client
+                                         (URL = dove hai pubblicato directory.txt)
+  nyctalus-rete servi [--porta 18800]    pubblica directory.txt da questo PC (rete locale)
+  nyctalus-rete casa [--nodi 4]          RETE DI CASA tutta su questo PC: nodi + elenco +
+                                         codice per il telefono (Ctrl-C per fermare)
+
+Per i CLIENT (chi usa la rete):
+  nyctalus-rete importa CODICE|FILE      collega questo PC alla rete del codice
+  nyctalus-rete importa --prova          torna alla rete di prova locale
+  nyctalus-rete stato                    a quale rete è collegato questo PC
+
+Dati del gestore in ~/.nyctalus-rete (cartella privata). La chiave SEGRETA
+dell'autorità non esce mai da lì: ai client va solo il codice (chiave pubblica + URL).
+"""
+import base64
+import http.server
+import json
+import os
+import re
+import shutil
+import signal
+import socket
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+
+DATI = Path(os.environ.get("NYCTALUS_RETE_DATI", Path.home() / ".nyctalus-rete"))
+CONFIG_CLIENT = Path.home() / ".nyctalus-browser" / "config.json"     # lo leggono chat e browser del PC
+PREFISSO = "NYCT1:"
+RIGA = re.compile(r"^(\[?[0-9A-Za-z.:-]+\]?):(\d{1,5}),([0-9a-f]{64}),([0-9a-f]{64})$")
+
+
+def esci(msg, codice=1):
+    print("✗ " + msg, file=sys.stderr)
+    sys.exit(codice)
+
+
+def ok(msg):
+    print("✓ " + msg)
+
+
+def binario():
+    """Il motore: variabile NYCTALUS_BIN, installazione, PATH, sorgenti compilati."""
+    qui = Path(__file__).resolve().parent
+    for c in (os.environ.get("NYCTALUS_BIN"), qui.parent / "bin" / "nyctalus", shutil.which("nyctalus"),
+              qui.parents[1] / "target" / "release" / "nyctalus"):
+        if c and Path(c).is_file() and os.access(c, os.X_OK):
+            return str(c)
+    esci("motore «nyctalus» non trovato (installa Nyctalus o imposta NYCTALUS_BIN)")
+
+
+def privata(cartella):
+    cartella.mkdir(parents=True, exist_ok=True)
+    os.chmod(cartella, 0o700)
+    return cartella
+
+
+def scrivi_privato(percorso, testo):
+    fd = os.open(percorso, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(testo)
+    os.chmod(percorso, 0o600)
+
+
+def ip_locale():
+    """L'indirizzo di questo PC nella rete locale (nessun pacchetto viene spedito)."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("192.0.2.1", 9))
+        return s.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
+
+# --- la rete del gestore ---------------------------------------------------------------
+class Rete:
+    def __init__(self, cartella):
+        self.dir = cartella
+        self.f_aut = cartella / "autorita.json"
+        self.f_nodi = cartella / "nodi.txt"
+        self.f_elenco = cartella / "directory.txt"
+        self.f_codice = cartella / "codice.txt"
+
+    def esiste(self):
+        return self.f_aut.exists()
+
+    def autorita(self):
+        if not self.esiste():
+            esci("nessuna rete: prima «nyctalus-rete crea»")
+        return json.loads(self.f_aut.read_text())
+
+    def crea(self, nome, sostituisci=False):
+        if self.esiste() and not sostituisci:
+            esci("la rete esiste già (%s). Per ricominciare da capo: --sostituisci "
+                 "(i client andranno ricollegati con un codice nuovo)" % self.f_aut)
+        out = subprocess.run([binario(), "authority"], capture_output=True, text=True, check=True).stdout
+        seg = re.search(r"secret:\s+([0-9a-f]{64})", out).group(1)
+        pub = re.search(r"public:\s+([0-9a-f]{64})", out).group(1)
+        if self.dir.parent == DATI:
+            privata(DATI)
+        privata(self.dir)
+        scrivi_privato(self.f_aut, json.dumps({"nome": nome, "segreto": seg, "pubblica": pub,
+                                               "creata": time.strftime("%Y-%m-%d %H:%M")}, indent=1))
+        if sostituisci:
+            for f in (self.f_nodi, self.f_elenco, self.f_codice):
+                f.unlink(missing_ok=True)
+        return pub
+
+    def nodi(self):
+        if not self.f_nodi.exists():
+            return []
+        return [r.strip() for r in self.f_nodi.read_text().splitlines() if RIGA.match(r.strip())]
+
+    def salva_nodi(self, righe):
+        scrivi_privato(self.f_nodi, "".join(r + "\n" for r in righe))
+
+    def aggiungi(self, righe):
+        attuali = self.nodi()
+        nuove = 0
+        for r in righe:
+            r = r.strip()
+            if not r or r.startswith("#"):
+                continue
+            r = r.split()[-1] if " " in r else r          # accetta anche «directory entry:   …»
+            if not RIGA.match(r):
+                esci("riga non valida: %r (atteso IP:PORTA,chiave,impronta)" % r)
+            indirizzo = r.split(",")[0]
+            attuali = [a for a in attuali if a.split(",")[0] != indirizzo] + [r]
+            nuove += 1
+        self.salva_nodi(attuali)
+        return nuove, len(attuali)
+
+    def togli(self, indirizzo):
+        attuali = self.nodi()
+        resto = [a for a in attuali if a.split(",")[0] != indirizzo]
+        self.salva_nodi(resto)
+        return len(attuali) - len(resto)
+
+    def firma(self):
+        a, nodi = self.autorita(), self.nodi()
+        if len(nodi) < 3:
+            esci("servono almeno 3 nodi (ogni percorso ne usa 3 diversi): ora sono %d" % len(nodi))
+        out = subprocess.run([binario(), "directory", "--authority-secret", a["segreto"], "--entries", ";".join(nodi)],
+                             capture_output=True, text=True)
+        if out.returncode != 0 or "firma" not in out.stdout:
+            esci("firma non riuscita: " + (out.stderr or out.stdout).strip())
+        self.f_elenco.write_text(out.stdout)
+        return self.f_elenco
+
+    def codice(self, url):
+        if not re.match(r"^https?://[^\s]+$", url):
+            esci("URL non valido: deve iniziare con http:// o https://")
+        a = self.autorita()
+        cfg = {"v": 1, "nome": a["nome"], "directory_url": url, "authority": a["pubblica"]}
+        cod = PREFISSO + base64.urlsafe_b64encode(json.dumps(cfg, separators=(",", ":")).encode()).decode().rstrip("=")
+        self.f_codice.write_text(cod + "\n")
+        (self.dir / "nyctalus-rete.json").write_text(json.dumps(cfg, indent=1) + "\n")
+        return cod
+
+
+# --- codice di rete (anche per i client) ------------------------------------------------
+def leggi_codice(testo):
+    """Codice NYCT1:… oppure il JSON della rete → dict validato."""
+    testo = testo.strip()
+    if testo.startswith(PREFISSO):
+        b = testo[len(PREFISSO):]
+        try:
+            cfg = json.loads(base64.urlsafe_b64decode(b + "=" * (-len(b) % 4)))
+        except Exception:     # noqa: BLE001
+            raise ValueError("codice di rete rovinato (copialo per intero)")
+    else:
+        try:
+            cfg = json.loads(testo)
+        except Exception:     # noqa: BLE001
+            raise ValueError("non è un codice di rete Nyctalus (deve iniziare con %s)" % PREFISSO)
+    url, aut = str(cfg.get("directory_url", "")), str(cfg.get("authority", ""))
+    if not re.match(r"^https?://[^\s]+$", url) or not re.fullmatch(r"[0-9a-f]{64}", aut):
+        raise ValueError("codice di rete incompleto")
+    return {"nome": str(cfg.get("nome") or "Rete Nyctalus")[:60], "directory_url": url, "authority": aut}
+
+
+def importa(argomento):
+    cfg = {}
+    if CONFIG_CLIENT.exists():
+        try:
+            cfg = json.loads(CONFIG_CLIENT.read_text())
+        except Exception:     # noqa: BLE001
+            cfg = {}
+    if argomento == "--prova":
+        for k in ("directory_url", "authority", "nome_rete"):
+            cfg.pop(k, None)
+        msg = "questo PC torna alla rete di prova locale"
+    else:
+        testo = Path(argomento).read_text() if Path(argomento).is_file() else argomento
+        try:
+            rete = leggi_codice(testo)
+        except ValueError as e:
+            esci(str(e))
+        cfg.update({"directory_url": rete["directory_url"], "authority": rete["authority"], "nome_rete": rete["nome"]})
+        msg = "questo PC ora usa la rete «%s»" % rete["nome"]
+    CONFIG_CLIENT.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG_CLIENT.write_text(json.dumps(cfg, indent=1) + "\n")
+    ok(msg)
+    print("  Chiudi e riapri chat e browser perché la usino.")
+
+
+def stato_client():
+    try:
+        cfg = json.loads(CONFIG_CLIENT.read_text())
+    except Exception:         # noqa: BLE001
+        cfg = {}
+    if cfg.get("directory_url") and cfg.get("authority"):
+        print("Rete: %s\n  elenco: %s\n  autorità: %s…" % (cfg.get("nome_rete", "(senza nome)"),
+                                                         cfg["directory_url"], cfg["authority"][:16]))
+    else:
+        print("Rete: prova locale (solo su questo PC). Per collegarti: nyctalus-rete importa CODICE")
+
+
+# --- pubblicare l'elenco in rete locale -------------------------------------------------
+def servitore(rete, porta, ip):
+    """HTTP minimo: SOLO /directory.txt e una pagina col codice (niente altro file)."""
+    class Gestore(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == "/directory.txt" and rete.f_elenco.exists():
+                corpo, tipo = rete.f_elenco.read_bytes(), "text/plain; charset=utf-8"
+            elif self.path in ("/", "/codice") and rete.f_codice.exists():
+                cod = rete.f_codice.read_text().strip()
+                corpo = ("<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'>"
+                         "<title>Codice di rete Nyctalus</title><body style='font:16px sans-serif;padding:16px;"
+                         "background:#0a0e1a;color:#e6ecff'><h2>Codice di rete</h2><p>Tienilo premuto → Copia, poi "
+                         "nell'app: ⚙ Impostazioni → Rete condivisa → Importa codice.</p><textarea readonly "
+                         "style='width:100%;height:9em;font:14px monospace'>" + cod + "</textarea>").encode()
+                tipo = "text/html; charset=utf-8"
+            else:
+                self.send_error(404)
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", tipo)
+            self.send_header("Content-Length", str(len(corpo)))
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            self.wfile.write(corpo)
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.ThreadingHTTPServer(("0.0.0.0", porta), Gestore)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv, "http://%s:%d/directory.txt" % (ip, porta)
+
+
+def aspetta_ctrl_c():
+    fermo = threading.Event()
+    signal.signal(signal.SIGTERM, lambda *a: fermo.set())
+    try:
+        while not fermo.wait(1):
+            pass
+    except KeyboardInterrupt:
+        pass
+
+
+# --- rete di casa: tutto su questo PC ---------------------------------------------------
+def casa(nodi, porta_base, porta_web, ip, importa_qui):
+    privata(DATI)
+    r = Rete(privata(DATI / "casa"))
+    if not r.esiste():
+        r.crea("Rete di casa")
+    b, proc, righe = binario(), [], []
+    try:
+        for i in range(nodi):
+            porta = porta_base + i
+            d = r.dir / ("nodo-%d" % porta)
+            (d / "riga-elenco.txt").unlink(missing_ok=True)
+            log = open(r.dir / ("nodo-%d.log" % porta), "ab")
+            proc.append(subprocess.Popen([b, "node", "--listen", "0.0.0.0:%d" % porta, "--data", str(d),
+                                          "--announce", "%s:%d" % (ip, porta)], stdout=log, stderr=log,
+                                         start_new_session=True))
+        for i in range(nodi):
+            f = r.dir / ("nodo-%d" % (porta_base + i)) / "riga-elenco.txt"
+            for _ in range(100):
+                if f.exists() and f.read_text().strip():
+                    break
+                if proc[i].poll() is not None:
+                    esci("il nodo sulla porta %d non parte (porta occupata?) — vedi %s"
+                         % (porta_base + i, r.dir / ("nodo-%d.log" % (porta_base + i))))
+                time.sleep(0.1)
+            righe.append(f.read_text().strip())
+        r.salva_nodi(righe)
+        r.firma()
+        srv, url = servitore(r, porta_web, ip)
+        cod = r.codice(url)
+        print("\n🦇 Rete di casa attiva su questo PC (%s) — %d nodi\n" % (ip, nodi))
+        print("Sul TELEFONO (stessa Wi-Fi): apri nel browser  http://%s:%d/  e copia il codice," % (ip, porta_web))
+        print("oppure copia da qui il codice di rete:\n\n  %s\n" % cod)
+        print("Nell'app: ⚙ Impostazioni → Rete condivisa → Importa codice.")
+        if importa_qui:
+            importa(cod)
+        print("\nLascia questa finestra aperta: Ctrl-C ferma la rete di casa.")
+        aspetta_ctrl_c()
+        srv.shutdown()
+    finally:
+        for p in proc:
+            try:
+                os.killpg(p.pid, signal.SIGTERM)
+            except Exception:  # noqa: BLE001
+                pass
+        print("\nRete di casa fermata.")
+
+
+# --- riga di comando --------------------------------------------------------------------
+def opzione(args, nome, predefinito=None):
+    if nome in args:
+        i = args.index(nome)
+        if i + 1 >= len(args):
+            esci("manca il valore di " + nome)
+        v = args[i + 1]
+        del args[i:i + 2]
+        return v
+    return predefinito
+
+
+def principale(args):
+    if not args or args[0] in ("-h", "--help", "aiuto"):
+        print(__doc__)
+        return
+    cmd, args = args[0], list(args[1:])
+    rete = Rete(DATI)
+    if cmd == "crea":
+        nome = opzione(args, "--nome", "Rete Nyctalus")
+        pub = rete.crea(nome, "--sostituisci" in args)
+        ok("rete «%s» creata. Chiave pubblica dell'autorità: %s" % (nome, pub))
+        print("  La chiave segreta resta in %s (non darla a nessuno, fanne una copia di sicurezza)." % rete.f_aut)
+        print("  Ora: aggiungi le righe dei nodi (nyctalus-rete aggiungi …), poi firma.")
+    elif cmd == "aggiungi":
+        f = opzione(args, "--file")
+        righe = (Path(f).read_text().splitlines() if f else []) + args
+        if not righe:
+            esci("indica le righe dei nodi o --file FILE")
+        n, tot = rete.aggiungi(righe)
+        ok("%d nodi aggiunti/aggiornati (%d in tutto). Ricordati di firmare: nyctalus-rete firma" % (n, tot))
+    elif cmd == "togli":
+        if not args:
+            esci("indica IP:PORTA del nodo")
+        n = rete.togli(args[0])
+        ok("%d nodo tolto. Ricordati di firmare e ripubblicare." % n) if n else esci("nodo non trovato")
+    elif cmd == "elenco":
+        a = rete.autorita()
+        print("Rete «%s» (creata %s)\n  autorità pubblica: %s" % (a["nome"], a["creata"], a["pubblica"]))
+        nodi = rete.nodi()
+        print("  nodi: %d" % len(nodi))
+        for n in nodi:
+            print("    " + n.split(",")[0])
+        firmato = rete.f_elenco.exists() and rete.f_elenco.stat().st_mtime >= (rete.f_nodi.stat().st_mtime if rete.f_nodi.exists() else 0)
+        print("  elenco firmato: %s" % (str(rete.f_elenco) if firmato else "DA FIRMARE (nyctalus-rete firma)"))
+        if rete.f_codice.exists():
+            print("  codice per i client: %s" % rete.f_codice.read_text().strip())
+    elif cmd == "firma":
+        f = rete.firma()
+        ok("elenco firmato: %s" % f)
+        print("  Pubblicalo dove i client lo scaricano (sito, GitHub Pages, o «nyctalus-rete servi»),")
+        print("  poi, solo la prima volta, crea il codice: nyctalus-rete codice --url URL")
+    elif cmd == "verifica":
+        a = rete.autorita()
+        if not rete.f_elenco.exists():
+            esci("prima firma l'elenco: nyctalus-rete firma")
+        sys.exit(subprocess.run([binario(), "nodes", "--directory", str(rete.f_elenco), "--authority", a["pubblica"],
+                                 "--probe"]).returncode)
+    elif cmd == "codice":
+        url = opzione(args, "--url")
+        if not url:
+            esci("indica --url, l'indirizzo dove hai pubblicato directory.txt")
+        cod = rete.codice(url)
+        ok("codice di rete (dallo ai client: contiene solo la chiave PUBBLICA e l'URL):")
+        print("\n  %s\n" % cod)
+        print("  Salvato anche in %s" % rete.f_codice)
+    elif cmd == "servi":
+        porta = int(opzione(args, "--porta", "18800"))
+        ip = opzione(args, "--ip", ip_locale())
+        if not rete.f_elenco.exists():
+            esci("prima firma l'elenco: nyctalus-rete firma")
+        _srv, url = servitore(rete, porta, ip)
+        if not rete.f_codice.exists():
+            rete.codice(url)
+        ok("pubblico l'elenco su %s (Ctrl-C per smettere)" % url)
+        print("  Codice di rete: %s" % rete.f_codice.read_text().strip())
+        aspetta_ctrl_c()
+    elif cmd == "casa":
+        casa(int(opzione(args, "--nodi", "4")), int(opzione(args, "--porta-base", "4701")),
+             int(opzione(args, "--porta", "18800")), opzione(args, "--ip", ip_locale()),
+             "--non-importare" not in args)
+    elif cmd == "importa":
+        if not args:
+            esci("indica il codice di rete (o un file che lo contiene), oppure --prova")
+        importa(args[0])
+    elif cmd == "stato":
+        stato_client()
+    else:
+        esci("comando sconosciuto: %s (nyctalus-rete --help)" % cmd)
+
+
+if __name__ == "__main__":
+    sys.stdout.reconfigure(line_buffering=True)
+    principale(sys.argv[1:])

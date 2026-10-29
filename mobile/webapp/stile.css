@@ -172,6 +172,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .stato-rete-imp[data-fase="avvio"] .luce { background: #e8b339; animation: lampeggio 1s infinite; }
 .stato-rete-imp[data-fase="errore"] .luce { background: #e5534b; }
 @keyframes lampeggio { 50% { opacity: .3; } }
+.nota-rete { font-size: 13px; color: var(--tenue); margin: 2px 0 8px; }
+.campo-codice { width: 100%; box-sizing: border-box; font: 13px monospace; padding: 10px; border-radius: 10px;
+  border: 1px solid rgba(var(--rgb), .35); background: rgba(var(--rgb), .08); color: var(--testo); resize: vertical; }
 #dialogo .pulsanti .primario { background: var(--invia); color: #fff; }
 #dialogo .pulsanti .pericoloso { background: #d64545; color: #fff; }
 #dialogo label.spunta { display: flex; gap: 10px; align-items: center; color: var(--testo); margin: 8px 0; }
@@ -200,6 +203,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tile img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block;
   opacity: 0; transition: transform .15s ease, opacity .2s ease; }
 .tile.pronta img { opacity: 1; }
+.sentinella-gal { grid-column: 1 / -1; height: 1px; }
 .tile .ic { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 30px; }
 .tile-cam { background: linear-gradient(135deg, #1f3b66, #2a2050); color: #fff; font-size: 13px; }
 .tile-cam .dentro { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column;

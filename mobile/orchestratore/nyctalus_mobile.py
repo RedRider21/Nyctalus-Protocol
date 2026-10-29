@@ -64,6 +64,34 @@ def leggi_config():
         return {}
 
 
+def scrivi_config(cfg):
+    DATI.mkdir(parents=True, exist_ok=True)
+    tmp = CONFIG.with_suffix(".tmp")
+    tmp.write_text(json.dumps(cfg, indent=1) + "\n", encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    tmp.replace(CONFIG)
+
+
+PREFISSO_CODICE = "NYCT1:"
+
+
+def leggi_codice(testo):
+    """Codice di rete «NYCT1:…» (lo crea `nyctalus-rete codice` sul PC del gestore)
+    → {nome, directory_url, authority}. Contiene solo la chiave PUBBLICA dell'autorità."""
+    testo = (testo or "").strip()
+    if not testo.startswith(PREFISSO_CODICE) or len(testo) > 2000:
+        raise ValueError("non è un codice di rete Nyctalus (inizia con %s)" % PREFISSO_CODICE)
+    b = testo[len(PREFISSO_CODICE):]
+    try:
+        cfg = json.loads(base64.urlsafe_b64decode(b + "=" * (-len(b) % 4)))
+    except Exception:            # noqa: BLE001
+        raise ValueError("codice di rete rovinato: copialo per intero")
+    url, aut = str(cfg.get("directory_url", "")), str(cfg.get("authority", ""))
+    if not re.match(r"^https?://[^\s]+$", url) or not re.fullmatch(r"[0-9a-f]{64}", aut):
+        raise ValueError("codice di rete incompleto")
+    return {"nome": str(cfg.get("nome") or "Rete Nyctalus")[:60], "directory_url": url, "authority": aut}
+
+
 PORTE = dict(PORTE_DEFAULT, **{k: v for k, v in leggi_config().get("porte", {}).items() if k in PORTE_DEFAULT})
 PORTA_HTTP = int(os.environ.get("NYCTALUS_MOBILE_PORT", PORTE["http"]))
 CONTROLLO = ("127.0.0.1", int(PORTE["controllo"]))
@@ -141,6 +169,7 @@ class Servizi:
 
     def info(self):
         return {"stato": self.stato, "dettaglio": self.dettaglio, "modalita": self.modalita,
+                "rete": leggi_config().get("nome_rete", ""),
                 "indirizzo": self.indirizzo, "binario": bool(trova_binario())}
 
     def _lancia(self, argomenti, log_file, env=None):
@@ -279,7 +308,22 @@ def cartelle_galleria():
     return extra + [HOME / "storage" / "dcim", HOME / "storage" / "pictures", HOME / "storage" / "movies"]
 
 
-def elenco_galleria(quanti=120):
+GALLERIA_CACHE = {"ts": 0.0, "voci": []}
+GALLERIA_DURATA = 45          # secondi: riaprire la graffetta non riscandisce migliaia di file
+GALLERIA_MAX = 300            # quante foto/video recenti al massimo (a pagine nella web-app)
+GALLERIA_LOCK = threading.Lock()
+
+
+def elenco_galleria_recente():
+    """Come elenco_galleria, ma tenuto in memoria per qualche decina di secondi."""
+    with GALLERIA_LOCK:
+        if time.time() - GALLERIA_CACHE["ts"] > GALLERIA_DURATA:
+            GALLERIA_CACHE["voci"] = elenco_galleria(GALLERIA_MAX)
+            GALLERIA_CACHE["ts"] = time.time()
+        return GALLERIA_CACHE["voci"]
+
+
+def elenco_galleria(quanti=GALLERIA_MAX):
     """Foto e video più recenti (dal più nuovo), senza cartelle nascoste né miniature di sistema."""
     voci, visti = [], set()
     for radice in cartelle_galleria():
@@ -389,7 +433,7 @@ def miniatura_exif(percorso):
 
 def miniatura(percorso):
     """JPEG piccolo (lato ~360 px) di una foto o di un video, in cache. In ordine:
-    Pillow (se c'è: veloce e nitida) → miniatura EXIF già nel file → ffmpeg.
+    miniatura EXIF già nel file (istantanea: con migliaia di foto conta) → Pillow → ffmpeg.
     None se non si riesce: la web-app mostra un'icona invece della foto intera."""
     st = percorso.stat()
     chiave = hashlib.sha1(("%s|%d|%d" % (percorso, st.st_size, int(st.st_mtime))).encode()).hexdigest()
@@ -400,6 +444,13 @@ def miniatura(percorso):
     video = (mimetypes.guess_type(str(percorso))[0] or "").startswith("video/")
     if not video:
         try:
+            mini = miniatura_exif(percorso)
+        except OSError:
+            mini = None
+        if mini:
+            dest.write_bytes(mini)
+            return dest
+        try:
             from PIL import Image, ImageOps
             with Image.open(percorso) as im:
                 im.draft("RGB", (LATO_MINIATURA, LATO_MINIATURA))   # JPEG: decodifica già ridotta
@@ -409,13 +460,6 @@ def miniatura(percorso):
             return dest
         except Exception:        # noqa: BLE001  (Pillow assente o formato non suo)
             pass
-        try:
-            mini = miniatura_exif(percorso)
-        except OSError:
-            mini = None
-        if mini:
-            dest.write_bytes(mini)
-            return dest
     if shutil.which("ffmpeg"):
         subprocess.run(["ffmpeg", "-v", "error", "-y"] + (["-ss", "0.5"] if video else []) +
                        ["-i", str(percorso), "-frames:v", "1", "-vf", "scale=%d:-2" % LATO_MINIATURA, str(dest)],
@@ -657,6 +701,13 @@ async def instrada(req, lettore, scrittore):
         return await ponte_chat(lettore, scrittore, req)
     if p == "/api/stato":
         return await rispondi_json(scrittore, dict(SERVIZI.info(), versione=VERSIONE))
+    if p == "/api/rete":
+        if req.metodo == "POST":
+            return await cambia_rete(lettore, scrittore, req)
+        cfg = leggi_config()
+        condivisa = bool(cfg.get("directory_url") and cfg.get("authority"))
+        return await rispondi_json(scrittore, {"condivisa": condivisa, "nome": cfg.get("nome_rete", ""),
+                                               "url": cfg.get("directory_url", "") if condivisa else ""})
     if p == "/api/servizi/avvia" and req.metodo == "POST":
         SERVIZI.avvia()
         return await rispondi_json(scrittore, SERVIZI.info())
@@ -678,17 +729,57 @@ async def instrada(req, lettore, scrittore):
         return await servi_file(scrittore, req, m, None if m == f else "image/jpeg",
                                 extra="Cache-Control: private, max-age=86400\r\n")
     if p == "/api/galleria":
+        tutte = await asyncio.get_running_loop().run_in_executor(None, elenco_galleria_recente)
+        try:
+            da, quante = max(0, int(req.query.get("da", "0"))), max(1, min(60, int(req.query.get("n", "30"))))
+        except ValueError:
+            da, quante = 0, 30
         voci = [{"p": pf.encode().hex(), "nome": os.path.basename(pf), "dim": dim, "ts": int(ts),
                  "mime": mimetypes.guess_type(pf)[0] or "application/octet-stream"}
-                for ts, pf, dim in await asyncio.get_running_loop().run_in_executor(None, elenco_galleria)]
+                for ts, pf, dim in tutte[da:da + quante]]
         return await rispondi_json(scrittore, {"disponibile": any(g.exists() for g in cartelle_galleria()),
-                                               "voci": voci})
+                                               "voci": voci, "altre": da + quante < len(tutte)})
     if p == "/api/apri" and req.metodo == "POST":
         f = leggibile(bytes.fromhex(req.query.get("p", "")).decode("utf-8", "replace"))
         return await rispondi_json(scrittore, {"ok": bool(f and apri_con_app(f))})
     if p == "/api/carica" and req.metodo == "POST":
         return await carica(lettore, scrittore, req)
     return await servi_statico(scrittore, req)
+
+
+async def cambia_rete(lettore, scrittore, req):
+    """Importa un codice di rete ({"codice": "NYCT1:…"}) o torna alla rete di prova
+    ({"prova": true}); poi riavvia i servizi sulla rete nuova."""
+    try:
+        n = int(req.h.get("content-length", "0"))
+    except ValueError:
+        n = -1
+    if not 0 < n <= 4096:
+        return await rispondi_json(scrittore, {"errore": "richiesta non valida"}, "400 Bad Request")
+    try:
+        dati = json.loads(await lettore.readexactly(n))
+        cfg = leggi_config()
+        if dati.get("prova"):
+            for k in ("directory_url", "authority", "nome_rete"):
+                cfg.pop(k, None)
+            nome = ""
+        else:
+            rete = leggi_codice(dati.get("codice", ""))
+            cfg.update(directory_url=rete["directory_url"], authority=rete["authority"], nome_rete=rete["nome"])
+            nome = rete["nome"]
+    except ValueError as e:
+        return await rispondi_json(scrittore, {"errore": str(e)}, "400 Bad Request")
+    except Exception:            # noqa: BLE001
+        return await rispondi_json(scrittore, {"errore": "richiesta non valida"}, "400 Bad Request")
+    scrivi_config(cfg)
+    log("rete:", ("«%s» (%s)" % (nome, cfg["directory_url"])) if nome else "prova locale")
+
+    def riavvia():
+        SERVIZI.ferma()
+        time.sleep(0.5)
+        SERVIZI.avvia()
+    threading.Thread(target=riavvia, daemon=True).start()
+    return await rispondi_json(scrittore, {"ok": True, "nome": nome})
 
 
 async def carica(lettore, scrittore, req):

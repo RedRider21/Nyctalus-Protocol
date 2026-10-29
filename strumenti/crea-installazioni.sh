@@ -10,7 +10,10 @@
 #   ├── LEGGIMI.txt                    quale pacchetto per quale dispositivo
 #   ├── Nyctalus-completo.zip          TUTTO (PC + Android + manuali), da copiare in un colpo
 #   ├── PC-Linux/
-#   │   ├── Nyctalus-PC-Linux.zip       scompatta → ./installa.sh
+#   │   ├── Nyctalus-PC-Linux.zip       scompatta → ./installa.sh (chiede: client, gestore, nodo)
+#   │   └── LEGGIMI.txt
+#   ├── Server-Linux/
+#   │   ├── Nyctalus-Server-Linux.zip   solo il motore, per i NODI su un server (VPS)
 #   │   └── LEGGIMI.txt
 #   ├── Android/
 #   │   ├── nyctalus-termux.tar.gz      per Termux (si apre senza installare nulla)
@@ -52,7 +55,7 @@ say "Compilo il motore per il PC (release)…"
 ( cd "$ROOT" && cargo build --release -p nyctalus )
 
 rm -rf "$OUT"
-mkdir -p "$OUT/PC-Linux" "$OUT/Android"
+mkdir -p "$OUT/PC-Linux" "$OUT/Android" "$OUT/Server-Linux"
 manuali_in "$OUT/Manuali"
 
 # ============================== PC Linux ==============================
@@ -63,6 +66,9 @@ cp "$ROOT/target/release/nyctalus" "$P/bin/nyctalus"
 cp -r "$ROOT/pc/browser/nyctalus_browser" "$ROOT/pc/browser/nxs_i18n" "$P/browser/"
 cp -r "$ROOT/pc/launcher/nyctalus_launcher" "$P/launcher/"
 cp -r "$ROOT/pc/chat/nyctalus_chat" "$P/chat/"
+cp -r "$ROOT/pc/gestore-rete" "$P/"
+mkdir -p "$P/server"
+cp "$ROOT/server/installa-nodo.sh" "$P/server/installa.sh"; cp "$ROOT/server/nyctalus-server" "$ROOT/server/disinstalla.sh" "$P/server/"
 cp "$ROOT/strumenti/avvia-chat.sh" "$ROOT/pc/installa.sh" "$ROOT/pc/disinstalla.sh" "$P/"
 cp "$ROOT/logo.svg" "$ROOT/LICENSE" "$P/"
 manuali_in "$P/Manuali"
@@ -80,7 +86,7 @@ export PYTHONPATH="${extra}\$QUI/browser\${PYTHONPATH:+:\$PYTHONPATH}"
 exec python3 -m $modulo "\$@"
 EOF
 done
-chmod +x "$P"/*.sh "$P/bin/nyctalus"
+chmod +x "$P"/*.sh "$P/bin/nyctalus" "$P/gestore-rete/nyctalus-rete" "$P/server"/*
 
 cat > "$P/LEGGIMI.txt" <<'EOF'
 Nyctalus per PC Linux
@@ -90,7 +96,11 @@ Nyctalus per PC Linux
     non per proteggere dati reali.
 
 INSTALLARE
-   ./installa.sh                    controlla i pacchetti di sistema (chiede prima
+   ./installa.sh                    prima chiede COSA installi:
+                                      1) Client  (chat e browser: il caso normale)
+                                      2) Gestore (come il client + gestione di una rete)
+                                      3) Nodo server (questa macchina fa da nodo)
+                                    poi controlla i pacchetti di sistema (chiede prima
                                     di installare), copia il programma in
                                     ~/.local/share/nyctalus, crea le voci nel menu
                                     delle applicazioni e i comandi nyctalus-*
@@ -101,13 +111,52 @@ USARE
    oppure:  nyctalus-launcher · nyctalus-browser · nyctalus-chat
    Senza installare: ./avvia-launcher.sh · ./avvia-browser.sh · ./avvia-chat.sh
 
+COLLEGARSI A UNA RETE CONDIVISA
+   nyctalus-rete importa CODICE     (il codice te lo dà chi gestisce la rete)
+   nyctalus-rete casa               rete di casa su questo PC, per provare telefono ↔ PC
+
 DISINSTALLARE
    ~/.local/share/nyctalus/disinstalla.sh   (toglie solo Nyctalus; i dati solo se confermi)
 
-Manuali nella cartella Manuali/ (inizia da LEGGIMI.md e MANUALE-INSTALLAZIONE.md).
+Manuali nella cartella Manuali/: inizia da SCELTE-OPERATIVE.md (cosa installare e dove).
 EOF
 crea_zip "$P" "$OUT/PC-Linux/Nyctalus-PC-Linux.zip"
 cp "$P/LEGGIMI.txt" "$OUT/PC-Linux/LEGGIMI.txt"
+
+# ============================== Server Linux ==============================
+say "Server-Linux: assemblo il pacchetto per i nodi"
+V="$LAVORO/Nyctalus-Server"
+mkdir -p "$V/bin" "$V/Manuali"
+cp "$ROOT/target/release/nyctalus" "$V/bin/nyctalus"
+cp "$ROOT/server/installa-nodo.sh" "$V/installa.sh"; cp "$ROOT/server/nyctalus-server" "$ROOT/server/disinstalla.sh" "$V/"
+cp "$ROOT/documenti/manuali/MANUALE-SERVER.md" "$ROOT/documenti/manuali/SCELTE-OPERATIVE.md" "$ROOT/LICENSE" "$V/" 2>/dev/null || true
+mv "$V"/MANUALE-SERVER.md "$V"/SCELTE-OPERATIVE.md "$V/Manuali/" 2>/dev/null || true
+chmod +x "$V"/*.sh "$V/nyctalus-server" "$V/bin/nyctalus"
+cat > "$V/LEGGIMI.txt" <<'EOF'
+Nyctalus per SERVER (nodi della rete)
+=====================================
+
+Solo il motore, senza grafica: trasforma un server Linux x86_64 sempre acceso
+(un VPS, o un PC di casa con la porta aperta sul router) in 1-8 NODI della rete.
+
+INSTALLARE (sul server)
+   sudo ./installa.sh                chiede IP pubblico, quanti nodi, porta (UDP)
+   sudo ./installa.sh --ip 203.0.113.5 --nodi 4 --porta 4601 --si
+   ./installa.sh --utente            senza root (servizi dell'utente)
+
+   Alla fine stampa le RIGHE D'ELENCO: mandale a chi gestisce la rete.
+
+GESTIRE
+   nyctalus-server stato | righe | riavvia | ferma | avvia | log
+
+DISINSTALLARE
+   sudo /opt/nyctalus/disinstalla.sh      (le identità dei nodi restano, per reinstallare uguali)
+
+Passi completi: Manuali/MANUALE-SERVER.md · quadro generale: Manuali/SCELTE-OPERATIVE.md
+EOF
+mkdir -p "$OUT/Server-Linux"
+crea_zip "$V" "$OUT/Server-Linux/Nyctalus-Server-Linux.zip"
+cp "$V/LEGGIMI.txt" "$OUT/Server-Linux/LEGGIMI.txt"
 
 # ============================== Android ==============================
 say "Android: assemblo il pacchetto per Termux"
@@ -182,10 +231,13 @@ Nyctalus — cosa installare e dove
   Dispositivo           Cartella     Cosa prendere                  Poi
   --------------------  -----------  -----------------------------  ----------------------------
   PC Linux (x86_64)     PC-Linux/    Nyctalus-PC-Linux.zip          scompatta → ./installa.sh
+                                                                     (chiede: client, gestore o nodo)
+  Server / VPS (nodi)   Server-Linux/ Nyctalus-Server-Linux.zip     sul server: sudo ./installa.sh
   Telefono Android      Android/     nyctalus-termux.tar.gz (+APK)  in Termux → installa.sh
   Tutto in un colpo     —            Nyctalus-completo.zip          contiene tutte le cartelle
 
-Istruzioni passo-passo: il LEGGIMI.txt di ogni cartella e Manuali/MANUALE-INSTALLAZIONE.md.
+COSA INSTALLARE E DOVE, per ogni situazione: Manuali/SCELTE-OPERATIVE.md
+Istruzioni passo-passo: il LEGGIMI.txt di ogni cartella e i manuali in Manuali/.
 Windows e macOS: per ora solo il motore a riga di comando; le interfacce arriveranno.
 
 ⚠️  Prototipo non ancora verificato da revisori indipendenti: usalo per provare,
@@ -194,7 +246,7 @@ EOF
 
 say "Archivio completo"
 mkdir -p "$LAVORO/Nyctalus-completo"
-cp -r "$OUT/LEGGIMI.txt" "$OUT/PC-Linux" "$OUT/Android" "$OUT/Manuali" "$LAVORO/Nyctalus-completo/"
+cp -r "$OUT/LEGGIMI.txt" "$OUT/PC-Linux" "$OUT/Server-Linux" "$OUT/Android" "$OUT/Manuali" "$LAVORO/Nyctalus-completo/"
 crea_zip "$LAVORO/Nyctalus-completo" "$OUT/Nyctalus-completo.zip"
 
 echo

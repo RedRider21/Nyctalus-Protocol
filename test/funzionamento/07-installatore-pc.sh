@@ -26,6 +26,9 @@ for c in launcher browser; do
   [ "$(readlink "$H/.local/bin/nyctalus-$c")" = "$D/avvia-$c.sh" ] && pass "comando nyctalus-$c" || fail "comando nyctalus-$c mancante"
 done
 grep -q "un altro programma" "$H/.local/bin/nyctalus-chat" && pass "comando omonimo altrui non sovrascritto" || fail "sovrascritto un comando altrui (grave)"
+[ "$(readlink "$H/.local/bin/nyctalus-rete")" = "$D/gestore-rete/nyctalus-rete" ] && T "$H/.local/bin/nyctalus-rete" stato 2>&1 | grep -q "prova locale" \
+  && pass "comando nyctalus-rete (per importare il codice di rete)" || fail "nyctalus-rete non installato"
+T bash "$TMP/scompattato/Nyctalus/installa.sh" --ruolo sbagliato > /dev/null 2>&1 && fail "ruolo sconosciuto accettato" || pass "ruolo sconosciuto rifiutato"
 for v in launcher browser chat; do
   f="$H/.local/share/applications/nyctalus-$v.desktop"
   grep -q "^Exec=\"$D/avvia-$v.sh\"" "$f" 2>/dev/null && grep -q "^Icon=$D/logo.svg" "$f" && pass "voce di menu: $v" || fail "voce di menu $v"
@@ -39,7 +42,7 @@ T bash "$TMP/scompattato/Nyctalus/installa.sh" --si --avvio-automatico > /dev/nu
 [ -f "$H/.config/autostart/nyctalus-launcher.desktop" ] && pass "--avvio-automatico" || fail "avvio automatico non creato"
 mkdir -p "$H/.nyctalus-chat"; echo dato > "$H/.nyctalus-chat/contatti"
 T bash "$D/disinstalla.sh" --si > /dev/null 2>&1
-[ ! -e "$D" ] && [ ! -e "$H/.local/bin/nyctalus-launcher" ] && [ ! -e "$H/.local/share/applications/nyctalus-chat.desktop" ] \
+[ ! -e "$D" ] && [ ! -e "$H/.local/bin/nyctalus-launcher" ] && [ ! -e "$H/.local/bin/nyctalus-rete" ] && [ ! -e "$H/.local/share/applications/nyctalus-chat.desktop" ] \
   && [ ! -e "$H/.config/autostart/nyctalus-launcher.desktop" ] && pass "disinstallato: programma, comandi, menu e avvio automatico" || fail "disinstallazione incompleta"
 [ -f "$H/.local/share/applications/altro.desktop" ] && grep -q "un altro programma" "$H/.local/bin/nyctalus-chat" \
   && pass "cose di altri programmi intatte" || fail "toccate cose di altri programmi (grave)"

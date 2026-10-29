@@ -15,6 +15,7 @@ for c in launcher browser chat; do
   L="$HOME/.local/bin/nyctalus-$c"
   [ "$(readlink "$L" 2>/dev/null)" = "$DEST/avvia-$c.sh" ] && rm -f "$L"
 done
+[ "$(readlink "$HOME/.local/bin/nyctalus-rete" 2>/dev/null)" = "$DEST/gestore-rete/nyctalus-rete" ] && rm -f "$HOME/.local/bin/nyctalus-rete"
 for f in "$APP_DIR"/nyctalus-launcher.desktop "$APP_DIR"/nyctalus-browser.desktop "$APP_DIR"/nyctalus-chat.desktop \
          "$AUTO_DIR"/nyctalus-launcher.desktop; do
   grep -q '^X-Nyctalus=1' "$f" 2>/dev/null && rm -f "$f"
@@ -23,6 +24,7 @@ case "$DEST" in */nyctalus) rm -rf "$DEST" ;; esac
 echo "Programma Nyctalus rimosso."
 
 if [ "$SI" = 1 ]; then r=n; else
+  [ -d "$HOME/.nyctalus-rete" ] && echo "NB: ~/.nyctalus-rete (chiavi della TUA RETE, se la gestisci) non viene mai cancellata da qui."
   printf "Cancellare anche i tuoi DATI (identità/Contact ID, contatti, messaggi, allegati, impostazioni)? [s/N] "
   read -r r
 fi

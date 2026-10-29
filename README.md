@@ -127,7 +127,7 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 
 ## A che punto siamo
 
-**Fatto e testato** (88 test automatici):
+**Fatto e testato** (90 test automatici):
 - **L2 — nucleo del protocollo:** frammentazione, etichette segrete rotanti (BLAKE3), cifratura end-to-end (ChaCha20-Poly1305) con pacchetti di lunghezza fissa, ricomposizione con limiti anti-DoS.
 - **Stretta di mano Noise NK:** i due estremi si accordano sul segreto senza farlo mai viaggiare; forward secrecy; il mittente resta anonimo.
 - **Indirizzi `.nyct`:** la chiave pubblica di un servizio in base32, con controllo anti-errori di battitura.
@@ -153,14 +153,17 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 ```
 nyctalus protocol/
 ├── motore/          il motore in Rust: nyctalus-core (protocollo) + nyctalus (demone, nodi, chat)
-├── pc/              i programmi per il computer (Python+GTK3): browser/, chat/, launcher/
+├── pc/              i programmi per il computer (Python+GTK3): browser/, chat/, launcher/,
+│                    gestore-rete/ (nyctalus-rete: codice di rete, rete di casa, gestione)
+├── server/          i nodi su un server: installatore (servizi systemd) e nyctalus-server
 ├── mobile/          il telefono: orchestratore/ (Python in Termux), webapp/ (PWA),
 │                    termux/ (installatore), android/ (APK)
 ├── strumenti/       script di sviluppo: demo, avvio della chat, creazione delle installazioni
 ├── test/            tutte le prove di funzionamento e di sicurezza: test/esegui-tutti.sh
 ├── documenti/       visione, specifica, stato dei lavori, deploy, sicurezza, manuali
 └── installazioni/   GENERATA da strumenti/crea-installazioni.sh: cosa installare e dove
-    ├── PC-Linux/    archivio pronto + istruzioni
+    ├── PC-Linux/    archivio pronto + istruzioni (l'installatore chiede: client, gestore o nodo)
+    ├── Server-Linux/ solo il motore, per i nodi su un VPS
     └── Android/     archivio per Termux + APK + istruzioni passo-passo
 ```
 
@@ -169,7 +172,7 @@ nyctalus protocol/
 Serve [Rust](https://rustup.rs) (profilo minimal sufficiente):
 
 ```sh
-cargo test              # 88 test
+cargo test              # 90 test
 cargo build --release   # produce target/release/nyctalus
 ```
 

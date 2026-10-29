@@ -23,8 +23,8 @@ privata (non finiscono nella galleria) e si cancellano dopo un giorno.
 
 In cima all'elenco una striscia ti dice a che punto è la rete:
 - **⏳ Avvio della rete…**: pochi secondi, intanto vedi già le chat;
-- **Rete di prova LOCALE**: funziona solo sul telefono, per parlare con altri serve la
-  rete condivisa (`DEPLOY.md`);
+- **Rete di prova LOCALE**: funziona solo sul telefono. Per parlare con altri importa un
+  **codice di rete** (vedi sotto);
 - **Nyctalus è fermo** con il bottone **Avvia**.
 
 ## 2. Le chat (schermata principale)
@@ -66,8 +66,11 @@ Tocca **📎**: sale il **selettore**.
 
 Note:
 - Per vedere le foto nella griglia, in Termux una volta sola: `termux-setup-storage`.
-- Le **miniature** si preparano poche alla volta e solo per le caselle visibili; restano
-  in memoria, quindi la seconda apertura è immediata. Con `python-pillow` (l'installatore
+- La griglia mostra le foto **a pagine**: le prime 30, poi altre mentre scorri, fino alle
+  300 più recenti. Per le altre usa **Altre foto**.
+- Le **miniature** si preparano poche alla volta, in sottofondo e solo per le caselle
+  visibili. Si usa prima quella già contenuta nella foto, che è istantanea; restano in
+  memoria, quindi la seconda apertura è immediata. Con `python-pillow` (l'installatore
   lo aggiunge) sono nitide; senza, si usano quelle già contenute nelle foto. Una foto grande
   senza miniatura mostra un'icona: non si carica mai la foto intera solo per l'anteprima.
 - Il cerchio di selezione compare quando la foto è pronta.
@@ -87,6 +90,10 @@ Note:
 - **Tema**: Notte, Ardesia (stile Telegram), Viola, Chiaro;
 - **Sfondo della chat**: pipistrelli, velo di colore, tinta unita;
 - **Foto senza metadati**;
+- **Rete condivisa**: **📥 Importa codice** → incolla il codice `NYCT1:…` che ti ha dato
+  chi gestisce la rete (per la rete di casa lo mostra il PC: apri nel browser del
+  telefono l'indirizzo `http://IP-DEL-PC:18800/` e copialo). La rete si riavvia da sola
+  su quella condivisa; **↩ Rete di prova** torna indietro.
 - **Rete Nyctalus**: una spia dice in che fase sei. **● verde** = attiva (e se è la rete
   di prova locale o quella condivisa); **● gialla lampeggiante** = in avvio o in arresto;
   **○ grigia** = ferma; **● rossa** = errore. **▶ Avvia rete** si può toccare solo a
