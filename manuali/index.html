@@ -1,0 +1,82 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuali di Nyctalus · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html" class="qui">Manuali di Nyctalus</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<article>
+<h1 id="manuali-di-nyctalus">Manuali di Nyctalus</h1>
+<p><strong>Da dove iniziare:</strong> <a href="SCELTE-OPERATIVE.html">SCELTE-OPERATIVE.md</a> spiega cosa installare e
+dove: client, nodo server o gestore della rete. Ci sono i passi per provare da soli,
+per la rete di casa telefono ↔ PC, per una rete con un server e per una rete distribuita.</p>
+<table>
+<thead>
+<tr>
+<th>Manuale</th>
+<th>Per chi / cosa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="SCELTE-OPERATIVE.html">SCELTE-OPERATIVE.md</a></td>
+<td>i <strong>tre ruoli</strong> e i <strong>quattro scenari</strong>: cosa installare dove</td>
+</tr>
+<tr>
+<td><a href="MANUALE-SERVER.html">MANUALE-SERVER.md</a></td>
+<td>installare i <strong>nodi</strong> su un server/VPS e gestirli (<code>nyctalus-server</code>)</td>
+</tr>
+<tr>
+<td><a href="MANUALE-GESTORE-RETE.html">MANUALE-GESTORE-RETE.md</a></td>
+<td>creare e gestire una <strong>rete</strong>: autorità, elenco firmato, <strong>codice di rete</strong>, rete di casa (<code>nyctalus-rete</code>)</td>
+</tr>
+<tr>
+<td><a href="MANUALE-INSTALLAZIONE.html">MANUALE-INSTALLAZIONE.md</a></td>
+<td>installare su <strong>PC Linux</strong> e su <strong>Android</strong> (Termux), portare i file nel telefono, disinstallare, problemi frequenti</td>
+</tr>
+<tr>
+<td><a href="MANUALE-PC.html">MANUALE-PC.md</a></td>
+<td>usare <strong>launcher</strong>, <strong>browser</strong> (normale/Stealth, siti <code>.nyct</code>) e chat sul PC</td>
+</tr>
+<tr>
+<td><a href="MANUALE-TELEFONO.html">MANUALE-TELEFONO.md</a></td>
+<td>usare la <strong>web-app</strong> sul telefono: chat, pressione lunga, selettore allegati, impostazioni</td>
+</tr>
+<tr>
+<td><a href="MANUALE-CHAT.html">MANUALE-CHAT.md</a></td>
+<td>la <strong>chat <code>.nyct</code></strong> in dettaglio: Contact ID, contatti, allegati, fotocamera, menu, sicurezza</td>
+</tr>
+<tr>
+<td><a href="MANUALE-PROVE.html">MANUALE-PROVE.md</a></td>
+<td>rifare <strong>tutte le prove</strong> di funzionamento e di sicurezza</td>
+</tr>
+</tbody>
+</table>
+<p>Documenti tecnici (nella cartella <code>documenti/</code>): <a href="DEPLOY.html"><code>DEPLOY.md</code></a> (mettere in piedi una rete
+e tutte le opzioni), <a href="SICUREZZA.html"><code>SICUREZZA.md</code></a> (come verificare sicurezza e anonimato, e cosa
+richiede un audit), <code>SPECIFICA.md</code>, <code>VISIONE.md</code>, <code>STATO.md</code> (stato dei lavori).</p>
+</article>
+</main>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>

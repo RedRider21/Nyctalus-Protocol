@@ -1,0 +1,20 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+   Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol. */
+.wrap.manuale-doc { max-width: 1180px; }
+.manuale-doc { display: grid; grid-template-columns: 230px 1fr; gap: 32px; padding-top: 28px; padding-bottom: 60px; }
+.indice-manuali { position: sticky; top: 76px; align-self: start; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.indice-manuali a { padding: 7px 10px; border-radius: 8px; text-decoration: none; color: inherit; opacity: .75; }
+.indice-manuali a:hover { opacity: 1; background: rgba(127,127,127,.12); }
+.indice-manuali a.qui { opacity: 1; font-weight: 600; background: color-mix(in srgb, var(--acc2) 18%, transparent); }
+.manuale-doc article { min-width: 0; line-height: 1.6; }
+.manuale-doc article h1 { margin-top: 0; font-size: 2rem; line-height: 1.25; letter-spacing: 0; }
+.manuale-doc article h2 { font-size: 1.4rem; }
+.manuale-doc article h3 { font-size: 1.12rem; }
+.manuale-doc article h2 { margin-top: 2em; padding-top: .4em; border-top: 1px solid rgba(127,127,127,.25); }
+.manuale-doc table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14.5px; display: block; overflow-x: auto; }
+.manuale-doc th, .manuale-doc td { border: 1px solid rgba(127,127,127,.3); padding: 7px 10px; text-align: left; vertical-align: top; }
+.manuale-doc th { background: rgba(127,127,127,.1); }
+.manuale-doc pre { overflow-x: auto; padding: 12px 14px; border-radius: 10px; background: rgba(127,127,127,.12); }
+.manuale-doc code { font-size: .92em; }
+.manuale-doc blockquote { margin: 1em 0; padding: 8px 14px; border-left: 4px solid #e0a63a; background: rgba(224,166,58,.08); border-radius: 0 8px 8px 0; }
+@media (max-width: 760px) { .manuale-doc { grid-template-columns: 1fr; } .indice-manuali { position: static; flex-direction: row; flex-wrap: wrap; } }

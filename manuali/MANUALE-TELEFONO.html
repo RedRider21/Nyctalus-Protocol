@@ -1,0 +1,177 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuale d&#x27;uso — telefono (Android) · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html" class="qui">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<article>
+<h1 id="manuale-duso-telefono-android">Manuale d'uso — telefono (Android)</h1>
+<p>Sul telefono Nyctalus è una <strong>web-app in stile Telegram</strong> che apri nel browser (o
+nell'app <strong>Nyctalus</strong>). Dietro, dentro <strong>Termux</strong>, girano il motore (lo stesso del PC) e
+un piccolo servizio, l'<strong>orchestratore</strong>, che avvia la rete, fa da ponte con il motore e
+gestisce gli allegati. Installazione: <strong><a href="MANUALE-INSTALLAZIONE.html"><code>MANUALE-INSTALLAZIONE.md</code></a></strong>, capitolo 2.</p>
+<hr />
+<h2 id="1-avvio">1. Avvio</h2>
+<p>In Termux scrivi <code>nyctalus-mobile</code> e apri nel browser l'indirizzo che stampa
+(<code>http://127.0.0.1:18731/?t=…</code>). Con l'app Nyctalus basta toccare l'icona: compare la <strong>schermata di benvenuto</strong> col logo,
+e l'app avvia Nyctalus in Termux. Sotto il nome «Nyctalus · Anonymous Protocol» c'è una
+fila di pulsanti, come il mini menu del PC:</p>
+<table>
+<thead>
+<tr>
+<th>Pulsante</th>
+<th>Cosa apre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>💬 <strong>Chat</strong></td>
+<td>la chat. Si accende quando la scritta dice «● Nyctalus è pronto»</td>
+</tr>
+<tr>
+<td>🌐 <strong>Browser</strong></td>
+<td>il browser: <strong>🦇 modalità Nyctalus</strong> (anonimo, siti <code>.nyct</code>) oppure navigazione normale; parte da DuckDuckGo</td>
+</tr>
+<tr>
+<td>📁 <strong>File</strong></td>
+<td>in arrivo: invio e ricezione di file attraverso Nyctalus</td>
+</tr>
+<tr>
+<td>ℹ️ <strong>Info</strong></td>
+<td>il sito del progetto con i manuali online (anche toccando il logo)</td>
+</tr>
+</tbody>
+</table>
+<p>Il <strong>tasto indietro</strong> riporta sempre al punto di partenza: dalla conversazione all'elenco
+delle chat, dall'elenco a questa schermata; dal browser, chiudendo l'ultima scheda. La chat
+resta aperta dietro, quindi ritoccando 💬 ci si rientra subito.
+I pulsanti per Termux (installa/aggiorna Termux, installa/aggiorna Nyctalus, apri Termux,
+comando di avvio) sono sotto <strong>Strumenti ▾</strong>. Le foto e i video scattati dalla chat con l'app restano nella sua cartella
+privata (non finiscono nella galleria) e si cancellano dopo un giorno.</p>
+<p>In cima all'elenco una striscia ti dice a che punto è la rete:
+- <strong>⏳ Avvio della rete…</strong>: pochi secondi, intanto vedi già le chat;
+- <strong>Rete di prova LOCALE</strong>: funziona solo sul telefono. Per parlare con altri importa un
+  <strong>codice di rete</strong> (vedi sotto);
+- <strong>Nyctalus è fermo</strong> con il bottone <strong>Avvia</strong>.</p>
+<h2 id="1-bis-il-browser-solo-nellapp">1-bis. Il browser (solo nell'app)</h2>
+<p>È il browser di NovaOS in stile Chrome: schede, incognito, preferiti, cronologia, trova nella
+pagina, traduzione, modalità lettura, sito desktop, download. In più ha la <strong>modalità
+Nyctalus</strong>: il pulsante <strong>🦇</strong> a sinistra della barra, oppure la voce in cima al menu ⋮.</p>
+<ul>
+<li><strong>🦇 ON (verde):</strong> tutto il traffico del browser passa dalla rete Nyctalus e il sito non vede
+  il tuo indirizzo. Si aprono anche i siti <code>.nyct</code>.</li>
+<li><strong>Prima di aprire qualunque pagina il browser verifica</strong> che il traffico passi davvero
+  dalla rete. Se Nyctalus non è acceso o il telefono non lo permette, <strong>non apre nulla</strong> e lo
+  spiega.</li>
+<li>In questa modalità le schede sono tutte in incognito: niente cronologia, niente cache né
+  archivi dei siti, cookie cancellati quando esci. Sono spenti anche WebRTC, fotocamera,
+  microfono e posizione. La ricerca usa DuckDuckGo invece di Google. Non si passano indirizzi
+  ad altre app. Download e traduzione passano anche loro dalla rete (i download finiscono in
+  <code>Android/data/org.nyctalus.mobile/files/Download</code>).</li>
+<li>Il browser gira in un processo separato: chiudendolo, la volta dopo riparte normale.</li>
+<li>Serve Android 9 o successivo, con «Android System WebView» o Chrome aggiornati.</li>
+<li>I siti <code>.nyct</code> fuori dalla modalità Nyctalus sono bloccati, come sul PC.</li>
+</ul>
+<h2 id="2-le-chat-schermata-principale">2. Le chat (schermata principale)</h2>
+<ul>
+<li>Ogni riga mostra <strong>avatar</strong>, <strong>nome</strong>, <strong>ultimo messaggio</strong>, <strong>ora o giorno</strong>, il
+  numero di <strong>messaggi non letti</strong> e il 📌 delle chat fissate (che restano in cima).</li>
+<li>🔍 cerca fra i contatti; <strong>✏️</strong> (in basso a destra) aggiunge un contatto: incolla il
+  suo <strong>Contact ID</strong> e dagli un nome.</li>
+<li>In basso c'è il <strong>tuo Contact ID</strong>: toccalo per copiarlo e darlo agli amici (non è
+  segreto).</li>
+<li>All'apertura elenco e conversazioni compaiono <strong>subito</strong>, anche prima che la rete sia
+  pronta: il telefono ne tiene una copia (cache <strong>IndexedDB</strong>) che poi si allinea con il
+  motore.</li>
+</ul>
+<p><strong>Pressione lunga su una chat</strong> → menu: Apri · Segna come letto/non letto · Fissa in
+alto · Rinomina · Copia il Contact ID · <strong>Cancella cronologia</strong> · <strong>Elimina la chat</strong>.</p>
+<h2 id="3-la-conversazione">3. La conversazione</h2>
+<ul>
+<li>Tocca una chat per aprirla; <strong>←</strong> (o il tasto Indietro) torna all'elenco.</li>
+<li>Scrivi in basso e tocca <strong>➤</strong>.</li>
+<li>I messaggi sono raggruppati per giorno (<strong>Oggi</strong>, <strong>Ieri</strong>…); la chat resta in fondo
+  quando arrivano messaggi e foto.</li>
+<li><strong>⋮</strong> in alto: lo stesso menu della pressione lunga sulla chat.</li>
+</ul>
+<p><strong>Pressione lunga su un messaggio</strong> → Copia testo · Inoltra (a un altro contatto) ·
+<strong>Elimina per me</strong> (solo dal tuo telefono). Sugli allegati: Apri · Inoltra · Elimina.</p>
+<h2 id="4-allegati-come-telegram">4. Allegati (come Telegram)</h2>
+<p>Tocca <strong>📎</strong>: sale il <strong>selettore</strong>.
+- La <strong>griglia</strong> mostra le tue <strong>foto e video più recenti</strong>; la prima casella è la
+  <strong>Fotocamera</strong>.
+- <strong>Tocca le foto per sceglierle</strong>: compare il <strong>numero d'ordine</strong> nel cerchio blu (1,
+  2, 3…). Tocca di nuovo per togliere.
+- Con almeno un elemento scelto compaiono la <strong>didascalia</strong> e <strong>Invia (N)</strong>.
+- Le schede in basso: <strong>Galleria</strong> · <strong>File</strong> (qualunque file) · <strong>Altre foto</strong> (il
+  selettore di sistema) · <strong>Video</strong> (registra un video).</p>
+<p>Note:
+- Per vedere le foto nella griglia, in Termux una volta sola: <code>termux-setup-storage</code>.
+- La griglia mostra le foto <strong>a pagine</strong>: le prime 30, poi altre mentre scorri, fino alle
+  300 più recenti. Per le altre usa <strong>Altre foto</strong>.
+- Le <strong>miniature</strong> si preparano poche alla volta, in sottofondo e solo per le caselle
+  visibili. Si usa prima quella già contenuta nella foto, che è istantanea; restano in
+  memoria, quindi la seconda apertura è immediata. Con <code>python-pillow</code> (l'installatore
+  lo aggiunge) sono nitide; senza, si usano quelle già contenute nelle foto. Una foto grande
+  senza miniatura mostra un'icona: non si carica mai la foto intera solo per l'anteprima.
+- Il cerchio di selezione compare quando la foto è pronta.
+- Puoi scegliere <strong>più foto insieme</strong>: arrivano tutte (prima della versione 0.5 dell'app
+  una poteva perdersi).
+- Le foto JPEG/PNG partono <strong>senza metadati</strong> (niente posizione GPS né modello del
+  telefono): si può cambiare nelle impostazioni.
+- In chat le <strong>foto</strong> si vedono a tutta bolla, i <strong>video</strong> con miniatura e ▶ (le
+  miniature richiedono <code>pkg install ffmpeg</code>), gli <strong>audio</strong> si ascoltano dentro la chat,
+  gli altri file hanno il cerchio colorato con l'estensione.
+- <strong>Apri</strong> usa le app del telefono, ma solo per i tipi innocui (foto, video, audio, PDF,
+  testo): programmi e APK ricevuti <strong>non si aprono mai da soli</strong>.</p>
+<h2 id="5-impostazioni">5. Impostazioni (☰)</h2>
+<ul>
+<li>il tuo <strong>Contact ID</strong> con <strong>Copia</strong> e <strong>Condividi</strong>;</li>
+<li><strong>Tema</strong>: Notte, Ardesia (stile Telegram), Viola, Chiaro;</li>
+<li><strong>Sfondo della chat</strong>: pipistrelli, velo di colore, tinta unita;</li>
+<li><strong>Foto senza metadati</strong>;</li>
+<li><strong>Rete condivisa</strong>: <strong>📥 Importa codice</strong> → incolla il codice <code>NYCT1:…</code> che ti ha dato
+  chi gestisce la rete (per la rete di casa lo mostra il PC: apri nel browser del
+  telefono l'indirizzo <code>http://IP-DEL-PC:18800/</code> e copialo). La rete si riavvia da sola
+  su quella condivisa; <strong>↩ Rete di prova</strong> torna indietro.</li>
+<li><strong>Rete Nyctalus</strong>: una spia dice in che fase sei. <strong>● verde</strong> = attiva (e se è la rete
+  di prova locale o quella condivisa); <strong>● gialla lampeggiante</strong> = in avvio o in arresto;
+  <strong>○ grigia</strong> = ferma; <strong>● rossa</strong> = errore. <strong>▶ Avvia rete</strong> si può toccare solo a
+  rete ferma (o dopo un errore, come «↻ Riprova»), <strong>■ Ferma rete</strong> solo a rete attiva.</li>
+</ul>
+<h2 id="6-sicurezza-sul-telefono">6. Sicurezza sul telefono</h2>
+<ul>
+<li>Su Android <strong>ogni app</strong> può collegarsi alle porte <code>127.0.0.1</code>: per questo la web-app
+  entra solo con un <strong>segreto</strong> (il <code>?t=…</code> dell'indirizzo, poi un cookie), che sta nella
+  cartella privata di Termux. Senza segreto, niente accesso a chat e file.</li>
+<li>L'orchestratore legge <strong>solo</strong> le cartelle consentite (allegati, galleria in sola
+  lettura) e rifiuta richieste da altri siti.</li>
+<li>I messaggi viaggiano cifrati da un capo all'altro e <strong>chi ti scrive è autenticato</strong>
+  (vedi <a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a> e <a href="SICUREZZA.html"><code>SICUREZZA.md</code></a>).</li>
+</ul>
+</article>
+</main>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>

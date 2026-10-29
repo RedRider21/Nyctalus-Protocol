@@ -1,0 +1,305 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guida al deploy e alla configurazione · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html" class="qui">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<article>
+<h1 id="guida-al-deploy-e-alla-configurazione">Guida al deploy e alla configurazione</h1>
+<p>Come <strong>installare</strong>, <strong>configurare</strong> e <strong>mettere in piedi una rete</strong> Nyctalus per i
+test, e come far collegare i tester. Per il funzionamento del protocollo vedi
+<a href="README.html">README.md</a>; per i livelli e il modello di minaccia <a href="SPECIFICA.html">SPECIFICA.md</a>;
+per <strong>verificare</strong> sicurezza e anonimato <a href="SICUREZZA.html">SICUREZZA.md</a>.</p>
+<blockquote>
+<p>⚠️ <strong>Prototipo non ancora verificato da revisori indipendenti.</strong> Usalo per
+provare funzionamento, usabilità e stabilità — <strong>non</strong> per proteggere dati
+reali. Vedi <a href="SICUREZZA.html">SICUREZZA.md</a>.</p>
+</blockquote>
+<hr />
+<h2 id="1-cosa-installare">1. Cosa installare</h2>
+<h3 id="per-compilare-il-motore-demone-nodi">Per compilare il motore (demone, nodi)</h3>
+<ul>
+<li><strong>Rust</strong> (https://rustup.rs, profilo <em>minimal</em> sufficiente).</li>
+<li>Build:
+  <code>sh
+  git clone https://github.com/RedRider21/Nyctalus-Protocol.git
+  cd Nyctalus-Protocol
+  cargo build --release        # produce target/release/nyctalus</code></li>
+<li>In alternativa, quando ci sarà una Release pubblica, si scaricano i binari
+  già pronti (Linux x86_64/arm64, Windows, macOS).</li>
+</ul>
+<h3 id="per-i-client-grafici-browser-launcher-chat">Per i client grafici (browser, launcher, chat)</h3>
+<ul>
+<li><strong>Python 3</strong>, <strong>PyGObject (GTK 3)</strong>; <strong>WebKit2GTK</strong> solo per il browser.
+  <code>sh
+  sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
+  # su sistemi più vecchi: gir1.2-webkit2-4.0
+  # opzionale, per i tasti rapidi GLOBALI del launcher:
+  sudo apt install gir1.2-keybinder-3.0
+  # opzionale, per la chat: fotocamera (foto/video), lettore audio, miniature video
+  sudo apt install gir1.2-gstreamer-1.0 gstreamer1.0-gtk3 gstreamer1.0-plugins-good \
+                   gstreamer1.0-plugins-ugly gstreamer1.0-libav ffmpeg</code>
+  Il <strong>launcher</strong> e la <strong>chat</strong> richiedono solo GTK 3 (non WebKit).</li>
+<li>Avvio:
+  <code>sh
+  ./strumenti/demo-locale-nav-normal.sh      # browser in navigazione normale
+  ./strumenti/demo-chat.sh                    # chat: due finestre in locale</code></li>
+</ul>
+<h3 id="per-una-prova-completa-in-locale-tutto-in-uno">Per una prova completa in locale (tutto in uno)</h3>
+<pre><code class="language-sh">./strumenti/demo-locale.sh
+</code></pre>
+<p>Avvia 4 nodi locali, pubblica un sito <code>.nyct</code> dimostrativo, avvia il demone e
+apre il browser. Serve a <strong>provare subito</strong> il software su una sola macchina —
+non è una rete reale condivisa (vedi §3).</p>
+<hr />
+<h2 id="2-i-componenti-e-i-comandi">2. I componenti e i comandi</h2>
+<p>Il binario <code>nyctalus</code> fa tutto, con sotto-comandi (<code>nyctalus help</code> per l'elenco):</p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>A cosa serve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nyctalus authority</code></td>
+<td>crea una <strong>autorità</strong> di directory (una chiave segreta + pubblica). Si fa <strong>una volta sola</strong>.</td>
+</tr>
+<tr>
+<td><code>nyctalus node --listen IP:PORTA</code></td>
+<td>avvia un <strong>nodo-relè</strong>. Stampa la sua <em>riga d'elenco</em> (indirizzo, chiave, impronta).</td>
+</tr>
+<tr>
+<td><code>nyctalus directory --authority-secret SEG --entries '...'</code></td>
+<td><strong>firma</strong> l'elenco dei nodi con l'autorità → <code>directory.txt</code>.</td>
+</tr>
+<tr>
+<td><code>nyctalus nodes --directory FILE --authority PUB [--probe]</code></td>
+<td>mostra i nodi e, con <code>--probe</code>, quali sono raggiungibili ora.</td>
+</tr>
+<tr>
+<td><code>nyctalus start</code> / <code>nyctalus circuit</code></td>
+<td>il <strong>demone</strong>: proxy SOCKS5 che instrada attraverso la rete.</td>
+</tr>
+<tr>
+<td><code>nyctalus site --dir ./sito</code> / <code>--backend IP:PORTA</code></td>
+<td>pubblica un <strong>sito <code>.nyct</code></strong> (cartella o web server esterno).</td>
+</tr>
+<tr>
+<td><code>nyctalus browse ADDR.nyct</code></td>
+<td>visita un sito <code>.nyct</code> da terminale.</td>
+</tr>
+<tr>
+<td><code>nyctalus chat</code></td>
+<td><strong>motore della chat <code>.nyct</code></strong> (senza server, senza metadati): parla con l'interfaccia grafica su una porta di controllo locale.</td>
+</tr>
+<tr>
+<td><code>nyctalus exec -- PROGRAMMA</code></td>
+<td>lancia un programma instradandolo nella rete (stile torsocks).</td>
+</tr>
+<tr>
+<td><code>nyctalus monitor</code></td>
+<td>cruscotto testuale delle metriche del demone.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="opzioni-principali-chi-le-usa">Opzioni principali (chi le usa)</h3>
+<ul>
+<li><code>--hops N</code> (demone): nodi per percorso. <strong>Min 1, max 5, default 3.</strong> Sotto 3 niente vero anonimato.</li>
+<li><code>--circuits N</code> (demone): strade parallele. <strong>Min 1, max 8, default 2.</strong></li>
+<li><code>--cover HZ</code> (demone <strong>e</strong> nodo): <strong>rumore di fondo</strong> (celle finte a ritmo di Poisson). <code>circuit/start --cover</code> = in salita, <code>node --cover</code> = in discesa. Default 0.</li>
+<li><code>--obfuscation HEX</code> (demone <strong>e</strong> nodi): <strong>camuffamento del trasporto</strong> con una chiave di rete condivisa (ogni datagramma UDP reso rumore per il DPI). Deve essere <strong>uguale su tutti</strong> i nodi e sul client.</li>
+<li><code>--socks IP:PORTA</code> (demone): dove ascolta il proxy (default <code>127.0.0.1:1080</code>).</li>
+<li><code>--control IP:PORTA</code> (demone): porta di controllo per <code>monitor</code> (default <code>127.0.0.1:1090</code>).</li>
+<li><code>--tor-socks IP:PORTA</code> (nodo): proxy del Tor di sistema per raggiungere i <code>.onion</code> (default <code>127.0.0.1:9050</code>).</li>
+<li><code>--max-file MB</code> (chat): dimensione massima degli allegati inviati e accettati. <strong>Min 1, max 4096, default 200.</strong></li>
+</ul>
+<hr />
+<h2 id="3-mettere-in-piedi-una-rete-per-i-test-condivisa-reale">3. Mettere in piedi una rete per i test (condivisa, reale)</h2>
+<blockquote>
+<p><strong>Modo semplice (consigliato):</strong> pacchetto <code>installazioni/Server-Linux</code> sui server
+(<a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>) e strumento <code>nyctalus-rete</code> sul PC del gestore
+(<a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a>): fanno da soli i passi qui sotto, con nodi come servizi
+systemd e un <strong>codice di rete</strong> da dare ai client. Quadro: <a href="SCELTE-OPERATIVE.html"><code>SCELTE-OPERATIVE.md</code></a>.
+Qui sotto restano i comandi a mano, per chi vuole capire o personalizzare.</p>
+</blockquote>
+<p>Perché <strong>più persone</strong> provino la <strong>stessa</strong> rete, servono nodi su <strong>server
+pubblici</strong> (con IP pubblico) e una directory firmata <strong>pubblicata</strong>.</p>
+<h3 id="31-una-volta-sola-lautorita">3.1 Una volta sola: l'autorità</h3>
+<p>Su una macchina sicura (la tieni tu):</p>
+<pre><code class="language-sh">nyctalus authority
+#   secret:  &lt;SEGRETO&gt;      &lt;- tienilo segreto, serve a firmare la directory
+#   public:  &lt;PUBBLICA&gt;     &lt;- va dato a tutti i client e nodi
+</code></pre>
+<h3 id="32-i-nodi-su-ogni-server-pubblico">3.2 I nodi (su ogni server pubblico)</h3>
+<p>Su ciascun VPS/server, con la porta aperta sul firewall:</p>
+<pre><code class="language-sh">nyctalus node --listen 0.0.0.0:4601 --data /var/lib/nyctalus/nodo-4601 --announce IP_PUBBLICO:4601
+#   directory entry:   IP_PUBBLICO:4601,&lt;x25519&gt;,&lt;impronta&gt;
+# --data: identità conservata, la riga resta uguale ai riavvii (senza, cambia ogni volta)
+</code></pre>
+<p>Copia la <strong>riga <code>directory entry</code></strong> di ogni nodo.
+(Opzionale: aggiungi <code>--obfuscation &lt;HEX&gt;</code> uguale su tutti per il camuffamento,
+e <code>--cover 5</code> per il rumore di fondo in discesa.)</p>
+<blockquote>
+<p>Consiglio: all'inizio fai nodi <strong>senza uscita verso Internet</strong> e punta sui
+siti <code>.nyct</code> interni (niente implicazioni legali da nodo d'uscita). L'uscita
+verso Internet la abiliti più avanti, con volontari consapevoli.</p>
+</blockquote>
+<h3 id="33-firma-la-directory">3.3 Firma la directory</h3>
+<p>Sulla macchina dell'autorità, con tutte le righe raccolte:</p>
+<pre><code class="language-sh">nyctalus directory --authority-secret &lt;SEGRETO&gt; \
+  --entries 'IP1:4601,x,fp;IP2:4601,x,fp;IP3:4601,x,fp' &gt; directory.txt
+</code></pre>
+<h3 id="34-pubblica-la-directory-a-un-url">3.4 Pubblica la directory a un URL</h3>
+<p>Metti <code>directory.txt</code> dove i client possono scaricarlo via HTTPS: per esempio un
+hosting statico, le <strong>GitHub Pages</strong> del progetto, o un tuo server. L'URL sarà
+qualcosa come <code>https://tuo-sito/directory.txt</code>.
+Quando aggiungi/togli nodi, ri-firmi e ri-pubblichi il file.</p>
+<h3 id="35-verifica">3.5 Verifica</h3>
+<pre><code class="language-sh">nyctalus nodes --directory directory.txt --authority &lt;PUBBLICA&gt; --probe
+# deve elencare i nodi come 'online' con il tempo di risposta
+</code></pre>
+<hr />
+<h2 id="4-configurare-i-client-i-tester">4. Configurare i client (i tester)</h2>
+<p>I tester installano il <strong>browser</strong> e lo puntano alla tua rete. Basta un file di
+configurazione <code>~/.nyctalus-browser/config.json</code>:</p>
+<pre><code class="language-json">{
+  &quot;directory_url&quot;: &quot;https://tuo-sito/directory.txt&quot;,
+  &quot;authority&quot;: &quot;&lt;PUBBLICA&gt;&quot;,
+  &quot;socks_host&quot;: &quot;127.0.0.1&quot;,
+  &quot;socks_port&quot;: 1080
+}
+</code></pre>
+<p>Poi: avviano il browser (<code>demo-locale-nav-normal.sh</code> o <code>python3 -m nyctalus_browser</code>),
+cliccano <strong>Stealth</strong> → il browser <strong>scarica la directory, la fa verificare al
+demone</strong> (che controlla la firma con la chiave dell'autorità) e instrada il
+traffico. Il pulsante mostra <strong>"Stealth ON"</strong>.</p>
+<ul>
+<li><strong>Senza</strong> <code>directory_url</code>/<code>authority</code> nel config, cliccando Stealth il browser
+  avvia una <strong>rete di prova locale</strong> (sul PC del tester) → pulsante "Stealth ON ·
+  prova locale": utile a provare, ma non è la rete condivisa.</li>
+<li>Chi preferisce il terminale può lanciare il demone a mano:
+  <code>sh
+  curl -s https://tuo-sito/directory.txt &gt; directory.txt
+  nyctalus start --directory directory.txt --authority &lt;PUBBLICA&gt; --socks 127.0.0.1:1080</code></li>
+</ul>
+<h3 id="i-tester-che-vogliono-far-crescere-la-rete">I tester che vogliono far crescere la rete</h3>
+<p>Possono far girare un <strong>nodo</strong> (serve una porta pubblica) e mandarti la loro
+riga <code>directory entry</code>: tu la aggiungi, ri-firmi e ri-pubblichi la directory.
+(La registrazione automatica dei nodi è un miglioramento futuro.)</p>
+<hr />
+<h2 id="5-pubblicare-un-sito-nyct">5. Pubblicare un sito <code>.nyct</code></h2>
+<p>Su qualunque macchina connessa alla rete (serve <code>directory.txt</code> + autorità):</p>
+<pre><code class="language-sh"># una cartella di file HTML/JS…
+nyctalus site --dir ./mio-sito --identity sito.key --directory directory.txt --authority &lt;PUB&gt;
+#   address:  &lt;ADDR&gt;.nyct     &lt;- l'indirizzo da condividere
+
+# …oppure un web server esistente (Nginx/Apache) dietro al demone
+nyctalus site --backend 127.0.0.1:8080 --directory directory.txt --authority &lt;PUB&gt;
+</code></pre>
+<p>I visitatori aprono <code>http://&lt;ADDR&gt;.nyct</code> dal browser (con lo Stealth attivo) o con
+<code>nyctalus browse &lt;ADDR&gt;.nyct</code>.</p>
+<hr />
+<h2 id="6-la-chat-nyct-senza-server-senza-metadati">6. La chat <code>.nyct</code> (senza server, senza metadati)</h2>
+<p>Ogni utente <strong>è</strong> un indirizzo <code>.nyct</code>: quello è il suo <strong>Contact ID</strong>, l'unica cosa
+da scambiarsi. Non esiste un server centrale né una rubrica globale: i messaggi
+viaggiano punto-a-punto nella rete (circuito → punto d'incontro → servizio),
+cifrati end-to-end. Il mittente è <strong>autenticato crittograficamente</strong> (un secondo
+handshake Noise NK dentro il tunnel: solo chi possiede la chiave privata
+dell'indirizzo che dichiara può concludere la conversazione), quindi nessuno può
+spacciarsi per un tuo contatto.</p>
+<p><strong>Serve la rete condivisa.</strong> La chat è a due parti: per parlarsi, <strong>entrambi</strong>
+devono essere sulla <strong>stessa rete</strong> (quella pubblica di §3, configurata nei client
+come in §4 — <code>directory_url</code> + <code>authority</code>). Senza configurazione la finestra si
+apre comunque, ma su una rete di prova <strong>locale</strong> (non raggiungi altre persone).</p>
+<p><strong>Avvio (uso reale):</strong></p>
+<pre><code class="language-sh">./avvia-chat.sh          # nel pacchetto; oppure strumenti/avvia-chat.sh in sviluppo
+</code></pre>
+<p>Fa tutto da sé: avvia/riusa il proxy SOCKS, pubblica il tuo servizio <code>.nyct</code>, avvia
+il motore e apre la finestra. Al primo avvio crea la tua identità in
+<code>~/.nyctalus-chat/identita</code> (il tuo Contact ID non cambia più). Nella finestra:
+copia il tuo Contact ID e dallo agli amici; premi « + » per aggiungere il loro
+indirizzo; scrivi.</p>
+<p><strong>Provarla da solo su un PC</strong> (due identità, due finestre, rete locale):</p>
+<pre><code class="language-sh">./strumenti/demo-chat.sh
+</code></pre>
+<p><strong>A mano</strong> (se vuoi controllare i pezzi): servono <code>nyctalus start</code> (il SOCKS),
+<code>nyctalus site --backend 127.0.0.1:1082 --identity ~/.nyctalus-chat/identita …</code>
+(l'entrata) e <code>nyctalus chat</code> (il motore); l'interfaccia è
+<code>python3 -m nyctalus_chat</code> con <code>PYTHONPATH</code> su <code>chat/</code> e <code>browser/</code>.</p>
+<hr />
+<h2 id="7-riassunto-delle-opzioni-cosa-scegliere">7. Riassunto delle opzioni (cosa scegliere)</h2>
+<table>
+<thead>
+<tr>
+<th>Vuoi…</th>
+<th>Fai così</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Provare tutto su un PC</td>
+<td><code>./strumenti/demo-locale.sh</code></td>
+</tr>
+<tr>
+<td>Provare la <strong>chat</strong> su un PC</td>
+<td><code>./strumenti/demo-chat.sh</code> (due finestre)</td>
+</tr>
+<tr>
+<td>Usare la <strong>chat</strong> per davvero</td>
+<td><code>./avvia-chat.sh</code> (serve la rete condivisa, §3–4)</td>
+</tr>
+<tr>
+<td>Solo il browser normale</td>
+<td><code>./strumenti/demo-locale-nav-normal.sh</code></td>
+</tr>
+<tr>
+<td>Una rete condivisa per i tester</td>
+<td>§3 (nodi pubblici + directory pubblicata) + §4 (config dei client)</td>
+</tr>
+<tr>
+<td>Più anonimato (più lento)</td>
+<td><code>--hops 4</code> o <code>5</code>, <code>--circuits 3</code>+</td>
+</tr>
+<tr>
+<td>Nascondere i tempi</td>
+<td><code>--cover 5</code> su demone e nodi</td>
+</tr>
+<tr>
+<td>Eludere un DPI/censura</td>
+<td><code>--obfuscation &lt;HEX&gt;</code> uguale ovunque</td>
+</tr>
+<tr>
+<td>Siti interni senza uscita Internet</td>
+<td>usa solo <code>.nyct</code>, nessun nodo d'uscita</td>
+</tr>
+</tbody>
+</table>
+<p>Per <strong>verificare</strong> che tutto ciò protegga davvero: <strong><a href="SICUREZZA.html">SICUREZZA.md</a></strong>.</p>
+</article>
+</main>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>

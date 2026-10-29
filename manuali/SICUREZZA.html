@@ -1,0 +1,192 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verificare sicurezza e anonimato · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html" class="qui">Verificare sicurezza e anonimato</a></nav>
+<article>
+<h1 id="verificare-sicurezza-e-anonimato">Verificare sicurezza e anonimato</h1>
+<p>Questo documento spiega <strong>cosa si può verificare da soli</strong> (con gli strumenti
+qui indicati e lo script <a href="strumenti/verifica.sh"><code>strumenti/verifica.sh</code></a>) e <strong>cosa
+invece richiede una verifica indipendente</strong> prima di considerare Nyctalus sicuro
+per dati reali. Niente di qui sostituisce un <strong>audit</strong> di crittografi terzi.</p>
+<blockquote>
+<p>Principio: fidati, ma <strong>verifica</strong>. Le proprietà sotto sono testabili; le
+conclusioni forti sull'anonimato richiedono misure su rete reale e revisione.</p>
+</blockquote>
+<hr />
+<h2 id="1-verifiche-automatiche-subito-in-locale">1. Verifiche automatiche (subito, in locale)</h2>
+<pre><code class="language-sh">./strumenti/verifica.sh
+</code></pre>
+<p>Controlla, e riporta PASS/FAIL:</p>
+<ol>
+<li><strong>Correttezza del protocollo</strong> — <code>cargo test</code> (tutti i test automatici: celle a
+   lunghezza fissa = pacchetto Sphinx, cifratura, stretta Noise, indirizzi,
+   conflux, rendezvous…).</li>
+<li><strong>Firma della directory</strong> — una directory <strong>manomessa</strong> viene <strong>rifiutata</strong>
+   (il byte cambiato invalida la firma Ed25519 dell'autorità).</li>
+<li><strong>Autorità sbagliata</strong> — una directory firmata da <strong>un'altra autorità</strong> viene
+   <strong>rifiutata</strong> (il client accetta solo la chiave attesa).</li>
+<li><strong>Camuffamento obbligatorio</strong> — con <code>--obfuscation</code>, un client <strong>senza la
+   chiave di rete giusta non riesce a connettersi</strong>: sul filo il traffico è
+   indistinguibile da rumore (nessuna firma di QUIC riconoscibile).</li>
+</ol>
+<p>Questi quattro punti provano proprietà concrete: integrità/autenticità
+dell'elenco dei nodi, e che l'offuscamento del trasporto sia davvero attivo.</p>
+<hr />
+<h2 id="2-verifiche-manuali-su-rete-reale-con-unuscita-remota">2. Verifiche manuali su <strong>rete reale</strong> (con un'uscita remota)</h2>
+<p>Alcune cose <strong>non</strong> si possono provare in locale (dove client, nodi e uscita sono
+tutti sul tuo PC: l'uscita vede il tuo IP perché <em>sei tu</em> l'uscita). Servono nodi
+su macchine diverse.</p>
+<h3 id="21-lip-e-davvero-nascosto-niente-leak">2.1 L'IP è davvero nascosto (niente leak)</h3>
+<p>Con lo <strong>Stealth attivo</strong> e una rete con <strong>uscita su un'altra macchina</strong>:</p>
+<pre><code class="language-sh"># IP reale (senza proxy)
+curl -s https://api.ipify.org ; echo
+# IP visto attraverso Nyctalus (deve essere DIVERSO, quello dell'uscita)
+curl -s --socks5-hostname 127.0.0.1:1080 https://api.ipify.org ; echo
+</code></pre>
+<p>I due valori <strong>devono differire</strong>. Dal <strong>browser</strong>, con Stealth ON, apri una
+pagina tipo <code>https://ip.me</code> o <code>https://whoer.net</code> e controlla che non mostri il
+tuo IP/DNS reale.</p>
+<h3 id="22-niente-dns-leak">2.2 Niente DNS leak</h3>
+<p><code>--socks5-hostname</code> (e il browser in <code>socks5://</code>) manda il <strong>nome host</strong> al proxy,
+che lo risolve <strong>dentro la rete</strong>: il tuo resolver locale non deve vedere i domini
+che visiti. Verifica con un monitor DNS locale o osservando che le query non
+escono dal tuo PC quando lo Stealth è attivo.</p>
+<h3 id="23-i-nodi-vedono-solo-cio-che-devono">2.3 I nodi vedono solo ciò che devono</h3>
+<p>Su una rete a 3+ salti con nodi istrumentati:
+- il <strong>guard</strong> (1º nodo) vede il tuo IP ma <strong>non</strong> la destinazione;
+- il <strong>nodo di mezzo</strong> non vede <strong>né</strong> IP <strong>né</strong> destinazione;
+- l'<strong>uscita</strong> vede la destinazione ma <strong>non</strong> il tuo IP.</p>
+<p>Lo si controlla facendo girare i nodi con i log e verificando che l'indirizzo
+del client <strong>non</strong> compaia oltre il guard, e che la destinazione <strong>non</strong> compaia
+prima dell'uscita.</p>
+<h3 id="24-osservare-il-filo">2.4 Osservare il filo</h3>
+<p>Con <strong>Wireshark</strong> o <code>tcpdump</code> sul collegamento di un nodo:
+- il traffico è <strong>QUIC/UDP</strong> (o, con <code>--obfuscation</code>, <strong>rumore casuale</strong> senza
+  firma di QUIC): un DPI non riconosce "Nyctalus";
+- i siti <code>.nyct</code> viaggiano <strong>cifrati end-to-end</strong> (Noise): il nodo d'incontro e i
+  relè non vedono il contenuto in chiaro.</p>
+<blockquote>
+<p>Nota: la <strong>lunghezza fissa delle celle</strong> (1372 byte) protegge dall'analisi di
+dimensione <em>da parte di un nodo che decifra il suo strato</em>; sul filo i
+datagrammi QUIC hanno una loro struttura. È una difesa a livello di circuito,
+verificata dai test, non osservabile direttamente con tcpdump (QUIC cifra).</p>
+</blockquote>
+<h3 id="25-rumore-di-fondo">2.5 Rumore di fondo</h3>
+<p>Con <code>--cover 5</code> su demone e nodi, il flusso di celle resta <strong>uniforme anche da
+fermo</strong>: un osservatore non capisce <em>quando</em> invii davvero. Lo si vede dal volume
+costante di datagrammi anche senza navigare.</p>
+<h3 id="26-chat-autenticazione-del-contatto">2.6 Chat: autenticazione del contatto</h3>
+<p>La chat <code>.nyct</code> eredita tutte le proprietà del trasporto (anonimato di rete,
+cifratura E2E verso il servizio, uniformità dei quadri). In più, quando qualcuno
+ti scrive <strong>non ci si fida dell'indirizzo dichiarato</strong>: il motore esegue, dentro
+il tunnel già cifrato, un <strong>secondo handshake Noise NK</strong> verso quell'indirizzo —
+solo chi possiede la chiave privata del <code>.nyct</code> dichiarato lo conclude, quindi un
+impostore che conosce l'indirizzo di un tuo contatto <strong>non</strong> riesce a spacciarsi
+per lui. Il test <code>cargo test</code> include la prova che un impostore viene respinto; a
+livello end-to-end lo si vede con <code>strumenti/demo-chat.sh</code> (i messaggi arrivano con
+l'indirizzo autenticato del mittente). <em>Nota:</em> resta la verifica umana del Contact
+ID (scambiatevelo per un canale fidato, come si fa con le onion di Ricochet).</p>
+<p><strong>Allegati.</strong> Viaggiano nella stessa sessione autenticata; il destinatario
+verifica l'impronta <strong>BLAKE3</strong> dell'intero file e scarta tutto se non torna (o se
+arrivano più byte del dichiarato). I nomi ricevuti sono ripuliti (niente <code>../</code>,
+niente file nascosti, nessuna sovrascrittura) — c'è un test apposito
+(<code>nomi_di_file_resi_innocui</code>). La finestra apre direttamente solo i tipi innocui
+(immagini, video, audio, PDF, testo); eseguibili e archivi vengono solo mostrati
+nella cartella. Le foto JPEG/PNG partono <strong>senza EXIF</strong> (niente GPS). Resta un
+rischio generale, comune a tutte le chat: le anteprime usano i decodificatori di
+immagini del sistema (gdk-pixbuf), quindi tenete il sistema aggiornato.</p>
+<p><strong>Fotocamera e microfono.</strong> Si accendono solo su un'azione esplicita («Scatta una
+foto» / «Registra un video») e si spengono chiudendo quella finestra; foto e
+video restano in una cartella locale (<code>~/.cache/nyctalus-chat/fotocamera/</code>) e
+partono solo dopo la conferma nella finestra di anteprima. Le foto della webcam
+non contengono EXIF; quelle scelte dal disco vengono ripulite per impostazione
+predefinita.</p>
+<hr />
+<h2 id="3-cosa-serve-luno-e-cosa-non-basta-da-soli">3. Cosa serve l'uno (e cosa <strong>non</strong> basta da soli)</h2>
+<p>Le verifiche sopra mostrano che le difese <strong>ci sono e funzionano</strong>. Ma
+<strong>l'anonimato forte</strong> dipende da cose che richiedono altro:</p>
+<ul>
+<li><strong>Revisione crittografica indipendente</strong> del protocollo nel suo insieme
+  (composizione di Sphinx + strati simmetrici + Noise + QUIC): i mattoni sono
+  standard, ma la <em>combinazione</em> va esaminata da esperti (sottomissione a
+  <strong>PETS/USENIX Security</strong>, analisi formale).</li>
+<li><strong>Pentest</strong> pubblico e <strong>bug bounty</strong>.</li>
+<li><strong>Misure su rete reale e larga</strong> (es. simulazione con <strong>Shadow</strong>, confronto con
+  Tor) per correlazione dei tempi, dimensione dell'anonymity set, resistenza a un
+  avversario che osserva gran parte della rete — contro il quale <strong>nessuna</strong> rete
+  veloce può nulla (la protezione, lì, è pari a Tor, non superiore).</li>
+<li><strong>Diversità e numero dei nodi</strong>: l'anonimato cresce con la rete. Pochi nodi,
+  tutti dello stesso operatore o nella stessa rete, <strong>non</strong> danno anonimato reale.</li>
+<li><strong>Igiene dell'utente</strong>: se ti identifichi (login, dati personali), nessuna rete
+  ti protegge.</li>
+</ul>
+<p>Finché questi passi non sono fatti, Nyctalus va usato per <strong>provare</strong>
+funzionamento, usabilità e stabilità — <strong>non</strong> per proteggere dati reali.</p>
+<hr />
+<h2 id="4-riferimenti-rapidi-agli-strumenti">4. Riferimenti rapidi agli strumenti</h2>
+<table>
+<thead>
+<tr>
+<th>Verifica</th>
+<th>Strumento</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Correttezza/regressioni</td>
+<td><code>cargo test</code>, <code>./strumenti/verifica.sh</code></td>
+</tr>
+<tr>
+<td>IP/DNS leak</td>
+<td><code>curl --socks5-hostname …</code>, <code>https://ip.me</code>, monitor DNS</td>
+</tr>
+<tr>
+<td>Traffico sul filo</td>
+<td><strong>Wireshark</strong>, <code>tcpdump</code></td>
+</tr>
+<tr>
+<td>Nodi raggiungibili</td>
+<td><code>nyctalus nodes --probe</code></td>
+</tr>
+<tr>
+<td>Metriche del demone</td>
+<td><code>nyctalus monitor</code></td>
+</tr>
+<tr>
+<td>Confronto con Tor (futuro)</td>
+<td><strong>Shadow</strong> (simulatore di rete)</td>
+</tr>
+<tr>
+<td>Revisione</td>
+<td>crittografi indipendenti, PETS/USENIX, pentest</td>
+</tr>
+</tbody>
+</table>
+</article>
+</main>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>

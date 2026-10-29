@@ -1,0 +1,315 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuale d&#x27;installazione · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html" class="qui">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<article>
+<h1 id="manuale-dinstallazione">Manuale d'installazione</h1>
+<blockquote>
+<p>⚠️ <strong>Prototipo</strong> non ancora verificato da revisori indipendenti: usalo per provare
+funzionamento, usabilità e stabilità, <strong>non</strong> per proteggere dati reali.</p>
+</blockquote>
+<p>Tutto ciò che si installa sta nella cartella <strong><code>installazioni/</code></strong>, una sottocartella per
+dispositivo (la crea <code>strumenti/crea-installazioni.sh</code> partendo dai sorgenti):</p>
+<table>
+<thead>
+<tr>
+<th>Dispositivo</th>
+<th>Cartella</th>
+<th>Cosa contiene</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PC Linux (x86_64)</td>
+<td><code>installazioni/PC-Linux/</code></td>
+<td><code>Nyctalus-PC-Linux.zip</code>: motore, browser, chat, launcher, <code>nyctalus-rete</code>; l'installatore chiede il <strong>ruolo</strong></td>
+</tr>
+<tr>
+<td>Server / VPS (nodi)</td>
+<td><code>installazioni/Server-Linux/</code></td>
+<td><code>Nyctalus-Server-Linux.zip</code>: solo il motore, per i nodi della rete (<a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>)</td>
+</tr>
+<tr>
+<td>Telefono Android</td>
+<td><code>installazioni/Android/</code></td>
+<td><code>nyctalus-termux.tar.gz</code> (dentro Termux) · <code>Nyctalus.apk</code> (l'app, facoltativa)</td>
+</tr>
+<tr>
+<td>Manuali</td>
+<td><code>installazioni/Manuali/</code></td>
+<td>questi manuali</td>
+</tr>
+</tbody>
+</table>
+<p>Prima di iniziare: <strong>cosa installare e dove</strong> dipende da cosa vuoi fare. Lo spiega
+<a href="SCELTE-OPERATIVE.html"><code>SCELTE-OPERATIVE.md</code></a> (client, nodo server, gestore della rete).</p>
+<hr />
+<h2 id="1-pc-linux">1. PC Linux</h2>
+<h3 id="11-cosa-installare-dal-sistema">1.1 Cosa installare dal sistema</h3>
+<p>Debian, Ubuntu, Linux Mint e derivate:</p>
+<pre><code class="language-sh">sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1
+</code></pre>
+<p>Facoltativi:</p>
+<pre><code class="language-sh">sudo apt install gir1.2-keybinder-3.0                  # tasti rapidi GLOBALI del launcher
+sudo apt install gir1.2-gstreamer-1.0 gstreamer1.0-gtk3 \
+     gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly \
+     gstreamer1.0-libav ffmpeg                          # fotocamera, audio, miniature video
+</code></pre>
+<p>Sui sistemi più vecchi <code>gir1.2-webkit2-4.0</code> al posto di <code>-4.1</code>.</p>
+<h3 id="12-installare">1.2 Installare</h3>
+<p>Nessun installatore: si estrae e si usa.</p>
+<pre><code class="language-sh">tar xzf Nyctalus-PC-Linux.tar.gz        # crea la cartella Nyctalus/
+cd Nyctalus
+</code></pre>
+<p>All'inizio l'installatore chiede <strong>cosa stai installando</strong>:
+<strong>1) Client</strong> (il caso normale), <strong>2) Gestore</strong> (come il client, in più gestisci una rete),
+<strong>3) Nodo server</strong> (la macchina fa da nodo: vedi <a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>). Senza domande:
+<code>./installa.sh --ruolo client --si</code>.</p>
+<h3 id="13-avviare">1.3 Avviare</h3>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>./avvia-launcher.sh</code></td>
+<td>il pannello da cui parte tutto (logo → guida, Browser, Chat)</td>
+</tr>
+<tr>
+<td><code>./avvia-browser.sh</code></td>
+<td>solo il browser</td>
+</tr>
+<tr>
+<td><code>./avvia-chat.sh</code></td>
+<td>solo la chat (motore + servizio <code>.nyct</code> + finestra)</td>
+</tr>
+</tbody>
+</table>
+<p>Uso dei programmi: <strong><a href="MANUALE-PC.html"><code>MANUALE-PC.md</code></a></strong> e <strong><a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a></strong>.</p>
+<h3 id="14-disinstallare">1.4 Disinstallare</h3>
+<p>Cancella la cartella <code>Nyctalus/</code>. I dati personali stanno nella home, in cartelle a parte:
+<code>~/.nyctalus-chat</code> (identità, contatti, messaggi, allegati), <code>~/.nyctalus-browser</code>,
+<code>~/.nyctalus-launcher</code>, <code>~/.cache/nyctalus-chat</code>. Cancellale solo se vuoi perdere
+identità e chat.</p>
+<hr />
+<h2 id="2-telefono-android">2. Telefono Android</h2>
+<p>Nyctalus sul telefono funziona come <strong>Termux-NexusSEC-OS</strong>: dentro <strong>Termux</strong> gira il
+motore (lo stesso del PC) con un piccolo servizio, e l'interfaccia è una <strong>web-app in
+stile Telegram</strong>, che apri nel browser del telefono oppure nell'app <strong>Nyctalus</strong>.</p>
+<p><strong>Convive con gli altri progetti in Termux:</strong> usa solo la cartella <code>~/nyctalus</code>, i dati
+in <code>~/.nyctalus-mobile</code> e <code>~/.nyctalus-chat</code>, porte del blocco <strong>18xxx</strong>, comandi che
+iniziano con <code>nyctalus-</code>; installa <strong>solo i pacchetti che mancano</strong> e <strong>non aggiorna
+mai</strong> quelli già presenti; in <code>termux.properties</code> aggiunge una sola riga, senza
+riscrivere il file.</p>
+<h3 id="21-cosa-scaricare">2.1 Cosa scaricare</h3>
+<ol>
+<li><strong>Termux</strong> — <strong>non</strong> dal Play Store (versione vecchia e ferma):
+   - F-Droid: <a href="https://f-droid.org/packages/com.termux/">https://f-droid.org/packages/com.termux/</a>
+   - oppure GitHub: <a href="https://github.com/termux/termux-app/releases">https://github.com/termux/termux-app/releases</a> → il file
+     <code>termux-app_…_arm64-v8a.apk</code> (quasi tutti i telefoni recenti sono <em>arm64-v8a</em>).</li>
+</ol>
+<p>Se usi già Termux per altri progetti, va bene quello che hai.
+2. <strong><code>nyctalus-termux.tar.gz</code></strong> dalla cartella <code>installazioni/Android/</code>.
+3. Facoltativa: <strong><code>Nyctalus.apk</code></strong>, l'app Nyctalus (circa 170 KB). Senza, usi il browser
+   del telefono (funziona allo stesso modo). Per installarla Android chiede di consentire
+   «Installa app sconosciute» all'app con cui la apri (File, Chrome…).</p>
+<h3 id="21-bis-il-modo-piu-semplice-con-lapp">2.1-bis Il modo più semplice: con l'app</h3>
+<p><code>Nyctalus.apk</code> contiene già il pacchetto per Termux, quindi <strong>non serve copiare archivi</strong>:
+1. installa <strong>Termux</strong>, aprilo una volta e aspetta che finisca di prepararsi;
+2. installa <strong><code>Nyctalus.apk</code></strong> e aprila; concedi il permesso «Esegui comandi in Termux»;
+3. tocca <strong>«🦇 Installa / aggiorna Nyctalus in Termux»</strong>. Termux si apre e mostra
+   l'installazione (lo stesso installatore del punto 2.3, che convive con gli altri
+   progetti); alla fine l'app torna davanti da sola: tocca <strong>Entra</strong>.</p>
+<p>Solo la <strong>prima volta</strong> Termux può non eseguire il comando da solo (manca ancora
+l'impostazione <code>allow-external-apps</code>, che l'installatore poi aggiunge): in Termux tieni
+premuto → <strong>Incolla</strong> → Invio. Il comando è già negli appunti.</p>
+<p>Come funziona: l'app serve il pacchetto per qualche minuto su <code>127.0.0.1</code>, a un indirizzo
+casuale; Termux lo scarica con <code>curl</code> e ne <strong>verifica l'impronta SHA-256</strong> prima di
+installarlo (un pacchetto diverso viene rifiutato e non si installa nulla). Durante il
+trasferimento compare la notifica «Nyctalus — Passo il pacchetto a Termux…»: serve a non
+far «congelare» l'app da Android mentre Termux è in primo piano (problema delle versioni
+fino alla 0.3, in cui <code>curl</code> restava appeso o falliva). Sparisce da sola a consegna fatta.</p>
+<p>Se in Termux compare <em>«nyctalus-mobile: No such file or directory»</em> (APK 0.2), Nyctalus
+non è ancora installato: tocca prima «🦇 Installa / aggiorna Nyctalus». Dalla 0.3 il
+comando copiato se ne accorge da solo e installa.</p>
+<p>Gli altri pulsanti dell'app:</p>
+<table>
+<thead>
+<tr>
+<th>Pulsante</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>⬇ Installa Termux</td>
+<td>apre F-Droid (consigliato) o la pagina GitHub di Termux</td>
+</tr>
+<tr>
+<td>↻ Aggiorna Termux</td>
+<td>l'app Termux (F-Droid) oppure i pacchetti (<code>pkg upgrade</code>, chiede conferma: vale per <strong>tutti</strong> i progetti in Termux)</td>
+</tr>
+<tr>
+<td>🦇 Installa / aggiorna Nyctalus</td>
+<td>come sopra; per aggiornare: installa la nuova APK e ritocca il pulsante</td>
+</tr>
+<tr>
+<td>⌨ Apri Termux · 📋 Comando di avvio</td>
+<td>apre Termux; copia un comando da incollare in Termux che <strong>avvia</strong> Nyctalus e, se non è ancora installato, prima lo <strong>installa</strong> (vale 15 minuti)</td>
+</tr>
+<tr>
+<td>☁ Aggiornamenti da GitHub</td>
+<td>in arrivo, quando il progetto sarà pubblicato</td>
+</tr>
+</tbody>
+</table>
+<p>Se preferisci fare a mano, segui i punti qui sotto.</p>
+<h3 id="22-portare-larchivio-nel-telefono">2.2 Portare l'archivio nel telefono</h3>
+<p>L'archivio deve finire nella cartella <strong>Download</strong> del telefono. Scegli il modo più comodo:
+- <strong>cavo USB</strong>: collega il telefono al PC, scegli «Trasferimento file», copia
+  <code>nyctalus-termux.tar.gz</code> nella cartella <code>Download</code>;
+- <strong>mandalo a te stesso</strong> (mail, Telegram «Messaggi salvati», Drive…) e sul telefono
+  salvalo in Download;
+- <strong>in rete locale</strong> (PC e telefono sulla stessa Wi-Fi): sul PC, dalla cartella
+  <code>installazioni/Android/</code>, lancia <code>python3 -m http.server 8080</code>; in Termux
+  <code>curl -O http://IP-DEL-PC:8080/nyctalus-termux.tar.gz</code> (poi al punto 2.3 usa questo
+  file al posto di quello in Download). Alcune reti aziendali lo bloccano.</p>
+<h3 id="23-installare-una-volta-sola">2.3 Installare (una volta sola)</h3>
+<p>In Termux:</p>
+<pre><code class="language-sh">termux-setup-storage          # appare la richiesta di accesso ai file: concedila
+cd ~
+tar xzf ~/storage/downloads/nyctalus-termux.tar.gz
+bash nyctalus-termux/installa.sh
+</code></pre>
+<ul>
+<li><code>termux-setup-storage</code> crea <code>~/storage/downloads</code> (la tua cartella Download) e
+  permette anche di vedere le <strong>foto del telefono</strong> nel selettore degli allegati.</li>
+<li>Se l'archivio non contiene già il motore compilato per il telefono, l'installatore lo
+  <strong>compila sul telefono</strong>: scarica Rust (~300 MB) e impiega 10-30 minuti, <strong>solo la
+  prima volta</strong>. Meglio sotto Wi-Fi e col telefono in carica.</li>
+<li>Opzione: <code>bash nyctalus-termux/installa.sh --avvio-automatico</code> fa partire Nyctalus
+  all'accensione (serve l'app <strong>Termux:Boot</strong>).</li>
+</ul>
+<h3 id="24-avviare">2.4 Avviare</h3>
+<pre><code class="language-sh">nyctalus-mobile
+</code></pre>
+<p>Stampa un indirizzo come <code>http://127.0.0.1:18731/?t=…</code>: tienilo premuto, copialo e
+<strong>aprilo in Chrome</strong> sul telefono. La prima volta il browser ricorda l'accesso; dal
+menu di Chrome puoi <strong>«Aggiungi a schermata Home»</strong> per avere l'icona Nyctalus.</p>
+<p>Con l'<strong>app Nyctalus</strong> non serve copiare indirizzi: avvia il servizio in Termux da sola
+(la prima volta Android chiede il permesso «Esegui comandi in Termux»: concedilo).
+L'app usa un <strong>suo segreto</strong> d'accesso, che scrive in Termux all'avvio: da quel momento
+l'indirizzo aperto prima nel browser non vale più (si riapre con <code>nyctalus-mobile --stato</code>).
+Se l'app resta su «Nyctalus non risponde»: tocca <strong>«📋 Comando di avvio»</strong>, in
+Termux tieni premuto → Incolla → Invio, poi torna nell'app.</p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nyctalus-mobile</code></td>
+<td>avvia (in primo piano; Ctrl-C per fermare)</td>
+</tr>
+<tr>
+<td><code>nyctalus-mobile --sfondo</code></td>
+<td>avvia in sottofondo</td>
+</tr>
+<tr>
+<td><code>nyctalus-mobile --stato</code></td>
+<td>dice se è attivo e ristampa l'indirizzo da aprire</td>
+</tr>
+<tr>
+<td><code>nyctalus-mobile --ferma</code></td>
+<td>ferma tutto</td>
+</tr>
+</tbody>
+</table>
+<p>Uso dell'app: <strong><a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a></strong> e <strong><a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a></strong>.</p>
+<h3 id="25-disinstallare">2.5 Disinstallare</h3>
+<pre><code class="language-sh">bash ~/nyctalus/disinstalla.sh
+</code></pre>
+<p>Toglie <strong>solo</strong> Nyctalus (programma, comando, avvio automatico). Chiede prima di
+cancellare i tuoi dati (identità, contatti, messaggi). <strong>Non</strong> disinstalla pacchetti come
+python o rust, che potrebbero servire ad altri progetti.</p>
+<hr />
+<h2 id="3-la-rete-prova-locale-o-condivisa">3. La rete: prova locale o condivisa</h2>
+<p>Senza configurazione, PC e telefono avviano una <strong>rete di prova locale</strong>: tutto
+funziona, ma solo su quel dispositivo, e non raggiungi altre persone. Per parlare con
+gli altri ci si collega a una <strong>rete condivisa</strong> col <strong>codice di rete</strong> (<code>NYCT1:…</code>) che
+dà chi la gestisce:
+- <strong>PC:</strong> <code>nyctalus-rete importa NYCT1:…</code>, poi riapri chat e browser
+  (<code>nyctalus-rete importa --prova</code> per tornare alla rete di prova);
+- <strong>telefono:</strong> ⚙ Impostazioni → <strong>Rete condivisa</strong> → <strong>Importa codice</strong>.</p>
+<p>Per provare <strong>telefono ↔ PC</strong> senza server: sul PC <code>nyctalus-rete casa</code> (rete di casa).
+Come mettere in piedi una rete vera: <a href="SCELTE-OPERATIVE.html"><code>SCELTE-OPERATIVE.md</code></a>, <a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>,
+<a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a>.</p>
+<h2 id="4-problemi-frequenti">4. Problemi frequenti</h2>
+<table>
+<thead>
+<tr>
+<th>Sintomo</th>
+<th>Causa e rimedio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>«porte già usate da un altro programma»</td>
+<td>un altro progetto usa una delle porte 18xxx: cambiale in <code>~/.nyctalus-mobile/config.json</code> → <code>"porte": {…}</code></td>
+</tr>
+<tr>
+<td>la web-app dice «Accesso negato»</td>
+<td>apri l'indirizzo con <code>?t=…</code> stampato da <code>nyctalus-mobile --stato</code></td>
+</tr>
+<tr>
+<td>nel selettore allegati non vedo le foto</td>
+<td>in Termux: <code>termux-setup-storage</code> e consenti l'accesso ai file</td>
+</tr>
+<tr>
+<td>le miniature dei video non compaiono</td>
+<td>facoltativo: <code>pkg install ffmpeg</code></td>
+</tr>
+<tr>
+<td>la chat dice «rete di prova LOCALE»</td>
+<td>normale senza configurazione: vedi il capitolo 3</td>
+</tr>
+<tr>
+<td>sul PC la fotocamera è disattivata</td>
+<td>installa i pacchetti GStreamer del punto 1.1</td>
+</tr>
+</tbody>
+</table>
+</article>
+</main>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>

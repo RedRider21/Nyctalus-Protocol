@@ -1,0 +1,180 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuale delle prove (funzionamento e sicurezza) · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html" class="qui">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<article>
+<h1 id="manuale-delle-prove-funzionamento-e-sicurezza">Manuale delle prove (funzionamento e sicurezza)</h1>
+<p>Tutte le prove stanno nella cartella <strong><code>test/</code></strong> dei sorgenti e si rifanno quando
+serve, ad esempio dopo ogni modifica o prima di distribuire una versione.</p>
+<pre><code class="language-sh">test/esegui-tutti.sh                  # tutte le prove, con riepilogo finale
+test/esegui-tutti.sh sicurezza        # solo sicurezza  (= strumenti/verifica.sh)
+test/esegui-tutti.sh funzionamento    # solo funzionamento
+bash test/sicurezza/04-impostore-chat.sh   # una prova sola
+NYCT_TIENI=1 test/esegui-tutti.sh     # conserva i log delle prove, per indagare
+</code></pre>
+<p>Esito: ogni verifica stampa <strong>PASS</strong> / <strong>FAIL</strong> / <strong>SALTA</strong>; alla fine il riepilogo
+per prova e il totale. Il comando termina con errore se anche una sola verifica fallisce.</p>
+<p><strong>Le prove sono sicure da lanciare:</strong>
+- usano solo <strong>cartelle temporanee</strong> (<code>/tmp/nyctalus-test.*</code>), sempre ripulite;
+- usano <strong>porte dedicate 19xxx</strong>, diverse da sviluppo (1080…) e telefono (18xxx);
+- <strong>non toccano i tuoi dati</strong> (identità, chat) né gli altri programmi;
+- <strong>non accendono mai la webcam</strong>: la fotocamera si prova con sorgenti video/audio
+  finte di GStreamer;
+- chiudono tutti i processi che avviano.</p>
+<p><strong>Requisiti:</strong> Rust (<code>cargo</code>), Python 3. Facoltativi, altrimenti la prova viene
+<strong>SALTATA</strong>: <code>google-chrome</code> (web-app), un display grafico + GStreamer (fotocamera),
+<code>ffmpeg</code> (video).</p>
+<hr />
+<h2 id="prove-di-sicurezza-testsicurezza">Prove di sicurezza (<code>test/sicurezza/</code>)</h2>
+<table>
+<thead>
+<tr>
+<th>Prova</th>
+<th>Cosa verifica</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>01-directory-firmata</code></td>
+<td>l'elenco dei nodi firmato è accettato; manomesso o firmato da un'altra autorità è <strong>rifiutato</strong></td>
+</tr>
+<tr>
+<td><code>02-offuscamento</code></td>
+<td>con la chiave di rete il nodo risponde, senza resta muto (trasporto camuffato)</td>
+</tr>
+<tr>
+<td><code>03-segreto-controllo</code></td>
+<td>la porta di controllo della chat risponde solo a chi ha il <strong>segreto</strong> (sbagliato o assente → rifiutato)</td>
+</tr>
+<tr>
+<td><code>04-impostore-chat</code></td>
+<td><strong>attacco dal vivo</strong>: chi si spaccia per un contatto senza averne la chiave viene sfidato e buttato fuori; nessun messaggio falso consegnato né salvato</td>
+</tr>
+<tr>
+<td><code>06-browser-mobile</code></td>
+<td>browser dell'app in modalità Nyctalus: processo separato, nessun permesso sensibile, verifica col gettone, <code>.nyct</code> solo in rete, nessuna uscita verso altre app, WebRTC spento, download e traduzione in rete; <strong>inoltratore</strong>: pagina di verifica, niente connessioni a rete ferma, UDP rifiutato, indirizzi locali (127.x, localhost, 192.168.x, 10.x, ::1) rifiutati, sito vero raggiunto attraverso la rete</td>
+</tr>
+<tr>
+<td><code>05-orchestratore</code></td>
+<td>il servizio del telefono: niente accesso senza segreto (anche WebSocket), niente file di sistema (<code>/etc/passwd</code>), niente <code>../</code> fuori dalla web-app, niente comandi da altri siti, nomi caricati ripuliti, caricamenti enormi rifiutati</td>
+</tr>
+</tbody>
+</table>
+<h2 id="prove-di-funzionamento-testfunzionamento">Prove di funzionamento (<code>test/funzionamento/</code>)</h2>
+<table>
+<thead>
+<tr>
+<th>Prova</th>
+<th>Cosa verifica</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>00-test-automatici</code></td>
+<td>tutti i test del motore (<code>cargo test</code>): crittografia, celle, conflux, rendezvous, chat</td>
+</tr>
+<tr>
+<td><code>01-chat-e-allegati</code></td>
+<td>su una <strong>rete di prova</strong> (4 nodi, circuiti a 3 salti): testo nei due sensi, identità autenticata, allegati da 3 MB e immagini <strong>identici al byte</strong> (SHA-256), avanzamento, cronologia; <strong>tre allegati inviati insieme</strong> a un contatto nuovo arrivano tutti (difetto dei collegamenti doppi)</td>
+</tr>
+<tr>
+<td><code>02-orchestratore</code></td>
+<td>il servizio del telefono avvia rete e chat, ponte WebSocket verso il motore, caricamento e lettura a pezzi (Range), arresto senza processi orfani; <strong>miniature</strong> della galleria con Pillow, senza Pillow né ffmpeg (miniatura EXIF con orientamento) e mai la foto intera se grande; <strong>galleria da 2000 foto</strong> elencata in tempi brevi e tenuta in memoria</td>
+</tr>
+<tr>
+<td><code>03-webapp</code></td>
+<td>la web-app in Chrome a misura di telefono: elenco, cache IndexedDB, conversazione in fondo, pressione lunga, foto senza EXIF, <strong>selettore allegati</strong> (griglia, selezione numerata, «Invia (2)»), messaggi e foto a se stessi <strong>attraverso la rete</strong>; pulsanti della rete accesi/spenti secondo la fase</td>
+</tr>
+<tr>
+<td><code>04-fotocamera</code></td>
+<td>foto (JPEG) e video (H.264 + audio AAC, file chiuso bene) dalla fotocamera della chat, finestra di anteprima d'invio; <strong>tasto destro su una foto</strong> in chat: il menu riguarda quella foto (prima «Elimina per me» poteva cancellarne un'altra)</td>
+</tr>
+<tr>
+<td><code>05-installatore-termux</code></td>
+<td>installatore in un <strong>Termux simulato</strong>: tutto in <code>~/nyctalus</code>, nessun pacchetto superfluo né <code>pkg upgrade</code>, <code>termux.properties</code> intatto e senza righe doppie, avvio automatico solo se chiesto, <code>nyctalus-mobile</code> avvia/ferma, disinstallazione che <strong>non tocca gli altri progetti</strong>, comandi omonimi altrui non sovrascritti</td>
+</tr>
+<tr>
+<td><code>06-installazioni</code></td>
+<td>la cartella <code>installazioni/</code>: pacchetti e LEGGIMI per ogni dispositivo, <strong>nessun dato personale</strong> dentro, il pacchetto PC si estrae e parte, quello Android contiene tutto il necessario</td>
+</tr>
+<tr>
+<td><code>07-installatore-pc</code></td>
+<td>installatore del PC in una HOME finta: menu e comandi, nessun sudo superfluo, cose altrui intatte, disinstallazione pulita</td>
+</tr>
+<tr>
+<td><code>09-server-e-rete</code></td>
+<td>il percorso completo di una <strong>rete condivisa</strong>: installatore dei <strong>nodi</strong> in una radice finta (servizio systemd corretto, chiavi 600, riga stabile ai riavvii, nodi avviati col comando del servizio), <strong>gestore</strong> (<code>nyctalus-rete</code> crea/aggiungi/firma/verifica/codice/servi; il codice non contiene mai la chiave segreta), <strong>client</strong> PC e telefono che importano il codice e passano alla rete condivisa; codici rovinati rifiutati</td>
+</tr>
+<tr>
+<td><code>08-app-android</code></td>
+<td>app Android: niente permesso fotocamera, scatti privati, nomi di file filtrati; il comando che l'app fa eseguire a Termux scrive il <strong>suo segreto</strong> (600) e il servizio già acceso lo accetta, il vecchio no; «Installa Nyctalus in Termux» in un <strong>Termux simulato</strong> (pacchetto con impronta sbagliata rifiutato, installazione, <code>allow-external-apps</code>, ritorno all'app, niente <code>pkg upgrade</code>); il <strong>servitore Java vero</strong> dell'app provato su JVM (404 agli indirizzi sbagliati, consegna integra, spegnimento); compila l'APK se c'è un Android SDK (<code>ANDROID_HOME</code>) e controlla che contenga il pacchetto</td>
+</tr>
+</tbody>
+</table>
+<h2 id="aggiungere-una-prova">Aggiungere una prova</h2>
+<p>Un file <code>NN-nome.sh</code> in <code>test/sicurezza/</code> o <code>test/funzionamento/</code> che inizia con
+<code>. "$(dirname "$0")/../lib.sh"</code> e usa le funzioni comuni:</p>
+<table>
+<thead>
+<tr>
+<th>Funzione</th>
+<th>A cosa serve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>titolo</code>, <code>pass</code>, <code>fail</code>, <code>salta</code>, <code>verifica</code></td>
+<td>intestazione ed esiti</td>
+</tr>
+<tr>
+<td><code>assicura_binario</code></td>
+<td>compila il motore se manca o è vecchio</td>
+</tr>
+<tr>
+<td><code>rete_di_prova BASE</code></td>
+<td>autorità + 4 nodi sulle porte BASE…BASE+3 (variabili <code>SEC</code> <code>PUB</code> <code>DIR</code>)</td>
+</tr>
+<tr>
+<td><code>identita NOME BACKEND CONTROLLO SOCKS [SEGRETO]</code></td>
+<td>motore della chat + servizio <code>.nyct</code>; indirizzo in <code>$ADDR</code> (non chiamarla dentro <code>$(...)</code>)</td>
+</tr>
+<tr>
+<td><code>controllo PORTA SEGRETO ATTESA COMANDI…</code></td>
+<td>parla con il motore della chat (<code>NYCT_FINO=regex</code> per fermarsi alla risposta)</td>
+</tr>
+<tr>
+<td><code>attendi_regex FILE REGEX [sec]</code></td>
+<td>aspetta una riga in un log</td>
+</tr>
+</tbody>
+</table>
+<p>Ogni processo avviato va aggiunto a <code>PIDS</code> (<code>… &amp; PIDS+=($!)</code>): la libreria lo chiude a
+fine prova.</p>
+</article>
+</main>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>

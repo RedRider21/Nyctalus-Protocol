@@ -1,0 +1,147 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuale del server (nodi della rete) · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SERVER.html" class="qui">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<article>
+<h1 id="manuale-del-server-nodi-della-rete">Manuale del server (nodi della rete)</h1>
+<p>Un <strong>nodo</strong> inoltra il traffico cifrato della rete. Non vede cosa passa né chi parla con
+chi. Su un server ne puoi far girare da 1 a 8. Quadro generale: <a href="SCELTE-OPERATIVE.html"><code>SCELTE-OPERATIVE.md</code></a>.</p>
+<h2 id="1-cosa-serve">1. Cosa serve</h2>
+<ul>
+<li>Un server <strong>Linux x86_64</strong> sempre acceso, con <strong>IP pubblico</strong>: un VPS va benissimo
+  (1 CPU, 512 MB-1 GB di RAM, Debian o Ubuntu).</li>
+<li>Accesso <strong>root</strong> (<code>sudo</code>). Senza root c'è <code>--utente</code>, vedi §6.</li>
+<li>Le porte <strong>UDP</strong> dei nodi aperte: per esempio 4601-4604.</li>
+<li>Il pacchetto <code>installazioni/Server-Linux/Nyctalus-Server-Linux.zip</code>. Contiene solo il
+  motore, senza grafica.</li>
+</ul>
+<h2 id="2-portare-il-pacchetto-sul-server">2. Portare il pacchetto sul server</h2>
+<p>Dal tuo PC:</p>
+<pre><code class="language-sh">scp Nyctalus-Server-Linux.zip utente@IP-DEL-SERVER:
+ssh utente@IP-DEL-SERVER
+unzip Nyctalus-Server-Linux.zip      # se manca: sudo apt install unzip
+cd Nyctalus-Server
+</code></pre>
+<h2 id="3-installare">3. Installare</h2>
+<pre><code class="language-sh">sudo ./installa.sh
+</code></pre>
+<p>L'installatore chiede:</p>
+<table>
+<thead>
+<tr>
+<th>Domanda</th>
+<th>Cosa rispondere</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IP pubblico</td>
+<td>quello del <strong>pannello del fornitore</strong>. L'installatore propone quello che vede, ma dietro NAT può essere sbagliato</td>
+</tr>
+<tr>
+<td>Quanti nodi</td>
+<td><strong>4</strong> se è l'unico server della rete; <strong>1-2</strong> se ci sono altri server</td>
+</tr>
+<tr>
+<td>Prima porta</td>
+<td><code>4601</code>, va bene la proposta (le altre seguono: 4602, 4603…)</td>
+</tr>
+</tbody>
+</table>
+<p>Senza domande:</p>
+<pre><code class="language-sh">sudo ./installa.sh --ip 203.0.113.5 --nodi 4 --porta 4601 --si
+</code></pre>
+<p>Cosa fa:
+- motore in <code>/opt/nyctalus</code>;
+- un servizio <code>nyctalus-nodo@PORTA</code> per nodo, che riparte da solo dopo un riavvio, gira
+  con un utente dedicato <code>nyctalus</code> e privilegi ridotti;
+- identità dei nodi in <code>/var/lib/nyctalus</code>;
+- apre le porte su <code>ufw</code>/<code>firewalld</code>, se attivi.</p>
+<p><strong>Alla fine stampa le RIGHE D'ELENCO</strong>, una per nodo:</p>
+<pre><code>203.0.113.5:4601,1f59a3…,2ecd48…
+</code></pre>
+<p><strong>Mandale al gestore della rete.</strong> Non sono segrete.</p>
+<blockquote>
+<p><strong>Firewall del fornitore:</strong> molti VPS hanno anche un firewall nel <strong>pannello web</strong>.
+Apri lì le stesse porte <strong>UDP</strong>, altrimenti i nodi risultano irraggiungibili.</p>
+</blockquote>
+<h2 id="4-gestire">4. Gestire</h2>
+<pre><code class="language-sh">nyctalus-server stato       # servizi attivi?
+nyctalus-server righe       # ristampa le righe per il gestore
+nyctalus-server riavvia     # (anche: avvia, ferma)
+nyctalus-server log         # ultimi messaggi (log 4601 = solo quel nodo)
+</code></pre>
+<p>Le righe <strong>non cambiano</strong> tra un riavvio e l'altro: ogni nodo conserva la sua identità.</p>
+<h2 id="5-opzioni-in-piu">5. Opzioni in più</h2>
+<ul>
+<li><code>--camuffamento HEX</code>: il traffico sembra rumore a chi lo osserva. La chiave di 64
+  caratteri esadecimali deve essere <strong>uguale su tutti i nodi e sui client</strong>: la decide
+  il gestore.</li>
+<li><code>--rumore HZ</code>: celle finte di copertura verso i client (es. <code>5</code>). Consuma banda.</li>
+<li>Per cambiare IP o opzioni: modifica <code>/etc/nyctalus/server.conf</code>, poi
+  <code>nyctalus-server riavvia</code>. Se cambia l'IP, rimanda le righe al gestore.</li>
+</ul>
+<h2 id="6-senza-root">6. Senza root</h2>
+<pre><code class="language-sh">./installa.sh --utente
+sudo loginctl enable-linger $USER     # una volta: i nodi restano accesi senza login
+</code></pre>
+<p>Tutto finisce in <code>~/.local/share/nyctalus-server</code>, con servizi <code>systemctl --user</code>.</p>
+<h2 id="7-aggiornare-e-disinstallare">7. Aggiornare e disinstallare</h2>
+<ul>
+<li><strong>Aggiornare:</strong> scompatta il pacchetto nuovo e rilancia <code>sudo ./installa.sh</code> con le
+  stesse risposte. Le identità restano: le righe non cambiano.</li>
+<li><strong>Disinstallare:</strong> <code>sudo /opt/nyctalus/disinstalla.sh</code>. Toglie servizi e programma e
+  <strong>conserva</strong> le identità. Con <code>--anche-identita</code> cancella anche quelle.
+  Poi chiedi al gestore di togliere i nodi: <code>nyctalus-rete togli IP:PORTA</code>.</li>
+</ul>
+<h2 id="8-problemi">8. Problemi</h2>
+<table>
+<thead>
+<tr>
+<th>Sintomo</th>
+<th>Causa probabile</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>il gestore vede i nodi «offline» con <code>nyctalus-rete verifica</code></td>
+<td>porte UDP chiuse sul <strong>firewall del fornitore</strong>, o IP sbagliato nelle righe</td>
+</tr>
+<tr>
+<td><code>il motore non parte su questo server</code></td>
+<td>server non x86_64 (ARM): per ora serve x86_64</td>
+</tr>
+<tr>
+<td><code>nyctalus-server stato</code> → <code>failed</code></td>
+<td><code>nyctalus-server log</code>: spesso è la porta già usata da un altro programma</td>
+</tr>
+</tbody>
+</table>
+</article>
+</main>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>

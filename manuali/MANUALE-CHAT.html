@@ -1,0 +1,220 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuale della chat .nyct · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html" class="qui">Manuale della chat .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<article>
+<h1 id="manuale-della-chat-nyct">Manuale della chat <code>.nyct</code></h1>
+<p>Una chat <strong>senza server e senza metadati</strong>: non esiste un'azienda in mezzo, nessun
+numero di telefono, nessuna rubrica globale. Ogni persona <strong>è</strong> un indirizzo
+<code>.nyct</code> — il suo <strong>Contact ID</strong> — e i messaggi viaggiano cifrati da un capo
+all'altro dentro la rete Nyctalus (circuito a più salti → punto d'incontro →
+servizio del destinatario). Modello simile a Ricochet/Cwtch.</p>
+<hr />
+<h2 id="1-avviare-la-chat">1. Avviare la chat</h2>
+<ul>
+<li>Dal <strong>launcher</strong>: premi il bottone <strong>Chat</strong>.</li>
+<li>Oppure da terminale:
+  <code>sh
+  ./avvia-chat.sh          # nel pacchetto
+  ./strumenti/avvia-chat.sh  # in sviluppo</code></li>
+</ul>
+<p>La <strong>finestra si apre subito</strong>. La rete, però, ha bisogno di qualche secondo per
+salire (deve costruire un circuito a più salti e registrare il tuo servizio al
+punto d'incontro): finché non è pronta vedi già la finestra e il tuo Contact ID,
+ma l'invio/ricezione parte quando la rete è su. È normale, non è un blocco.</p>
+<blockquote>
+<p><strong>Perché «ci mette un po'»?</strong> Non è un difetto: a differenza di una chat
+normale, qui non ci si collega a un server centrale. Il programma mette in
+piedi un pezzo di rete anonima (relay + circuito cifrato + punto d'incontro)
+prima di poter parlare. È il prezzo dell'assenza di metadati.</p>
+</blockquote>
+<hr />
+<h2 id="2-il-tuo-contact-id-in-basso-a-sinistra">2. Il tuo Contact ID (in basso a sinistra)</h2>
+<p>Il codice monospazio in basso a sinistra, con il bottone <strong>Copia</strong>, è il tuo
+<strong>Contact ID</strong>: <em>è il tuo indirizzo nella rete</em>, l'unica cosa da dare agli altri
+perché ti scrivano. Funziona come un numero di telefono o un indirizzo <code>.onion</code>.</p>
+<ul>
+<li><strong>Non è segreto</strong>: condividilo pure (chat, email, di persona, QR…). Meglio
+  passarlo per un canale che l'altro <strong>riconosce come tuo</strong>, così siete sicuri
+  che sia davvero il tuo (come si fa con gli indirizzi Ricochet).</li>
+<li>Il <strong>segreto</strong> è la tua chiave privata, che resta sul tuo computer in
+  <code>~/.nyctalus-chat/identita</code>. <strong>Non cambia</strong>: il tuo Contact ID resta lo stesso
+  nel tempo. Se cancelli quel file perdi l'identità (ne nasce una nuova diversa).</li>
+</ul>
+<hr />
+<h2 id="3-aggiungere-un-contatto-e-scrivere">3. Aggiungere un contatto e scrivere</h2>
+<ol>
+<li>Premi <strong>«+»</strong> in alto a sinistra.</li>
+<li>Incolla l'<strong>indirizzo <code>.nyct</code></strong> dell'altra persona (il suo Contact ID) e
+   dagli un <strong>nome</strong> (è solo un soprannome locale, lo vedi solo tu).</li>
+<li>Selezionalo nell'elenco a sinistra e scrivi nel campo in basso → <strong>Invio</strong> (o
+   il bottone ➤).</li>
+</ol>
+<p>Il pallino/anello <strong>verde</strong> sull'avatar indica che il contatto è <strong>in linea</strong>.
+La <strong>cronologia</strong> resta sul tuo computer (in <code>~/.nyctalus-chat/cronologia</code>) e si
+ricarica quando riapri una conversazione.</p>
+<p>Se qualcuno ti scrive da un indirizzo <strong>non in rubrica</strong>, la chat te lo segnala e
+ti propone di aggiungerlo per rispondere.</p>
+<hr />
+<h2 id="4-allegati-file-foto-video-audio-documenti">4. Allegati: file, foto, video, audio, documenti</h2>
+<ul>
+<li><strong>Inviare</strong>: apri la chat con un contatto e premi la <strong>graffetta 📎</strong>. Si apre il
+  <strong>selettore come in Telegram</strong>:</li>
+<li>la <strong>griglia</strong> delle tue foto e video più recenti (sul PC dalle cartelle Immagini,
+    Video e Download; sul telefono dalla galleria); la prima casella è la <strong>Fotocamera</strong>;</li>
+<li><strong>tocca/clicca le foto per sceglierle</strong>: compare il <strong>numero d'ordine</strong> nel cerchio
+    blu (1, 2, 3…), e vengono inviate in quell'ordine; un altro tocco le toglie;</li>
+<li>con almeno una scelta compaiono la <strong>didascalia</strong>, «Senza metadati» e <strong>«Invia (N)»</strong>;</li>
+<li>le schede in basso: <strong>File</strong> (qualunque file) · <strong>Altre foto</strong> (scegli da altre
+    cartelle) · <strong>Foto</strong> e <strong>Video</strong> dalla fotocamera (con l'audio del microfono; il timer
+    rosso mostra la durata, «Ferma e usa» chiude la registrazione).</li>
+</ul>
+<p>In alternativa puoi <strong>trascinare i file</strong> dentro la conversazione.
+- Per i file scelti con «File», «Altre foto», la fotocamera o il trascinamento, <strong>prima di inviare</strong> compare l'<strong>anteprima</strong> (come «Invia foto» di Telegram):
+  miniature, una <strong>didascalia</strong> facoltativa (arriva come messaggio subito dopo) e
+  l'opzione per togliere i metadati dalle foto.
+- <strong>Come si vedono in chat</strong>:
+  - <strong>foto</strong> a tutta bolla con l'ora sopra; un clic le apre a grandezza piena;
+  - <strong>video</strong> con la miniatura, il tasto ▶ e la durata; un clic li apre nel
+    lettore del sistema;
+  - <strong>audio</strong> con il pulsante ▶/⏸: si ascoltano <strong>dentro la chat</strong>;
+  - <strong>altri file</strong> con il cerchio colorato dell'estensione (PDF, ZIP, DOCX…);
+  - durante il trasferimento, un <strong>anello</strong> mostra l'avanzamento.
+- <strong>Dove finiscono</strong>: in <code>~/.nyctalus-chat/allegati/&lt;contatto&gt;/</code>.
+- <strong>Limite</strong>: 200 MB per file (si cambia con l'opzione <code>--max-file</code> del motore).
+- <strong>Fotocamera</strong>: si accende <strong>solo</strong> quando scegli «Scatta una foto» o «Registra
+  un video», e si spegne appena chiudi quella finestra. Servono GStreamer e
+  ffmpeg (vedi <a href="DEPLOY.html"><code>DEPLOY.md</code></a>); senza, queste due voci restano disattivate.</p>
+<p><strong>Sicurezza degli allegati</strong>
+- Viaggiano nella <strong>stessa sessione cifrata e autenticata</strong> dei messaggi; alla
+  fine il destinatario controlla l'<strong>impronta BLAKE3</strong> di tutto il file: se anche
+  un solo byte non torna, il file viene <strong>scartato</strong>.
+- Il <strong>nome</strong> del file ricevuto viene ripulito (niente percorsi come
+  <code>../../</code>, niente file nascosti), e un file con lo stesso nome non viene mai
+  sovrascritto.
+- <strong>Apri</strong> funziona direttamente solo per i tipi innocui (foto, video, audio,
+  PDF, testo). Programmi, script e archivi <strong>non vengono mai aperti da soli</strong>: la
+  chat ti mostra la cartella e decidi tu.
+- <strong>Foto senza metadati</strong>: per impostazione predefinita le foto JPEG/PNG vengono
+  inviate <strong>senza dati EXIF</strong> (niente posizione GPS né modello del telefono). Si
+  può disattivare dal menu ⚙.</p>
+<hr />
+<h2 id="5-aspetto-e-finestra">5. Aspetto e finestra</h2>
+<ul>
+<li>Menu <strong>⚙</strong> in alto: scegli il <strong>tema</strong> (Notte, Ardesia stile Telegram, Viola
+  notturno, Chiaro) e lo <strong>sfondo</strong> della chat (trama a pipistrelli, velo di
+  colore, tinta unita).</li>
+<li>La finestra si ricorda <strong>dimensione, posizione</strong> e se era <strong>massimizzata</strong>:
+  la ritrovi come l'hai lasciata.</li>
+<li>Finché non apri una conversazione vedi solo il benvenuto col pipistrello; il
+  campo per scrivere compare quando selezioni un contatto.</li>
+</ul>
+<hr />
+<h3 id="menu-del-tasto-destro-e-i-tre-puntini">Menu del tasto destro (e i tre puntini ⋮)</h3>
+<p>Come in Telegram, con il <strong>tasto destro</strong>:
+- <strong>su un contatto</strong> dell'elenco (o con <strong>⋮</strong> in alto nella conversazione):
+  Apri la chat · Segna come letto/non letto · Fissa in alto · Rinomina… · Copia
+  il Contact ID · <strong>Cancella cronologia</strong> · <strong>Elimina la chat</strong>;
+- <strong>su un messaggio</strong>: Copia testo · Inoltra (a un altro contatto) · <strong>Elimina
+  per me</strong>; sugli allegati anche Apri · Mostra nella cartella · Salva con nome….</p>
+<p>«Elimina» e «Cancella» chiedono conferma e agiscono <strong>solo sul tuo computer</strong>:
+non c'è un server che possa cancellare i messaggi dall'altra parte.</p>
+<p>Nell'elenco vedi per ogni chat l'<strong>ultimo messaggio</strong>, l'ora (o il giorno), il
+<strong>numero di messaggi non letti</strong> e il 📌 delle chat fissate, che restano in cima.</p>
+<hr />
+<h2 id="6-serve-una-rete-condivisa">6. Serve una rete condivisa</h2>
+<p>La chat è a <strong>due parti</strong>: per parlarvi, <strong>tu e l'altra persona dovete essere
+sulla stessa rete</strong>.</p>
+<ul>
+<li><strong>Rete pubblica (uso reale).</strong> Se hai configurato la rete condivisa nel file
+  <code>~/.nyctalus-browser/config.json</code> (<code>directory_url</code> + <code>authority</code>, vedi
+  <a href="DEPLOY.html"><code>DEPLOY.md</code></a>), la chat la usa automaticamente: così raggiungi chiunque sia su
+  quella rete. È il modo con cui tu e i tuoi contatti vi parlate davvero.</li>
+<li><strong>Rete di prova locale (solo per curiosare).</strong> Senza quella configurazione la
+  finestra si apre comunque, ma su una rete di prova <strong>solo sul tuo PC</strong>: utile
+  per vedere com'è fatta, <strong>non</strong> per raggiungere altre persone.</li>
+</ul>
+<p><strong>Provare la chat da solo</strong> (due finestre sul tuo computer, come due persone):</p>
+<pre><code class="language-sh">./strumenti/demo-chat.sh
+</code></pre>
+<p>Aggiungi in ciascuna finestra l'indirizzo dell'altra e scrivetevi.</p>
+<hr />
+<h2 id="7-sicurezza-in-due-righe">7. Sicurezza in due righe</h2>
+<ul>
+<li>I messaggi sono <strong>cifrati end-to-end</strong>; i relay della rete non vedono il
+  contenuto e non conoscono gli IP di mittente e destinatario.</li>
+<li><strong>Chi ti scrive è autenticato</strong>: la chat verifica con la crittografia che il
+  mittente possieda davvero la chiave privata dell'indirizzo che dichiara, quindi
+  <strong>nessuno può spacciarsi</strong> per un tuo contatto.</li>
+<li>Resta a te la <strong>verifica umana</strong> del Contact ID (scambiatevelo per un canale
+  fidato) e l'<strong>igiene</strong>: se nei messaggi ti identifichi, nessuna rete può
+  nasconderti. Vedi <a href="SICUREZZA.html"><code>SICUREZZA.md</code></a>.</li>
+</ul>
+<blockquote>
+<p>⚠️ Prototipo non ancora verificato da revisori indipendenti: usalo per provare
+funzionamento, usabilità e stabilità, <strong>non</strong> per proteggere dati reali.</p>
+</blockquote>
+<hr />
+<h2 id="8-dove-stanno-i-tuoi-dati">8. Dove stanno i tuoi dati</h2>
+<p>Tutto in <code>~/.nyctalus-chat/</code>:</p>
+<table>
+<thead>
+<tr>
+<th>File/cartella</th>
+<th>Contenuto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>identita</code></td>
+<td>la tua chiave (identità) — <strong>il tuo Contact ID</strong>. Tienila al sicuro.</td>
+</tr>
+<tr>
+<td><code>contatti</code></td>
+<td>l'elenco dei contatti che hai aggiunto (indirizzo + soprannome).</td>
+</tr>
+<tr>
+<td><code>cronologia/&lt;addr&gt;.log</code></td>
+<td>lo storico dei messaggi (e degli allegati) con ciascun contatto.</td>
+</tr>
+<tr>
+<td><code>allegati/&lt;contatto&gt;/</code></td>
+<td>i file ricevuti.</td>
+</tr>
+<tr>
+<td><code>ui.json</code></td>
+<td>tema, sfondo, dimensione e posizione della finestra.</td>
+</tr>
+</tbody>
+</table>
+<p>Per <strong>cambiare identità</strong> da zero, chiudi la chat ed elimina <code>identita</code> (perderai
+il vecchio Contact ID). Per fare pulizia di una conversazione, cancella il
+relativo file in <code>cronologia/</code>.</p>
+</article>
+</main>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>

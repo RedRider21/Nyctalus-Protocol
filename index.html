@@ -20,7 +20,9 @@
     <a href="#caratteristiche"><span class="it">Caratteristiche</span><span class="en">Features</span></a>
     <a href="#traffico"><span class="it">Traffico</span><span class="en">Traffic</span></a>
     <a href="#stato"><span class="it">Stato</span><span class="en">Status</span></a>
-    <a href="#manuale"><span class="it">Manuale</span><span class="en">Manual</span></a>
+    <a href="#installare"><span class="it">Installare</span><span class="en">Install</span></a>
+    <a href="#manuale"><span class="it">Guida</span><span class="en">Guide</span></a>
+    <a href="manuali/index.html"><span class="it">Manuali</span><span class="en">Manuals</span></a>
     <a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a>
   </nav>
   <button class="btn-icona" id="lingua" title="Lingua / Language">🌐 <span id="lingua-et">EN</span></button>
@@ -40,7 +42,8 @@
     <span class="en">⚠️ Work-in-progress prototype — do not yet use it to protect real data</span>
   </span>
   <div class="cta">
-    <a class="bottone pieno" href="#manuale"><span class="it">Leggi il manuale</span><span class="en">Read the manual</span></a>
+    <a class="bottone pieno" href="#installare"><span class="it">Cosa installare</span><span class="en">What to install</span></a>
+    <a class="bottone vuoto" href="manuali/index.html"><span class="it">Manuali</span><span class="en">Manuals</span></a>
     <a class="bottone vuoto" href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a>
   </div>
 </header>
@@ -152,7 +155,7 @@ nyctalus node    ... --cover 5   <span class="c"><span class="it"># discesa</spa
 <section id="stato"><div class="wrap">
   <div class="occhiello"><span class="it">Stato</span><span class="en">Status</span></div>
   <h2><span class="it">A che punto siamo</span><span class="en">Where we are</span></h2>
-  <p class="intro"><span class="it">Fatto e testato (84 test automatici):</span><span class="en">Done and tested (84 automated tests):</span></p>
+  <p class="intro"><span class="it">Fatto e testato: 90 test automatici del motore e 235 verifiche di funzionamento e sicurezza (<code class="in">test/esegui-tutti.sh</code>):</span><span class="en">Done and tested: 90 automated engine tests and 235 functional and security checks (<code class="in">test/esegui-tutti.sh</code>):</span></p>
   <ul class="spunta">
     <li><b><span class="it">Nucleo del protocollo (L2)</span><span class="en">Protocol core (L2)</span></b> — <span class="it">frammentazione, etichette segrete, cifratura end-to-end, ricomposizione anti-DoS.</span><span class="en">fragmentation, secret labels, end-to-end encryption, DoS-resistant reassembly.</span></li>
     <li><b><span class="it">Stretta di mano Noise NK</span><span class="en">Noise NK handshake</span></b> — <span class="it">segreto mai trasmesso, forward secrecy, mittente anonimo.</span><span class="en">secret never transmitted, forward secrecy, anonymous sender.</span></li>
@@ -171,8 +174,24 @@ nyctalus node    ... --cover 5   <span class="c"><span class="it"># discesa</spa
     <li><b><span class="it">Browser dedicato</span><span class="en">Dedicated browser</span></b> — <span class="it">clone di Firefox (GTK/WebKit); parte come un browser normale, lo <b>stealth</b> (rete Nyctalus) si accende col bottone, e i <code class="in">.nyct</code> lo attivano da soli.</span><span class="en">a Firefox clone (GTK/WebKit); it starts as an ordinary browser, <b>stealth</b> (the Nyctalus network) is toggled with a button, and <code class="in">.nyct</code> addresses turn it on by themselves.</span></li>
     <li><b><span class="it">Chat .nyct (senza server, senza metadati)</span><span class="en">.nyct chat (no server, no metadata)</span></b> — <span class="it">ogni utente è un indirizzo <code class="in">.nyct</code> (il suo <b>Contact ID</b>); motore in Rust (<code class="in">nyctalus chat</code>) + finestra GTK. Oltre all'anonimato e alla cifratura E2E, <b>chi scrive è autenticato</b> da un secondo handshake Noise NK dentro il tunnel: nessuno può spacciarsi per un contatto. Vedi la <a href="#chat">guida alla chat</a>.</span><span class="en">each user is a <code class="in">.nyct</code> address (their <b>Contact ID</b>); Rust engine (<code class="in">nyctalus chat</code>) + GTK window. Beyond network anonymity and E2E encryption, <b>the sender is authenticated</b> by a second Noise NK handshake inside the tunnel: nobody can impersonate a contact. See the <a href="#chat">chat guide</a>.</span></li>
     <li><b><span class="it">Mini-launcher da desktop</span><span class="en">Desktop mini-launcher</span></b> — <span class="it">pannello trascinabile con bottoni quadrati (orizzontale/verticale), dimensione regolabile e tasti rapidi configurabili, per lanciare Browser e Chat. Client grafici in Python+GTK3; il motore resta in Rust.</span><span class="en">a draggable panel with square buttons (horizontal/vertical), adjustable size and configurable hotkeys, to launch Browser and Chat. Graphical clients in Python+GTK3; the engine stays in Rust.</span></li>
-    <li class="futuro"><b><span class="it">In arrivo</span><span class="en">Coming</span></b> — <span class="it">gestore file grafico, taratura del rumore di fondo su rete reale, confronto con Tor (Shadow), rete di nodi pubblica.</span><span class="en">graphical file manager, tuning cover traffic on a real network, comparison against Tor (Shadow), a public node network.</span></li>
+    <li><b><span class="it">Chat in stile Telegram, con allegati</span><span class="en">Telegram-style chat, with attachments</span></b> — <span class="it">temi e sfondi, menu col tasto destro, foto e video a tutta bolla, lettore audio, fotocamera, selettore degli allegati a griglia, foto senza metadati. Gli allegati viaggiano a blocchi dentro la sessione cifrata, con verifica BLAKE3 finale.</span><span class="en">themes and backgrounds, right-click menus, full-bubble photos and videos, audio player, camera, grid attachment picker, photos stripped of metadata. Attachments travel in blocks inside the encrypted session, with a final BLAKE3 check.</span></li>
+    <li><b><span class="it">App per il telefono (Android)</span><span class="en">Phone app (Android)</span></b> — <span class="it">il motore gira in Termux, l'app (APK) lo installa e lo avvia da sola. La chat è una web-app in stile Telegram. Dalla schermata di benvenuto si aprono Chat, Browser, File (in arrivo) e Info.</span><span class="en">the engine runs in Termux, and the app (APK) installs and starts it by itself. The chat is a Telegram-style web app. The welcome screen opens Chat, Browser, Files (coming) and Info.</span></li>
+    <li><b><span class="it">Browser del telefono con modalità Nyctalus</span><span class="en">Phone browser with Nyctalus mode</span></b> — <span class="it">browser in stile Chrome; con 🦇 tutto il traffico passa dalla rete. Prima di aprire una pagina verifica che il traffico passi davvero da Nyctalus, altrimenti non apre nulla. WebRTC è spento, le schede sono in incognito e i <code class="in">.nyct</code> si aprono solo in questa modalità.</span><span class="en">Chrome-style browser; with 🦇 all traffic goes through the network. Before opening a page it checks that traffic really goes through Nyctalus, otherwise it opens nothing. WebRTC is off, tabs are incognito, and <code class="in">.nyct</code> sites open only in this mode.</span></li>
+    <li><b><span class="it">Rete condivisa pronta all'uso</span><span class="en">Ready-to-use shared network</span></b> — <span class="it">l'installatore chiede il ruolo (client, gestore, nodo). Il pacchetto server installa i nodi come servizi di sistema. <code class="in">nyctalus-rete</code> firma l'elenco dei nodi e crea il <b>codice di rete</b> da dare ai client; <code class="in">nyctalus-rete casa</code> fa una rete di casa per provare telefono ↔ PC.</span><span class="en">the installer asks for the role (client, manager, node). The server package installs nodes as system services. <code class="in">nyctalus-rete</code> signs the node list and creates the <b>network code</b> for clients; <code class="in">nyctalus-rete casa</code> builds a home network to try phone ↔ PC.</span></li>
+    <li class="futuro"><b><span class="it">In arrivo</span><span class="en">Coming</span></b> — <span class="it">gestore file grafico (PC e telefono), motore precompilato per il telefono, taratura del rumore di fondo su rete reale, confronto con Tor (Shadow), una rete di nodi pubblica.</span><span class="en">graphical file manager (PC and phone), prebuilt engine for the phone, tuning cover traffic on a real network, comparison against Tor (Shadow), a public node network.</span></li>
   </ul>
+</div></section>
+
+<section id="installare"><div class="wrap">
+  <div class="occhiello"><span class="it">Installare</span><span class="en">Install</span></div>
+  <h2><span class="it">Cosa installare, e dove</span><span class="en">What to install, and where</span></h2>
+  <p class="intro"><span class="it">Una rete Nyctalus ha tre ruoli. I pacchetti si preparano dai sorgenti con <code class="in">strumenti/crea-installazioni.sh</code>, che crea la cartella <code class="in">installazioni/</code> con una sottocartella per dispositivo e le istruzioni. Per ora, finché il prototipo non è verificato, non distribuiamo binari già pronti.</span><span class="en">A Nyctalus network has three roles. Packages are built from source with <code class="in">strumenti/crea-installazioni.sh</code>, which creates the <code class="in">installazioni/</code> folder with one subfolder per device and the instructions. For now, until the prototype is verified, we do not distribute prebuilt binaries.</span></p>
+  <ul class="spunta">
+    <li><b><span class="it">Client</span><span class="en">Client</span></b> — <span class="it">chi usa la rete. PC Linux: <code class="in">PC-Linux/</code> → <code class="in">./installa.sh</code>, scelta 1. Telefono: <code class="in">Android/</code> → l'app, che installa Nyctalus in Termux.</span><span class="en">those who use the network. Linux PC: <code class="in">PC-Linux/</code> → <code class="in">./installa.sh</code>, option 1. Phone: <code class="in">Android/</code> → the app, which installs Nyctalus in Termux.</span></li>
+    <li><b><span class="it">Nodo</span><span class="en">Node</span></b> — <span class="it">chi tiene in piedi la rete: un server sempre acceso (VPS). <code class="in">Server-Linux/</code> → <code class="in">sudo ./installa.sh</code>, poi si mandano al gestore le righe d'elenco stampate.</span><span class="en">those who keep the network running: an always-on server (VPS). <code class="in">Server-Linux/</code> → <code class="in">sudo ./installa.sh</code>, then send the printed directory lines to the manager.</span></li>
+    <li><b><span class="it">Gestore</span><span class="en">Manager</span></b> — <span class="it">chi firma l'elenco dei nodi e dà il codice di rete ai client. È un PC qualunque: <code class="in">./installa.sh</code>, scelta 2.</span><span class="en">those who sign the node list and give the network code to clients. Any PC will do: <code class="in">./installa.sh</code>, option 2.</span></li>
+  </ul>
+  <p class="intro"><span class="it">I quattro scenari (provare da soli, rete di casa telefono ↔ PC, rete con un server, rete distribuita) sono spiegati passo per passo in <a href="manuali/SCELTE-OPERATIVE.html">Scelte operative</a>. Tutti i manuali, in italiano: <a href="manuali/index.html">Manuali</a>.</span><span class="en">The four scenarios (trying alone, home network phone ↔ PC, a network with one server, a distributed network) are explained step by step in <a href="manuali/SCELTE-OPERATIVE.html">Operational choices</a>. All manuals (in Italian): <a href="manuali/index.html">Manuals</a>.</span></p>
 </div></section>
 
 <section id="manuale"><div class="wrap">
@@ -184,7 +203,8 @@ nyctalus node    ... --cover 5   <span class="c"><span class="it"># discesa</spa
     <p class="intro"><span class="it">Serve <a href="https://rustup.rs">Rust</a> (profilo minimal sufficiente).</span><span class="en">You need <a href="https://rustup.rs">Rust</a> (the minimal profile is enough).</span></p>
     <pre>git clone https://github.com/RedRider21/Nyctalus-Protocol.git
 cd Nyctalus-Protocol
-cargo test              <span class="c"><span class="it"># 84 test</span><span class="en"># 84 tests</span></span>
+cargo test              <span class="c"><span class="it"># 90 test</span><span class="en"># 90 tests</span></span>
+bash test/esegui-tutti.sh   <span class="c"><span class="it"># tutte le prove di funzionamento e sicurezza</span><span class="en"># all functional and security checks</span></span>
 cargo build --release   <span class="c"><span class="it"># produce target/release/nyctalus</span><span class="en"># builds target/release/nyctalus</span></span></pre>
   </div>
 
@@ -251,7 +271,7 @@ curl --socks5-hostname 127.0.0.1:1080 http://example.com</pre>
     <h3><span class="it">Avvio</span><span class="en">Start</span></h3>
     <p class="intro"><span class="it">Dal <b>launcher</b> premi <b>Chat</b>, oppure da terminale:</span><span class="en">From the <b>launcher</b> press <b>Chat</b>, or from a terminal:</span></p>
     <pre>./avvia-chat.sh          <span class="c"><span class="it"># nel pacchetto</span><span class="en"># in the package</span></span>
-./scripts/demo-chat.sh   <span class="c"><span class="it"># prova locale: due finestre</span><span class="en"># local demo: two windows</span></span></pre>
+./strumenti/demo-chat.sh   <span class="c"><span class="it"># prova locale: due finestre</span><span class="en"># local demo: two windows</span></span></pre>
     <div class="nota"><span class="it">La finestra si apre <b>subito</b>; la rete sale in sottofondo (deve costruire un circuito e registrare il tuo servizio al punto d'incontro): qualche secondo e puoi scrivere. Non è un difetto — è il prezzo dell'assenza di metadati.</span><span class="en">The window opens <b>right away</b>; the network comes up in the background (it builds a circuit and registers your service at a rendezvous): a few seconds and you can write. It's not a flaw — it's the price of having no metadata.</span></div>
   </div>
 

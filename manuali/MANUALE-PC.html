@@ -1,0 +1,152 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuale d&#x27;uso — PC · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html" class="qui">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<article>
+<h1 id="manuale-duso-pc">Manuale d'uso — PC</h1>
+<p>Sul PC Nyctalus ha tre programmi grafici: il <strong>launcher</strong> (il pannello da cui parte
+tutto), il <strong>browser</strong> e la <strong>chat</strong>. Sotto c'è sempre lo stesso <strong>motore</strong> in Rust
+(<code>bin/nyctalus</code>), che fa crittografia e rete; i programmi grafici non vedono mai le
+chiavi.</p>
+<p>Installazione: <a href="MANUALE-INSTALLAZIONE.html"><code>MANUALE-INSTALLAZIONE.md</code></a>. La chat ha il suo manuale: <a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a>.</p>
+<hr />
+<h2 id="1-il-launcher-pannello-da-desktop">1. Il launcher (pannello da desktop)</h2>
+<p>Installato, è nel menu delle applicazioni come <strong>«Nyctalus»</strong> (o col comando <code>nyctalus-launcher</code>); dalla cartella scompattata <code>./avvia-launcher.sh</code>; dai sorgenti <code>strumenti/avvia-launcher.sh</code> (dopo il riordino non sta più in <code>launcher/</code> ma in <code>pc/launcher/</code>). È un piccolo pannello <strong>senza bordi</strong>, che puoi
+<strong>trascinare</strong> ovunque sullo schermo con il tasto sinistro.</p>
+<table>
+<thead>
+<tr>
+<th>Bottone</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🦇 logo</td>
+<td>apre la guida online (sito del progetto) nel browser</td>
+</tr>
+<tr>
+<td>Browser</td>
+<td>apre il browser Nyctalus</td>
+</tr>
+<tr>
+<td>Chat</td>
+<td>apre la chat (motore + servizio <code>.nyct</code> + finestra)</td>
+</tr>
+<tr>
+<td>File</td>
+<td>gestore dei file: in arrivo</td>
+</tr>
+<tr>
+<td>☰</td>
+<td>impostazioni (anche con il <strong>tasto destro</strong> sul pannello)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Impostazioni (☰ o tasto destro):</strong>
+- <strong>Disposizione verticale / orizzontale</strong> dei bottoni;
+- <strong>Più grande / Più piccola / Normale</strong>: dimensione dei bottoni;
+- <strong>Sempre in primo piano</strong>;
+- <strong>Tasti rapidi…</strong>: scegli tu le combinazioni per Browser, Chat, File e
+  Mostra/Nascondi il pannello. Premi il bottone accanto all'azione, poi la combinazione
+  (Esc annulla, ✕ la toglie). <strong>Sono vuote all'inizio</strong>, per non scontrarsi con le
+  scorciatoie del sistema: scegline di libere. Con il pacchetto <code>gir1.2-keybinder-3.0</code>
+  funzionano <strong>ovunque</strong>; senza, solo quando il pannello è in primo piano.
+- <strong>Esci</strong>.</p>
+<p>Posizione, orientamento, dimensione e tasti rapidi vengono ricordati
+(<code>~/.nyctalus-launcher/config.json</code>).</p>
+<hr />
+<h2 id="2-il-browser">2. Il browser</h2>
+<p>Si avvia dal launcher o con <code>./avvia-browser.sh</code>. È un browser completo (schede,
+preferiti, cronologia, download, ricerca nella pagina, traduzione, 5 lingue).</p>
+<h3 id="normale-e-stealth">Normale e Stealth</h3>
+<ul>
+<li>Parte <strong>normale</strong>: naviga come un browser qualunque.</li>
+<li>Il bottone <strong>Stealth</strong> accende la rete Nyctalus: <strong>avvia da solo i servizi</strong> (rete
+  pubblica se configurata, altrimenti una rete di prova locale) e da quel momento le
+  nuove schede passano dalla rete anonima, senza cookie né cronologia su disco, con le
+  protezioni contro le fughe di dati (WebRTC spento, User-Agent generico, niente
+  geolocalizzazione).</li>
+<li>Le scritte del bottone: <strong>Stealth OFF</strong>, <strong>Stealth (avvio…)</strong>, <strong>Stealth ON</strong>,
+  <strong>Stealth ON · prova locale</strong>, <strong>Stealth (non connesso)</strong>.</li>
+</ul>
+<h3 id="siti-nyct">Siti <code>.nyct</code></h3>
+<p>Gli indirizzi <code>.nyct</code> sono siti interni della rete, come gli <code>.onion</code> di Tor. Se ne apri
+uno, lo Stealth si accende da solo. Senza rete Nyctalus attiva <strong>il browser li blocca</strong>
+(mostra «Rete Nyctalus non attiva») invece di farli uscire in chiaro.</p>
+<hr />
+<h2 id="3-la-chat">3. La chat</h2>
+<p>Si avvia dal launcher (bottone Chat) o con <code>./avvia-chat.sh</code>. La finestra si apre
+subito, mentre la rete finisce di avviarsi in sottofondo. Tutto il resto (contatti,
+messaggi, allegati, fotocamera, menu del tasto destro, temi) è in <strong><a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a></strong>.</p>
+<hr />
+<h3 id="collegarsi-a-una-rete-condivisa">Collegarsi a una rete condivisa</h3>
+<p>Senza configurazione chat e browser usano una rete di prova solo sul PC. Per una rete
+condivisa serve il <strong>codice di rete</strong> dato da chi la gestisce:</p>
+<pre><code class="language-sh">nyctalus-rete importa NYCT1:…     # poi chiudi e riapri chat e browser
+nyctalus-rete stato               # a quale rete sei collegato
+nyctalus-rete importa --prova     # torna alla rete di prova
+nyctalus-rete casa                # rete di casa su questo PC (prova telefono ↔ PC)
+</code></pre>
+<p>Gestire una rete propria: <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a>.</p>
+<h2 id="4-dove-stanno-i-dati">4. Dove stanno i dati</h2>
+<table>
+<thead>
+<tr>
+<th>Cartella</th>
+<th>Contenuto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/.nyctalus-chat/</code></td>
+<td>identità (Contact ID), contatti, cronologia, allegati, aspetto della chat</td>
+</tr>
+<tr>
+<td><code>~/.nyctalus-browser/</code></td>
+<td>impostazioni, preferiti e cronologia del browser (solo in modalità normale)</td>
+</tr>
+<tr>
+<td><code>~/.nyctalus-launcher/</code></td>
+<td>posizione e impostazioni del pannello</td>
+</tr>
+<tr>
+<td><code>~/.nyctalus-rete/</code></td>
+<td>solo per chi <strong>gestisce</strong> una rete: chiavi dell'autorità (copia di sicurezza!), nodi, elenco firmato, rete di casa</td>
+</tr>
+<tr>
+<td><code>~/.cache/nyctalus-chat/</code></td>
+<td>miniature, foto e video della fotocamera prima dell'invio</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-verificare-che-tutto-funzioni">5. Verificare che tutto funzioni</h2>
+<p>Chi ha i sorgenti può lanciare la batteria di prove: vedi <strong><a href="MANUALE-PROVE.html"><code>MANUALE-PROVE.md</code></a></strong>.</p>
+</article>
+</main>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>

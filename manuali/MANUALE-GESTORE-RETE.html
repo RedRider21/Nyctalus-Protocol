@@ -1,0 +1,122 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuale del gestore della rete · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html" class="qui">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<article>
+<h1 id="manuale-del-gestore-della-rete">Manuale del gestore della rete</h1>
+<p>Il <strong>gestore</strong> decide quali nodi fanno parte della rete. Firma il loro elenco con una
+chiave che solo lui possiede e dà ai client il <strong>codice di rete</strong>. Basta un PC, anche
+quello che usi tutti i giorni. Quadro generale: <a href="SCELTE-OPERATIVE.html"><code>SCELTE-OPERATIVE.md</code></a>.</p>
+<p>Strumento: <strong><code>nyctalus-rete</code></strong>. Lo installa <code>./installa.sh</code> del pacchetto PC (scelte 1 e 2).</p>
+<h2 id="1-in-breve">1. In breve</h2>
+<pre><code class="language-sh">nyctalus-rete crea --nome &quot;La mia rete&quot;             # una volta sola
+nyctalus-rete aggiungi --file righe-nodi.txt        # le righe ricevute dai server
+nyctalus-rete firma                                 # → ~/.nyctalus-rete/directory.txt
+# pubblica directory.txt a un indirizzo web (§4)
+nyctalus-rete codice --url https://…/directory.txt  # → NYCT1:…  da dare ai client
+nyctalus-rete verifica                              # i nodi rispondono?
+</code></pre>
+<h2 id="2-creare-la-rete-una-volta">2. Creare la rete (una volta)</h2>
+<pre><code class="language-sh">nyctalus-rete crea --nome &quot;La mia rete&quot;
+</code></pre>
+<ul>
+<li>Crea l'<strong>autorità</strong>: una chiave segreta e una pubblica, in <code>~/.nyctalus-rete/</code> (cartella
+  privata, file 600).</li>
+<li><strong>Fai una copia di sicurezza</strong> di <code>~/.nyctalus-rete/autorita.json</code> su una chiavetta.
+  Se la perdi, non puoi più firmare: dovresti creare una rete nuova e ridare il codice a
+  tutti.</li>
+<li>Un secondo <code>crea</code> viene rifiutato. Per ricominciare da capo serve <code>--sostituisci</code>.</li>
+</ul>
+<h2 id="3-aggiungere-e-togliere-nodi">3. Aggiungere e togliere nodi</h2>
+<p>I server ti mandano righe come <code>203.0.113.5:4601,1f59…,2ecd…</code> (<a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>).</p>
+<pre><code class="language-sh">nyctalus-rete aggiungi 'RIGA1' 'RIGA2' …        # oppure: --file righe-nodi.txt
+nyctalus-rete togli 203.0.113.5:4601
+nyctalus-rete elenco                             # nodi attuali, e se l'elenco è da firmare
+nyctalus-rete firma                              # SEMPRE dopo ogni cambio (minimo 3 nodi)
+</code></pre>
+<p>Una riga con lo stesso indirizzo <strong>sostituisce</strong> la vecchia. Le righe sbagliate vengono
+rifiutate.</p>
+<h2 id="4-pubblicare-lelenco">4. Pubblicare l'elenco</h2>
+<p>I client scaricano <code>~/.nyctalus-rete/directory.txt</code> da un indirizzo web. Il file è
+firmato: anche se qualcuno lo alterasse, i client lo rifiuterebbero. Scegli tu dove:</p>
+<table>
+<thead>
+<tr>
+<th>Dove</th>
+<th>Come</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Questo PC, rete di casa</strong></td>
+<td><code>nyctalus-rete servi</code>, finché resta aperto: <code>http://IP-DEL-PC:18800/directory.txt</code></td>
+</tr>
+<tr>
+<td><strong>Il server dei nodi</strong></td>
+<td>copia il file in una cartella web del server (Nginx/Apache), oppure lancia lì <code>nyctalus-rete servi</code></td>
+</tr>
+<tr>
+<td><strong>Un sito o hosting statico</strong></td>
+<td>carica <code>directory.txt</code> (anche le GitHub Pages del progetto, quando potremo aggiornarle)</td>
+</tr>
+</tbody>
+</table>
+<p>Dopo ogni <code>firma</code> ricarica il file nello stesso posto.</p>
+<h2 id="5-il-codice-per-i-client">5. Il codice per i client</h2>
+<pre><code class="language-sh">nyctalus-rete codice --url https://tuo-sito/directory.txt
+</code></pre>
+<p>Stampa <code>NYCT1:…</code> e lo salva in <code>~/.nyctalus-rete/codice.txt</code>.
+- Contiene solo <strong>nome, URL e chiave pubblica</strong>: puoi mandarlo per messaggio o mail.
+- <strong>Va rifatto solo se cambi l'URL.</strong> Aggiungere o togliere nodi non cambia il codice.
+- I client lo importano così:
+  - <strong>PC:</strong> <code>nyctalus-rete importa NYCT1:…</code>, poi chiudi e riapri chat e browser
+    (<code>nyctalus-rete importa --prova</code> per tornare alla rete di prova; <code>stato</code> per vedere
+    la rete in uso);
+  - <strong>telefono:</strong> ⚙ Impostazioni → <strong>Rete condivisa</strong> → <strong>Importa codice</strong> (la rete si
+    riavvia da sola; «↩ Rete di prova» per tornare indietro).</p>
+<h2 id="6-rete-di-casa-prove-senza-server">6. Rete di casa (prove senza server)</h2>
+<pre><code class="language-sh">nyctalus-rete casa            # opzioni: --nodi 4  --ip IP  --porta 18800  --porta-base 4701
+</code></pre>
+<p>Fa tutto da solo su questo PC:
+- accende i nodi (porte UDP 4701-4704);
+- firma l'elenco con una rete separata, «Rete di casa», che non tocca la tua rete vera;
+- lo pubblica su <code>http://IP-DEL-PC:18800/</code>, una pagina col codice da aprire sul telefono;
+- importa il codice anche su questo PC.</p>
+<p>Lascia la finestra aperta; <code>Ctrl-C</code> ferma tutto. Se il telefono non si collega, il
+firewall del PC blocca le porte: apri TCP 18800 e UDP 4701-4704 verso la rete locale.</p>
+<h2 id="7-sicurezza-in-tre-righe">7. Sicurezza in tre righe</h2>
+<ul>
+<li>La chiave <strong>segreta</strong> non esce mai da <code>~/.nyctalus-rete</code>: il codice e l'elenco
+  contengono solo la pubblica.</li>
+<li>Chi ha il codice può <strong>usare</strong> la rete, non modificarla.</li>
+<li>Rete con tutti i nodi su un solo server: funziona, ma <strong>non è anonima</strong> verso quel
+  fornitore. Per l'anonimato servono nodi su server diversi (scenario D).</li>
+</ul>
+</article>
+</main>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>

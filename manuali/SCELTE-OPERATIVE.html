@@ -1,0 +1,161 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scelte operative: cosa installare e dove · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="SCELTE-OPERATIVE.html" class="qui">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<article>
+<h1 id="scelte-operative-cosa-installare-e-dove">Scelte operative: cosa installare e dove</h1>
+<h2 id="i-tre-ruoli">I tre ruoli</h2>
+<table>
+<thead>
+<tr>
+<th>Ruolo</th>
+<th>Che cosa fa</th>
+<th>Dove</th>
+<th>Pacchetto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Client</strong></td>
+<td>usa la rete: chat, browser</td>
+<td>PC, telefono</td>
+<td><code>PC-Linux/</code> (scegli 1) · <code>Android/</code></td>
+</tr>
+<tr>
+<td><strong>Nodo</strong></td>
+<td>tiene in piedi la rete: inoltra il traffico cifrato</td>
+<td><strong>server sempre acceso</strong> con IP pubblico (VPS)</td>
+<td><code>Server-Linux/</code></td>
+</tr>
+<tr>
+<td><strong>Gestore</strong></td>
+<td>firma l'elenco dei nodi e dà il <strong>codice di rete</strong> ai client</td>
+<td>il tuo PC (uno solo)</td>
+<td><code>PC-Linux/</code> (scegli 2)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>I <strong>telefoni sono solo client</strong>. Non possono fare da nodo: cambiano indirizzo, non
+  si possono raggiungere da Internet e Android li mette a dormire.</li>
+<li>Ogni percorso usa <strong>3 nodi diversi</strong>, quindi una rete ne ha almeno 3 (meglio 4).</li>
+<li>Il <strong>codice di rete</strong> (<code>NYCT1:…</code>) è l'unica cosa che un client deve ricevere: contiene
+  il nome della rete, l'indirizzo dell'elenco e la chiave <strong>pubblica</strong> del gestore.
+  Non contiene segreti.</li>
+</ul>
+<hr />
+<h2 id="scenario-a-provare-da-solo-nessun-server">Scenario A · Provare da solo (nessun server)</h2>
+<p><strong>Cosa:</strong> chat e browser su un dispositivo, con la rete di prova che si crea da sola.</p>
+<ol>
+<li>Installa il <strong>client</strong> (PC: <code>./installa.sh</code> → 1 · telefono: <a href="MANUALE-INSTALLAZIONE.html"><code>MANUALE-INSTALLAZIONE.md</code></a>).</li>
+<li>Apri la chat: la striscia dice «Rete di prova LOCALE».</li>
+<li>Aggiungi come contatto il <strong>tuo stesso Contact ID</strong>: messaggi e file fanno il giro
+   completo della rete.</li>
+</ol>
+<p>Limite: non puoi parlare con nessun altro dispositivo.</p>
+<h2 id="scenario-b-rete-di-casa-telefono-pc-nessun-server">Scenario B · Rete di casa: telefono ↔ PC (nessun server)</h2>
+<p><strong>Cosa:</strong> il PC fa da nodi e da gestore sulla Wi-Fi di casa; il telefono si collega.
+È il modo per provare <strong>due identità diverse</strong> tra loro.</p>
+<ol>
+<li>Sul PC installa il <strong>gestore</strong> (<code>./installa.sh</code> → 2).</li>
+<li>Sul PC: <code>nyctalus-rete casa</code> e lascia la finestra aperta. Stampa un codice <code>NYCT1:…</code>
+   e un indirizzo <code>http://IP-DEL-PC:18800/</code>.</li>
+<li>Sul telefono, sulla <strong>stessa Wi-Fi</strong>: apri quell'indirizzo nel browser e copia il
+   codice. Poi nell'app vai in ⚙ Impostazioni → <strong>Rete condivisa</strong> → <strong>Importa codice</strong>.</li>
+<li>Sul PC la chat usa già la rete di casa: <code>casa</code> importa il codice anche sul PC.
+   Chiudi e riapri la chat.</li>
+<li>Scambiatevi i Contact ID e scrivetevi.</li>
+</ol>
+<p>Limiti: funziona solo in casa e solo finché la finestra di <code>casa</code> resta aperta.
+<code>Ctrl-C</code> la ferma. Per tornare alla rete di prova: PC <code>nyctalus-rete importa --prova</code>,
+telefono «↩ Rete di prova».</p>
+<h2 id="scenario-c-rete-vera-con-un-server-vps">Scenario C · Rete vera con un server (VPS)</h2>
+<p><strong>Cosa:</strong> un server in affitto con 4 nodi; chiunque abbia il codice può usare la rete.</p>
+<table>
+<thead>
+<tr>
+<th>Dove</th>
+<th>Cosa fai</th>
+<th>Manuale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Server</strong></td>
+<td><code>sudo ./installa.sh --nodi 4</code> dal pacchetto <code>Server-Linux</code> → stampa 4 righe</td>
+<td><a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a></td>
+</tr>
+<tr>
+<td><strong>Tuo PC (gestore)</strong></td>
+<td><code>nyctalus-rete crea</code> → <code>aggiungi</code> le 4 righe → <code>firma</code></td>
+<td><a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a></td>
+</tr>
+<tr>
+<td><strong>Dove pubblichi</strong></td>
+<td>metti <code>directory.txt</code> a un indirizzo web (anche sullo stesso server)</td>
+<td><a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a> §4</td>
+</tr>
+<tr>
+<td><strong>Tuo PC (gestore)</strong></td>
+<td><code>nyctalus-rete codice --url URL</code> → il codice <code>NYCT1:…</code></td>
+<td><a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a></td>
+</tr>
+<tr>
+<td><strong>Ogni client</strong></td>
+<td>PC: <code>nyctalus-rete importa CODICE</code> · telefono: ⚙ → Importa codice</td>
+<td>questo file, sopra</td>
+</tr>
+</tbody>
+</table>
+<p>Limite: tutti i nodi stanno da un solo fornitore. La rete funziona davvero, ma quel
+fornitore vedrebbe sia l'entrata sia l'uscita: va bene per provare, non per l'anonimato.</p>
+<h2 id="scenario-d-rete-distribuita-piu-server-anche-di-amici">Scenario D · Rete distribuita (più server, anche di amici)</h2>
+<p><strong>Cosa:</strong> come C, ma con i nodi su <strong>server e fornitori diversi</strong>. È così che la rete
+diventa anonima.</p>
+<ol>
+<li>Su ogni server: pacchetto <code>Server-Linux</code>, <code>sudo ./installa.sh --nodi 1</code> (o 2).</li>
+<li>Ognuno ti manda le sue righe (<code>nyctalus-server righe</code>): non sono segrete.</li>
+<li>Tu le aggiungi, firmi e ripubblichi <code>directory.txt</code>. <strong>Il codice non cambia</strong>, perché
+   restano uguali l'URL e la chiave: i client vedono i nodi nuovi al prossimo avvio.</li>
+</ol>
+<hr />
+<h2 id="domande-rapide">Domande rapide</h2>
+<ul>
+<li><strong>Mi serve un server per provare?</strong> No: scenari A e B.</li>
+<li><strong>Che server prendere?</strong> Un VPS Linux x86_64 qualsiasi, anche il più piccolo (1 CPU,
+  512 MB-1 GB di RAM), con IP pubblico e possibilità di aprire porte <strong>UDP</strong>.</li>
+<li><strong>Posso usare il PC di casa come nodo per gli altri?</strong> Sì, se resta acceso e apri sul
+  router le porte UDP verso il PC. Alcuni operatori però non danno un IP pubblico.</li>
+<li><strong>Ho cambiato o aggiunto nodi: devo ridare il codice?</strong> No. Si ridà solo se cambi URL o
+  ricrei la rete con <code>crea --sostituisci</code>.</li>
+<li><strong>Chi ha il codice può alterare la rete?</strong> No: per firmare un elenco serve la chiave
+  segreta, che resta in <code>~/.nyctalus-rete</code> sul PC del gestore. Fanne una copia di sicurezza.</li>
+</ul>
+</article>
+</main>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>
