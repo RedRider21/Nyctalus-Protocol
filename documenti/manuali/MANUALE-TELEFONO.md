@@ -15,7 +15,9 @@ gestisce gli allegati. Installazione: **`MANUALE-INSTALLAZIONE.md`**, capitolo 2
 ## 1. Avvio
 
 In Termux scrivi `nyctalus-mobile` e apri nel browser l'indirizzo che stampa
-(`http://127.0.0.1:18731/?t=…`). Con l'app Nyctalus basta toccare l'icona.
+(`http://127.0.0.1:18731/?t=…`). Con l'app Nyctalus basta toccare l'icona: avvia Nyctalus in Termux e
+apre la chat. Le foto e i video scattati dalla chat con l'app restano nella sua cartella
+privata (non finiscono nella galleria) e si cancellano dopo un giorno.
 
 In cima all'elenco una striscia ti dice a che punto è la rete:
 - **⏳ Avvio della rete…**: pochi secondi, intanto vedi già le chat;

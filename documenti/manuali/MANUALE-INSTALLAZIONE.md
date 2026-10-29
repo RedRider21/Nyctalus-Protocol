@@ -14,7 +14,7 @@ dispositivo (la crea `strumenti/crea-installazioni.sh` partendo dai sorgenti):
 | Dispositivo | Cartella | Cosa contiene |
 |---|---|---|
 | PC Linux (x86_64) | `installazioni/PC-Linux/` | `Nyctalus-PC-Linux.tar.gz` — motore + browser + chat + launcher |
-| Telefono Android | `installazioni/Android/` | `nyctalus-termux.tar.gz` (dentro Termux) · `Nyctalus.apk` (quando disponibile) |
+| Telefono Android | `installazioni/Android/` | `nyctalus-termux.tar.gz` (dentro Termux) · `Nyctalus.apk` (l'app, facoltativa) |
 | Manuali | `installazioni/Manuali/` | questi manuali |
 
 ---
@@ -79,8 +79,9 @@ riscrivere il file.
 
    Se usi già Termux per altri progetti, va bene quello che hai.
 2. **`nyctalus-termux.tar.gz`** dalla cartella `installazioni/Android/`.
-3. Facoltativa: **`Nyctalus.apk`**, l'app a schermo intero. Senza, usi il browser del
-   telefono (funziona allo stesso modo).
+3. Facoltativa: **`Nyctalus.apk`**, l'app Nyctalus (circa 170 KB). Senza, usi il browser
+   del telefono (funziona allo stesso modo). Per installarla Android chiede di consentire
+   «Installa app sconosciute» all'app con cui la apri (File, Chrome…).
 
 ### 2.2 Portare l'archivio nel telefono
 L'archivio deve finire nella cartella **Download** del telefono. Scegli il modo più comodo:
@@ -119,6 +120,10 @@ menu di Chrome puoi **«Aggiungi a schermata Home»** per avere l'icona Nyctalus
 
 Con l'**app Nyctalus** non serve copiare indirizzi: avvia il servizio in Termux da sola
 (la prima volta Android chiede il permesso «Esegui comandi in Termux»: concedilo).
+L'app usa un **suo segreto** d'accesso, che scrive in Termux all'avvio: da quel momento
+l'indirizzo aperto prima nel browser non vale più (si riapre con `nyctalus-mobile --stato`).
+Se l'app resta su «Nyctalus non risponde»: tocca **«Copia il comando di avvio»**, in
+Termux tieni premuto → Incolla → Invio, poi torna nell'app.
 
 | Comando | Cosa fa |
 |---|---|
