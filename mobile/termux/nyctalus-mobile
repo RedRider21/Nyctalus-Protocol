@@ -1,0 +1,38 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+#
+# Avvia/ferma Nyctalus mobile (l'orchestratore, che a sua volta avvia la rete e la chat).
+#   nyctalus-mobile            avvia in primo piano (Ctrl-C per fermare)
+#   nyctalus-mobile --sfondo   avvia in sottofondo (usato dall'app e da Termux:Boot)
+#   nyctalus-mobile --ferma    ferma l'istanza in esecuzione
+#   nyctalus-mobile --stato    dice se è in esecuzione e stampa l'indirizzo da aprire
+set -u
+QUI="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+DATI="$HOME/.nyctalus-mobile"; PIDF="$DATI/pid"; LOG="$DATI/nyctalus-mobile.log"
+mkdir -p "$DATI"
+export NYCTALUS_BIN="$QUI/bin/nyctalus" NYCTALUS_WEBAPP="$QUI/webapp"
+
+attivo() { [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF")" 2>/dev/null && grep -q nyctalus_mobile "/proc/$(cat "$PIDF")/cmdline" 2>/dev/null; }
+porta() { python - <<'PY' 2>/dev/null || echo 18731
+import json, os
+try: print(json.load(open(os.path.expanduser("~/.nyctalus-mobile/config.json"))).get("porte", {}).get("http", 18731))
+except Exception: print(18731)
+PY
+}
+indirizzo() { echo "http://127.0.0.1:$(porta)/?t=$(cat "$DATI/token" 2>/dev/null)"; }
+
+case "${1:-}" in
+  --ferma)
+    if attivo; then kill "$(cat "$PIDF")"; rm -f "$PIDF"; echo "Nyctalus mobile fermato."; else echo "Non era in esecuzione."; fi ;;
+  --stato)
+    if attivo; then echo "In esecuzione (pid $(cat "$PIDF")). Apri: $(indirizzo)"; else echo "Fermo."; fi ;;
+  --sfondo)
+    if attivo; then exit 0; fi
+    nohup python "$QUI/orchestratore/nyctalus_mobile.py" >>"$LOG" 2>&1 &
+    echo $! > "$PIDF" ;;
+  *)
+    if attivo; then echo "Già in esecuzione. Apri: $(indirizzo)"; exit 0; fi
+    echo $$ > "$PIDF"
+    exec python "$QUI/orchestratore/nyctalus_mobile.py" ;;
+esac
