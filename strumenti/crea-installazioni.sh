@@ -153,8 +153,8 @@ INSTALLARE CON L'APP (il modo più semplice)
      Termux; alla fine si torna nell'app da sola. Solo la PRIMA volta Termux può
      non partire da solo: tieni premuto in Termux → Incolla → Invio (il comando è
      già negli appunti).
-  Nell'app ci sono anche: Installa Termux, Aggiorna Termux, Apri Termux,
-  Comando di avvio. Gli aggiornamenti da GitHub arriveranno più avanti.
+  Nell'app ci sono anche: Installa Termux, Aggiorna Termux, Apri Termux e
+  Comando di avvio (da incollare in Termux: avvia Nyctalus, e se manca prima lo installa). Gli aggiornamenti da GitHub arriveranno più avanti.
 
 INSTALLARE A MANO (senza app, si usa il browser)
   a) Copia nyctalus-termux.tar.gz nella cartella Download del telefono

@@ -13,7 +13,7 @@ della chat. Deriva dal launcher di Termux-NexusSEC-OS e funziona allo stesso mod
 | Cosa | Come |
 |---|---|
 | Accesso | segreto casuale di 128 bit generato dall'app, scritto da Termux in `~/.nyctalus-mobile/token` (permessi 600), presentato una volta con `?t=` e poi come cookie |
-| Termux non risponde | apre Termux un istante e torna da sola; altrimenti «Copia il comando di avvio» da incollare in Termux |
+| Termux non risponde | apre Termux un istante e torna da sola; altrimenti «Comando di avvio» da incollare in Termux, che avvia Nyctalus e, se manca, prima lo installa |
 | Allegati | i campi file della web-app aprono galleria, file o fotocamera del telefono |
 | Foto/video dalla fotocamera | restano nella cartella **privata** dell'app (`FotoProvider`), non in galleria; cancellati dopo un giorno |
 | Ponte `window.NyctalusHost` | `copia(testo)`, `condividi(testo)`, `tema(id)`, `esci()` |

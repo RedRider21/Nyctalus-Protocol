@@ -99,6 +99,10 @@ Come funziona: l'app serve il pacchetto per qualche minuto su `127.0.0.1`, a un 
 casuale; Termux lo scarica con `curl` e ne **verifica l'impronta SHA-256** prima di
 installarlo (un pacchetto diverso viene rifiutato e non si installa nulla).
 
+Se in Termux compare *«nyctalus-mobile: No such file or directory»* (APK 0.2), Nyctalus
+non è ancora installato: tocca prima «🦇 Installa / aggiorna Nyctalus». Dalla 0.3 il
+comando copiato se ne accorge da solo e installa.
+
 Gli altri pulsanti dell'app:
 
 | Pulsante | Cosa fa |
@@ -106,7 +110,7 @@ Gli altri pulsanti dell'app:
 | ⬇ Installa Termux | apre F-Droid (consigliato) o la pagina GitHub di Termux |
 | ↻ Aggiorna Termux | l'app Termux (F-Droid) oppure i pacchetti (`pkg upgrade`, chiede conferma: vale per **tutti** i progetti in Termux) |
 | 🦇 Installa / aggiorna Nyctalus | come sopra; per aggiornare: installa la nuova APK e ritocca il pulsante |
-| ⌨ Apri Termux · 📋 Comando di avvio | apre Termux; copia il comando che avvia Nyctalus |
+| ⌨ Apri Termux · 📋 Comando di avvio | apre Termux; copia un comando da incollare in Termux che **avvia** Nyctalus e, se non è ancora installato, prima lo **installa** (vale 15 minuti) |
 | ☁ Aggiornamenti da GitHub | in arrivo, quando il progetto sarà pubblicato |
 
 Se preferisci fare a mano, segui i punti qui sotto.
@@ -150,7 +154,7 @@ Con l'**app Nyctalus** non serve copiare indirizzi: avvia il servizio in Termux 
 (la prima volta Android chiede il permesso «Esegui comandi in Termux»: concedilo).
 L'app usa un **suo segreto** d'accesso, che scrive in Termux all'avvio: da quel momento
 l'indirizzo aperto prima nel browser non vale più (si riapre con `nyctalus-mobile --stato`).
-Se l'app resta su «Nyctalus non risponde»: tocca **«Copia il comando di avvio»**, in
+Se l'app resta su «Nyctalus non risponde»: tocca **«📋 Comando di avvio»**, in
 Termux tieni premuto → Incolla → Invio, poi torna nell'app.
 
 | Comando | Cosa fa |

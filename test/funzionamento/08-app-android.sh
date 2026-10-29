@@ -26,7 +26,7 @@ PY
 CMD=$(python3 - "$J" <<'PY'
 import re, sys
 s = open(sys.argv[1]).read()
-corpo = re.search(r'private String comandoAvvio\(\) \{(.*?)\}', s, re.S).group(1)
+corpo = re.search(r'private String comandoAvvio\(\) \{(.*?);\n    \}', s, re.S).group(1)
 pezzi = re.findall(r'"((?:[^"\\]|\\.)*)"|\b(segreto)\b', corpo)
 print("".join(p if p else "@SEGRETO@" for p, v in pezzi).replace('\\"', '"'))
 PY
@@ -57,6 +57,10 @@ sleep 1.1
 [ "$(codice "$NUOVO")" = 200 ] && pass "il servizio già acceso accetta il segreto nuovo dell'app" || fail "segreto nuovo rifiutato"
 [ "$(codice "$VECCHIO")" != 200 ] && pass "il segreto vecchio non vale più" || fail "segreto vecchio ancora valido"
 [ "$(codice "")" != 200 ] && pass "senza segreto: accesso negato" || fail "accesso senza segreto"
+H0="$TMP/home-vuota"; mkdir -p "$H0"
+OUT0=$(HOME="$H0" PATH="/usr/bin:/bin" bash -c "${CMD//@SEGRETO@/$NUOVO}" 2>&1); RC=$?
+[ "$RC" != 0 ] && echo "$OUT0" | grep -q "non è ancora installato" && ! echo "$OUT0" | grep -q "No such file" \
+  && pass "Nyctalus non installato: messaggio chiaro invece di «No such file»" || fail "messaggio senza installazione: $OUT0"
 
 # --- «Installa / aggiorna Nyctalus in Termux», in un Termux simulato ---
 # Il comando è ricostruito dal codice Java; il pacchetto è servito come lo serve l'app
@@ -65,8 +69,8 @@ assicura_binario
 python3 - "$J" > "$TMP/inst.tpl" <<'PY'
 import re, sys
 s = open(sys.argv[1]).read()
-corpo = re.search(r'String cmd = (.*?);\n', s, re.S).group(1)
-avvio = re.search(r'private String comandoAvvio\(\) \{(.*?)\}', s, re.S).group(1)
+corpo = re.search(r'private String comandoInstallazione\(ServitorePacchetto sp\) \{\s*String cmd = (.*?);\n', s, re.S).group(1)
+avvio = re.search(r'private String comandoAvvio\(\) \{(.*?);\n    \}', s, re.S).group(1)
 def unisci(c):
     out = []
     for lit, ident in re.findall(r'"((?:[^"\\]|\\.)*)"|([A-Za-z_][\w.]*(?:\(\))?)', c):

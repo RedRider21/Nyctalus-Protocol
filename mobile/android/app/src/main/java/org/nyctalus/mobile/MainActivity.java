@@ -146,7 +146,8 @@ public class MainActivity extends Activity {
         return "mkdir -p ~/.nyctalus-mobile && chmod 700 ~/.nyctalus-mobile && "
              + "rm -f ~/.nyctalus-mobile/token && (umask 077; printf %s " + segreto + " > ~/.nyctalus-mobile/token) && "
              + "(command -v nyctalus-mobile >/dev/null 2>&1 && nyctalus-mobile --sfondo "
-             + "|| bash ~/nyctalus/nyctalus-mobile --sfondo)";
+             + "|| { [ -x ~/nyctalus/nyctalus-mobile ] && bash ~/nyctalus/nyctalus-mobile --sfondo; } "
+             + "|| { echo 'Nyctalus non è ancora installato in Termux: nell app tocca «Installa / aggiorna Nyctalus».'; false; })";
     }
 
     // ------------------------------------------------------------- AVVIO -----
@@ -230,8 +231,8 @@ public class MainActivity extends Activity {
                 if (attendi(ATTESA_MAX_MS)) { riportaDavanti(); servizioPronto(); return; }
             } else if (attendi(ATTESA_MAX_MS)) { servizioPronto(); return; }
             imposta("Nyctalus non risponde.\n"
-                  + "Se non l'hai ancora installato in Termux, segui il manuale.\n"
-                  + "Altrimenti: «Copia il comando di avvio», incollalo in Termux e torna qui.");
+                  + "Se Nyctalus non è ancora installato in Termux tocca «Installa / aggiorna Nyctalus».\n"
+                  + "Altrimenti: «Comando di avvio», incollalo in Termux e torna qui.");
         } finally {
             avviando = false;
         }
@@ -364,14 +365,27 @@ public class MainActivity extends Activity {
             avviso("Questa versione dell'app non contiene il pacchetto: usa nyctalus-termux.tar.gz (vedi manuale).");
             return;
         }
-        final ServitorePacchetto sp;
+        ServitorePacchetto sp = avviaServitore();
+        if (sp == null) return;
+        provatoInPrimoPiano = true;
+        entraAppenaPronto = true;
+        eseguiInTermux(comandoInstallazione(sp), true, null);
+        imposta("Installazione in corso in Termux…\nAlla fine l'app torna qui da sola.");
+    }
+
+    private ServitorePacchetto avviaServitore() {
         try {
-            sp = new ServitorePacchetto(this);
+            ServitorePacchetto sp = new ServitorePacchetto(this);
             sp.start();
+            return sp;
         } catch (Exception e) {
             avviso("Impossibile preparare il pacchetto: " + e.getMessage());
-            return;
+            return null;
         }
+    }
+
+    /** Scarica dall'app il pacchetto, ne verifica l'impronta, installa, avvia e riapre l'app. */
+    private String comandoInstallazione(ServitorePacchetto sp) {
         String cmd = "D=$(mktemp -d) && cd \"$D\" && "
                 + "{ command -v curl >/dev/null 2>&1 || pkg install -y curl; } && "
                 + "echo '» Scarico Nyctalus dall app…' && "
@@ -382,10 +396,7 @@ public class MainActivity extends Activity {
                 + "echo && echo '✓ Fatto: torno nell app Nyctalus…' && sleep 2 && "
                 + "(am start -n org.nyctalus.mobile/.MainActivity >/dev/null 2>&1 || true)"
                 + " || { echo; echo '✗ Installazione non riuscita: leggi i messaggi qui sopra.'; cd ~; rm -rf \"$D\"; }";
-        provatoInPrimoPiano = true;
-        entraAppenaPronto = true;
-        eseguiInTermux(cmd, true, null);
-        imposta("Installazione in corso in Termux…\nAlla fine l'app torna qui da sola.");
+        return cmd;
     }
 
     /** Gli aggiornamenti dal repository arriveranno quando il progetto sarà pubblicato. */
@@ -457,10 +468,21 @@ public class MainActivity extends Activity {
     }
 
     /** Ripiego sempre valido: il comando negli appunti, da incollare in Termux. */
+    /**
+     * Ripiego sempre valido: un comando da incollare in Termux che AVVIA Nyctalus se è
+     * installato e altrimenti lo INSTALLA prima (col pacchetto dell'app), poi lo avvia.
+     */
     private void copiaComando() {
-        copiaNegliAppunti(comandoAvvio());
+        String cmd = comandoAvvio() + " && echo '✓ Nyctalus avviato: torna nell app Nyctalus.'";
+        ServitorePacchetto sp = ServitorePacchetto.presente(this) ? avviaServitore() : null;
+        if (sp != null) {
+            cmd = "if [ -x ~/nyctalus/nyctalus-mobile ]; then " + cmd + "; else " + comandoInstallazione(sp) + "; fi";
+        }
+        copiaNegliAppunti(cmd);
+        entraAppenaPronto = true;
         apriTermux();
-        avviso("Comando copiato. In Termux: tieni premuto → Incolla → Invio, poi torna qui.");
+        avviso("Comando copiato. In Termux: tieni premuto → Incolla → Invio. "
+             + "Se Nyctalus manca lo installa, poi lo avvia (vale 15 minuti).");
     }
 
     // ----------------------------------------------------------- WEB-APP -----
