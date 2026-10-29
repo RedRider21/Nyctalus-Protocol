@@ -3,3 +3,7 @@ target/
 installazioni/
 __pycache__/
 *.pyc
+mobile/android/privato/
+mobile/android/Nyctalus.apk
+mobile/android/app/build/
+mobile/android/.gradle/

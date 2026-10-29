@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'org.nyctalus.mobile'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'org.nyctalus.mobile'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '0.1'
+    }
+
+    buildTypes {
+        release { minifyEnabled false }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// Nessuna dipendenza: solo la WebView del framework Android (niente AndroidX), come
+// il launcher di Termux-NexusSEC-OS da cui deriva.
+dependencies {
+}

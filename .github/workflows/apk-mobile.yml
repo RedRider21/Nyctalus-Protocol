@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+name: apk-mobile
+
+# Compila l'app Android (mobile/android) con lo stesso script usato in locale
+# (strumenti/compila-apk.sh: aapt2 → javac → d8 → apksigner, senza Gradle) e la
+# pubblica come artifact; con una Release la allega alla Release.
+# Nota: qui la chiave di firma è nuova a ogni esecuzione (chiave di sviluppo),
+# quindi prima di installare questa APK va tolta una versione firmata altrove.
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'mobile/android/**'
+      - 'strumenti/compila-apk.sh'
+      - '.github/workflows/apk-mobile.yml'
+  workflow_dispatch:
+  release:
+    types: [ published ]
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Pacchetti SDK
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+      - name: Compila
+        run: bash strumenti/compila-apk.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nyctalus-apk
+          path: mobile/android/Nyctalus.apk
+      - name: Allega alla Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: mobile/android/Nyctalus.apk

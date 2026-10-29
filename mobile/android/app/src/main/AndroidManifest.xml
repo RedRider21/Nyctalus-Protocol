@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Per chiedere a Termux di avviare Nyctalus (intent RUN_COMMAND).
+         Va abbinato a "allow-external-apps = true" in ~/.termux/termux.properties,
+         riga che l'installatore di Nyctalus aggiunge da solo. -->
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
+
+    <!-- Android 11+: rende visibili Termux e le app fotocamera/selettore file. -->
+    <queries>
+        <package android:name="com.termux" />
+        <intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent>
+        <intent><action android:name="android.media.action.VIDEO_CAPTURE" /></intent>
+        <intent><action android:name="android.intent.action.GET_CONTENT" /><data android:mimeType="*/*" /></intent>
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:usesCleartextTraffic="true"
+        android:theme="@android:style/Theme.Material.NoActionBar">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Foto scattate dalla chat: restano nella cartella PRIVATA dell'app (non nella
+             galleria del telefono); la fotocamera ci scrive con un permesso temporaneo. -->
+        <provider
+            android:name=".FotoProvider"
+            android:authorities="org.nyctalus.mobile.foto"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+    </application>
+</manifest>

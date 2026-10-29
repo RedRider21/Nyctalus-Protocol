@@ -597,7 +597,12 @@ function inoltra(testo, file) {
   apriFoglio("Inoltra a…", voci);
 }
 
+// dentro l'app Android (APK) la pagina ha il ponte window.NyctalusHost: appunti e
+// condivisione passano da lì, perché nella WebView le API del browser non sempre ci sono
+const HOST = window.NyctalusHost || null;
+
 async function copia(testo) {
+  if (HOST) { HOST.copia(String(testo)); toast("Copiato"); return; }
   try { await navigator.clipboard.writeText(testo); toast("Copiato"); }
   catch (e) { toast("Copia non riuscita"); }
 }
@@ -641,7 +646,8 @@ function impostazioni() {
   const bott = el("div", "pulsanti"); bott.style.justifyContent = "flex-start"; bott.style.marginTop = "0";
   const bc = el("button", "", "📋 Copia"); bc.onclick = () => copia(S.me);
   bott.appendChild(bc);
-  if (navigator.share) { const bs = el("button", "", "📤 Condividi"); bs.onclick = () => navigator.share({ text: S.me }).catch(() => {}); bott.appendChild(bs); }
+  if (HOST) { const bs = el("button", "", "📤 Condividi"); bs.onclick = () => HOST.condividi(S.me); bott.appendChild(bs); }
+  else if (navigator.share) { const bs = el("button", "", "📤 Condividi"); bs.onclick = () => navigator.share({ text: S.me }).catch(() => {}); bott.appendChild(bs); }
   const temi = el("div", "scelta-tema");
   [["notte", "🌙 Notte"], ["ardesia", "🪨 Ardesia"], ["viola", "🔮 Viola"], ["chiaro", "☀️ Chiaro"]].forEach(([k, nome]) => {
     const b = el("button", k === S.tema ? "sel" : "", nome);
