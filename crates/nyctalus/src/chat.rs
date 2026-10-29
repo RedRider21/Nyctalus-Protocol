@@ -463,6 +463,41 @@ impl Stato {
         }
     }
 
+    fn file_cronologia(&self, addr: &str) -> PathBuf {
+        self.dati.join("cronologia").join(format!("{}.log", con_suffisso(addr)))
+    }
+
+    /// Ultima riga della cronologia di un contatto (per l'anteprima nell'elenco).
+    fn ultima_riga(&self, addr: &str) -> Option<String> {
+        let testo = std::fs::read_to_string(self.file_cronologia(addr)).ok()?;
+        testo.lines().rev().find(|l| !l.trim().is_empty()).map(str::to_string)
+    }
+
+    /// Toglie dalla cronologia l'ultima occorrenza esatta di `riga`.
+    fn togli_riga(&self, addr: &str, riga: &str) -> bool {
+        let percorso = self.file_cronologia(addr);
+        let Ok(testo) = std::fs::read_to_string(&percorso) else { return false };
+        let mut righe: Vec<&str> = testo.lines().collect();
+        let Some(i) = righe.iter().rposition(|l| *l == riga) else { return false };
+        righe.remove(i);
+        let mut nuovo = righe.join("\n");
+        if !nuovo.is_empty() {
+            nuovo.push('\n');
+        }
+        std::fs::write(&percorso, nuovo).is_ok()
+    }
+
+    fn rimuovi_contatto(&self, addr: &str) {
+        use std::io::Write;
+        let mut g = self.contatti.lock().unwrap();
+        g.retain(|(a, _)| a != addr);
+        if let Ok(mut f) = std::fs::File::create(self.dati.join("contatti")) {
+            for (a, n) in g.iter() {
+                let _ = writeln!(f, "{a} {n}");
+            }
+        }
+    }
+
     fn aggiungi_contatto(&self, addr: &str, nick_hex: &str) {
         use std::io::Write;
         let mut g = self.contatti.lock().unwrap();
@@ -525,6 +560,9 @@ impl Stato {
                 let contatti = self.contatti.lock().unwrap().clone();
                 for (a, n) in contatti {
                     let _ = tx.send(format!("C {a} {n}\n"));
+                    if let Some(ultima) = self.ultima_riga(&a) {
+                        let _ = tx.send(format!("L {a} {ultima}\n"));
+                    }
                 }
                 let _ = tx.send("ENDC\n".into());
             }
@@ -573,6 +611,32 @@ impl Stato {
                     }
                     Err(_) => {
                         let _ = tx.send("ERR testo non valido\n".into());
+                    }
+                }
+            }
+            "CLEAR" => {
+                // CLEAR <addr>: cancella la cronologia (gli allegati ricevuti restano su disco)
+                let addr = con_suffisso(it.next().unwrap_or(""));
+                let _ = std::fs::remove_file(self.file_cronologia(&addr));
+                let _ = tx.send("OK\n".into());
+            }
+            "DEL" => {
+                // DEL <addr>: elimina il contatto e la sua cronologia
+                let addr = con_suffisso(it.next().unwrap_or(""));
+                self.rimuovi_contatto(&addr);
+                let _ = std::fs::remove_file(self.file_cronologia(&addr));
+                let _ = tx.send("OK\n".into());
+            }
+            "DELMSG" => {
+                // DELMSG <addr> <riga hex>: toglie quel messaggio dalla cronologia (solo da noi)
+                let addr = con_suffisso(it.next().unwrap_or(""));
+                let riga = da_hex(it.next().unwrap_or("")).map(|b| String::from_utf8_lossy(&b).to_string());
+                match riga {
+                    Ok(r) if self.togli_riga(&addr, &r) => {
+                        let _ = tx.send("OK\n".into());
+                    }
+                    _ => {
+                        let _ = tx.send("ERR messaggio non trovato\n".into());
                     }
                 }
             }
@@ -857,6 +921,30 @@ mod prove {
         assert_eq!(percorso_libero(&d, "a.txt"), d.join("a.txt"));
         std::fs::write(d.join("a.txt"), b"1").unwrap();
         assert_eq!(percorso_libero(&d, "a.txt"), d.join("a (2).txt"));
+        std::fs::remove_dir_all(&d).unwrap();
+    }
+
+    #[test]
+    fn togli_riga_rimuove_solo_quel_messaggio() {
+        let d = std::env::temp_dir().join(format!("nyct-cron-{}", nuovo_id()));
+        let st = Stato {
+            identita: Identita::genera().unwrap(),
+            indirizzo: String::new(),
+            socks: "127.0.0.1:1".parse().unwrap(),
+            dati: d.clone(),
+            contatti: Mutex::new(Vec::new()),
+            sessioni: Mutex::new(HashMap::new()),
+            iscritti: Mutex::new(Vec::new()),
+            in_arrivo: Mutex::new(HashMap::new()),
+            max_file: 1,
+        };
+        st.registra_riga("x.nyct", "in 1 6161");
+        st.registra_riga("x.nyct", "out 2 6262");
+        st.registra_riga("x.nyct", "in 3 6363");
+        assert!(st.togli_riga("x.nyct", "out 2 6262"));
+        assert!(!st.togli_riga("x.nyct", "out 2 6262"));
+        assert_eq!(std::fs::read_to_string(st.file_cronologia("x.nyct")).unwrap(), "in 1 6161\nin 3 6363\n");
+        assert_eq!(st.ultima_riga("x.nyct").as_deref(), Some("in 3 6363"));
         std::fs::remove_dir_all(&d).unwrap();
     }
 
