@@ -124,7 +124,7 @@ public class MainActivity extends Activity {
      */
     private String comandoAvvio() {
         return "mkdir -p ~/.nyctalus-mobile && chmod 700 ~/.nyctalus-mobile && "
-             + "(umask 077; printf %s " + segreto + " > ~/.nyctalus-mobile/token) && "
+             + "rm -f ~/.nyctalus-mobile/token && (umask 077; printf %s " + segreto + " > ~/.nyctalus-mobile/token) && "
              + "(command -v nyctalus-mobile >/dev/null 2>&1 && nyctalus-mobile --sfondo "
              + "|| bash ~/nyctalus/nyctalus-mobile --sfondo)";
     }
