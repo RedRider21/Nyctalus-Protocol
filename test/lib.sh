@@ -26,7 +26,10 @@ pulizia() {
   for p in "${PIDS[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null; done
   sleep 0.3
   for p in "${PIDS[@]:-}"; do [ -n "$p" ] && kill -9 "$p" 2>/dev/null; done
-  case "$TMP" in /tmp/nyctalus-test.*) rm -rf "$TMP" ;; esac
+  # rete di sicurezza: qualunque processo rimasto che usa la NOSTRA cartella temporanea
+  case "$TMP" in /tmp/nyctalus-test.*) pkill -f -- "$TMP" 2>/dev/null; sleep 0.2 ;; esac
+  if [ -n "${NYCT_TIENI:-}" ]; then echo "  (log conservati in $TMP)"
+  else case "$TMP" in /tmp/nyctalus-test.*) rm -rf "$TMP" ;; esac; fi
   # risultati per esegui-tutti.sh
   [ -n "${NYCT_RISULTATI:-}" ] && echo "$NOME_PROVA $OK $KO $SALTATI" >> "$NYCT_RISULTATI"
 }
@@ -69,7 +72,8 @@ rete_di_prova() {
   "$BIN" directory --authority-secret "$SEC" --entries "$righe" > "$DIR" 2>/dev/null
 }
 
-# identita NOME BACKEND CONTROLLO SOCKS [SEGRETO]  → motore chat + servizio .nyct; stampa l'indirizzo
+# identita NOME BACKEND CONTROLLO SOCKS [SEGRETO]  → motore chat + servizio .nyct; indirizzo in $ADDR
+# NB: NON chiamarla dentro $(...): i processi avviati lì non finirebbero in PIDS.
 identita() {
   local nome="$1" be="$2" ctl="$3" socks="$4" seg="${5:-}" addr
   mkdir -p "$TMP/$nome"
@@ -78,7 +82,7 @@ identita() {
   addr=$(attendi_regex "$TMP/$nome.chat.log" '[a-z2-7]{56}\.nyct' 10)
   "$BIN" site --backend 127.0.0.1:"$be" --identity "$TMP/$nome/identita" --directory "$DIR" --authority "$PUB" \
       --hops 3 > "$TMP/$nome.site.log" 2>&1 & PIDS+=($!)
-  echo "$addr"
+  ADDR="$addr"
 }
 
 # controllo PORTA [SEGRETO] [ATTESA] COMANDI...  → stampa le righe ricevute dal motore

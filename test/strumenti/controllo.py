@@ -5,7 +5,9 @@
 uso: controllo.py PORTA SEGRETO|- ATTESA_SEC COMANDO [COMANDO...]
 Manda AUTH (se c'è il segreto) e i comandi, poi stampa ogni riga ricevuta
 entro ATTESA_SEC secondi. Nei comandi, {hex:testo} diventa l'esadecimale di testo.
+Con la variabile NYCT_FINO=regex si ferma appena arriva una riga che corrisponde.
 """
+import os
 import re
 import socket
 import sys
@@ -19,6 +21,7 @@ if segreto != "-":
 for c in comandi:
     s.sendall((c + "\n").encode())
 fine = time.time() + attesa
+fino = re.compile(os.environ["NYCT_FINO"], re.M) if os.environ.get("NYCT_FINO") else None
 buf = b""
 s.settimeout(0.3)
 while time.time() < fine:
@@ -27,7 +30,8 @@ while time.time() < fine:
         if not d:
             break
         buf += d
+        print(d.decode("utf-8", "replace"), end="", flush=True)
+        if fino and fino.search(buf.decode("utf-8", "replace")):
+            break
     except socket.timeout:
         pass
-for riga in buf.decode("utf-8", "replace").splitlines():
-    print(riga)
