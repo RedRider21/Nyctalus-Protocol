@@ -33,20 +33,34 @@ pub struct Autenticazione {
     pub autorita: [u8; 32],
 }
 
+/// Opzioni di contorno del nodo: cartella di stato (identità stabile fra i riavvii)
+/// e indirizzo pubblico da annunciare nella riga d'elenco (dietro NAT o 0.0.0.0).
+#[derive(Default)]
+pub struct Contorno {
+    pub dati: Option<PathBuf>,
+    pub annuncia: Option<String>,
+}
+
 pub async fn nodo(
     ascolta: SocketAddr,
     segreto: [u8; 32],
     auth: Option<Autenticazione>,
     offusca: Option<[u8; 32]>,
     copertura: f64,
+    contorno: Contorno,
 ) -> Risultato<()> {
     let _ = COPERTURA_NODO.set(copertura);
     let pubblica = circuito::chiave_pubblica(&segreto);
-    let identita = crate::tls::identita_server()?;
+    let identita = crate::tls::identita_server_in(contorno.dati.as_deref())?;
+    let annunciato = contorno.annuncia.clone().unwrap_or_else(|| ascolta.to_string());
+    let riga = format!("{annunciato},{},{}", in_esadecimale(&pubblica), in_esadecimale(&identita.impronta));
+    if let Some(d) = &contorno.dati {
+        std::fs::write(d.join("riga-elenco.txt"), format!("{riga}\n"))?;   // per lo script del server
+    }
     println!("Node listening on {ascolta}");
     println!("  X25519 public key: {}", in_esadecimale(&pubblica));
     println!("  TLS fingerprint:   {}", in_esadecimale(&identita.impronta));
-    println!("  directory entry:   {ascolta},{},{}", in_esadecimale(&pubblica), in_esadecimale(&identita.impronta));
+    println!("  directory entry:   {riga}");
     if auth.is_some() {
         println!("  downstream link authentication: ON (via signed directory)");
     } else {

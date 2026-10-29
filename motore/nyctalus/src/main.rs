@@ -55,7 +55,7 @@ Usage:
   nyctalus nodes   [--config FILE] [--directory FILE] [--authority HEX] [--probe] [--timeout 3] [--obfuscation HEX]
   nyctalus exec    [--socks ADDR] [--config FILE] -- PROGRAM [ARG...]
   nyctalus monitor [--control 127.0.0.1:1090]
-  nyctalus node    --listen 0.0.0.0:4601 [--secret HEX] [--directory FILE --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0]
+  nyctalus node    --listen 0.0.0.0:4601 [--data DIR] [--announce PUBLIC_IP:PORT] [--secret HEX] [--directory FILE --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0]
   nyctalus authority
   nyctalus directory --authority-secret HEX --entries 'addr,x,fp;addr,x,fp'
   nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)]
@@ -184,10 +184,23 @@ async fn esegui() -> Risultato<()> {
         }
         "node" => {
             let ascolta: SocketAddr = obbligatoria(&opzioni, "listen")?.parse()?;
-            let segreto = match opzione(&opzioni, "secret") {
-                Some(hex) => da_esadecimale(hex)?,
-                None => nyctalus_core::circuito::genera_segreto(),
+            // --data DIR: segreto e certificato salvati lì la prima volta e riusati
+            // dopo, così la riga del nodo nell'elenco firmato non cambia ai riavvii
+            let dati = opzione(&opzioni, "data").map(PathBuf::from);
+            let segreto = match (opzione(&opzioni, "secret"), &dati) {
+                (Some(hex), _) => da_esadecimale(hex)?,
+                (None, Some(d)) => match std::fs::read_to_string(d.join("segreto")) {
+                    Ok(t) => da_esadecimale(t.trim())?,
+                    Err(_) => {
+                        let s = nyctalus_core::circuito::genera_segreto();
+                        std::fs::create_dir_all(d)?;
+                        tls::scrivi_privato(&d.join("segreto"), in_esadecimale(&s).as_bytes())?;
+                        s
+                    }
+                },
+                (None, None) => nyctalus_core::circuito::genera_segreto(),
             };
+            let contorno = nodo::Contorno { dati, annuncia: opzione(&opzioni, "announce").map(String::from) };
             let auth = match (opzione(&opzioni, "directory"), opzione(&opzioni, "authority")) {
                 (Some(e), Some(a)) => {
                     Some(nodo::Autenticazione { elenco: PathBuf::from(e), autorita: da_esadecimale(a)? })
@@ -199,7 +212,7 @@ async fn esegui() -> Risultato<()> {
             if let Some(ts) = opzione(&opzioni, "tor-socks") {
                 ponte::imposta_tor_socks(ts.parse()?);
             }
-            nodo::nodo(ascolta, segreto, auth, offusca, copertura).await
+            nodo::nodo(ascolta, segreto, auth, offusca, copertura, contorno).await
         }
         "authority" => {
             let (segreto, pubblica) = nyctalus_core::elenco::genera_autorita();

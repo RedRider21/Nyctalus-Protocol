@@ -26,12 +26,46 @@ pub struct IdentitaServer {
 }
 
 pub fn identita_server() -> Risultato<IdentitaServer> {
-    let certificato = rcgen::generate_simple_self_signed(vec![NOME_SERVER.to_string()])?;
-    let der = certificato.cert.der().clone();
+    identita_server_in(None)
+}
+
+/// Come `identita_server`, ma se c'è una cartella di stato il certificato vi viene
+/// salvato la prima volta e riusato dopo: così l'impronta (e quindi la riga del nodo
+/// nell'elenco firmato) resta la stessa a ogni riavvio.
+pub fn identita_server_in(cartella: Option<&std::path::Path>) -> Risultato<IdentitaServer> {
+    let salvati = cartella.and_then(|c| Some((std::fs::read(c.join("tls-cert.der")).ok()?, std::fs::read(c.join("tls-chiave.der")).ok()?)));
+    let (der, chiave_der) = match salvati {
+        Some((cert, chiave)) => (CertificateDer::from(cert), chiave),
+        None => {
+            let certificato = rcgen::generate_simple_self_signed(vec![NOME_SERVER.to_string()])?;
+            let der = certificato.cert.der().clone();
+            let chiave = certificato.signing_key.serialize_der();
+            if let Some(c) = cartella {
+                std::fs::create_dir_all(c)?;
+                std::fs::write(c.join("tls-cert.der"), der.as_ref())?;
+                scrivi_privato(&c.join("tls-chiave.der"), &chiave)?;
+            }
+            (der, chiave)
+        }
+    };
     let impronta = *blake3::hash(&der).as_bytes();
-    let chiave = PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(certificato.signing_key.serialize_der()));
+    let chiave = PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(chiave_der));
     let config = quinn::ServerConfig::with_single_cert(vec![der], chiave)?;
     Ok(IdentitaServer { config, impronta })
+}
+
+/// Scrive un file leggibile solo dal proprietario (chiavi private).
+pub fn scrivi_privato(percorso: &std::path::Path, dati: &[u8]) -> Risultato<()> {
+    use std::io::Write;
+    let mut o = std::fs::OpenOptions::new();
+    o.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        o.mode(0o600);
+    }
+    o.open(percorso)?.write_all(dati)?;
+    Ok(())
 }
 
 pub fn config_client(impronta_attesa: [u8; 32]) -> Risultato<quinn::ClientConfig> {
@@ -141,5 +175,27 @@ impl ServerCertVerifier for VerificaImpronta {
 
     fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
         self.algoritmi.supported_schemes()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn impronta_stabile_con_la_cartella_di_stato() {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        let c = std::env::temp_dir().join(format!("nyct-tls-{}", std::process::id()));
+        let a = identita_server_in(Some(&c)).unwrap().impronta;
+        let b = identita_server_in(Some(&c)).unwrap().impronta;
+        assert_eq!(a, b, "riavviato con la stessa cartella deve avere la stessa impronta");
+        assert_ne!(a, identita_server_in(None).unwrap().impronta);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let modo = std::fs::metadata(c.join("tls-chiave.der")).unwrap().permissions().mode();
+            assert_eq!(modo & 0o077, 0, "la chiave privata non deve essere leggibile da altri");
+        }
+        let _ = std::fs::remove_dir_all(&c);
     }
 }
