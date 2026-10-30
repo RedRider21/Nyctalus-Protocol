@@ -279,7 +279,11 @@ def servitore(rete, porta, ip):
             elif self.path in ("/", "/codice") and rete.f_codice.exists():
                 cod = rete.f_codice.read_text().strip()
                 imp = impronta(rete.autorita()["pubblica"])
-                link = "nyctalus://rete?codice=" + urllib.parse.quote(cod, safe="")
+                q = urllib.parse.quote(cod, safe="")
+                # Chrome su Android apre le app in modo affidabile con un link «intent:»;
+                # il link nyctalus:// resta per gli altri browser.
+                intent = "intent://rete?codice=%s#Intent;scheme=nyctalus;package=org.nyctalus.mobile;end" % q
+                diretto = "nyctalus://rete?codice=" + q
                 corpo = ("<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'>"
                          "<title>Codice di rete Nyctalus</title><body style='font:16px sans-serif;padding:16px;"
                          "background:#0a0e1a;color:#e6ecff'><h2>Rete «%s»</h2>"
@@ -287,11 +291,17 @@ def servitore(rete, porta, ip):
                          "<p><a href='%s' style='display:block;text-align:center;padding:16px;border-radius:14px;"
                          "background:linear-gradient(135deg,#5ec8d8,#8a86ff);color:#06101c;font-weight:700;"
                          "font-size:18px;text-decoration:none'>📲 Collega l'app Nyctalus</a></p>"
+                         "<p style='text-align:center;font-size:14px'><a href='%s' style='color:#8a86ff'>non si apre? "
+                         "prova questo link</a></p>"
                          "<p style='color:#9aa7b8'>Tocca il pulsante: si apre l'app e ti chiede conferma. Controlla che "
-                         "l'impronta sia la stessa. Senza app, o se il pulsante non funziona, copia il codice e importalo "
-                         "a mano (app: «🔗 Rete» nella schermata iniziale).</p><textarea readonly "
-                         "style='width:100%%;height:8em;font:14px monospace'>%s</textarea>"
-                         % (html.escape(rete.autorita()["nome"]), imp, html.escape(link, quote=True), cod)).encode()
+                         "l'impronta sia la stessa.<br>Altrimenti: <b>Copia il codice</b> qui sotto, poi nell'app tocca "
+                         "«🔗 Rete» → Importa codice di rete (lo trova già incollato).</p>"
+                         "<button onclick=\"var t=document.getElementById('c');t.select();document.execCommand('copy');"
+                         "this.textContent='✓ Copiato'\" style='width:100%%;padding:14px;border-radius:12px;border:1px solid #2a3550;"
+                         "background:#151a23;color:#e6ecff;font-size:16px'>📋 Copia il codice</button>"
+                         "<textarea id='c' readonly style='width:100%%;height:8em;margin-top:10px;font:14px monospace'>%s</textarea>"
+                         % (html.escape(rete.autorita()["nome"]), imp, html.escape(intent, quote=True),
+                            html.escape(diretto, quote=True), cod)).encode()
                 tipo = "text/html; charset=utf-8"
             else:
                 self.send_error(404)
