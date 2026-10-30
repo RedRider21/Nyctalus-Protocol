@@ -47,6 +47,11 @@ In cima all'elenco una striscia ti dice a che punto è la rete:
   **codice di rete** (vedi sotto);
 - **Nyctalus è fermo** con il bottone **Avvia**.
 
+**Se Android ferma Nyctalus** mentre sei in un'altra app (per esempio Chrome), tornando
+nell'app questa se ne accorge e lo riaccende da sola in Termux. Per ridurre il problema,
+quando Nyctalus parte Termux resta «sveglio» (`termux-wake-lock`): compare una notifica fissa
+di Termux, ed è normale. Se resta fermo, apri Termux e scrivi `nyctalus-mobile --sfondo`.
+
 ## 1-bis. Il browser (solo nell'app)
 
 È il browser di NovaOS in stile Chrome: schede, incognito, preferiti, cronologia, trova nella

@@ -24,10 +24,13 @@ indirizzo() { echo "http://127.0.0.1:$(porta)/?t=$(cat "$DATI/token" 2>/dev/null
 
 case "${1:-}" in
   --ferma)
-    if attivo; then kill "$(cat "$PIDF")"; rm -f "$PIDF"; echo "Nyctalus mobile fermato."; else echo "Non era in esecuzione."; fi ;;
+    if attivo; then kill "$(cat "$PIDF")"; rm -f "$PIDF"; echo "Nyctalus mobile fermato."; else echo "Non era in esecuzione."; fi
+    command -v termux-wake-unlock >/dev/null 2>&1 && termux-wake-unlock ;;
   --stato)
     if attivo; then echo "In esecuzione (pid $(cat "$PIDF")). Apri: $(indirizzo)"; else echo "Fermo."; fi ;;
   --sfondo)
+    # Termux resta sveglio: Android ferma meno i suoi programmi mentre si usa un'altra app
+    command -v termux-wake-lock >/dev/null 2>&1 && termux-wake-lock
     if attivo; then exit 0; fi
     nohup python "$QUI/orchestratore/nyctalus_mobile.py" >>"$LOG" 2>&1 &
     echo $! > "$PIDF" ;;

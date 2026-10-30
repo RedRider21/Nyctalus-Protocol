@@ -468,6 +468,21 @@ public class MainActivity extends Activity {
         if (inPausa && !caricata && !avviando) {
             inPausa = false;
             new Thread(() -> { if (attendi(12000)) servizioPronto(); }).start();
+        } else if (inPausa && !avviando) {
+            // di ritorno da un'altra app: il servizio in Termux potrebbe essere stato
+            // fermato da Android — si controlla davvero invece di fidarsi di «pronto»
+            inPausa = false;
+            new Thread(() -> {
+                if (!risponde()) {
+                    pronto = false;
+                    imposta("Nyctalus si era fermato: lo riavvio in Termux…");
+                    avviaInTermux();
+                    if (attendi(30000)) servizioPronto();
+                    else imposta("Nyctalus non risponde. Strumenti ▾ → Comando di avvio, incollalo in Termux.");
+                } else {
+                    aggiornaRete();
+                }
+            }).start();
         }
     }
 
@@ -626,6 +641,26 @@ public class MainActivity extends Activity {
         }
     }
 
+    /**
+     * Come api(), ma se il servizio in Termux non risponde (Android lo ha fermato mentre
+     * si era in un'altra app) lo riaccende, aspetta che sia pronto e riprova una volta.
+     */
+    private String[] apiConRiavvio(String metodo, String percorso, String json) throws IOException {
+        try {
+            return api(metodo, percorso, json);
+        } catch (IOException primo) {
+            pronto = false;
+            imposta("Nyctalus non risponde: lo riavvio in Termux…");
+            avviaInTermux();
+            if (!attendi(30000)) {
+                throw new IOException("il servizio di Nyctalus in Termux è spento. Apri Termux e scrivi: "
+                        + "nyctalus-mobile --sfondo   poi torna qui e riprova");
+            }
+            servizioPronto();
+            return api(metodo, percorso, json);
+        }
+    }
+
     /** Aggiorna la riga «🔗 Rete» della schermata iniziale. */
     private void aggiornaRete() {
         new Thread(() -> {
@@ -690,7 +725,7 @@ public class MainActivity extends Activity {
         new Thread(() -> {
             String msg;
             try {
-                String[] r = api("POST", "/api/rete", json);
+                String[] r = apiConRiavvio("POST", "/api/rete", json);
                 org.json.JSONObject o = new org.json.JSONObject(r[1]);
                 if (o.optBoolean("ok")) {
                     String nome = o.optString("nome");
