@@ -66,8 +66,8 @@ Stampa `NYCT1:…` e lo salva in `~/.nyctalus-rete/codice.txt`.
   - **PC:** `nyctalus-rete importa NYCT1:…`, poi chiudi e riapri chat e browser
     (`nyctalus-rete importa --prova` per tornare alla rete di prova; `stato` per vedere
     la rete in uso);
-  - **telefono:** ⚙ Impostazioni → **Rete condivisa** → **Importa codice** (la rete si
-    riavvia da sola; «↩ Rete di prova» per tornare indietro).
+  - **telefono:** nella schermata iniziale dell'app **🔗 Rete** → **Importa codice di rete**
+    (vale per chat, browser e file; la rete si riavvia da sola).
 
 ## 6. Rete di casa (prove senza server)
 ```sh
@@ -91,7 +91,7 @@ sudo ufw allow from 192.168.1.0/24 to any port 4701:4704 proto udp
 Valgono solo per la rete di casa. Per richiuderle usa le stesse righe con `delete allow`.
 
 **Impronta della rete:** `casa` e `codice` stampano un'impronta breve (es. `92E6-9EB0`). Dopo
-l'importazione il telefono la mostra in ⚙ → Rete condivisa: deve essere **la stessa**. Così
+l'importazione il telefono la mostra nella riga **🔗 Rete** della schermata iniziale: deve essere **la stessa**. Così
 sei sicuro che nessuno sulla Wi-Fi ti abbia passato un codice diverso. La pagina è in
 `http` perché è solo nella rete locale e distribuisce dati pubblici; l'elenco dei nodi è
 firmato, e l'impronta protegge il codice.

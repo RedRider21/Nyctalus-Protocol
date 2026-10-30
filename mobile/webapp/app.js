@@ -746,6 +746,7 @@ function impostazioni() {
     quale.textContent = x.condivisa ? "Collegato a «" + (x.nome || "rete condivisa") + "» · impronta " + x.impronta
         + " (deve essere uguale a quella mostrata da chi gestisce la rete)."
       : "Ora usi la rete di prova: solo su questo dispositivo. Con un codice di rete parli con gli altri.";
+    if (HOST) quale.textContent += " La rete vale per tutta l'app (chat, browser, file): la trovi anche nella schermata iniziale, «🔗 Rete».";
     bp.classList.toggle("nascosto", !x.condivisa);
   }).catch(() => {});
   bi.onclick = () => {

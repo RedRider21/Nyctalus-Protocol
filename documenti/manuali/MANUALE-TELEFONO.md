@@ -26,6 +26,12 @@ fila di pulsanti, come il mini menu del PC:
 | 📁 **File** | in arrivo: invio e ricezione di file attraverso Nyctalus |
 | ℹ️ **Info** | il sito del progetto con i manuali online (anche toccando il logo) |
 
+Sotto la scritta di stato c'è la riga **🔗 Rete**: dice a quale rete sei collegato
+(«prova locale», oppure il nome della rete e la sua impronta). **La rete è una sola per
+tutta l'app**: chat, browser in modalità 🦇 e, quando ci sarà, il gestore dei file. Toccala
+per **importare un codice di rete** (se ne hai già copiato uno, è proposto da solo) o per
+tornare alla rete di prova.
+
 Il **tasto indietro** riporta sempre al punto di partenza: dalla conversazione all'elenco
 delle chat, dall'elenco a questa schermata; dal browser, chiudendo l'ultima scheda. La chat
 resta aperta dietro, quindi ritoccando 💬 ci si rientra subito.
@@ -122,7 +128,8 @@ Note:
 - **Tema**: Notte, Ardesia (stile Telegram), Viola, Chiaro;
 - **Sfondo della chat**: pipistrelli, velo di colore, tinta unita;
 - **Foto senza metadati**;
-- **Rete condivisa**: **📥 Importa codice** → incolla il codice `NYCT1:…` che ti ha dato
+- **Rete condivisa** (la stessa della riga 🔗 Rete della schermata iniziale: vale per tutta
+  l'app): **📥 Importa codice** → incolla il codice `NYCT1:…` che ti ha dato
   chi gestisce la rete (per la rete di casa lo mostra il PC: apri nel browser del
   telefono l'indirizzo `http://IP-DEL-PC:18800/` e copialo). La rete si riavvia da sola
   su quella condivisa; **↩ Rete di prova** torna indietro. Dopo l'importazione compare

@@ -40,7 +40,7 @@ Limite: non puoi parlare con nessun altro dispositivo.
 2. Sul PC: `nyctalus-rete casa` e lascia la finestra aperta. Stampa un codice `NYCT1:…`
    e un indirizzo `http://IP-DEL-PC:18800/`.
 3. Sul telefono, sulla **stessa Wi-Fi**: apri quell'indirizzo nel browser e copia il
-   codice. Poi nell'app vai in ⚙ Impostazioni → **Rete condivisa** → **Importa codice**.
+   codice. Poi nella schermata iniziale dell'app tocca **🔗 Rete** → **Importa codice di rete** (vale per chat, browser e file).
 4. Sul PC la chat usa già la rete di casa: `casa` importa il codice anche sul PC.
    Chiudi e riapri la chat.
 5. Controlla che l'**impronta della rete** mostrata dal PC sia uguale a quella in ⚙ → Rete
@@ -63,7 +63,7 @@ telefono «↩ Rete di prova».
 | **Tuo PC (gestore)** | `nyctalus-rete crea` → `aggiungi` le 4 righe → `firma` | `MANUALE-GESTORE-RETE.md` |
 | **Dove pubblichi** | metti `directory.txt` a un indirizzo web (anche sullo stesso server) | `MANUALE-GESTORE-RETE.md` §4 |
 | **Tuo PC (gestore)** | `nyctalus-rete codice --url URL` → il codice `NYCT1:…` | `MANUALE-GESTORE-RETE.md` |
-| **Ogni client** | PC: `nyctalus-rete importa CODICE` · telefono: ⚙ → Importa codice | questo file, sopra |
+| **Ogni client** | PC: `nyctalus-rete importa CODICE` · telefono: schermata iniziale → **🔗 Rete** → Importa codice | questo file, sopra |
 
 Limite: tutti i nodi stanno da un solo fornitore. La rete funziona davvero, ma quel
 fornitore vedrebbe sia l'entrata sia l'uscita: va bene per provare, non per l'anonimato.

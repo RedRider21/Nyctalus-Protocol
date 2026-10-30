@@ -92,6 +92,18 @@ except urllib.error.HTTPError as e: print(e.code, e.read().decode())
 PY
 }
 api POST /api/rete '{"codice":"NYCT1:xx"}' | grep -q '^400' && pass "telefono: codice rovinato rifiutato" || fail "telefono: codice rovinato accettato"
+# come la chiama l'app Android dalla schermata iniziale (cookie col segreto, senza Origin) e da un sito estraneo
+app_rete() { python3 - "$@" <<'PY'
+import sys, urllib.request, urllib.error
+h = {"Cookie": "nyct=segreto0123456789abcdef0123456789", "Content-Type": "application/json"}
+if len(sys.argv) > 2: h["Origin"] = sys.argv[2]
+r = urllib.request.Request("http://127.0.0.1:19976/api/rete", data=sys.argv[1].encode(), method="POST", headers=h)
+try: print(urllib.request.urlopen(r, timeout=5).status)
+except urllib.error.HTTPError as e: print(e.code)
+PY
+}
+[ "$(app_rete '{"codice":"NYCT1:xx"}')" = 400 ] && pass "app (schermata iniziale): la richiesta senza Origin arriva al servizio" || fail "richiesta dell'app rifiutata"
+[ "$(app_rete '{"prova":true}' 'https://sito-estraneo.example')" = 403 ] && pass "un sito estraneo non può cambiare la rete (403)" || fail "cambio rete da un'altra origine (grave)"
 api POST /api/rete "{\"codice\":\"$COD\"}" | grep -q '"ok": true' && pass "telefono: codice di rete importato" || fail "telefono: importazione"
 for _ in $(seq 1 120); do api GET /api/stato | grep -q '"stato": "pronto", .*"modalita": "pubblica"' && break; sleep 0.5; done
 api GET /api/stato | grep -q '"modalita": "pubblica"' && api GET /api/stato | grep -q '"rete": "Rete di prova del test"' \

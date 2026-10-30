@@ -79,6 +79,8 @@ public class MainActivity extends Activity {
     private boolean caricata = false, pronto = false, entraAppenaPronto = false, inPausa = false;
     private View pulsanteEntra;      // la casella «Chat»: si accende quando Nyctalus è pronto
     private int portaSocksBrowser = 18733;
+    private TextView rigaRete;      // «🔗 Rete: …» — vale per TUTTA l'app (chat, browser, file)
+    private boolean reteCondivisa = false;
     private static final String SITO = "https://redrider21.github.io/Nyctalus-Protocol/";
     private volatile boolean avviando = false, provatoInPrimoPiano = false;
 
@@ -202,6 +204,20 @@ public class MainActivity extends Activity {
         sp.topMargin = dp(26);
         stato.setLayoutParams(sp);
         r.addView(stato);
+
+        // la rete è una sola per tutto il corredo: si sceglie qui, non dentro la chat
+        rigaRete = testo("🔗 Rete: …", C_ACCENTO, 13);
+        rigaRete.setPadding(dp(14), dp(8), dp(14), dp(8));
+        rigaRete.setOnClickListener(v -> menuRete());
+        GradientDrawable sfondoRete = new GradientDrawable();
+        sfondoRete.setCornerRadius(dp(16));
+        sfondoRete.setStroke(dp(1), C_BORDO);
+        rigaRete.setBackground(sfondoRete);
+        LinearLayout.LayoutParams rp = avvolgi();
+        rp.topMargin = dp(10);
+        rigaRete.setLayoutParams(rp);
+        r.addView(rigaRete);
+        aggiornaRete();
 
         // le funzioni, come il mini menu del PC: una fila di pulsanti piatti, tutti uguali
         LinearLayout griglia = riga();
@@ -364,6 +380,7 @@ public class MainActivity extends Activity {
 
     private void servizioPronto() {
         pronto = true;
+        aggiornaRete();
         imposta("● Nyctalus è pronto — scegli cosa aprire");
         runOnUiThread(() -> { if (pulsanteEntra != null) pulsanteEntra.animate().alpha(1f).setDuration(300).start(); });
         if (entraAppenaPronto) mostraWeb();
@@ -515,6 +532,119 @@ public class MainActivity extends Activity {
         lp.setMargins(dp(4), 0, dp(4), 0);
         c.setLayoutParams(lp);
         return c;
+    }
+
+    // ------------------------------------------------------------------ rete (per tutta l'app)
+    /** Chiede al servizio in Termux (con il segreto dell'app). Restituisce {codice, corpo}. */
+    private String[] api(String metodo, String percorso, String json) throws IOException {
+        HttpURLConnection c = (HttpURLConnection) new URL(URL_BASE + percorso).openConnection();
+        try {
+            c.setConnectTimeout(1500);
+            c.setReadTimeout(5000);
+            c.setRequestMethod(metodo);
+            c.setRequestProperty("Cookie", "nyct=" + segreto);
+            if (json != null) {
+                c.setDoOutput(true);
+                c.setRequestProperty("Content-Type", "application/json");
+                byte[] b = json.getBytes("UTF-8");
+                c.setFixedLengthStreamingMode(b.length);
+                try (java.io.OutputStream o = c.getOutputStream()) { o.write(b); }
+            }
+            int codice = c.getResponseCode();
+            java.io.InputStream in = codice < 400 ? c.getInputStream() : c.getErrorStream();
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            if (in != null) {
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                in.close();
+            }
+            return new String[]{String.valueOf(codice), out.toString("UTF-8")};
+        } finally {
+            c.disconnect();
+        }
+    }
+
+    /** Aggiorna la riga «🔗 Rete» della schermata iniziale. */
+    private void aggiornaRete() {
+        new Thread(() -> {
+            String testo;
+            try {
+                org.json.JSONObject o = new org.json.JSONObject(api("GET", "/api/rete", null)[1]);
+                reteCondivisa = o.optBoolean("condivisa");
+                testo = reteCondivisa
+                        ? "🔗 Rete: «" + o.optString("nome", "condivisa") + "» · " + o.optString("impronta")
+                        : "🔗 Rete: prova locale (solo questo telefono) — tocca per collegarti";
+            } catch (Exception e) {
+                testo = "🔗 Rete: si sceglie quando Nyctalus è acceso";
+            }
+            final String t = testo;
+            runOnUiThread(() -> { if (rigaRete != null) rigaRete.setText(t); });
+        }).start();
+    }
+
+    private void menuRete() {
+        if (!pronto) {
+            avviso("Prima avvia Nyctalus (attendi «Nyctalus è pronto»), poi scegli la rete.");
+            return;
+        }
+        String[] voci = reteCondivisa
+                ? new String[]{"📥  Importa un altro codice di rete", "↩  Torna alla rete di prova"}
+                : new String[]{"📥  Importa codice di rete"};
+        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle("Rete Nyctalus (per chat, browser e file)")
+                .setItems(voci, (d, k) -> { if (k == 0) importaCodice(); else cambiaRete("{\"prova\":true}"); })
+                .setNegativeButton("Annulla", null).show();
+    }
+
+    private void importaCodice() {
+        final android.widget.EditText campo = new android.widget.EditText(this);
+        campo.setHint("NYCT1:…");
+        campo.setMinLines(3);
+        campo.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        // se negli appunti c'è già un codice, lo si propone
+        try {
+            ClipboardManager cb = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cb != null && cb.hasPrimaryClip() && cb.getPrimaryClip().getItemCount() > 0) {
+                CharSequence a = cb.getPrimaryClip().getItemAt(0).coerceToText(this);
+                if (a != null && a.toString().trim().startsWith("NYCT1:")) campo.setText(a.toString().trim());
+            }
+        } catch (Exception ignorata) { }
+        android.widget.FrameLayout box = new android.widget.FrameLayout(this);
+        box.setPadding(dp(20), dp(8), dp(20), 0);
+        box.addView(campo);
+        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle("Importa codice di rete")
+                .setMessage("Incolla il codice che ti ha dato chi gestisce la rete (per la rete di casa: lo mostra il PC).")
+                .setView(box)
+                .setPositiveButton("Collegati", (d, k) -> {
+                    try {
+                        cambiaRete(new org.json.JSONObject().put("codice", campo.getText().toString().trim()).toString());
+                    } catch (org.json.JSONException ignorata) { }
+                })
+                .setNegativeButton("Annulla", null).show();
+    }
+
+    private void cambiaRete(String json) {
+        new Thread(() -> {
+            String msg;
+            try {
+                String[] r = api("POST", "/api/rete", json);
+                org.json.JSONObject o = new org.json.JSONObject(r[1]);
+                if (o.optBoolean("ok")) {
+                    String nome = o.optString("nome");
+                    msg = nome.isEmpty() ? "Torno alla rete di prova: riavvio la rete…"
+                            : "Collegato a «" + nome + "»: riavvio la rete… Controlla l'impronta.";
+                } else {
+                    msg = "✗ " + o.optString("errore", "codice non accettato");
+                }
+            } catch (Exception e) {
+                msg = "✗ Nyctalus non risponde: " + e.getMessage();
+            }
+            avviso(msg);
+            dormi(1500);
+            aggiornaRete();
+        }).start();
     }
 
     /** Se il browser si è chiuso per un errore, lo si dice (con il testo da copiare e riferire). */
