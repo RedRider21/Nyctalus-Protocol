@@ -103,11 +103,11 @@ footer a{color:var(--acc)}
 .scatto figcaption{font-size:.86rem;color:var(--tenue);margin-top:8px;text-align:center;line-height:1.45}
 @media (max-width:760px){.galleria-pc{grid-template-columns:1fr}.galleria-tel{grid-template-columns:1fr 1fr}}
 
-/* torna su: in basso a sinistra, compare scorrendo; colore pieno, si vede su tema chiaro e scuro */
-.torna-su{position:fixed;left:18px;bottom:18px;z-index:30;width:46px;height:46px;border-radius:50%;
+/* torna su: in basso a destra, compare scorrendo; colore pieno, si vede su tema chiaro e scuro */
+.torna-su{position:fixed;right:18px;bottom:18px;z-index:30;width:46px;height:46px;border-radius:50%;
   border:2px solid rgba(255,255,255,.85);background:#4a44d6;background:linear-gradient(135deg,var(--acc),var(--acc2));
   color:#fff;font-size:22px;font-weight:700;line-height:1;cursor:pointer;box-shadow:0 6px 22px rgba(0,0,0,.35);
   opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .25s,transform .25s}
 .torna-su.visibile{opacity:1;transform:none;pointer-events:auto}
 .torna-su:hover{transform:translateY(-2px)}
-@media (max-width:760px){.torna-su{left:12px;bottom:12px;width:42px;height:42px}}
+@media (max-width:760px){.torna-su{right:12px;bottom:12px;width:42px;height:42px}}
