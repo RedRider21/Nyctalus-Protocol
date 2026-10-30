@@ -19,7 +19,7 @@
   <button class="btn-icona" id="tema" title="Tema">🌓</button>
 </div></div>
 <main class="wrap manuale-doc">
-<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html" class="qui">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html" class="qui">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
 <article>
 <h1 id="manuale-duso-telefono-android">Manuale d'uso — telefono (Android)</h1>
 <p>Sul telefono Nyctalus è una <strong>web-app in stile Telegram</strong> che apri nel browser (o
@@ -76,6 +76,10 @@ privata (non finiscono nella galleria) e si cancellano dopo un giorno.</p>
 - <strong>Rete di prova LOCALE</strong>: funziona solo sul telefono. Per parlare con altri importa un
   <strong>codice di rete</strong> (vedi sotto);
 - <strong>Nyctalus è fermo</strong> con il bottone <strong>Avvia</strong>.</p>
+<p><strong>Se Android ferma Nyctalus</strong> mentre sei in un'altra app (per esempio Chrome), tornando
+nell'app questa se ne accorge e lo riaccende da sola in Termux. Per ridurre il problema,
+quando Nyctalus parte Termux resta «sveglio» (<code>termux-wake-lock</code>): compare una notifica fissa
+di Termux, ed è normale. Se resta fermo, apri Termux e scrivi <code>nyctalus-mobile --sfondo</code>.</p>
 <h2 id="1-bis-il-browser-solo-nellapp">1-bis. Il browser (solo nell'app)</h2>
 <p>È il browser di NovaOS in stile Chrome: schede, incognito, preferiti, cronologia, trova nella
 pagina, traduzione, modalità lettura, sito desktop, download. In più ha la <strong>modalità
