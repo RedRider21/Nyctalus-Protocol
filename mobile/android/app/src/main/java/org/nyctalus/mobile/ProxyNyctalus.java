@@ -28,13 +28,28 @@ final class ProxyNyctalus {
 
     private ProxyNyctalus() { }
 
+    /** Le funzioni che dichiariamo di saper usare (come fa androidx.webkit): la WebView
+     *  abilita solo quelle che sanno usare entrambe le parti. */
+    private static final String[] NOSTRE = {"PROXY_OVERRIDE", "PROXY_OVERRIDE_REVERSE_BYPASS", "DOCUMENT_START_SCRIPT"};
+
+    private static InvocationHandler fabbrica;
+    /** Perché l'ultima operazione non è riuscita (per il messaggio all'utente). */
+    static String ultimoErrore = "";
+
     /** La fabbrica della WebView di Chrome (InvocationHandler), oppure eccezione. */
-    private static InvocationHandler fabbrica() throws Exception {
+    private static synchronized InvocationHandler fabbrica() throws Exception {
+        if (fabbrica != null) return fabbrica;
         if (Build.VERSION.SDK_INT < 28) throw new IllegalStateException("serve Android 9 o successivo");
         ClassLoader cl = WebView.getWebViewClassLoader();
         Class<?> glue = Class.forName("org.chromium.support_lib_glue.SupportLibReflectionUtil", false, cl);
-        Method crea = glue.getDeclaredMethod("createWebViewProviderFactory");
-        return (InvocationHandler) crea.invoke(null);
+        // Si presenta la «libreria» (un oggetto che risponde a getSupportedFeatures), come
+        // androidx: createWebViewProviderFactory(InvocationHandler) — senza questo argomento
+        // la chiamata non esiste e tutto sembrava «non supportato».
+        Method crea = glue.getDeclaredMethod("createWebViewProviderFactory", InvocationHandler.class);
+        InvocationHandler libreria = (proxy, m, argomenti) ->
+                "getSupportedFeatures".equals(m.getName()) ? NOSTRE.clone() : null;
+        fabbrica = (InvocationHandler) crea.invoke(null, libreria);
+        return fabbrica;
     }
 
     private static Method metodo(String interfaccia, String nome, Class<?>... tipi) throws Exception {
@@ -54,7 +69,11 @@ final class ProxyNyctalus {
             } else if (f instanceof Collection) {
                 return ((Collection<?>) f).contains(funzione);
             }
-        } catch (Throwable ignorata) { }
+            ultimoErrore = "la WebView non offre " + funzione;
+        } catch (Throwable e) {
+            Throwable c = e.getCause() != null ? e.getCause() : e;
+            ultimoErrore = c.getClass().getSimpleName() + ": " + c.getMessage();
+        }
         return false;
     }
 

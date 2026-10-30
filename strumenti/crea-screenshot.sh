@@ -8,7 +8,7 @@
 #   PC:       mini menu, chat, selettore allegati, browser
 #   telefono: elenco chat, conversazione, galleria allegati, impostazioni (web-app)
 # La schermata di benvenuto e il browser dell'app Android si fotografano dal telefono
-# (qui non c'è un emulatore): mettili in documenti/immagini/ come tel-app.png e tel-browser.png.
+# (qui non c'è un emulatore): tel-app.png e tel-app-strumenti.png in documenti/immagini/ vengono dal telefono (barre tolte con convert -crop).
 # Il sito (ramo gh-pages) usa le stesse immagini in immagini/: dopo averle rifatte, copiale lì.
 set -eu
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

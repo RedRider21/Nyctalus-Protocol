@@ -197,8 +197,9 @@ public class BrowserActivity extends Activity {
     /** Imposta il proxy, poi VERIFICA che passi davvero da Nyctalus; solo dopo apre pagine. */
     private void attivaNyctalus(final String url) {
         if (!ProxyNyctalus.supporta("PROXY_OVERRIDE")) {
-            fallitaNyctalus("La WebView di questo telefono non permette di instradare il traffico "
-                + "(serve Android 9 o successivo e «Android System WebView»/Chrome aggiornati dal Play Store).");
+            fallitaNyctalus("La WebView di questo telefono non permette di instradare il traffico. "
+                + "Aggiorna «Android System WebView» e Chrome dal Play Store e riprova.\n\nDettaglio tecnico (Android "
+                + android.os.Build.VERSION.RELEASE + "): " + ProxyNyctalus.ultimoErrore);
             return;
         }
         Toast.makeText(this, "Collego il browser alla rete Nyctalus…", Toast.LENGTH_SHORT).show();

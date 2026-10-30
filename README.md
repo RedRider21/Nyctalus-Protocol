@@ -39,6 +39,11 @@ Sito e manuale: **https://redrider21.github.io/Nyctalus-Protocol/**
 ### Sul telefono (Android)
 
 <table align="center"><tr>
+<td align="center"><img src="documenti/immagini/tel-app.png" width="200" alt="Schermata iniziale dell'app"><br><sub><b>App Nyctalus</b>: Chat, Browser, File, Info</sub></td>
+<td align="center"><img src="documenti/immagini/tel-app-strumenti.png" width="200" alt="Strumenti per Termux"><br><sub><b>Strumenti</b>: Termux e installazione di Nyctalus</sub></td>
+</tr></table>
+
+<table align="center"><tr>
 <td align="center"><img src="documenti/immagini/tel-elenco.png" width="200" alt="Elenco delle chat"><br><sub>Elenco delle chat</sub></td>
 <td align="center"><img src="documenti/immagini/tel-chat.png" width="200" alt="Conversazione"><br><sub>Conversazione</sub></td>
 <td align="center"><img src="documenti/immagini/tel-allegati.png" width="200" alt="Galleria degli allegati"><br><sub>Galleria degli allegati</sub></td>
