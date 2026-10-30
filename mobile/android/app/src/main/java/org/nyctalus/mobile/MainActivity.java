@@ -81,6 +81,7 @@ public class MainActivity extends Activity {
     private int portaSocksBrowser = 18733;
     private TextView rigaRete;      // «🔗 Rete: …» — vale per TUTTA l'app (chat, browser, file)
     private boolean reteCondivisa = false;
+    private org.json.JSONArray retiSalvate = new org.json.JSONArray();
     private static final String SITO = "https://redrider21.github.io/Nyctalus-Protocol/";
     private volatile boolean avviando = false, provatoInPrimoPiano = false;
 
@@ -668,6 +669,7 @@ public class MainActivity extends Activity {
             try {
                 org.json.JSONObject o = new org.json.JSONObject(api("GET", "/api/rete", null)[1]);
                 reteCondivisa = o.optBoolean("condivisa");
+                retiSalvate = o.optJSONArray("reti") != null ? o.optJSONArray("reti") : new org.json.JSONArray();
                 testo = reteCondivisa
                         ? "🔗 Rete: «" + o.optString("nome", "condivisa") + "» · " + o.optString("impronta")
                         : "🔗 Rete: prova locale (solo questo telefono) — tocca per collegarti";
@@ -684,13 +686,34 @@ public class MainActivity extends Activity {
             avviso("Prima avvia Nyctalus (attendi «Nyctalus è pronto»), poi scegli la rete.");
             return;
         }
-        String[] voci = reteCondivisa
-                ? new String[]{"📥  Importa un altro codice di rete", "↩  Torna alla rete di prova"}
-                : new String[]{"📥  Importa codice di rete"};
+        // le reti salvate (si passa dall'una all'altra con un tocco), poi le azioni
+        final java.util.List<String> voci = new java.util.ArrayList<>();
+        final java.util.List<Runnable> azioni = new java.util.ArrayList<>();
+        for (int i = 0; i < retiSalvate.length(); i++) {
+            org.json.JSONObject r = retiSalvate.optJSONObject(i);
+            if (r == null) continue;
+            final int n = i;
+            boolean attiva = r.optBoolean("attiva");
+            voci.add((attiva ? "●  " : "○  ") + r.optString("nome") + "  ·  " + r.optString("impronta") + (attiva ? "  (in uso)" : ""));
+            azioni.add(() -> { if (!attiva) cambiaRete("{\"usa\":" + n + "}"); else menuReteSalvata(n, r.optString("nome")); });
+        }
+        voci.add(reteCondivisa ? "○  Rete di prova (solo questo telefono)" : "●  Rete di prova (solo questo telefono)  (in uso)");
+        azioni.add(() -> { if (reteCondivisa) cambiaRete("{\"prova\":true}"); });
+        voci.add("📥  Importa un codice di rete");
+        azioni.add(this::importaCodice);
         new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setTitle("Rete Nyctalus (per chat, browser e file)")
-                .setItems(voci, (d, k) -> { if (k == 0) importaCodice(); else cambiaRete("{\"prova\":true}"); })
-                .setNegativeButton("Annulla", null).show();
+                .setItems(voci.toArray(new String[0]), (d, k) -> azioni.get(k).run())
+                .setNegativeButton("Chiudi", null).show();
+    }
+
+    /** Una rete salvata già in uso: si può solo togliere dall'elenco. */
+    private void menuReteSalvata(int n, String nome) {
+        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle("«" + nome + "»")
+                .setItems(new String[]{"🗑  Togli dall'elenco (e torna alla rete di prova)"},
+                        (d, k) -> cambiaRete("{\"togli\":" + n + "}"))
+                .setNegativeButton("Chiudi", null).show();
     }
 
     private void importaCodice() {
@@ -729,7 +752,7 @@ public class MainActivity extends Activity {
                 org.json.JSONObject o = new org.json.JSONObject(r[1]);
                 if (o.optBoolean("ok")) {
                     String nome = o.optString("nome");
-                    msg = nome.isEmpty() ? "Torno alla rete di prova: riavvio la rete…"
+                    msg = nome.isEmpty() ? "Rete di prova (solo questo telefono): riavvio la rete…"
                             : "Collegato a «" + nome + "»: riavvio la rete… Controlla l'impronta.";
                 } else {
                     msg = "✗ " + o.optString("errore", "codice non accettato");

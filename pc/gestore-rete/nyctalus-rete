@@ -19,6 +19,8 @@ Per il GESTORE della rete (chi la tiene in piedi):
 Per i CLIENT (chi usa la rete):
   nyctalus-rete importa CODICE|FILE      collega questo PC alla rete del codice
   nyctalus-rete importa --prova          torna alla rete di prova locale
+  nyctalus-rete reti                     le reti salvate (● quella in uso)
+  nyctalus-rete usa N                    passa alla rete salvata N
   nyctalus-rete stato                    a quale rete è collegato questo PC
 
 Dati del gestore in ~/.nyctalus-rete (cartella privata). La chiave SEGRETA
@@ -266,10 +268,54 @@ def importa(argomento):
         except ValueError as e:
             esci(str(e))
         cfg.update({"directory_url": rete["directory_url"], "authority": rete["authority"], "nome_rete": rete["nome"]})
-        msg = "questo PC ora usa la rete «%s»" % rete["nome"]
+        reti = [r for r in reti_salvate(cfg) if not (r["authority"] == rete["authority"]
+                                                    and r["directory_url"] == rete["directory_url"])]
+        cfg["reti"] = (reti + [rete])[-20:]
+        msg = "questo PC ora usa la rete «%s» (impronta %s)" % (rete["nome"], impronta(rete["authority"]))
     CONFIG_CLIENT.parent.mkdir(parents=True, exist_ok=True)
     CONFIG_CLIENT.write_text(json.dumps(cfg, indent=1) + "\n")
     ok(msg)
+    print("  Chiudi e riapri chat e browser perché la usino.")
+
+
+def leggi_config_client():
+    try:
+        return json.loads(CONFIG_CLIENT.read_text())
+    except Exception:         # noqa: BLE001
+        return {}
+
+
+def reti_salvate(cfg):
+    """Le reti importate su questo PC (come sul telefono): si passa dall'una all'altra."""
+    reti = [r for r in cfg.get("reti", []) if isinstance(r, dict) and r.get("directory_url") and r.get("authority")]
+    if cfg.get("directory_url") and cfg.get("authority") and not any(
+            r["authority"] == cfg["authority"] and r["directory_url"] == cfg["directory_url"] for r in reti):
+        reti.append({"nome": cfg.get("nome_rete") or "Rete Nyctalus", "directory_url": cfg["directory_url"],
+                     "authority": cfg["authority"]})
+    return reti
+
+
+def elenca_reti():
+    cfg = leggi_config_client()
+    reti = reti_salvate(cfg)
+    if not reti:
+        print("Nessuna rete salvata: questo PC usa la rete di prova. Per collegarti: nyctalus-rete importa CODICE")
+        return
+    for i, r in enumerate(reti):
+        attiva = r["authority"] == cfg.get("authority") and r["directory_url"] == cfg.get("directory_url")
+        print("  %s %d  %s · %s%s" % ("●" if attiva else "○", i, r["nome"], impronta(r["authority"]), "  (in uso)" if attiva else ""))
+    print("  Passa a un'altra:  nyctalus-rete usa N    ·  rete di prova:  nyctalus-rete importa --prova")
+
+
+def usa_rete(n):
+    cfg = leggi_config_client()
+    reti = reti_salvate(cfg)
+    if not 0 <= n < len(reti):
+        esci("rete %d non trovata (nyctalus-rete reti per l'elenco)" % n)
+    r = reti[n]
+    cfg.update({"directory_url": r["directory_url"], "authority": r["authority"], "nome_rete": r["nome"], "reti": reti})
+    CONFIG_CLIENT.write_text(json.dumps(cfg, indent=1) + "\n")
+    ok("questo PC ora usa la rete «%s» (impronta %s)" % (r["nome"], impronta(r["authority"])))
     print("  Chiudi e riapri chat e browser perché la usino.")
 
 
@@ -489,6 +535,12 @@ def principale(args):
         importa(args[0])
     elif cmd == "stato":
         stato_client()
+    elif cmd == "reti":
+        elenca_reti()
+    elif cmd == "usa":
+        if not args or not args[0].isdigit():
+            esci("indica il numero della rete (nyctalus-rete reti per l'elenco)")
+        usa_rete(int(args[0]))
     else:
         esci("comando sconosciuto: %s (nyctalus-rete --help)" % cmd)
 

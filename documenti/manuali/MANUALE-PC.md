@@ -80,6 +80,8 @@ condivisa serve il **codice di rete** dato da chi la gestisce:
 nyctalus-rete importa NYCT1:…     # poi chiudi e riapri chat e browser
 nyctalus-rete stato               # a quale rete sei collegato
 nyctalus-rete importa --prova     # torna alla rete di prova
+nyctalus-rete reti                # le reti salvate (● quella in uso)
+nyctalus-rete usa N               # passa alla rete salvata N
 nyctalus-rete casa                # rete di casa su questo PC (prova telefono ↔ PC)
 ```
 Gestire una rete propria: `MANUALE-GESTORE-RETE.md`.

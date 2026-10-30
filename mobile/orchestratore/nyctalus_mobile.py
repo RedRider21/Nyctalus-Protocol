@@ -708,13 +708,13 @@ async def instrada(req, lettore, scrittore):
             return await cambia_rete(lettore, scrittore, req)
         cfg = leggi_config()
         condivisa = bool(cfg.get("directory_url") and cfg.get("authority"))
-        imp = ""
-        if condivisa:
-            h = hashlib.sha256(bytes.fromhex(cfg["authority"])).hexdigest()[:8].upper()
-            imp = h[:4] + "-" + h[4:]          # uguale a quella che stampa nyctalus-rete sul PC
+        reti = [{"nome": r["nome"], "impronta": impronta_rete(r["authority"]),
+                 "attiva": condivisa and r["authority"] == cfg["authority"] and r["directory_url"] == cfg["directory_url"]}
+                for r in reti_salvate(cfg)]
         return await rispondi_json(scrittore, {"condivisa": condivisa, "nome": cfg.get("nome_rete", ""),
                                                "url": cfg.get("directory_url", "") if condivisa else "",
-                                               "impronta": imp})
+                                               "impronta": impronta_rete(cfg["authority"]) if condivisa else "",
+                                               "reti": reti})
     if p == "/api/servizi/avvia" and req.metodo == "POST":
         SERVIZI.avvia()
         return await rispondi_json(scrittore, SERVIZI.info())
@@ -754,9 +754,28 @@ async def instrada(req, lettore, scrittore):
     return await servi_statico(scrittore, req)
 
 
+def impronta_rete(autorita):
+    """Impronta breve della rete (uguale a quella che stampa nyctalus-rete sul PC)."""
+    h = hashlib.sha256(bytes.fromhex(autorita)).hexdigest()[:8].upper()
+    return h[:4] + "-" + h[4:]
+
+
+def reti_salvate(cfg):
+    """Le reti importate (codici di rete): si passa dall'una all'altra senza reimportare."""
+    reti = [r for r in cfg.get("reti", []) if isinstance(r, dict) and r.get("directory_url") and r.get("authority")]
+    if cfg.get("directory_url") and cfg.get("authority") and not any(
+            r["authority"] == cfg["authority"] and r["directory_url"] == cfg["directory_url"] for r in reti):
+        reti.append({"nome": cfg.get("nome_rete") or "Rete Nyctalus", "directory_url": cfg["directory_url"],
+                     "authority": cfg["authority"]})       # rete importata prima che ci fosse l'elenco
+    return reti
+
+
 async def cambia_rete(lettore, scrittore, req):
-    """Importa un codice di rete ({"codice": "NYCT1:…"}) o torna alla rete di prova
-    ({"prova": true}); poi riavvia i servizi sulla rete nuova."""
+    """Cambia la rete di tutto il corredo, poi riavvia i servizi:
+      {"codice": "NYCT1:…"}  importa (e la aggiunge alle reti salvate)
+      {"usa": N}             passa alla rete salvata N
+      {"togli": N}           toglie la rete salvata N (se era attiva, si torna alla prova)
+      {"prova": true}        rete di prova locale"""
     try:
         n = int(req.h.get("content-length", "0"))
     except ValueError:
@@ -766,16 +785,35 @@ async def cambia_rete(lettore, scrittore, req):
     try:
         dati = json.loads(await lettore.readexactly(n))
         cfg = leggi_config()
+        reti = reti_salvate(cfg)
+        for k in ("usa", "togli"):
+            if k in dati and not 0 <= int(dati[k]) < len(reti):
+                raise IndexError(k)
+        if "togli" in dati:
+            via = reti.pop(int(dati["togli"]))
+            if via["authority"] == cfg.get("authority") and via["directory_url"] == cfg.get("directory_url"):
+                dati = {"prova": True}
         if dati.get("prova"):
             for k in ("directory_url", "authority", "nome_rete"):
                 cfg.pop(k, None)
             nome = ""
+        elif "usa" in dati:
+            rete = reti[int(dati["usa"])]
+            cfg.update(directory_url=rete["directory_url"], authority=rete["authority"], nome_rete=rete["nome"])
+            nome = rete["nome"]
+        elif "togli" in dati:
+            nome = cfg.get("nome_rete", "")
         else:
             rete = leggi_codice(dati.get("codice", ""))
             cfg.update(directory_url=rete["directory_url"], authority=rete["authority"], nome_rete=rete["nome"])
             nome = rete["nome"]
+            reti = [r for r in reti if not (r["authority"] == rete["authority"] and r["directory_url"] == rete["directory_url"])]
+            reti.append(rete)
+        cfg["reti"] = reti[-20:]
     except ValueError as e:
         return await rispondi_json(scrittore, {"errore": str(e)}, "400 Bad Request")
+    except IndexError:
+        return await rispondi_json(scrittore, {"errore": "rete non trovata"}, "400 Bad Request")
     except Exception:            # noqa: BLE001
         return await rispondi_json(scrittore, {"errore": "richiesta non valida"}, "400 Bad Request")
     scrivi_config(cfg)

@@ -63,7 +63,8 @@ Stampa `NYCT1:…` e lo salva in `~/.nyctalus-rete/codice.txt`.
 - Contiene solo **nome, URL e chiave pubblica**: puoi mandarlo per messaggio o mail.
 - **Va rifatto solo se cambi l'URL.** Aggiungere o togliere nodi non cambia il codice.
 - I client lo importano così:
-  - **PC:** `nyctalus-rete importa NYCT1:…`, poi chiudi e riapri chat e browser
+  - **PC:** `nyctalus-rete importa NYCT1:…`, poi chiudi e riapri chat e browser. Le reti
+    importate restano salvate: `nyctalus-rete reti` le elenca, `nyctalus-rete usa N` cambia rete
     (`nyctalus-rete importa --prova` per tornare alla rete di prova; `stato` per vedere
     la rete in uso);
   - **telefono:** nella schermata iniziale dell'app **🔗 Rete** → **Importa codice di rete**

@@ -73,7 +73,9 @@ C() { env HOME="$TMP/pc" python3 "$ROOT/pc/gestore-rete/nyctalus-rete" "$@"; }
 C importa "NYCT1:rovinato" > /dev/null 2>&1 && fail "codice rovinato accettato" || pass "PC: codice rovinato rifiutato"
 C importa "$COD" > /dev/null 2>&1 && python3 -c "import json,sys;c=json.load(open(sys.argv[1]));sys.exit(0 if c['directory_url'].endswith(':19975/directory.txt') and len(c['authority'])==64 else 1)" "$TMP/pc/.nyctalus-browser/config.json" \
   && pass "PC: codice importato (chat e browser useranno la rete)" || fail "importazione sul PC"
-C importa --prova > /dev/null 2>&1 && ! grep -q directory_url "$TMP/pc/.nyctalus-browser/config.json" && pass "PC: ritorno alla rete di prova" || fail "importa --prova"
+C importa --prova > /dev/null 2>&1 && python3 -c "import json,sys;c=json.load(open(sys.argv[1]));sys.exit(0 if 'directory_url' not in c and len(c.get('reti',[]))==1 else 1)" "$TMP/pc/.nyctalus-browser/config.json" \
+  && pass "PC: ritorno alla rete di prova (la rete resta tra quelle salvate)" || fail "importa --prova"
+C usa 0 > /dev/null 2>&1 && grep -q '"directory_url"' "$TMP/pc/.nyctalus-browser/config.json" && C reti | grep -q "●" && pass "PC: nyctalus-rete usa 0 ripassa alla rete salvata" || fail "nyctalus-rete usa"
 
 H="$TMP/tel"; mkdir -p "$H/.nyctalus-mobile"
 echo '{"porte": {"http": 19976, "controllo": 19977, "backend": 19978, "socks": 19979, "socks_locale": 19980, "monitor": 19981, "nodi": [19982,19983,19984,19985]}}' > "$H/.nyctalus-mobile/config.json"
@@ -110,8 +112,16 @@ api GET /api/stato | grep -q '"modalita": "pubblica"' && api GET /api/stato | gr
   && pass "telefono: servizi riavviati sulla rete condivisa «Rete di prova del test»" || fail "telefono: $(api GET /api/stato) $(tail -2 "$TMP/o.log")"
 api GET /api/rete | grep -q '"condivisa": true' && pass "telefono: /api/rete dice «condivisa»" || fail "/api/rete"
 IMP_PC=$(G codice --url http://127.0.0.1:19975/directory.txt 2>&1 | grep -oE 'Impronta della rete: [0-9A-F]{4}-[0-9A-F]{4}' | awk '{print $4}')
-IMP_TEL=$(api GET /api/rete | grep -oE '"impronta": "[0-9A-F]{4}-[0-9A-F]{4}"' | cut -d'"' -f4)
+IMP_TEL=$(api GET /api/rete | grep -oE '"impronta": "[0-9A-F]{4}-[0-9A-F]{4}"' | head -1 | cut -d'"' -f4)
 [ -n "$IMP_PC" ] && [ "$IMP_PC" = "$IMP_TEL" ] && pass "stessa impronta della rete su PC e telefono ($IMP_PC): il codice importato è quello giusto" || fail "impronta PC «$IMP_PC» ≠ telefono «$IMP_TEL»"
+# reti salvate: si torna alla prova e si ripassa alla rete senza reimportare il codice
+api POST /api/rete '{"prova":true}' > /dev/null; sleep 1
+R=$(api GET /api/rete); echo "$R" | grep -q '"condivisa": false' && echo "$R" | grep -q '"nome": "Rete di prova del test", "impronta": "[0-9A-F-]*", "attiva": false' \
+  && pass "reti salvate: tornato alla prova, la rete resta nell'elenco" || fail "elenco reti: $R"
+api POST /api/rete '{"usa":0}' | grep -q '"nome": "Rete di prova del test"' && api GET /api/rete | grep -q '"attiva": true' \
+  && pass "reti salvate: ripassato alla rete con un tocco, senza reimportare" || fail "usa rete salvata"
+api POST /api/rete '{"usa":7}' | grep -q '^400' && api POST /api/rete '{"usa":-1}' | grep -q '^400' && pass "rete inesistente rifiutata" || fail "indice di rete non controllato"
+for _ in $(seq 1 120); do api GET /api/stato | grep -q '"stato": "pronto", .*"modalita": "pubblica"' && break; sleep 0.5; done
 [ "$(stat -c %a "$H/.nyctalus-mobile/config.json")" = 600 ] && grep -q '"porte"' "$H/.nyctalus-mobile/config.json" \
   && pass "telefono: configurazione privata e porte personalizzate conservate" || fail "config del telefono"
 

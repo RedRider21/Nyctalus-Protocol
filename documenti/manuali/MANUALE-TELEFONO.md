@@ -26,6 +26,10 @@ fila di pulsanti, come il mini menu del PC:
 | 📁 **File** | in arrivo: invio e ricezione di file attraverso Nyctalus |
 | ℹ️ **Info** | il sito del progetto con i manuali online (anche toccando il logo) |
 
+Le reti che importi restano in un **elenco**: toccando **🔗 Rete** le vedi tutte (● quella in uso)
+e passi dall'una all'altra con un tocco, senza reimportare il codice; c'è anche la rete di
+prova. Toccando quella in uso puoi toglierla dall'elenco.
+
 Sotto la scritta di stato c'è la riga **🔗 Rete**: dice a quale rete sei collegato
 («prova locale», oppure il nome della rete e la sua impronta). **La rete è una sola per
 tutta l'app**: chat, browser in modalità 🦇 e, quando ci sarà, il gestore dei file. Toccala
