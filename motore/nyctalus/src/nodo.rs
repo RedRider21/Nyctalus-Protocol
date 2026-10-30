@@ -138,26 +138,56 @@ async fn gestisci_circuito(
             // Andata: togli il tuo strato e inoltra a valle. Il nonce è un
             // contatore locale (non viaggia sul filo): stessa posizione, stesso
             // nonce su ogni nodo, grazie all'ordine garantito dallo stream.
+            // Se una direzione CADE (errore, non fine regolare), la caduta si passa
+            // anche all'altra parte: reset in avanti, stop all'indietro. Senza, il
+            // nodo dopo restava in attesa per sempre — e il punto d'incontro teneva
+            // le registrazioni di servizi spenti, consegnandole a chi li cercava.
             let andata = async {
                 let mut n: u64 = 0;
-                while let Some(mut payload) = leggi_quadro(&mut ricezione_monte).await? {
-                    cipolla::sbuccia(n, &chiave, &mut payload);
-                    scrivi_quadro(&mut invio_valle, &payload).await?;
-                    n += 1;
+                loop {
+                    match leggi_quadro(&mut ricezione_monte).await {
+                        Ok(Some(mut payload)) => {
+                            cipolla::sbuccia(n, &chiave, &mut payload);
+                            if let Err(e) = scrivi_quadro(&mut invio_valle, &payload).await {
+                                let _ = ricezione_monte.stop(quinn::VarInt::from_u32(0));
+                                return Err(e);
+                            }
+                            n += 1;
+                        }
+                        Ok(None) => {
+                            let _ = invio_valle.finish();
+                            return Risultato::Ok(());
+                        }
+                        Err(e) => {
+                            let _ = invio_valle.reset(quinn::VarInt::from_u32(0));
+                            return Err(e);
+                        }
+                    }
                 }
-                let _ = invio_valle.finish();
-                Risultato::Ok(())
             };
             // Ritorno: aggiungi il tuo strato e rimanda a monte.
             let ritorno = async {
                 let mut n: u64 = 0;
-                while let Some(mut payload) = leggi_quadro(&mut ricezione_valle).await? {
-                    cipolla::sbuccia(BIT_RISPOSTA | n, &chiave, &mut payload);
-                    scrivi_quadro(&mut invio_monte, &payload).await?;
-                    n += 1;
+                loop {
+                    match leggi_quadro(&mut ricezione_valle).await {
+                        Ok(Some(mut payload)) => {
+                            cipolla::sbuccia(BIT_RISPOSTA | n, &chiave, &mut payload);
+                            if let Err(e) = scrivi_quadro(&mut invio_monte, &payload).await {
+                                let _ = ricezione_valle.stop(quinn::VarInt::from_u32(0));
+                                return Err(e);
+                            }
+                            n += 1;
+                        }
+                        Ok(None) => {
+                            let _ = invio_monte.finish();
+                            return Risultato::Ok(());
+                        }
+                        Err(e) => {
+                            let _ = invio_monte.reset(quinn::VarInt::from_u32(0));
+                            return Err(e);
+                        }
+                    }
                 }
-                let _ = invio_monte.finish();
-                Risultato::Ok(())
             };
             let (a, b) = tokio::join!(andata, ritorno);
             a?;

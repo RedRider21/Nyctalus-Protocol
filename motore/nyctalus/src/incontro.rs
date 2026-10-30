@@ -437,7 +437,7 @@ fn registro_onion() -> &'static Mutex<HashMap<[u8; 32], std::collections::VecDeq
 /// nonce da 1; quelli di ritorno nonce da 0 (il primo è "OK"/"NO").
 pub async fn uscita_rendezvous(
     invio: quinn::SendStream,
-    ricezione: quinn::RecvStream,
+    mut ricezione: quinn::RecvStream,
     chiave: [u8; 32],
     primo: Vec<u8>,
 ) -> Risultato<()> {
@@ -455,47 +455,71 @@ pub async fn uscita_rendezvous(
 
             // Verso il servizio: "OK", poi i plaintext client→servizio da rx_vs.
             let scrittore = scrittore_ritorno(invio, chiave, b"OK".to_vec(), rx_vs);
-            // Attende che un client si colleghi e consegni il suo canale.
-            match consegna_rx.await {
-                Ok(verso_client) => {
+            // Attende che un client si colleghi e consegni il suo canale — ma intanto
+            // tiene d'occhio il circuito del servizio: se cade (servizio spento), la
+            // registrazione si scarta invece di restare in coda «morta».
+            let consegnato = tokio::select! {
+                c = consegna_rx => c.ok(),
+                _ = attendi_chiusura(&mut ricezione) => None,
+            };
+            match consegnato {
+                Some(verso_client) => {
                     // Dal servizio: plaintext servizio→client verso `verso_client`.
                     let lettore = lettore_avanti(ricezione, chiave, 1, verso_client);
                     tokio::join!(scrittore, lettore);
                 }
-                Err(_) => {
-                    // Nessun client (o circuito caduto): chiudi pulito.
+                None => {
+                    // Nessun client (o circuito del servizio caduto): chiudi pulito.
                     drop(scrittore);
                 }
             }
             Ok(())
         }
         COLLEGA => {
-            let incontro = {
-                let mut reg = registro_onion().lock().unwrap();
-                let coda = reg.get_mut(&key).and_then(|q| q.pop_front());
-                if reg.get(&key).is_some_and(|q| q.is_empty()) {
-                    reg.remove(&key);
-                }
-                coda
-            };
-            let Some(incontro) = incontro else {
-                scrittore_ritorno_singolo(invio, chiave, b"NO".to_vec()).await;
-                return Ok(());
-            };
+            // La prima registrazione VIVA del servizio: quelle il cui circuito è
+            // caduto (consegna rifiutata) si scartano e si passa alla successiva.
             let (tx_vc, rx_vc) = mpsc::channel::<Vec<u8>>(256);
-            if incontro.consegna.send(tx_vc).is_err() {
+            let mut tx_vc = Some(tx_vc);
+            let mut trovato = None;
+            loop {
+                let incontro = {
+                    let mut reg = registro_onion().lock().unwrap();
+                    let coda = reg.get_mut(&key).and_then(|q| q.pop_front());
+                    if reg.get(&key).is_some_and(|q| q.is_empty()) {
+                        reg.remove(&key);
+                    }
+                    coda
+                };
+                let Some(incontro) = incontro else { break };
+                match incontro.consegna.send(tx_vc.take().expect("canale ancora da consegnare")) {
+                    Ok(()) => {
+                        trovato = Some(incontro.verso_servizio);
+                        break;
+                    }
+                    Err(indietro) => tx_vc = Some(indietro), // registrazione morta: la prossima
+                }
+            }
+            let Some(verso_servizio) = trovato else {
                 scrittore_ritorno_singolo(invio, chiave, b"NO".to_vec()).await;
                 return Ok(());
-            }
+            };
             // Verso il client: "OK", poi i plaintext servizio→client da rx_vc.
             let scrittore = scrittore_ritorno(invio, chiave, b"OK".to_vec(), rx_vc);
             // Dal client: plaintext client→servizio verso il canale del servizio.
-            let lettore = lettore_avanti(ricezione, chiave, 1, incontro.verso_servizio);
+            let lettore = lettore_avanti(ricezione, chiave, 1, verso_servizio);
             tokio::join!(scrittore, lettore);
             Ok(())
         }
         _ => Err("rendezvous: unknown control type".into()),
     }
+}
+
+/// Torna quando il circuito di una registrazione in attesa si chiude o cade. Il
+/// servizio, dopo REGISTRA, non manda nulla finché non arriva un client: se arriva
+/// qualcosa (o niente più), per la registrazione in attesa vale come chiusura.
+async fn attendi_chiusura(ricezione: &mut quinn::RecvStream) {
+    let mut un_byte = [0u8; 1];
+    let _ = ricezione.read(&mut un_byte).await;
 }
 
 /// Scrive sul ritorno del circuito: prima `iniziale`, poi i plaintext da `rx`,
@@ -840,13 +864,17 @@ pub async fn browse(
     salti: usize,
 ) -> Risultato<()> {
     let chiave = indirizzo::in_chiave(indirizzo_nyct)?;
-    let mut canale = collega_al_servizio(&chiave, &elenco, manuale, offusca, salti).await?;
-
     // Stretta Noise NK end-to-end col servizio (il client è il mittente).
-    let (mittente, primo) = Mittente::inizia(&chiave)?;
-    canale.invia(&primo).await?;
-    let risposta = canale.ricevi().await?.ok_or("no handshake reply")?;
-    let segreti = mittente.completa(&risposta)?;
+    let (mut canale, segreti) = if manuale.is_none() {
+        collega_e_stringi(&chiave, &elenco, offusca, salti).await?   // salta le registrazioni morte
+    } else {
+        let mut canale = collega_al_servizio(&chiave, &elenco, manuale, offusca, salti).await?;
+        let (mittente, primo) = Mittente::inizia(&chiave)?;
+        canale.invia(&primo).await?;
+        let risposta = canale.ricevi().await?.ok_or("no handshake reply")?;
+        let segreti = mittente.completa(&risposta)?;
+        (canale, segreti)
+    };
     let mut tx = Record::nuovo(&segreti.verso_destinatario);
     let mut rx = Record::nuovo(&segreti.verso_mittente);
 
@@ -891,6 +919,47 @@ pub async fn browse(
 //  Integrazione col proxy SOCKS: `.nyct` → rendezvous
 // ======================================================================
 
+/// Quante registrazioni prova il client prima di arrendersi (vedi `collega_e_stringi`).
+const TENTATIVI_STRETTA: usize = 12;
+/// Quanto si aspetta la risposta del servizio alla stretta di mano.
+const ATTESA_STRETTA: std::time::Duration = std::time::Duration::from_secs(6);
+
+/// Collega al servizio e fa la stretta di mano Noise NK.
+///
+/// Il punto d'incontro tiene le registrazioni del servizio in coda e ne dà una a
+/// ogni client. Se il servizio è stato riavviato, le sue vecchie registrazioni
+/// possono restare lì «morte» (il circuito che le teneva è caduto, ma la caduta non
+/// è arrivata al punto d'incontro): il client viene collegato a una di quelle e la
+/// stretta non riceve risposta. Allora si scarta quella e si chiede la successiva —
+/// ogni tentativo a vuoto dura pochi millisecondi — finché si trova la registrazione
+/// viva del servizio.
+async fn collega_e_stringi(
+    chiave: &[u8; 32],
+    elenco: &[NodoRete],
+    offusca: Option<[u8; 32]>,
+    salti: usize,
+) -> Risultato<(Canale, SegretiSessione)> {
+    let mut ultimo = String::from("nessun tentativo");
+    for _ in 0..TENTATIVI_STRETTA {
+        // il punto d'incontro non trova proprio il servizio: inutile insistere
+        let mut canale = collega_al_servizio(chiave, elenco, None, offusca, salti).await?;
+        let (mittente, primo) = Mittente::inizia(chiave)?;
+        if canale.invia(&primo).await.is_err() {
+            ultimo = "registrazione caduta durante l'invio".into();
+            continue;
+        }
+        match tokio::time::timeout(ATTESA_STRETTA, canale.ricevi()).await {
+            Ok(Ok(Some(risposta))) => match mittente.completa(&risposta) {
+                Ok(segreti) => return Ok((canale, segreti)),
+                Err(e) => return Err(e.into()), // risposta sbagliata: non è il servizio giusto
+            },
+            Ok(Ok(None)) | Ok(Err(_)) => ultimo = "registrazione morta (nessuna risposta alla stretta)".into(),
+            Err(_) => ultimo = "il servizio non ha risposto in tempo".into(),
+        }
+    }
+    Err(format!("servizio non raggiungibile dopo {TENTATIVI_STRETTA} registrazioni: {ultimo}").into())
+}
+
 pub async fn tunnel_socks(
     mut cliente: TcpStream,
     indirizzo_nyct: &str,
@@ -907,19 +976,13 @@ pub async fn tunnel_socks(
     };
 
     // Collega e fai la stretta prima di confermare al client SOCKS.
-    let avviato = async {
-        let mut canale = collega_al_servizio(&chiave, &elenco, None, offusca, salti).await?;
-        let (mittente, primo) = Mittente::inizia(&chiave)?;
-        canale.invia(&primo).await?;
-        let risposta = canale.ricevi().await?.ok_or("no handshake reply")?;
-        let segreti = mittente.completa(&risposta)?;
-        Risultato::Ok((canale, segreti))
-    }
-    .await;
+    let avviato = collega_e_stringi(&chiave, &elenco, offusca, salti).await;
 
     let (canale, segreti) = match avviato {
         Ok(v) => v,
-        Err(_) => {
+        Err(e) => {
+            // il motivo nel registro: al client SOCKS arriva solo «rifiutato»
+            eprintln!("{indirizzo_nyct}: servizio non raggiunto: {e}");
             cliente.write_all(&socks5::risposta_richiesta(Esito::ConnessioneRifiutata)).await?;
             return Ok(());
         }

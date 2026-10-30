@@ -50,7 +50,8 @@ pub fn identita_server_in(cartella: Option<&std::path::Path>) -> Risultato<Ident
     };
     let impronta = *blake3::hash(&der).as_bytes();
     let chiave = PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(chiave_der));
-    let config = quinn::ServerConfig::with_single_cert(vec![der], chiave)?;
+    let mut config = quinn::ServerConfig::with_single_cert(vec![der], chiave)?;
+    config.transport_config(trasporto_client());   // stessi tempi: chi sparisce si scopre presto
     Ok(IdentitaServer { config, impronta })
 }
 
@@ -90,8 +91,11 @@ pub fn config_client(impronta_attesa: [u8; 32]) -> Risultato<quinn::ClientConfig
 /// periodico, così non vengono chiusi dal timeout di inattività di QUIC.
 fn trasporto_client() -> Arc<quinn::TransportConfig> {
     let mut t = quinn::TransportConfig::default();
-    t.keep_alive_interval(Some(std::time::Duration::from_secs(8)));
-    t.max_idle_timeout(Some(std::time::Duration::from_secs(30).try_into().expect("30s valido")));
+    // Segnale di vita ogni 5 s; 15 s di silenzio = l'altro capo non c'è più. Un
+    // servizio spento di colpo (senza salutare) si scopre così in pochi secondi, e la
+    // caduta si propaga lungo il circuito fino al punto d'incontro.
+    t.keep_alive_interval(Some(std::time::Duration::from_secs(5)));
+    t.max_idle_timeout(Some(std::time::Duration::from_secs(15).try_into().expect("15s valido")));
     Arc::new(t)
 }
 
