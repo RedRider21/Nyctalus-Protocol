@@ -252,3 +252,18 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .vuoto-emoji { grid-column: 1 / -1; color: var(--tenue); font-size: 13px; padding: 12px; }
 #velo.trasparente { background: transparent; }
 #foglio.emoji { border-radius: 14px 14px 0 0; box-shadow: 0 -6px 18px rgba(0,0,0,.25); }
+
+/* rubrica della rete */
+.rubrica { max-height: 62vh; overflow-y: auto; padding: 0 12px 10px; }
+.rubrica-io { padding: 6px 4px 12px; border-bottom: 1px solid rgba(var(--rgb), .14); margin-bottom: 6px; }
+.rubrica-io .primario { margin-top: 8px; width: 100%; padding: 11px; border: 0; border-radius: 12px; background: var(--invia); color: #fff; font-weight: 600; font-size: 15px; }
+.rubrica-io .pulsanti { display: flex; gap: 8px; margin-top: 8px; }
+.rubrica-io .pulsanti button { flex: 1; padding: 9px; border: 0; border-radius: 10px; background: rgba(var(--rgb), .14); color: var(--testo); font-weight: 600; }
+.rubrica-io .pulsanti .pericoloso { background: rgba(214, 69, 69, .18); color: #ff8a8a; }
+.rubrica-utente { display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 4px; border: 0; background: transparent;
+  color: var(--testo); text-align: left; border-radius: 12px; cursor: pointer; }
+.rubrica-utente:hover { background: rgba(var(--rgb), .08); }
+.rubrica-utente .testo { flex: 1; min-width: 0; }
+.rubrica-utente .nome { font-weight: 600; }
+.rubrica-utente .sotto { font-size: 13px; color: var(--tenue); }
+.rubrica-utente .freccia { font-size: 18px; opacity: .8; }

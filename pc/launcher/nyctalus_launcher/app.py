@@ -147,6 +147,7 @@ class Launcher(Gtk.Window):
         self._bottone_logo(_t("lau.info"), self._apri_pages)
         self._bottone("web-browser-symbolic", _t("lau.browser"), self._apri_browser)
         self._bottone("user-available-symbolic", _t("lau.chat"), self._apri_chat)
+        self._bottone("system-users-symbolic", _t("lau.rubrica"), self._apri_rubrica)
         self._bottone("folder-download-symbolic", _t("lau.file"), self._apri_file, attivo=False)
         sep = Gtk.Separator(
             orientation=Gtk.Orientation.VERTICAL if not verticale else Gtk.Orientation.HORIZONTAL)
@@ -340,6 +341,26 @@ class Launcher(Gtk.Window):
                 self._lancia(["bash", str(candidato)])
                 return
         self._avviso(_t("lau.chat"), _t("lau.in_arrivo_corpo"))
+
+    def _apri_rubrica(self):
+        """La rubrica della rete: se la chat è già aperta le si chiede di mostrarla
+        (file-segnale), altrimenti si apre la chat direttamente sulla rubrica."""
+        import socket
+        try:
+            socket.create_connection(("127.0.0.1", 1091), timeout=0.5).close()
+            aperta = True
+        except OSError:
+            aperta = False
+        if aperta:
+            segnale = Path.home() / ".nyctalus-chat" / "apri-rubrica"
+            segnale.parent.mkdir(parents=True, exist_ok=True)
+            segnale.write_text("1")
+            return
+        for candidato in (RADICE / "avvia-chat.sh", RADICE.parent / "strumenti" / "avvia-chat.sh"):
+            if candidato.exists():
+                self._lancia(["bash", str(candidato)], env=dict(os.environ, NYCTALUS_APRI_RUBRICA="1"))
+                return
+        self._avviso(_t("lau.rubrica"), _t("lau.in_arrivo_corpo"))
 
     def _apri_file(self):
         self._avviso(_t("lau.file"), _t("lau.in_arrivo_corpo"))

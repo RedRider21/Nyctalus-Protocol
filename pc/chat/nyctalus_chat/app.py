@@ -287,6 +287,16 @@ dialog button.suggested-action { background-color: @SEND@; color: #ffffff; }
 dialog button.suggested-action:hover { background-color: @SENDH@; }
 dialog button.destructive-action, messagedialog button.destructive-action { background-color: #d64545; color: #ffffff; }
 dialog checkbutton { color: @TEXT@; }
+.finestra-rubrica { background-color: @BG@; color: @TEXT@; }
+.finestra-rubrica label { color: @TEXT@; }
+.finestra-rubrica label.stato-riga { color: @MUTED@; }
+.finestra-rubrica list, .finestra-rubrica list row { background-color: transparent; }
+.finestra-rubrica button { background-color: rgba(@RGB@,0.14); background-image: none; color: @TEXT@;
+                           border: none; border-radius: 9px; padding: 6px 14px; box-shadow: none; text-shadow: none; }
+.finestra-rubrica button:hover { background-color: rgba(@RGB@,0.26); }
+.finestra-rubrica button.suggested-action { background-color: @SEND@; color: #ffffff; }
+.finestra-rubrica button.suggested-action:hover { background-color: @SENDH@; }
+.finestra-rubrica button.destructive-action { background-color: rgba(214,69,69,0.85); color: #ffffff; }
 dialog check { background-color: @BG@; border: 1px solid rgba(@RGB@,0.35); border-radius: 4px; }
 dialog check:checked { background-color: @SEND@; color: #ffffff; }
 dialog list, dialog list row { background-color: transparent; color: @TEXT@; }
@@ -484,6 +494,15 @@ def senza_metadati(percorso, mime):
         return percorso
 
 
+def leggi_rubrica_rete():
+    """L'indirizzo della rubrica della rete in uso (dal codice di rete importato)."""
+    try:
+        cfg = json.loads((Path.home() / ".nyctalus-browser" / "config.json").read_text())
+        return cfg.get("rubrica", "") if cfg.get("directory_url") else ""
+    except Exception:            # noqa: BLE001
+        return ""
+
+
 def ultimo_accesso(ts):
     """«ultimo accesso oggi alle 18:05» (come Telegram), calcolato dal nostro motore."""
     if not ts:
@@ -595,6 +614,8 @@ class Chat(Gtk.Window):
         self.contatti = {}       # addr -> nome
         self.online = set()
         self.visti = {}          # ultimo accesso visto dal nostro motore (evento V)
+        self.rubrica = leggi_rubrica_rete()   # indirizzo .nyct della rubrica della rete (se c'è)
+        self.fin_rubrica = None
         self.attivo = None
         self.righe_contatto = {} # addr -> Gtk.ListBoxRow
         self.sock = None
@@ -666,6 +687,10 @@ class Chat(Gtk.Window):
         aiuto.set_tooltip_text(_t("chat.aiuto")); aiuto.set_valign(Gtk.Align.CENTER)
         aiuto.connect("clicked", self._apri_manuale)
         testa.pack_end(aiuto, False, False, 0)
+        rub = Gtk.Button(label="👥"); rub.get_style_context().add_class("pill")
+        rub.set_tooltip_text(_t("chat.rub.titolo")); rub.set_valign(Gtk.Align.CENTER)
+        rub.connect("clicked", lambda _w: self.apri_rubrica())
+        testa.pack_end(rub, False, False, 0)
         aspetto = Gtk.Button(label="⚙"); aspetto.get_style_context().add_class("pill")
         aspetto.set_tooltip_text(_t("chat.aspetto")); aspetto.set_valign(Gtk.Align.CENTER)
         aspetto.connect("clicked", self._menu_aspetto)
@@ -833,6 +858,10 @@ class Chat(Gtk.Window):
         self._cmd("WHOAMI")
         self._cmd("LIST")
         self._cmd("SUB")
+        # rubrica: «ci sono» se iscritti (così risultiamo in linea), apertura chiesta dal mini menu
+        GLib.timeout_add_seconds(4, self._ci_sono)
+        GLib.timeout_add_seconds(180, self._ci_sono)
+        GLib.timeout_add(1500, self._richiesta_rubrica)
         return True
 
     def _errore_motore(self):
@@ -871,6 +900,11 @@ class Chat(Gtk.Window):
     def _evento(self, riga):
         parti = riga.split(" ")
         tipo = parti[0]
+        # la rubrica parla in JSON: non è una conversazione e non resta in cronologia
+        if self.rubrica and len(parti) >= 2 and parti[1] == self.rubrica:
+            if tipo == "MSG" and len(parti) >= 4:
+                self._risposta_rubrica(_da_hex(parti[3]))
+            return False
         if tipo == "ME" and len(parti) >= 2:
             self.me = parti[1]
             self.mio_id.set_text(self.me)
@@ -1641,6 +1675,76 @@ class Chat(Gtk.Window):
         self.ingresso.set_text("")
 
     # --- dialoghi --------------------------------------------------------------
+    # --- rubrica della rete -------------------------------------------------------
+    def chiedi_rubrica(self, obj):
+        if self.rubrica:
+            self._cmd("SEND %s %s" % (self.rubrica, json.dumps(obj, ensure_ascii=False).encode().hex()))
+
+    def _iscritto(self):
+        return self.ui.get("rubrica_nomi", {}).get(self.rubrica)
+
+    def _ci_sono(self):
+        if self.rubrica and self._iscritto():
+            self.chiedi_rubrica({"op": "ci_sono"})
+        return True
+
+    def _risposta_rubrica(self, testo):
+        self._cmd("CLEAR " + self.rubrica)
+        try:
+            r = json.loads(testo)
+        except ValueError:
+            return
+        nomi = self.ui.setdefault("rubrica_nomi", {})
+        if r.get("op") == "iscritto":
+            nomi[self.rubrica] = r.get("nome", "")
+            self._salva_ui()
+            self.chiedi_rubrica({"op": "elenco"})
+        elif r.get("op") == "cancellato":
+            nomi.pop(self.rubrica, None)
+            self._salva_ui()
+            self.chiedi_rubrica({"op": "elenco"})
+        elif r.get("op") == "elenco":
+            if not r.get("iscritto") and nomi.pop(self.rubrica, None) is not None:
+                self._salva_ui()
+            if self.fin_rubrica is not None:
+                self.fin_rubrica.mostra(r, self._iscritto())
+        elif r.get("op") == "errore" and self.fin_rubrica is not None:
+            self.fin_rubrica._messaggio("⚠ " + r.get("msg", ""))
+
+    def apri_rubrica(self):
+        self.rubrica = leggi_rubrica_rete()
+        if not self.rubrica:
+            d = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.INFO,
+                                  buttons=Gtk.ButtonsType.OK, text=_t("chat.rub.nessuna"))
+            d.format_secondary_text(_t("chat.rub.nessuna_corpo"))
+            d.run()
+            d.destroy()
+            return
+        if self.fin_rubrica is not None:
+            self.fin_rubrica.present()
+            self.fin_rubrica.chiedi()
+            return
+        from .rubrica import FinestraRubrica
+        self.fin_rubrica = FinestraRubrica(self, _t, lambda n, a: fai_avatar(n, a), ultimo_accesso)
+        self.fin_rubrica.connect("destroy", lambda _w: setattr(self, "fin_rubrica", None))
+
+    def scrivi_a(self, addr, nome):
+        """Dalla rubrica: aggiunge (se serve) e apre la conversazione."""
+        if addr not in self.contatti:
+            self._cmd("ADD %s %s" % (addr, nome.encode().hex()))
+            self._upsert_contatto(addr, nome)
+        riga = self.righe_contatto.get(addr)
+        if riga is not None:
+            self.lista.select_row(riga)
+
+    def _richiesta_rubrica(self):
+        """Il mini menu chiede di aprire la rubrica (file-segnale), o lo chiede l'avvio."""
+        segnale = Path.home() / ".nyctalus-chat" / "apri-rubrica"
+        if segnale.exists() or os.environ.pop("NYCTALUS_APRI_RUBRICA", ""):
+            segnale.unlink(missing_ok=True)
+            self.apri_rubrica()
+        return True
+
     def _dialogo_aggiungi(self, preimposta="", info=""):
         d = Gtk.Dialog(title=_t("chat.aggiungi"), transient_for=self, modal=True)
         d.add_button(_t("chat.annulla"), Gtk.ResponseType.CANCEL)

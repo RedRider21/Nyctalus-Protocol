@@ -24,6 +24,7 @@ Installato, è nel menu delle applicazioni come **«Nyctalus»** (o col comando 
 | 🦇 logo | apre la guida online (sito del progetto) nel browser |
 | Browser | apre il browser Nyctalus |
 | Chat | apre la chat (motore + servizio `.nyct` + finestra) |
+| Rubrica | apre la **rubrica della rete** in una finestra a sé (avvia la chat se è chiusa): iscriversi, chi è in linea, aggiungere e scrivere (`MANUALE-CHAT.md` §3-bis) |
 | File | gestore dei file: in arrivo |
 | ☰ | impostazioni (anche con il **tasto destro** sul pannello) |
 

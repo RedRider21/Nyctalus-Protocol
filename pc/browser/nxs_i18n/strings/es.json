@@ -1616,5 +1616,22 @@
   "chat.visto_data": "última vez el {data} a las {ora}",
   "chat.emoji": "Emojis",
   "chat.emoji_recenti": "Recientes",
-  "chat.emoji_vuoto": "Los emojis que usas aparecen aquí."
+  "chat.emoji_vuoto": "Los emojis que usas aparecen aquí.",
+  "lau.rubrica": "Network directory",
+  "chat.rub.titolo": "Network directory",
+  "chat.rub.aggiorna": "Refresh",
+  "chat.rub.attendi": "Asking the directory…",
+  "chat.rub.sei_iscritto": "You are listed as “{nome}”.",
+  "chat.rub.cambia_nome": "Change name",
+  "chat.rub.cancellati": "Leave",
+  "chat.rub.nota": "Join with a name: people on this network will see it and can write to you. You can leave at any time.",
+  "chat.rub.iscriviti": "Join",
+  "chat.rub.vuoto": "Nobody else has joined yet.",
+  "chat.rub.scrivi": "Write",
+  "chat.rub.aggiungi": "Add",
+  "chat.rub.nome_titolo": "Name in the directory",
+  "chat.rub.nome_nota": "Visible to people on this network.",
+  "chat.rub.salva": "Save",
+  "chat.rub.nessuna": "This network has no directory",
+  "chat.rub.nessuna_corpo": "Networks that offer one (e.g. the home network) include it in their network code: nyctalus-rete importa CODE."
 }

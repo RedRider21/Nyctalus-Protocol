@@ -223,6 +223,9 @@ class Rete:
             esci("URL non valido: deve iniziare con http:// o https://")
         a = self.autorita()
         cfg = {"v": 1, "nome": a["nome"], "directory_url": url, "authority": a["pubblica"]}
+        f_rub = self.dir / "rubrica" / "indirizzo"
+        if f_rub.exists():
+            cfg["rubrica"] = f_rub.read_text().strip()     # la rubrica di questa rete (se accesa)
         cod = PREFISSO + base64.urlsafe_b64encode(json.dumps(cfg, separators=(",", ":")).encode()).decode().rstrip("=")
         self.f_codice.write_text(cod + "\n")
         (self.dir / "nyctalus-rete.json").write_text(json.dumps(cfg, indent=1) + "\n")
@@ -247,7 +250,50 @@ def leggi_codice(testo):
     url, aut = str(cfg.get("directory_url", "")), str(cfg.get("authority", ""))
     if not re.match(r"^https?://[^\s]+$", url) or not re.fullmatch(r"[0-9a-f]{64}", aut):
         raise ValueError("codice di rete incompleto")
-    return {"nome": str(cfg.get("nome") or "Rete Nyctalus")[:60], "directory_url": url, "authority": aut}
+    rete = {"nome": str(cfg.get("nome") or "Rete Nyctalus")[:60], "directory_url": url, "authority": aut}
+    if re.fullmatch(r"[a-z2-7]{56}\.nyct", str(cfg.get("rubrica", ""))):
+        rete["rubrica"] = cfg["rubrica"]
+    return rete
+
+
+# --- rubrica della rete ------------------------------------------------------------------
+PORTE_RUBRICA = [int(x) for x in os.environ.get("NYCTALUS_RUBRICA_PORTE", "18810,18811,18812,18813").split(",")]
+
+
+def avvia_rubrica(rete, autorita_pub, proc):
+    """Accende la rubrica della rete: un motore della chat con la sua identità, il suo
+    collegamento alla rete, il suo servizio .nyct e il programma rubrica.py. Restituisce
+    l'indirizzo .nyct della rubrica (scritto anche in rubrica/indirizzo per il codice)."""
+    b = binario()
+    d = privata(rete.dir / "rubrica")
+    backend, controllo, socks, monitor = PORTE_RUBRICA
+    segreto = base64.b16encode(os.urandom(16)).decode().lower()
+    env = dict(os.environ, NYCTALUS_CHAT_TOKEN=segreto)
+    log = lambda n: open(d / (n + ".log"), "ab")     # noqa: E731
+    p = subprocess.Popen([b, "chat", "--data", str(d), "--backend", "127.0.0.1:%d" % backend,
+                          "--control", "127.0.0.1:%d" % controllo, "--socks", "127.0.0.1:%d" % socks,
+                          "--max-file", "1"], stdout=subprocess.PIPE, stderr=log("chat"), env=env,
+                         text=True, start_new_session=True)
+    proc.append(p)
+    indirizzo = None
+    for riga in p.stdout:
+        m = re.search(r"[a-z2-7]{56}\.nyct", riga)
+        if m:
+            indirizzo = m.group(0)
+            break
+    if not indirizzo:
+        esci("la rubrica non parte (vedi %s)" % (d / "chat.log"))
+    (d / "indirizzo").write_text(indirizzo + "\n")
+    proc.append(subprocess.Popen([b, "start", "--directory", str(rete.f_elenco), "--authority", autorita_pub,
+                                  "--socks", "127.0.0.1:%d" % socks, "--control", "127.0.0.1:%d" % monitor],
+                                 stdout=log("rete"), stderr=subprocess.STDOUT, start_new_session=True))
+    proc.append(subprocess.Popen([b, "site", "--backend", "127.0.0.1:%d" % backend, "--identity", str(d / "identita"),
+                                  "--directory", str(rete.f_elenco), "--authority", autorita_pub, "--hops", "3"],
+                                 stdout=log("servizio"), stderr=subprocess.STDOUT, start_new_session=True))
+    proc.append(subprocess.Popen([sys.executable, str(Path(__file__).resolve().parent / "rubrica.py"), str(d),
+                                  str(controllo)], stdout=log("rubrica"), stderr=subprocess.STDOUT, env=env,
+                                 start_new_session=True))
+    return indirizzo
 
 
 def importa(argomento):
@@ -258,16 +304,24 @@ def importa(argomento):
         except Exception:     # noqa: BLE001
             cfg = {}
     if argomento == "--prova":
-        for k in ("directory_url", "authority", "nome_rete"):
+        for k in ("directory_url", "authority", "nome_rete", "rubrica"):
             cfg.pop(k, None)
         msg = "questo PC torna alla rete di prova locale"
     else:
-        testo = Path(argomento).read_text() if Path(argomento).is_file() else argomento
+        testo = argomento
+        if not argomento.strip().startswith(PREFISSO):      # un file che contiene il codice
+            try:
+                testo = Path(argomento).read_text()
+            except OSError:
+                pass
         try:
             rete = leggi_codice(testo)
         except ValueError as e:
             esci(str(e))
         cfg.update({"directory_url": rete["directory_url"], "authority": rete["authority"], "nome_rete": rete["nome"]})
+        cfg.pop("rubrica", None)
+        if rete.get("rubrica"):
+            cfg["rubrica"] = rete["rubrica"]
         reti = [r for r in reti_salvate(cfg) if not (r["authority"] == rete["authority"]
                                                     and r["directory_url"] == rete["directory_url"])]
         cfg["reti"] = (reti + [rete])[-20:]
@@ -314,6 +368,9 @@ def usa_rete(n):
         esci("rete %d non trovata (nyctalus-rete reti per l'elenco)" % n)
     r = reti[n]
     cfg.update({"directory_url": r["directory_url"], "authority": r["authority"], "nome_rete": r["nome"], "reti": reti})
+    cfg.pop("rubrica", None)
+    if r.get("rubrica"):
+        cfg["rubrica"] = r["rubrica"]
     CONFIG_CLIENT.write_text(json.dumps(cfg, indent=1) + "\n")
     ok("questo PC ora usa la rete «%s» (impronta %s)" % (r["nome"], impronta(r["authority"])))
     print("  Chiudi e riapri chat e browser perché la usino.")
@@ -421,6 +478,7 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui):
             righe.append(f.read_text().strip())
         r.salva_nodi(righe)
         r.firma()
+        avvia_rubrica(r, r.autorita()["pubblica"], proc)      # chi usa la rete vede chi c'è
         srv, url = servitore(r, porta_web, ip)
         cod = r.codice(url)
         imp = impronta(r.autorita()["pubblica"])

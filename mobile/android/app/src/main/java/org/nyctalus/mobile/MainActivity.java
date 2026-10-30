@@ -77,6 +77,7 @@ public class MainActivity extends Activity {
     private TextView stato;
     private String segreto;
     private boolean caricata = false, pronto = false, entraAppenaPronto = false, inPausa = false;
+    private boolean apriRubrica = false;   // entrando, la chat si apre sulla rubrica della rete
     private View pulsanteEntra;      // la casella «Chat»: si accende quando Nyctalus è pronto
     private int portaSocksBrowser = 18733;
     private TextView rigaRete;      // «🔗 Rete: …» — vale per TUTTA l'app (chat, browser, file)
@@ -279,9 +280,10 @@ public class MainActivity extends Activity {
         // le funzioni, come il mini menu del PC: una fila di pulsanti piatti, tutti uguali
         LinearLayout griglia = riga();
         ((LinearLayout.LayoutParams) griglia.getLayoutParams()).topMargin = dp(20);
-        pulsanteEntra = casella("💬", "Chat", v -> entra());
+        pulsanteEntra = casella("💬", "Chat", v -> { apriRubrica = false; entra(); });
         pulsanteEntra.setAlpha(pronto ? 1f : 0.55f);
         griglia.addView(pulsanteEntra);
+        griglia.addView(casella("👥", "Rubrica", v -> { apriRubrica = true; entra(); }));
         griglia.addView(casella("🌐", "Browser", v -> sceltaBrowser()));
         View file = casella("📁", "File", v -> avviso(
                 "Il gestore dei file (invio e ricezione attraverso Nyctalus) è in preparazione."));
@@ -905,7 +907,14 @@ public class MainActivity extends Activity {
     }
 
     private void mostraWeb() {
-        if (web != null) { runOnUiThread(() -> setContentView(web)); return; }   // già pronta: si rientra
+        if (web != null) {                                                     // già pronta: si rientra
+            runOnUiThread(() -> {
+                setContentView(web);
+                if (apriRubrica) web.evaluateJavascript("window.nyctApriRubrica && nyctApriRubrica()", null);
+                apriRubrica = false;
+            });
+            return;
+        }
         if (caricata) return;
         caricata = true;
         runOnUiThread(() -> {
@@ -947,7 +956,8 @@ public class MainActivity extends Activity {
                 }
             });
             setContentView(web);
-            web.loadUrl(URL_BASE + "/?t=" + segreto);
+            web.loadUrl(URL_BASE + "/?t=" + segreto + (apriRubrica ? "#rubrica" : ""));
+            apriRubrica = false;
         });
     }
 

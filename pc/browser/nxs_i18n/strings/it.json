@@ -1616,5 +1616,22 @@
   "chat.visto_data": "ultimo accesso il {data} alle {ora}",
   "chat.emoji": "Emoticon",
   "chat.emoji_recenti": "Recenti",
-  "chat.emoji_vuoto": "Le emoticon che usi compaiono qui."
+  "chat.emoji_vuoto": "Le emoticon che usi compaiono qui.",
+  "lau.rubrica": "Rubrica della rete",
+  "chat.rub.titolo": "Rubrica della rete",
+  "chat.rub.aggiorna": "Aggiorna l'elenco",
+  "chat.rub.attendi": "Chiedo l'elenco alla rubrica…",
+  "chat.rub.sei_iscritto": "Sei in rubrica come «{nome}».",
+  "chat.rub.cambia_nome": "Cambia nome",
+  "chat.rub.cancellati": "Cancellati",
+  "chat.rub.nota": "Iscriviti con un nome: chi usa questa rete vedrà il tuo nome e potrà scriverti. Puoi cancellarti quando vuoi.",
+  "chat.rub.iscriviti": "Iscriviti",
+  "chat.rub.vuoto": "Ancora nessun altro iscritto.",
+  "chat.rub.scrivi": "Scrivi",
+  "chat.rub.aggiungi": "Aggiungi",
+  "chat.rub.nome_titolo": "Nome in rubrica",
+  "chat.rub.nome_nota": "Sarà visibile a chi usa questa rete.",
+  "chat.rub.salva": "Salva",
+  "chat.rub.nessuna": "Questa rete non ha una rubrica",
+  "chat.rub.nessuna_corpo": "La rubrica c'è nelle reti che la offrono (per esempio la rete di casa). Collegati con il codice di rete: nyctalus-rete importa CODICE."
 }

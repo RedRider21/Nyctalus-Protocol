@@ -90,7 +90,10 @@ def leggi_codice(testo):
     url, aut = str(cfg.get("directory_url", "")), str(cfg.get("authority", ""))
     if not re.match(r"^https?://[^\s]+$", url) or not re.fullmatch(r"[0-9a-f]{64}", aut):
         raise ValueError("codice di rete incompleto")
-    return {"nome": str(cfg.get("nome") or "Rete Nyctalus")[:60], "directory_url": url, "authority": aut}
+    rete = {"nome": str(cfg.get("nome") or "Rete Nyctalus")[:60], "directory_url": url, "authority": aut}
+    if re.fullmatch(r"[a-z2-7]{56}\.nyct", str(cfg.get("rubrica", ""))):
+        rete["rubrica"] = cfg["rubrica"]                # la rubrica della rete
+    return rete
 
 
 PORTE = dict(PORTE_DEFAULT, **{k: v for k, v in leggi_config().get("porte", {}).items() if k in PORTE_DEFAULT})
@@ -712,6 +715,7 @@ async def instrada(req, lettore, scrittore):
                  "attiva": condivisa and r["authority"] == cfg["authority"] and r["directory_url"] == cfg["directory_url"]}
                 for r in reti_salvate(cfg)]
         return await rispondi_json(scrittore, {"condivisa": condivisa, "nome": cfg.get("nome_rete", ""),
+                                               "rubrica": cfg.get("rubrica", "") if condivisa else "",
                                                "url": cfg.get("directory_url", "") if condivisa else "",
                                                "impronta": impronta_rete(cfg["authority"]) if condivisa else "",
                                                "reti": reti})
@@ -794,18 +798,24 @@ async def cambia_rete(lettore, scrittore, req):
             if via["authority"] == cfg.get("authority") and via["directory_url"] == cfg.get("directory_url"):
                 dati = {"prova": True}
         if dati.get("prova"):
-            for k in ("directory_url", "authority", "nome_rete"):
+            for k in ("directory_url", "authority", "nome_rete", "rubrica"):
                 cfg.pop(k, None)
             nome = ""
         elif "usa" in dati:
             rete = reti[int(dati["usa"])]
             cfg.update(directory_url=rete["directory_url"], authority=rete["authority"], nome_rete=rete["nome"])
+            cfg.pop("rubrica", None)
+            if rete.get("rubrica"):
+                cfg["rubrica"] = rete["rubrica"]
             nome = rete["nome"]
         elif "togli" in dati:
             nome = cfg.get("nome_rete", "")
         else:
             rete = leggi_codice(dati.get("codice", ""))
             cfg.update(directory_url=rete["directory_url"], authority=rete["authority"], nome_rete=rete["nome"])
+            cfg.pop("rubrica", None)
+            if rete.get("rubrica"):
+                cfg["rubrica"] = rete["rubrica"]
             nome = rete["nome"]
             reti = [r for r in reti if not (r["authority"] == rete["authority"] and r["directory_url"] == rete["directory_url"])]
             reti.append(rete)

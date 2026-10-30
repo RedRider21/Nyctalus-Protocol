@@ -23,7 +23,7 @@ Sito e manuale: **https://redrider21.github.io/Nyctalus-Protocol/**
 
 <p align="center">
   <img src="documenti/immagini/pc-launcher.png" alt="Mini menu da desktop"><br>
-  <sub><b>Mini menu da desktop</b>: logo (sito e manuali), Browser, Chat, File (in arrivo), impostazioni</sub>
+  <sub><b>Mini menu da desktop</b>: logo (sito e manuali), Browser, Chat, Rubrica, File (in arrivo), impostazioni</sub>
 </p>
 
 <p align="center">
@@ -50,7 +50,7 @@ Sito e manuale: **https://redrider21.github.io/Nyctalus-Protocol/**
 <td align="center"><img src="documenti/immagini/tel-impostazioni.png" width="200" alt="Impostazioni"><br><sub>Temi, rete, codice di rete</sub></td>
 </tr></table>
 
-<sub>L'app Android (APK) avvia Nyctalus in Termux e apre Chat, Browser (con modalità 🦇 Nyctalus) e manuali. Come installare: <a href="documenti/manuali/SCELTE-OPERATIVE.md">Scelte operative</a>.</sub>
+<sub>L'app Android (APK) avvia Nyctalus in Termux e apre Chat, Rubrica della rete, Browser (con modalità 🦇 Nyctalus) e manuali. Come installare: <a href="documenti/manuali/SCELTE-OPERATIVE.md">Scelte operative</a>.</sub>
 
 ---
 
@@ -182,8 +182,8 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 
 - **Rumore di fondo (cover traffic) + celle a lunghezza fissa**: tutti i quadri del circuito e del rendezvous hanno la **stessa taglia** (1372 byte); celle fittizie opzionali (`--cover`) in **entrambe le direzioni** mascherano *quando* si invia.
 - **Browser dedicato** (clone di Firefox): parte normale, lo **stealth** (rete Nyctalus) si accende col bottone e **avvia da solo i servizi** (rete pubblica configurata o rete di prova locale); i `.nyct` attivano lo stealth automaticamente.
-- **Chat `.nyct`** (senza server, senza metadati): ogni utente è un indirizzo `.nyct` (il suo Contact ID); motore in Rust (`nyctalus chat`) + finestra GTK. Oltre all'anonimato di rete e alla cifratura E2E, **chi scrive è autenticato crittograficamente** (un secondo handshake Noise NK dentro il tunnel: solo chi possiede la chiave privata dell'indirizzo dichiarato lo conclude), quindi nessuno può spacciarsi per un contatto. Grafica in **stile Telegram** con temi e sfondi, **menu del tasto destro** e **allegati di ogni tipo** come in Telegram (foto e video a tutta bolla, audio ascoltabile nella chat, documenti, **foto e video dalla webcam**; verifica d'integrità BLAKE3, foto inviate senza EXIF). Guida: [MANUALE-CHAT.md](documenti/MANUALE-CHAT.md).
-- **Mini-launcher da desktop**: pannello senza bordi, trascinabile, con bottoni quadrati (orizzontale/verticale), **dimensione regolabile** e **tasti rapidi configurabili**, per lanciare Browser e Chat. Client grafici (browser, launcher, chat) in **Python+GTK3**; il motore resta in **Rust**.
+- **Chat `.nyct`** (senza server, senza metadati): ogni utente è un indirizzo `.nyct` (il suo Contact ID); motore in Rust (`nyctalus chat`) + finestra GTK. Oltre all'anonimato di rete e alla cifratura E2E, **chi scrive è autenticato crittograficamente** (un secondo handshake Noise NK dentro il tunnel: solo chi possiede la chiave privata dell'indirizzo dichiarato lo conclude), quindi nessuno può spacciarsi per un contatto. Grafica in **stile Telegram** con temi e sfondi, **menu del tasto destro** e **allegati di ogni tipo** come in Telegram (foto e video a tutta bolla, audio ascoltabile nella chat, documenti, **foto e video dalla webcam**; verifica d'integrità BLAKE3, foto inviate senza EXIF), **emoticon**, **in linea / ultimo accesso** e la **rubrica della rete** 👥 (ci si iscrive con un nome, si vede chi usa la rete e chi è in linea, si aggiunge con un clic). Guida: [MANUALE-CHAT.md](documenti/MANUALE-CHAT.md).
+- **Mini-launcher da desktop**: pannello senza bordi, trascinabile, con bottoni quadrati (orizzontale/verticale), **dimensione regolabile** e **tasti rapidi configurabili**, per lanciare Browser, Chat e Rubrica. Client grafici (browser, launcher, chat) in **Python+GTK3**; il motore resta in **Rust**.
 
 **In arrivo** (vedi [STATO.md](documenti/STATO.md)): taratura del rumore di fondo su rete reale, rotazione dei guard e ripresa dai circuiti caduti, descrittore firmato dei servizi, simulazione contro Tor con **Shadow**, gestore file grafico, **versione mobile** (PWA servita dal motore in Termux, browser mobile dal clone Chrome di NovaOS).
 

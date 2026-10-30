@@ -122,7 +122,10 @@ const S = {
 function connetti() {
   const ws = new WebSocket("ws://" + location.host + "/ws");
   S.ws = ws;
-  ws.onopen = () => { manda("WHOAMI"); manda("LIST"); manda("SUB"); };
+  ws.onopen = () => {
+    manda("WHOAMI"); manda("LIST"); manda("SUB");
+    if (S.elencoInAttesa) { S.elencoInAttesa = false; chiediRubrica({ op: "elenco" }); }
+  };
   ws.onmessage = (ev) => ev.data.split("\n").forEach((r) => r && evento(r));
   ws.onclose = () => { S.ws = null; setTimeout(controllaServizi, 1500); };
 }
@@ -143,6 +146,7 @@ async function controllaServizi() {
     testo.textContent = info.stato === "errore" ? "⚠ " + info.dettaglio : "Nyctalus è fermo";
   }
   if (info.indirizzo && !S.ws) connetti();
+  if (info.stato === "pronto" && info.rete !== S.reteVista) { S.reteVista = info.rete; leggiRubrica(); }
   if (info.stato !== "pronto") setTimeout(controllaServizi, 1500);
 }
 const post = (url) => fetch(url, { method: "POST" }).then((r) => r.json()).catch(() => ({}));
@@ -157,9 +161,89 @@ function erroreLeggibile(d) {
 const postJson = (url, dati) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
   body: JSON.stringify(dati) }).then((r) => r.json()).catch(() => ({ errore: "servizio non raggiungibile" }));
 
+// ---------- rubrica della rete -----------------------------------------------------------
+// L'elenco di chi usa questa rete (chi si è iscritto con un nome). Le richieste sono messaggi
+// della chat cifrata verso la rubrica, che quindi sa con certezza chi scrive.
+S.rubrica = ""; S.rubricaDati = null;
+// l'app Android apre la chat direttamente sulla rubrica (riquadro «Rubrica» dell'avvio)
+S.rubricaAppena = location.hash === "#rubrica";
+window.nyctApriRubrica = () => { if (S.rubrica) apriRubrica(); else S.rubricaAppena = true; };
+async function leggiRubrica() {
+  try {
+    const r = await (await fetch("/api/rete")).json();
+    S.rubrica = r.rubrica || "";
+  } catch (e) { S.rubrica = ""; }
+  $("btn-rubrica").classList.toggle("nascosto", !S.rubrica);
+  if (S.rubrica && localStorage.getItem("nyct-iscritto-" + S.rubrica)) chiediRubrica({ op: "ci_sono" });
+  if (S.rubricaAppena) { S.rubricaAppena = false; apriRubrica(); }
+}
+function chiediRubrica(obj) { if (S.rubrica) manda("SEND " + S.rubrica + " " + inHex(JSON.stringify(obj))); }
+setInterval(() => { if (S.rubrica && localStorage.getItem("nyct-iscritto-" + S.rubrica)) chiediRubrica({ op: "ci_sono" }); }, 180000);
+
+function rispostaRubrica(testo) {
+  manda("CLEAR " + S.rubrica);                     // niente cronologia con la rubrica
+  let r; try { r = JSON.parse(testo); } catch (e) { return; }
+  const chiave = "nyct-iscritto-" + S.rubrica;
+  if (r.op === "iscritto") { try { localStorage.setItem(chiave, r.nome); } catch (e) { /* niente */ } toast("Iscritto come «" + r.nome + "»"); chiediRubrica({ op: "elenco" }); }
+  else if (r.op === "cancellato") { try { localStorage.removeItem(chiave); } catch (e) { /* niente */ } toast("Non sei più in rubrica"); chiediRubrica({ op: "elenco" }); }
+  else if (r.op === "elenco") { S.rubricaDati = r; if (!r.iscritto) { try { localStorage.removeItem(chiave); } catch (e) { /* niente */ } } disegnaRubrica(); }
+  else if (r.op === "errore") toast("Rubrica: " + r.msg);
+}
+
+function apriRubrica() {
+  if (!S.rubrica) return toast("Questa rete non ha una rubrica");
+  S.rubricaDati = null;
+  apriFoglio("👥 Rubrica della rete", [el("div", "rubrica", "Chiedo l'elenco alla rubrica…")]);
+  if (S.ws && S.ws.readyState === 1) chiediRubrica({ op: "elenco" });
+  else S.elencoInAttesa = true;                    // si chiede appena la chat è collegata
+}
+function disegnaRubrica() {
+  const box = document.querySelector("#foglio .rubrica");
+  if (!box || !S.rubricaDati) return;
+  box.textContent = "";
+  const r = S.rubricaDati, mioNome = localStorage.getItem("nyct-iscritto-" + S.rubrica);
+  const io = el("div", "rubrica-io");
+  if (r.iscritto) {
+    io.append(el("div", "", "Sei in rubrica come «" + (mioNome || "…") + "»."));
+    const b = el("div", "pulsanti");
+    const cambia = el("button", "", "✏️ Cambia nome"), via = el("button", "pericoloso", "Cancellati");
+    cambia.onclick = () => chiediNome(mioNome || ""); via.onclick = () => chiediRubrica({ op: "cancella" });
+    b.append(cambia, via); io.appendChild(b);
+  } else {
+    io.append(el("div", "nota-rete", "Iscriviti con un nome: chi usa questa rete vedrà il tuo nome e potrà scriverti. Puoi cancellarti quando vuoi."));
+    const b = el("button", "primario", "Iscriviti"); b.onclick = () => chiediNome("");
+    io.appendChild(b);
+  }
+  box.appendChild(io);
+  const altri = r.utenti.filter((u) => u.a !== S.me);
+  if (!altri.length) box.appendChild(el("div", "nota-rete", "Ancora nessun altro iscritto."));
+  altri.forEach((u) => {
+    const riga = el("button", "rubrica-utente");
+    const av = avatar(u.a, u.n, true); if (u.on) av.classList.add("online");
+    const testo = el("div", "testo");
+    testo.append(el("div", "nome", u.n), el("div", "sotto", u.on ? "in linea" : ultimoAccesso(u.v)));
+    riga.append(av, testo, el("span", "freccia", S.contatti.has(u.a) ? "💬" : "＋"));
+    riga.onclick = () => {
+      chiudiFoglio();
+      if (!S.contatti.has(u.a)) { manda("ADD " + u.a + " " + inHex(u.n)); aggiornaContatto(u.a, u.n); manda("LIST"); }
+      apriChat(u.a);
+    };
+    box.appendChild(riga);
+  });
+}
+function chiediNome(attuale) {
+  const campo = el("input"); campo.type = "text"; campo.maxLength = 40; campo.value = attuale; campo.placeholder = "Il tuo nome";
+  dialogo("Nome in rubrica", [el("p", "", "Sarà visibile a chi usa questa rete."), campo],
+    [["Annulla", null], ["Salva", () => { const n = campo.value.trim(); if (n) chiediRubrica({ op: "iscrivi", nome: n }); }, "primario"]]);
+  setTimeout(() => campo.focus(), 50);
+}
+$("btn-rubrica").onclick = apriRubrica;
+
 // ---------- eventi dal motore ----------------------------------------------------------
 function evento(riga) {
   const p = riga.split(" "), t = p[0];
+  // la rubrica della rete parla con noi in JSON: non è una conversazione, non va in cronologia
+  if (S.rubrica && p[1] === S.rubrica) { if (t === "MSG") rispostaRubrica(daHex(p[3])); return; }
   if (t === "ME") { S.me = p[1]; $("mio-id-valore").textContent = S.me; }
   else if (t === "C") { aggiornaContatto(p[1], p[2] ? daHex(p[2]) : p[1].slice(0, 10)); cacheContatto(p[1]); }
   else if (t === "L") { anteprima(p[1], p.slice(2).join(" ")); cacheContatto(p[1]); }

@@ -78,7 +78,13 @@ Fa tutto da solo su questo PC:
 - accende i nodi (porte UDP 4701-4704);
 - firma l'elenco con una rete separata, «Rete di casa», che non tocca la tua rete vera;
 - lo pubblica su `http://IP-DEL-PC:18800/`: aprila sul telefono e tocca **📲 Collega l'app Nyctalus**. L'app si apre e chiede conferma mostrando nome e impronta della rete (il pulsante usa il link «intent» di Chrome; sotto c'è un link di riserva per gli altri browser). C'è anche **📋 Copia il codice**, da importare con «🔗 Rete» nell'app;
+- accende la **rubrica della rete** e mette il suo indirizzo nel codice: chi importa il
+  codice trova nella chat il pulsante **👥** per iscriversi e vedere chi usa la rete;
 - importa il codice anche su questo PC.
+
+La rubrica tiene i suoi dati in `~/.nyctalus-rete/casa/rubrica/` (`rubrica.json`, privato,
+600): solo l'elenco degli iscritti, mai la cronologia. Porte locali (solo 127.0.0.1)
+18810-18813, cambiabili con `NYCTALUS_RUBRICA_PORTE=a,b,c,d`.
 
 Lascia la finestra aperta; `Ctrl-C` ferma tutto.
 
