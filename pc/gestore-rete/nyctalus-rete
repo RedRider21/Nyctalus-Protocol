@@ -76,6 +76,41 @@ def scrivi_privato(percorso, testo):
     os.chmod(percorso, 0o600)
 
 
+def impronta(pubblica):
+    """Impronta breve della rete (dalla chiave pubblica dell'autorità): si confronta a occhio
+    fra PC e telefono per essere sicuri di aver importato il codice giusto."""
+    h = __import__("hashlib").sha256(bytes.fromhex(pubblica)).hexdigest()[:8].upper()
+    return h[:4] + "-" + h[4:]
+
+
+def firewall_chiuso():
+    """Il firewall del PC scarta le richieste dalla rete locale? (ufw o firewalld attivi)"""
+    try:
+        conf = Path("/etc/ufw/ufw.conf").read_text()
+        if re.search(r"^ENABLED=yes", conf, re.M):
+            return "ufw"
+    except OSError:
+        pass
+    if shutil.which("firewall-cmd") and subprocess.run(["firewall-cmd", "--state"], capture_output=True).returncode == 0:
+        return "firewalld"
+    return None
+
+
+def avviso_firewall(porta_web, porte_nodi, ip):
+    fw = firewall_chiuso()
+    if not fw:
+        return
+    rete = ".".join(ip.split(".")[:3]) + ".0/24"
+    print("\n⚠️  Il firewall del PC (%s) è attivo: il telefono non riuscirà a collegarsi (la pagina resta a caricare)." % fw)
+    print("   Apri le porte solo verso la tua rete di casa, una volta sola:")
+    if fw == "ufw":
+        print("     sudo ufw allow from %s to any port %d proto tcp" % (rete, porta_web))
+        print("     sudo ufw allow from %s to any port %d:%d proto udp" % (rete, porte_nodi[0], porte_nodi[-1]))
+    else:
+        print("     sudo firewall-cmd --add-port=%d/tcp --add-port=%d-%d/udp" % (porta_web, porte_nodi[0], porte_nodi[-1]))
+    print("   (per richiuderle: le stesse righe con «delete allow» al posto di «allow»)")
+
+
 def ip_locale():
     """L'indirizzo di questo PC nella rete locale (nessun pacchetto viene spedito)."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -309,6 +344,9 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui):
         print("Sul TELEFONO (stessa Wi-Fi): apri nel browser  http://%s:%d/  e copia il codice," % (ip, porta_web))
         print("oppure copia da qui il codice di rete:\n\n  %s\n" % cod)
         print("Nell'app: ⚙ Impostazioni → Rete condivisa → Importa codice.")
+        print("Impronta della rete: %s  ← il telefono deve mostrare la STESSA dopo l'importazione"
+              % impronta(r.autorita()["pubblica"]))
+        avviso_firewall(porta_web, [porta_base + i for i in range(nodi)], ip)
         if importa_qui:
             importa(cod)
         print("\nLascia questa finestra aperta: Ctrl-C ferma la rete di casa.")
@@ -388,6 +426,8 @@ def principale(args):
         cod = rete.codice(url)
         ok("codice di rete (dallo ai client: contiene solo la chiave PUBBLICA e l'URL):")
         print("\n  %s\n" % cod)
+        print("  Impronta della rete: %s (i client la vedono dopo l'importazione: deve essere uguale)"
+              % impronta(rete.autorita()["pubblica"]))
         print("  Salvato anche in %s" % rete.f_codice)
     elif cmd == "servi":
         porta = int(opzione(args, "--porta", "18800"))

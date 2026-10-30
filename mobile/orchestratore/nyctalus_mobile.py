@@ -708,8 +708,13 @@ async def instrada(req, lettore, scrittore):
             return await cambia_rete(lettore, scrittore, req)
         cfg = leggi_config()
         condivisa = bool(cfg.get("directory_url") and cfg.get("authority"))
+        imp = ""
+        if condivisa:
+            h = hashlib.sha256(bytes.fromhex(cfg["authority"])).hexdigest()[:8].upper()
+            imp = h[:4] + "-" + h[4:]          # uguale a quella che stampa nyctalus-rete sul PC
         return await rispondi_json(scrittore, {"condivisa": condivisa, "nome": cfg.get("nome_rete", ""),
-                                               "url": cfg.get("directory_url", "") if condivisa else ""})
+                                               "url": cfg.get("directory_url", "") if condivisa else "",
+                                               "impronta": imp})
     if p == "/api/servizi/avvia" and req.metodo == "POST":
         SERVIZI.avvia()
         return await rispondi_json(scrittore, SERVIZI.info())

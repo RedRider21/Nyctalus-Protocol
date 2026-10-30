@@ -42,13 +42,23 @@ final class ProxyNyctalus {
         if (Build.VERSION.SDK_INT < 28) throw new IllegalStateException("serve Android 9 o successivo");
         ClassLoader cl = WebView.getWebViewClassLoader();
         Class<?> glue = Class.forName("org.chromium.support_lib_glue.SupportLibReflectionUtil", false, cl);
-        // Si presenta la «libreria» (un oggetto che risponde a getSupportedFeatures), come
-        // androidx: createWebViewProviderFactory(InvocationHandler) — senza questo argomento
-        // la chiamata non esiste e tutto sembrava «non supportato».
-        Method crea = glue.getDeclaredMethod("createWebViewProviderFactory", InvocationHandler.class);
+        // La forma di createWebViewProviderFactory cambia fra le versioni della WebView:
+        // con un argomento (la «libreria», un oggetto che risponde a getSupportedFeatures,
+        // come fa androidx) o senza. Invece di indovinare, si guarda quale c'è.
         InvocationHandler libreria = (proxy, m, argomenti) ->
                 "getSupportedFeatures".equals(m.getName()) ? NOSTRE.clone() : null;
-        fabbrica = (InvocationHandler) crea.invoke(null, libreria);
+        StringBuilder trovati = new StringBuilder();
+        for (Method m : glue.getDeclaredMethods()) {
+            trovati.append(m.getName()).append(java.util.Arrays.toString(m.getParameterTypes())).append(' ');
+            if (!"createWebViewProviderFactory".equals(m.getName())) continue;
+            m.setAccessible(true);
+            Class<?>[] tipi = m.getParameterTypes();
+            Object f = null;
+            if (tipi.length == 0) f = m.invoke(null);
+            else if (tipi.length == 1 && tipi[0].isAssignableFrom(InvocationHandler.class)) f = m.invoke(null, libreria);
+            if (f instanceof InvocationHandler) { fabbrica = (InvocationHandler) f; break; }
+        }
+        if (fabbrica == null) throw new NoSuchMethodException("createWebViewProviderFactory non trovato; metodi: " + trovati);
         return fabbrica;
     }
 

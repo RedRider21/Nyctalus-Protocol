@@ -79,8 +79,22 @@ Fa tutto da solo su questo PC:
 - lo pubblica su `http://IP-DEL-PC:18800/`, una pagina col codice da aprire sul telefono;
 - importa il codice anche su questo PC.
 
-Lascia la finestra aperta; `Ctrl-C` ferma tutto. Se il telefono non si collega, il
-firewall del PC blocca le porte: apri TCP 18800 e UDP 4701-4704 verso la rete locale.
+Lascia la finestra aperta; `Ctrl-C` ferma tutto.
+
+**Se il telefono resta a caricare la pagina, è il firewall del PC.** Su Ubuntu ufw scarta in
+silenzio ciò che arriva dalla rete locale. `casa` se ne accorge e stampa i comandi; con la
+rete `192.168.1.x` sono:
+```sh
+sudo ufw allow from 192.168.1.0/24 to any port 18800 proto tcp
+sudo ufw allow from 192.168.1.0/24 to any port 4701:4704 proto udp
+```
+Valgono solo per la rete di casa. Per richiuderle usa le stesse righe con `delete allow`.
+
+**Impronta della rete:** `casa` e `codice` stampano un'impronta breve (es. `92E6-9EB0`). Dopo
+l'importazione il telefono la mostra in ⚙ → Rete condivisa: deve essere **la stessa**. Così
+sei sicuro che nessuno sulla Wi-Fi ti abbia passato un codice diverso. La pagina è in
+`http` perché è solo nella rete locale e distribuisce dati pubblici; l'elenco dei nodi è
+firmato, e l'impronta protegge il codice.
 
 ## 7. Sicurezza in tre righe
 - La chiave **segreta** non esce mai da `~/.nyctalus-rete`: il codice e l'elenco

@@ -125,7 +125,9 @@ Note:
 - **Rete condivisa**: **📥 Importa codice** → incolla il codice `NYCT1:…` che ti ha dato
   chi gestisce la rete (per la rete di casa lo mostra il PC: apri nel browser del
   telefono l'indirizzo `http://IP-DEL-PC:18800/` e copialo). La rete si riavvia da sola
-  su quella condivisa; **↩ Rete di prova** torna indietro.
+  su quella condivisa; **↩ Rete di prova** torna indietro. Dopo l'importazione compare
+  l'**impronta della rete** (es. `92E6-9EB0`): deve essere uguale a quella mostrata da chi
+  gestisce la rete (per la rete di casa, il PC).
 - **Rete Nyctalus**: una spia dice in che fase sei. **● verde** = attiva (e se è la rete
   di prova locale o quella condivisa); **● gialla lampeggiante** = in avvio o in arresto;
   **○ grigia** = ferma; **● rossa** = errore. **▶ Avvia rete** si può toccare solo a

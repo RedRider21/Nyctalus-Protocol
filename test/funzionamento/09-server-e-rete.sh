@@ -97,6 +97,9 @@ for _ in $(seq 1 120); do api GET /api/stato | grep -q '"stato": "pronto", .*"mo
 api GET /api/stato | grep -q '"modalita": "pubblica"' && api GET /api/stato | grep -q '"rete": "Rete di prova del test"' \
   && pass "telefono: servizi riavviati sulla rete condivisa «Rete di prova del test»" || fail "telefono: $(api GET /api/stato) $(tail -2 "$TMP/o.log")"
 api GET /api/rete | grep -q '"condivisa": true' && pass "telefono: /api/rete dice «condivisa»" || fail "/api/rete"
+IMP_PC=$(G codice --url http://127.0.0.1:19975/directory.txt 2>&1 | grep -oE 'Impronta della rete: [0-9A-F]{4}-[0-9A-F]{4}' | awk '{print $4}')
+IMP_TEL=$(api GET /api/rete | grep -oE '"impronta": "[0-9A-F]{4}-[0-9A-F]{4}"' | cut -d'"' -f4)
+[ -n "$IMP_PC" ] && [ "$IMP_PC" = "$IMP_TEL" ] && pass "stessa impronta della rete su PC e telefono ($IMP_PC): il codice importato è quello giusto" || fail "impronta PC «$IMP_PC» ≠ telefono «$IMP_TEL»"
 [ "$(stat -c %a "$H/.nyctalus-mobile/config.json")" = 600 ] && grep -q '"porte"' "$H/.nyctalus-mobile/config.json" \
   && pass "telefono: configurazione privata e porte personalizzate conservate" || fail "config del telefono"
 

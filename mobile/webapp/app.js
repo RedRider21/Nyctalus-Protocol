@@ -743,7 +743,8 @@ function impostazioni() {
   const bi = el("button", "", "📥 Importa codice"), bp = el("button", "nascosto", "↩ Rete di prova");
   condivisa.append(bi, bp);
   fetch("/api/rete").then((r) => r.json()).then((x) => {
-    quale.textContent = x.condivisa ? "Collegato a «" + (x.nome || "rete condivisa") + "»."
+    quale.textContent = x.condivisa ? "Collegato a «" + (x.nome || "rete condivisa") + "» · impronta " + x.impronta
+        + " (deve essere uguale a quella mostrata da chi gestisce la rete)."
       : "Ora usi la rete di prova: solo su questo dispositivo. Con un codice di rete parli con gli altri.";
     bp.classList.toggle("nascosto", !x.condivisa);
   }).catch(() => {});

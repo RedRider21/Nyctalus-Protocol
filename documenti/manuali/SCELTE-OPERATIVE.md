@@ -43,7 +43,12 @@ Limite: non puoi parlare con nessun altro dispositivo.
    codice. Poi nell'app vai in ⚙ Impostazioni → **Rete condivisa** → **Importa codice**.
 4. Sul PC la chat usa già la rete di casa: `casa` importa il codice anche sul PC.
    Chiudi e riapri la chat.
-5. Scambiatevi i Contact ID e scrivetevi.
+5. Controlla che l'**impronta della rete** mostrata dal PC sia uguale a quella in ⚙ → Rete
+   condivisa sul telefono.
+6. Scambiatevi i Contact ID e scrivetevi.
+
+Se il telefono resta a caricare la pagina, il firewall del PC blocca le porte: `casa` stampa
+i due comandi `sudo ufw allow …` da dare una volta sola (vedi `MANUALE-GESTORE-RETE.md` §6).
 
 Limiti: funziona solo in casa e solo finché la finestra di `casa` resta aperta.
 `Ctrl-C` la ferma. Per tornare alla rete di prova: PC `nyctalus-rete importa --prova`,
