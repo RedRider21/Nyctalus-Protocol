@@ -47,7 +47,7 @@ PAGINA = """<!doctype html>
 <button class="torna-su" id="torna-su" type="button" title="Torna su" aria-label="Torna su">↑</button>
 <script>
 (function(){{var b=document.getElementById('torna-su');
-function aggiorna(){{b.classList.toggle('visibile',window.scrollY>500);}}
+function aggiorna(){{b.classList.toggle('visibile',window.scrollY>250);}}
 window.addEventListener('scroll',aggiorna,{{passive:true}});aggiorna();
 b.addEventListener('click',function(){{window.scrollTo({{top:0,behavior:'smooth'}});}});}})();
 </script>
