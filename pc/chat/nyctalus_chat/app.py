@@ -473,6 +473,17 @@ def senza_metadati(percorso, mime):
         return percorso
 
 
+def errore_leggibile(dettaglio):
+    """L'errore del motore detto in modo comprensibile, col dettaglio tecnico in coda."""
+    d = dettaglio.strip()
+    if "SOCKS" in d or "servizio" in d or "service" in d:
+        return ("Messaggio non consegnato: il contatto non è raggiungibile adesso (non è in linea, "
+                "oppure non è nella stessa rete Nyctalus). Riprova quando risulta in linea. [%s]" % d)
+    if "rete" in d.lower() or "network" in d.lower():
+        return "Messaggio non consegnato: la rete Nyctalus non è pronta. [%s]" % d
+    return "Operazione non riuscita: %s" % d
+
+
 def riga_dell_evento(elenco, ev):
     """La riga dell'elenco su cui si è cliccato.
 
@@ -886,6 +897,9 @@ class Chat(Gtk.Window):
                 self._avviso_inline("⚠ " + _da_hex(parti[3]))
         elif tipo == "NEW" and len(parti) >= 2:
             self._contatto_sconosciuto(parti[1])
+        elif tipo == "ERR":
+            # un invio non riuscito (prima veniva ignorato: «non succede niente»)
+            self._avviso_inline("⚠ " + errore_leggibile(riga[4:]))
         return False
 
     # --- contatti --------------------------------------------------------------

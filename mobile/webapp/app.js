@@ -146,6 +146,14 @@ async function controllaServizi() {
   if (info.stato !== "pronto") setTimeout(controllaServizi, 1500);
 }
 const post = (url) => fetch(url, { method: "POST" }).then((r) => r.json()).catch(() => ({}));
+// l'errore del motore detto in modo comprensibile (stesso testo della chat del PC)
+function erroreLeggibile(d) {
+  d = (d || "").trim();
+  if (/SOCKS|servizio|service/.test(d)) return "⚠ Messaggio non consegnato: il contatto non è raggiungibile adesso "
+    + "(non è in linea, oppure non è nella stessa rete Nyctalus). Riprova quando risulta in linea. [" + d + "]";
+  if (/rete|network/i.test(d)) return "⚠ Messaggio non consegnato: la rete Nyctalus non è pronta. [" + d + "]";
+  return "⚠ Operazione non riuscita: " + d;
+}
 const postJson = (url, dati) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" },
   body: JSON.stringify(dati) }).then((r) => r.json()).catch(() => ({ errore: "servizio non raggiungibile" }));
 
@@ -171,7 +179,7 @@ function evento(riga) {
   else if (t === "PROG" && p[1] === S.attivo) avanzamento(p[2], p[3], +p[4], +p[5], p[6] || "", p[7] ? daHex(p[7]) : "");
   else if (t === "FERR" && p[1] === S.attivo) { togliTrasferimento(p[2]); avviso("⚠ " + daHex(p[3])); }
   else if (t === "NEW" && !S.contatti.has(p[1])) dialogoAggiungi(p[1], "Qualcuno ti ha scritto da un indirizzo che non è in rubrica. Aggiungilo per rispondere.");
-  else if (t === "ERR") toast(riga.slice(4));
+  else if (t === "ERR") avviso(erroreLeggibile(riga.slice(4)));
   else if (t === "ENDC") {   // collegamento diretto: #chat=<indirizzo> apre quella conversazione
     const m = location.hash.match(/chat=([a-z2-7]{56}\.nyct)/);
     if (m && S.contatti.has(m[1]) && !S.attivo) apriChat(m[1]);
