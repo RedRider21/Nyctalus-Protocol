@@ -12,6 +12,8 @@ A="$ROOT/mobile/android/app/src/main"; M="$A/AndroidManifest.xml"; J="$A/java/or
 grep -q 'allowBackup="false"' "$M" && pass "backup dell'app disattivato (il segreto non finisce nei backup)" || fail "allowBackup"
 grep -A3 'FotoProvider' "$M" | grep -q 'exported="false"' && pass "FotoProvider non esportato (scatti privati)" || fail "FotoProvider esportato"
 grep -q 'SecureRandom' "$J" && pass "segreto generato con SecureRandom" || fail "segreto non casuale"
+grep -q 'android:scheme="nyctalus"' "$M" && grep -q 'Collegarsi alla rete «' "$J" && grep -q 'Impronta della rete: " + impronta' "$J" \
+  && pass "«Collega l'app» (nyctalus://rete): conferma con nome e impronta prima di cambiare rete" || fail "collegamento senza conferma"
 grep -q '"127.0.0.1".equals(u.getHost())' "$J" && pass "solo il servizio locale resta nell'app" || fail "navigazione non limitata"
 python3 - "$ROOT/mobile/android/app/src/main/java/org/nyctalus/mobile/FotoProvider.java" <<'PY' && pass "FotoProvider rifiuta nomi con percorsi (../)" || fail "FotoProvider: nomi non filtrati"
 import re, sys

@@ -39,8 +39,9 @@ Limite: non puoi parlare con nessun altro dispositivo.
 1. Sul PC installa il **gestore** (`./installa.sh` → 2).
 2. Sul PC: `nyctalus-rete casa` e lascia la finestra aperta. Stampa un codice `NYCT1:…`
    e un indirizzo `http://IP-DEL-PC:18800/`.
-3. Sul telefono, sulla **stessa Wi-Fi**: apri quell'indirizzo nel browser e copia il
-   codice. Poi nella schermata iniziale dell'app tocca **🔗 Rete** → **Importa codice di rete** (vale per chat, browser e file).
+3. Sul telefono, sulla **stessa Wi-Fi**, apri nel browser `http://IP-DEL-PC:18800/` e tocca
+   **📲 Collega l'app Nyctalus**: l'app si apre e chiede conferma con nome e impronta della rete.
+   In alternativa copia il codice e importalo dalla riga **🔗 Rete** della schermata iniziale.
 4. Sul PC la chat usa già la rete di casa: `casa` importa il codice anche sul PC.
    Chiudi e riapri la chat.
 5. Controlla che l'**impronta della rete** mostrata dal PC sia uguale a quella in ⚙ → Rete

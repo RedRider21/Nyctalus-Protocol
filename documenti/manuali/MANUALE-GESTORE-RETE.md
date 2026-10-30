@@ -76,7 +76,7 @@ nyctalus-rete casa            # opzioni: --nodi 4  --ip IP  --porta 18800  --por
 Fa tutto da solo su questo PC:
 - accende i nodi (porte UDP 4701-4704);
 - firma l'elenco con una rete separata, «Rete di casa», che non tocca la tua rete vera;
-- lo pubblica su `http://IP-DEL-PC:18800/`, una pagina col codice da aprire sul telefono;
+- lo pubblica su `http://IP-DEL-PC:18800/`: aprila sul telefono e tocca **📲 Collega l'app Nyctalus**. L'app si apre e chiede conferma mostrando nome e impronta della rete; c'è anche il codice da copiare a mano;
 - importa il codice anche su questo PC.
 
 Lascia la finestra aperta; `Ctrl-C` ferma tutto.

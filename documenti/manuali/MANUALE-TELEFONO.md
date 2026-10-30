@@ -30,7 +30,9 @@ Sotto la scritta di stato c'è la riga **🔗 Rete**: dice a quale rete sei coll
 («prova locale», oppure il nome della rete e la sua impronta). **La rete è una sola per
 tutta l'app**: chat, browser in modalità 🦇 e, quando ci sarà, il gestore dei file. Toccala
 per **importare un codice di rete** (se ne hai già copiato uno, è proposto da solo) o per
-tornare alla rete di prova.
+tornare alla rete di prova. Più comodo ancora: dalla pagina della rete (per la rete di casa
+`http://IP-DEL-PC:18800/`) tocca **📲 Collega l'app Nyctalus**. L'app si apre e chiede conferma
+con nome e impronta della rete; l'esito resta a schermo.
 
 Il **tasto indietro** riporta sempre al punto di partenza: dalla conversazione all'elenco
 delle chat, dall'elenco a questa schermata; dal browser, chiudendo l'ultima scheda. La chat

@@ -102,6 +102,62 @@ public class MainActivity extends Activity {
         } else {
             new Thread(this::avvia).start();
         }
+        gestisciCollegamento(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        gestisciCollegamento(intent);
+    }
+
+    /** Codice arrivato da un link nyctalus://rete?codice=… , da applicare a rete pronta. */
+    private String codiceInAttesa;
+
+    /**
+     * «📲 Collega l'app»: un link nyctalus://rete?codice=NYCT1:… (pagina della rete di
+     * casa sul PC, o un messaggio). Si mostrano nome e impronta della rete e si chiede
+     * conferma: un sito qualunque non può cambiare rete senza che l'utente lo veda.
+     */
+    private void gestisciCollegamento(Intent intent) {
+        if (intent == null || intent.getData() == null || !"nyctalus".equals(intent.getData().getScheme())) return;
+        final String cod = intent.getData().getQueryParameter("codice");
+        intent.setData(null);
+        String nome, impronta;
+        try {
+            if (cod == null || !cod.startsWith("NYCT1:")) throw new IllegalArgumentException("non è un codice di rete");
+            String b = cod.substring(6);
+            org.json.JSONObject o = new org.json.JSONObject(new String(
+                    android.util.Base64.decode(b, android.util.Base64.URL_SAFE | android.util.Base64.NO_PADDING
+                            | android.util.Base64.NO_WRAP), "UTF-8"));
+            nome = o.optString("nome", "Rete Nyctalus");
+            byte[] chiave = new byte[32];
+            String a = o.getString("authority");
+            for (int i = 0; i < 32; i++) chiave[i] = (byte) Integer.parseInt(a.substring(2 * i, 2 * i + 2), 16);
+            byte[] h = java.security.MessageDigest.getInstance("SHA-256").digest(chiave);
+            String x = String.format("%02X%02X%02X%02X", h[0], h[1], h[2], h[3]);
+            impronta = x.substring(0, 4) + "-" + x.substring(4);
+        } catch (Exception e) {
+            new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                    .setTitle("Codice di rete non valido").setMessage(String.valueOf(e.getMessage()))
+                    .setPositiveButton("OK", null).show();
+            return;
+        }
+        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle("Collegarsi alla rete «" + nome + "»?")
+                .setMessage("Impronta della rete: " + impronta + "\n\nControlla che sia UGUALE a quella mostrata "
+                        + "da chi gestisce la rete (per la rete di casa: sul PC). Chat, browser e file useranno questa rete.")
+                .setPositiveButton("Collegati", (d, k) -> {
+                    String json;
+                    try { json = new org.json.JSONObject().put("codice", cod).toString(); } catch (Exception e) { return; }
+                    if (pronto) cambiaRete(json);
+                    else {
+                        codiceInAttesa = json;
+                        avviso("Mi collego appena Nyctalus è pronto…");
+                    }
+                })
+                .setNegativeButton("Annulla", null).show();
     }
 
     @Override
@@ -380,6 +436,11 @@ public class MainActivity extends Activity {
 
     private void servizioPronto() {
         pronto = true;
+        if (codiceInAttesa != null) {
+            String json = codiceInAttesa;
+            codiceInAttesa = null;
+            cambiaRete(json);
+        }
         aggiornaRete();
         imposta("● Nyctalus è pronto — scegli cosa aprire");
         runOnUiThread(() -> { if (pulsanteEntra != null) pulsanteEntra.animate().alpha(1f).setDuration(300).start(); });
@@ -641,7 +702,9 @@ public class MainActivity extends Activity {
             } catch (Exception e) {
                 msg = "✗ Nyctalus non risponde: " + e.getMessage();
             }
-            avviso(msg);
+            final String m = msg;
+            runOnUiThread(() -> new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                    .setTitle("Rete Nyctalus").setMessage(m).setPositiveButton("OK", null).show());
             dormi(1500);
             aggiornaRete();
         }).start();
