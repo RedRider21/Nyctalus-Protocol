@@ -33,6 +33,8 @@ Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 Limite: non puoi parlare con nessun altro dispositivo.
 
 ## Scenario B · Rete di casa: telefono ↔ PC (nessun server)
+
+> Versione in una pagina: **`GUIDA-RETE-DI-CASA.md`**.
 **Cosa:** il PC fa da nodi e da gestore sulla Wi-Fi di casa; il telefono si collega.
 È il modo per provare **due identità diverse** tra loro.
 

@@ -98,18 +98,34 @@ def firewall_chiuso():
     return None
 
 
-def avviso_firewall(porta_web, porte_nodi, ip):
+def apri_firewall(porta_web, porte_nodi, ip, cartella):
+    """Se il firewall blocca il telefono, si offre di aprire le porte SOLO verso la rete
+    di casa (chiede conferma e la password di sudo). Ricorda di averlo fatto."""
     fw = firewall_chiuso()
     if not fw:
         return
     rete = ".".join(ip.split(".")[:3]) + ".0/24"
-    print("\n⚠️  Il firewall del PC (%s) è attivo: il telefono non riuscirà a collegarsi (la pagina resta a caricare)." % fw)
-    print("   Apri le porte solo verso la tua rete di casa, una volta sola:")
     if fw == "ufw":
-        print("     sudo ufw allow from %s to any port %d proto tcp" % (rete, porta_web))
-        print("     sudo ufw allow from %s to any port %d:%d proto udp" % (rete, porte_nodi[0], porte_nodi[-1]))
+        comandi = [["ufw", "allow", "from", rete, "to", "any", "port", str(porta_web), "proto", "tcp"],
+                   ["ufw", "allow", "from", rete, "to", "any", "port", "%d:%d" % (porte_nodi[0], porte_nodi[-1]), "proto", "udp"]]
     else:
-        print("     sudo firewall-cmd --add-port=%d/tcp --add-port=%d-%d/udp" % (porta_web, porte_nodi[0], porte_nodi[-1]))
+        comandi = [["firewall-cmd", "--add-port=%d/tcp" % porta_web, "--add-port=%d-%d/udp" % (porte_nodi[0], porte_nodi[-1])]]
+    segno = cartella / "firewall-aperto"
+    firma = "%s %s %d %d-%d" % (fw, rete, porta_web, porte_nodi[0], porte_nodi[-1])
+    if segno.exists() and segno.read_text().strip() == firma:
+        return                                        # già aperte l'altra volta
+    print("\n⚠️  Il firewall del PC (%s) blocca il telefono (la pagina resterebbe a caricare)." % fw)
+    if sys.stdin.isatty():
+        r = input("   Apro le porte solo verso la rete di casa %s? Serve la password. [S/n] " % rete).strip().lower()
+        if r in ("", "s", "si", "sì", "y", "yes"):
+            if all(subprocess.run(["sudo"] + c).returncode == 0 for c in comandi):
+                segno.write_text(firma + "\n")
+                ok("porte aperte per la rete di casa")
+                return
+            print("   Non riuscito.")
+    print("   Aprile tu, una volta sola:")
+    for c in comandi:
+        print("     sudo " + " ".join(c))
     print("   (per richiuderle: le stesse righe con «delete allow» al posto di «allow»)")
 
 
@@ -361,15 +377,17 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui):
         r.firma()
         srv, url = servitore(r, porta_web, ip)
         cod = r.codice(url)
-        print("\n🦇 Rete di casa attiva su questo PC (%s) — %d nodi\n" % (ip, nodi))
-        print("Sul TELEFONO (stessa Wi-Fi): apri nel browser  http://%s:%d/  e copia il codice," % (ip, porta_web))
-        print("oppure copia da qui il codice di rete:\n\n  %s\n" % cod)
-        print("Nell'app: ⚙ Impostazioni → Rete condivisa → Importa codice.")
-        print("Impronta della rete: %s  ← il telefono deve mostrare la STESSA dopo l'importazione"
-              % impronta(r.autorita()["pubblica"]))
-        avviso_firewall(porta_web, [porta_base + i for i in range(nodi)], ip)
+        imp = impronta(r.autorita()["pubblica"])
+        apri_firewall(porta_web, [porta_base + i for i in range(nodi)], ip, r.dir)
         if importa_qui:
             importa(cod)
+        print("\n🦇 Rete di casa attiva su questo PC (%s) · %d nodi · impronta %s\n" % (ip, nodi, imp))
+        print("Ora:")
+        print("  1. Sul telefono (stessa Wi-Fi), nel browser:  http://%s:%d/" % (ip, porta_web))
+        print("     e tocca «📲 Collega l'app Nyctalus». Conferma nell'app: impronta %s." % imp)
+        print("  2. Sul PC apri la Chat (mini menu → Chat); sul telefono apri la Chat.")
+        print("  3. Scambiatevi i Contact ID e aggiungetevi:  + sul PC, ✏️ sul telefono.")
+        print("\n  Codice di rete, se serve a mano: %s" % cod)
         print("\nLascia questa finestra aperta: Ctrl-C ferma la rete di casa.")
         aspetta_ctrl_c()
         srv.shutdown()
