@@ -1613,5 +1613,8 @@
   "chat.gal.vuoto": "Keine aktuellen Fotos oder Videos in Bilder, Videos und Downloads. Nutze «Weitere Fotos» oder «Datei».",
   "chat.visto_oggi": "zuletzt heute um {ora}",
   "chat.visto_ieri": "zuletzt gestern um {ora}",
-  "chat.visto_data": "zuletzt am {data} um {ora}"
+  "chat.visto_data": "zuletzt am {data} um {ora}",
+  "chat.emoji": "Emojis",
+  "chat.emoji_recenti": "Zuletzt",
+  "chat.emoji_vuoto": "Deine benutzten Emojis erscheinen hier."
 }

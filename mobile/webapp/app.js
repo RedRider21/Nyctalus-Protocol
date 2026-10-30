@@ -428,6 +428,38 @@ function inviaTesto() {
 // (prima casella = fotocamera), selezione numerata, schede in basso, «Invia (N)».
 $("btn-allega").onclick = apriGalleria;
 
+// ---------- emoticon: pannello con categorie e «recenti»; inserisce dove si sta scrivendo -----
+function recentiEmoji() { try { return JSON.parse(localStorage.getItem("nyct-emoji") || "[]"); } catch (e) { return []; } }
+function inserisciEmoji(e) {
+  const t = $("testo"), i = t.selectionStart ?? t.value.length, f = t.selectionEnd ?? i;
+  t.value = t.value.slice(0, i) + e + t.value.slice(f);
+  t.selectionStart = t.selectionEnd = i + e.length;
+  t.dispatchEvent(new Event("input"));
+  const r = [e, ...recentiEmoji().filter((x) => x !== e)].slice(0, 32);
+  try { localStorage.setItem("nyct-emoji", JSON.stringify(r)); } catch (err) { /* niente */ }
+}
+function apriEmoji() {
+  const schede = el("div", "schede-emoji"), griglia = el("div", "griglia-emoji"), titolo = el("div", "titolo-emoji");
+  const categorie = [["🕘", "Recenti", recentiEmoji()], ...EMOJI];
+  const mostra = (k) => {
+    griglia.textContent = "";
+    titolo.textContent = categorie[k][1];
+    const elenco = categorie[k][2];
+    if (!elenco.length) griglia.appendChild(el("div", "vuoto-emoji", "Le emoticon che usi compaiono qui."));
+    elenco.forEach((e) => { const b = el("button", "", e); b.onclick = () => inserisciEmoji(e); griglia.appendChild(b); });
+    schede.querySelectorAll("button").forEach((b, i) => b.classList.toggle("sel", i === k));
+    griglia.scrollTop = 0;
+  };
+  categorie.forEach(([icona, nome], k) => { const b = el("button", "", icona); b.title = nome; b.onclick = () => mostra(k); schede.appendChild(b); });
+  apriFoglio(null, [schede, titolo, griglia]);
+  $("foglio").classList.add("emoji");
+  // come Telegram: il pannello sta SOPRA il campo di scrittura, che resta visibile
+  $("foglio").style.bottom = $("compositore").offsetHeight + "px";
+  $("velo").classList.add("trasparente");
+  mostra(recentiEmoji().length ? 0 : 1);
+}
+$("btn-emoji").onclick = apriEmoji;
+
 async function apriGalleria() {
   if (!S.attivo) return;
   const sel = [];                                   // voci selezionate, nell'ordine di tocco
@@ -622,7 +654,8 @@ function apriFoglio(titolo, contenuto) {
 function chiudiFoglio() {
   const f = $("foglio");
   if (f._chiudi) { f._chiudi(); f._chiudi = null; }     // ferma il caricamento delle miniature
-  $("velo").classList.add("nascosto"); f.classList.add("nascosto"); f.classList.remove("galleria");
+  $("velo").classList.add("nascosto"); $("velo").classList.remove("trasparente");
+  f.classList.add("nascosto"); f.classList.remove("galleria"); f.classList.remove("emoji"); f.style.bottom = "";
 }
 $("velo").onclick = chiudiFoglio;
 const voce = (ic, testo, az, pericolosa) => {

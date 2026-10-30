@@ -314,6 +314,17 @@ dialog list row:selected { background-color: rgba(@RGB@,0.22); }
 .graffetta { background: transparent; border: none; box-shadow: none; color: @MUTED@;
              font-size: 18px; padding: 4px 6px; min-width: 0; }
 .graffetta:hover { color: @ACCENT@; }
+popover.pannello-emoji, popover.pannello-emoji > contents, .pannello-emoji scrolledwindow, .pannello-emoji flowbox,
+.pannello-emoji flowboxchild { background-color: @PANEL@; color: @TEXT@; }
+popover.pannello-emoji { border: 1px solid rgba(@RGB@,0.18); border-radius: 12px; }
+.pannello-emoji button { color: @TEXT@; }
+.pannello-emoji .schede-emoji { border-bottom: 1px solid rgba(@RGB@,0.14); }
+.pannello-emoji .schede-emoji button { font-size: 17px; padding: 4px 8px; border-radius: 0; opacity: 0.5;
+    border-bottom: 2px solid transparent; }
+.pannello-emoji .schede-emoji button.sel { opacity: 1; border-bottom-color: @ACCENT@; }
+.pannello-emoji .titolo-emoji { font-size: 11px; font-weight: bold; color: @MUTED@; margin: 8px 6px 2px; }
+.pannello-emoji button.emoji { font-size: 22px; padding: 2px; min-width: 38px; min-height: 36px; border-radius: 10px; }
+.pannello-emoji button.emoji:hover { background: alpha(@ACCENT@, 0.16); }
 .anteprima { border-radius: 12px; }
 .icona-file { font-size: 28px; padding: 2px 4px; }
 .nome-file { font-weight: 600; }
@@ -763,6 +774,11 @@ class Chat(Gtk.Window):
         graffetta.set_tooltip_text(_t("chat.allega"))
         graffetta.connect("clicked", self._menu_graffetta)
         self.comp.pack_start(graffetta, False, False, 0)
+        faccina = Gtk.Button(label="😊")
+        faccina.get_style_context().add_class("graffetta")
+        faccina.set_tooltip_text(_t("chat.emoji"))
+        faccina.connect("clicked", self._pannello_emoji)
+        self.comp.pack_start(faccina, False, False, 0)
         self.ingresso = Gtk.Entry()
         self.ingresso.set_placeholder_text(_t("chat.scrivi"))
         self.ingresso.connect("activate", lambda _w: self._invia())
@@ -1468,6 +1484,69 @@ class Chat(Gtk.Window):
         except Exception:        # noqa: BLE001
             pass
 
+    # --- emoticon: pannello con categorie e «recenti» --------------------------------
+    def _pannello_emoji(self, bottone):
+        from . import emoji
+        pop = Gtk.Popover.new(bottone)
+        pop.get_style_context().add_class("pannello-emoji")
+        scatola = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        scatola.set_border_width(6)
+        schede = Gtk.Box(spacing=0)
+        schede.get_style_context().add_class("schede-emoji")
+        titolo = Gtk.Label(xalign=0)
+        titolo.get_style_context().add_class("titolo-emoji")
+        bottoni_schede = []
+        scorri = Gtk.ScrolledWindow()
+        scorri.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scorri.set_size_request(400, 280)
+        griglia = Gtk.FlowBox()
+        griglia.set_selection_mode(Gtk.SelectionMode.NONE)
+        griglia.set_max_children_per_line(10)
+        griglia.set_min_children_per_line(8)
+        griglia.set_homogeneous(True)
+        scorri.add(griglia)
+        categorie = [("🕘", _t("chat.emoji_recenti"), list(self.ui.get("emoji_recenti", [])))] + emoji.elenco()
+
+        def inserisci(_b, e):
+            pos = self.ingresso.get_position()
+            self.ingresso.insert_text(e, pos)
+            self.ingresso.set_position(pos + len(e))
+            recenti = [e] + [x for x in self.ui.get("emoji_recenti", []) if x != e]
+            self.ui["emoji_recenti"] = recenti[:32]
+            self._salva_ui()
+
+        def mostra(_b, k):
+            titolo.set_text(categorie[k][1].upper())
+            for i, bs in enumerate(bottoni_schede):
+                ctx = bs.get_style_context()
+                ctx.add_class("sel") if i == k else ctx.remove_class("sel")
+            for figlio in griglia.get_children():
+                griglia.remove(figlio)
+            for e in categorie[k][2]:
+                b = Gtk.Button(label=e)
+                b.get_style_context().add_class("emoji")
+                b.set_relief(Gtk.ReliefStyle.NONE)
+                b.connect("clicked", inserisci, e)
+                griglia.add(b)
+            if not categorie[k][2]:
+                griglia.add(Gtk.Label(label=_t("chat.emoji_vuoto")))
+            griglia.show_all()
+
+        for k, (icona, nome, _e) in enumerate(categorie):
+            b = Gtk.Button(label=icona)
+            b.set_relief(Gtk.ReliefStyle.NONE)
+            b.set_tooltip_text(nome)
+            b.connect("clicked", mostra, k)
+            schede.pack_start(b, False, False, 0)
+            bottoni_schede.append(b)
+        scatola.pack_start(schede, False, False, 0)
+        scatola.pack_start(titolo, False, False, 0)
+        scatola.pack_start(scorri, True, True, 0)
+        pop.add(scatola)
+        mostra(None, 0 if self.ui.get("emoji_recenti") else 1)
+        pop.show_all()
+        pop.popup()
+
     # --- graffetta: menu, scelta, fotocamera, anteprima --------------------------
     def _menu_graffetta(self, _bottone):
         """📎 → il selettore di Telegram: griglia delle foto/video recenti con
@@ -1608,6 +1687,8 @@ class Chat(Gtk.Window):
             d["non_letti"] = {}
         if not isinstance(d.get("fissati"), list):
             d["fissati"] = []
+        if not isinstance(d.get("emoji_recenti"), list):
+            d["emoji_recenti"] = []
         return d
 
     def _salva_ui(self):

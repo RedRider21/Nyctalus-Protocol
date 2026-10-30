@@ -57,6 +57,10 @@ perché ti scrivano. Funziona come un numero di telefono o un indirizzo `.onion`
 3. Selezionalo nell'elenco a sinistra e scrivi nel campo in basso → **Invio** (o
    il bottone ➤).
 
+**Emoticon:** il pulsante **😊** accanto alla graffetta apre il pannello: categorie (faccine,
+gesti, cuori, animali, cibo, attività, viaggi, oggetti, simboli) e **🕘 Recenti**. Toccata
+un'emoticon, entra nel testo dove stai scrivendo; il campo di scrittura resta visibile.
+
 Il pallino/anello **verde** sull'avatar indica che il contatto è **in linea**. Non serve
 scriversi prima: all'avvio la chat «bussa» da sola ai contatti (e poi ogni tanto a chi non
 risponde, con pause crescenti fino a 10 minuti). Chi è acceso compare in linea entro pochi

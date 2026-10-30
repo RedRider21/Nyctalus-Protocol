@@ -1613,5 +1613,8 @@
   "chat.gal.vuoto": "Nessuna foto o video recente nelle cartelle Immagini, Video e Download. Usa «Altre foto» o «File».",
   "chat.visto_oggi": "ultimo accesso oggi alle {ora}",
   "chat.visto_ieri": "ultimo accesso ieri alle {ora}",
-  "chat.visto_data": "ultimo accesso il {data} alle {ora}"
+  "chat.visto_data": "ultimo accesso il {data} alle {ora}",
+  "chat.emoji": "Emoticon",
+  "chat.emoji_recenti": "Recenti",
+  "chat.emoji_vuoto": "Le emoticon che usi compaiono qui."
 }

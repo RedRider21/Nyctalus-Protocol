@@ -229,3 +229,26 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .invio-gal { display: flex; gap: 8px; padding: 10px 10px max(10px, env(safe-area-inset-bottom)); border-top: 1px solid rgba(var(--rgb), .12); }
 .invio-gal input { flex: 1; border: 0; border-radius: 20px; padding: 10px 16px; background: var(--bg); color: var(--testo); font-size: 15px; outline: none; }
 .invio-gal .invia-gal { border: 0; border-radius: 20px; padding: 0 18px; background: var(--invia); color: #fff; font-weight: 700; }
+
+/* emoticon */
+#foglio.emoji { height: min(50vh, 400px); display: flex; flex-direction: column; padding: 4px 0 6px; }
+.schede-emoji { display: flex; gap: 0; overflow-x: auto; padding: 0 6px; border-bottom: 1px solid rgba(var(--rgb), .14);
+  flex: none; scrollbar-width: none; }
+.schede-emoji::-webkit-scrollbar { display: none; }
+.schede-emoji button { border: 0; border-bottom: 2px solid transparent; background: transparent; font-size: 20px;
+  padding: 7px 9px 6px; opacity: .5; flex: none; transition: opacity .15s, border-color .15s; filter: grayscale(.35); }
+.schede-emoji button.sel { opacity: 1; border-bottom-color: var(--accento); filter: none; }
+.titolo-emoji { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--tenue);
+  padding: 9px 14px 2px; flex: none; }
+.griglia-emoji { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  gap: 2px; padding: 4px 8px 8px; align-content: start; }
+.schede-emoji button, .griglia-emoji button, .bolla, #testo {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif, "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji"; }
+.schede-emoji button, .griglia-emoji button { font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif; }
+.griglia-emoji button { border: 0; background: transparent; font-size: 28px; height: 46px; border-radius: 12px; cursor: pointer;
+  transition: transform .08s, background .12s; }
+.griglia-emoji button:hover { background: rgba(var(--rgb), .12); }
+.griglia-emoji button:active { transform: scale(1.25); background: rgba(var(--rgb), .18); }
+.vuoto-emoji { grid-column: 1 / -1; color: var(--tenue); font-size: 13px; padding: 12px; }
+#velo.trasparente { background: transparent; }
+#foglio.emoji { border-radius: 14px 14px 0 0; box-shadow: 0 -6px 18px rgba(0,0,0,.25); }
