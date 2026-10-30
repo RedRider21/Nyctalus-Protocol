@@ -87,7 +87,8 @@ firmato: anche se qualcuno lo alterasse, i client lo rifiuterebbero. Scegli tu d
 - Contiene solo <strong>nome, URL e chiave pubblica</strong>: puoi mandarlo per messaggio o mail.
 - <strong>Va rifatto solo se cambi l'URL.</strong> Aggiungere o togliere nodi non cambia il codice.
 - I client lo importano così:
-  - <strong>PC:</strong> <code>nyctalus-rete importa NYCT1:…</code>, poi chiudi e riapri chat e browser
+  - <strong>PC:</strong> <code>nyctalus-rete importa NYCT1:…</code>, poi chiudi e riapri chat e browser. Le reti
+    importate restano salvate: <code>nyctalus-rete reti</code> le elenca, <code>nyctalus-rete usa N</code> cambia rete
     (<code>nyctalus-rete importa --prova</code> per tornare alla rete di prova; <code>stato</code> per vedere
     la rete in uso);
   - <strong>telefono:</strong> nella schermata iniziale dell'app <strong>🔗 Rete</strong> → <strong>Importa codice di rete</strong>
@@ -99,7 +100,12 @@ firmato: anche se qualcuno lo alterasse, i client lo rifiuterebbero. Scegli tu d
 - accende i nodi (porte UDP 4701-4704);
 - firma l'elenco con una rete separata, «Rete di casa», che non tocca la tua rete vera;
 - lo pubblica su <code>http://IP-DEL-PC:18800/</code>: aprila sul telefono e tocca <strong>📲 Collega l'app Nyctalus</strong>. L'app si apre e chiede conferma mostrando nome e impronta della rete (il pulsante usa il link «intent» di Chrome; sotto c'è un link di riserva per gli altri browser). C'è anche <strong>📋 Copia il codice</strong>, da importare con «🔗 Rete» nell'app;
+- accende la <strong>rubrica della rete</strong> e mette il suo indirizzo nel codice: chi importa il
+  codice trova nella chat il pulsante <strong>👥</strong> per iscriversi e vedere chi usa la rete;
 - importa il codice anche su questo PC.</p>
+<p>La rubrica tiene i suoi dati in <code>~/.nyctalus-rete/casa/rubrica/</code> (<code>rubrica.json</code>, privato,
+600): solo l'elenco degli iscritti, mai la cronologia. Porte locali (solo 127.0.0.1)
+18810-18813, cambiabili con <code>NYCTALUS_RUBRICA_PORTE=a,b,c,d</code>.</p>
 <p>Lascia la finestra aperta; <code>Ctrl-C</code> ferma tutto.</p>
 <p><strong>Se il telefono resta a caricare la pagina, è il firewall del PC.</strong> Su Ubuntu ufw scarta in
 silenzio ciò che arriva dalla rete locale. <code>casa</code> se ne accorge e stampa i comandi; con la

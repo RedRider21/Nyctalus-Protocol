@@ -23,7 +23,8 @@
 <article>
 <h1 id="manuale-della-chat-nyct">Manuale della chat <code>.nyct</code></h1>
 <p>Una chat <strong>senza server e senza metadati</strong>: non esiste un'azienda in mezzo, nessun
-numero di telefono, nessuna rubrica globale. Ogni persona <strong>è</strong> un indirizzo
+numero di telefono, nessuna rubrica globale (solo, se il gestore la accende, la piccola
+<strong>rubrica della rete</strong> a cui ci si iscrive se si vuole: §3-bis). Ogni persona <strong>è</strong> un indirizzo
 <code>.nyct</code> — il suo <strong>Contact ID</strong> — e i messaggi viaggiano cifrati da un capo
 all'altro dentro la rete Nyctalus (circuito a più salti → punto d'incontro →
 servizio del destinatario). Modello simile a Ricochet/Cwtch.</p>
@@ -80,9 +81,29 @@ alle 18:05»</strong> (ieri / data). Lo calcola il tuo dispositivo da quando ha 
 l'ultima volta; non viene mandato a nessuno (file <code>~/.nyctalus-chat/visti</code>).
 La <strong>cronologia</strong> resta sul tuo computer (in <code>~/.nyctalus-chat/cronologia</code>) e si
 ricarica quando riapri una conversazione.</p>
-<p>Se qualcuno ti scrive da un indirizzo <strong>non in rubrica</strong>, la chat te lo segnala e
+<p>Se qualcuno ti scrive da un indirizzo <strong>che non è fra i tuoi contatti</strong>, la chat te lo segnala e
 ti propone di aggiungerlo per rispondere.</p>
 <hr />
+<h2 id="3-bis-la-rubrica-della-rete">3-bis. La rubrica della rete (👥)</h2>
+<p>Se la rete ha una <strong>rubrica</strong> (la rete di casa la accende da sola, §6 del manuale del
+gestore), nella chat compare il pulsante <strong>👥</strong>: sul PC in alto, accanto al nome; sul
+telefono in cima all'elenco delle chat. Si apre anche direttamente: dal <strong>menu del PC</strong>
+(bottone <strong>Rubrica</strong>) e dalla <strong>schermata d'avvio del telefono</strong> (riquadro <strong>👥 Rubrica</strong>).</p>
+<ul>
+<li><strong>Iscriviti</strong> con un nome (1-40 caratteri): chi usa la stessa rete lo vede e può scriverti.
+  <strong>✏️ Cambia nome</strong> e <strong>Cancellati</strong> sono sempre lì; cancellato, sparisci dall'elenco.</li>
+<li>L'elenco mostra gli iscritti: prima <strong>chi è in linea</strong> (anello verde), poi gli altri con
+  <strong>l'ultimo accesso</strong>. Accanto a ciascuno: <strong>＋ Aggiungi</strong> (entra fra i tuoi contatti e si
+  apre la conversazione) oppure <strong>💬 Scrivi</strong> se c'è già. <strong>⟳</strong> aggiorna.</li>
+<li>Iscriversi è <strong>facoltativo</strong>: senza iscrizione vedi l'elenco ma non ci compari.</li>
+<li>Come funziona: la rubrica è un «utente automatico» della rete, con un suo indirizzo
+  <code>.nyct</code> (scritto nel codice di rete). Le richieste sono messaggi della chat cifrata, che
+  ne autentica il mittente: nessuno può iscriversi a nome tuo. La rubrica conserva solo
+  l'elenco degli iscritti (nome, indirizzo), non la cronologia delle richieste.</li>
+<li>Per farsi vedere in linea, la chat di chi è iscritto saluta la rubrica ogni 3 minuti.</li>
+</ul>
+<p><strong>In arrivo:</strong> la <em>casella cifrata</em>, per lasciare un messaggio anche a chi non è in linea
+(lo riceve quando si collega).</p>
 <h2 id="4-allegati-file-foto-video-audio-documenti">4. Allegati: file, foto, video, audio, documenti</h2>
 <ul>
 <li><strong>Inviare</strong>: apri la chat con un contatto e premi la <strong>graffetta 📎</strong>. Si apre il
