@@ -163,8 +163,12 @@ function evento(riga) {
   if (t === "ME") { S.me = p[1]; $("mio-id-valore").textContent = S.me; }
   else if (t === "C") { aggiornaContatto(p[1], p[2] ? daHex(p[2]) : p[1].slice(0, 10)); cacheContatto(p[1]); }
   else if (t === "L") { anteprima(p[1], p.slice(2).join(" ")); cacheContatto(p[1]); }
-  else if (t === "ST") { p[2] === "1" ? S.online.add(p[1]) : S.online.delete(p[1]); disegnaElenco(); if (p[1] === S.attivo) testata(); }
-  else if (t === "V") { S.visti.set(p[1], +p[2]); if (p[1] === S.attivo) testata(); }
+  else if (t === "ST") {
+    p[2] === "1" ? S.online.add(p[1]) : S.online.delete(p[1]);
+    segnaVisto(p[1], Math.floor(Date.now() / 1000));      // anche se il motore è più vecchio
+    disegnaElenco(); if (p[1] === S.attivo) testata();
+  }
+  else if (t === "V") { segnaVisto(p[1], +p[2]); if (p[1] === S.attivo) testata(); }
   else if (t === "MSG" || t === "OUT") {
     const dir = t === "MSG" ? "in" : "out", grezza = dir + " " + p[2] + " " + p[3];
     anteprima(p[1], grezza, dir === "in"); cacheAggiungiRiga(p[1], grezza); cacheContatto(p[1]);
@@ -293,6 +297,15 @@ function chiudiChat() {
   $("benvenuto").classList.remove("nascosto"); disegnaElenco();
 }
 window.onpopstate = () => { if (S.attivo) chiudiChat(); };
+
+// ultimo accesso: dal motore (evento V) o, se il motore è più vecchio, da quando la web-app
+// stessa ha visto il contatto entrare/uscire; conservato in questo dispositivo
+try { JSON.parse(localStorage.getItem("nyct-visti") || "[]").forEach(([a, t]) => S.visti.set(a, t)); } catch (e) { /* niente */ }
+function segnaVisto(addr, ts) {
+  if (ts <= (S.visti.get(addr) || 0)) return;
+  S.visti.set(addr, ts);
+  try { localStorage.setItem("nyct-visti", JSON.stringify([...S.visti])); } catch (e) { /* niente */ }
+}
 
 // «ultimo accesso …» come Telegram: lo calcola il nostro dispositivo, non viene mandato a nessuno
 function ultimoAccesso(ts) {
