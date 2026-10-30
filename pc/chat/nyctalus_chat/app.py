@@ -473,6 +473,21 @@ def senza_metadati(percorso, mime):
         return percorso
 
 
+def ultimo_accesso(ts):
+    """«ultimo accesso oggi alle 18:05» (come Telegram), calcolato dal nostro motore."""
+    if not ts:
+        return _t("chat.offline")
+    import datetime as dt
+    d = dt.datetime.fromtimestamp(ts)
+    oggi = dt.date.today()
+    ora = d.strftime("%H:%M")
+    if d.date() == oggi:
+        return _t("chat.visto_oggi", ora=ora)
+    if d.date() == oggi - dt.timedelta(days=1):
+        return _t("chat.visto_ieri", ora=ora)
+    return _t("chat.visto_data", data=d.strftime("%d/%m"), ora=ora)
+
+
 def errore_leggibile(dettaglio):
     """L'errore del motore detto in modo comprensibile, col dettaglio tecnico in coda."""
     d = dettaglio.strip()
@@ -568,6 +583,7 @@ class Chat(Gtk.Window):
         self.me = ""
         self.contatti = {}       # addr -> nome
         self.online = set()
+        self.visti = {}          # ultimo accesso visto dal nostro motore (evento V)
         self.attivo = None
         self.righe_contatto = {} # addr -> Gtk.ListBoxRow
         self.sock = None
@@ -857,6 +873,10 @@ class Chat(Gtk.Window):
                 self.online.discard(addr)
             self._aggiorna_pallino(addr)
             if addr == self.attivo:
+                self._aggiorna_testa()
+        elif tipo == "V" and len(parti) >= 3:
+            self.visti[parti[1]] = int(parti[2])
+            if parti[1] == self.attivo:
                 self._aggiorna_testa()
         elif tipo == "MSG" and len(parti) >= 4:
             addr, ts, hx = parti[1], parti[2], parti[3]
@@ -1268,7 +1288,7 @@ class Chat(Gtk.Window):
         nome = self.contatti.get(self.attivo, self.attivo[:10])
         self.conv_nome.set_text(nome)
         on = self.attivo in self.online
-        self.conv_sotto.set_text(_t("chat.online") if on else _t("chat.offline"))
+        self.conv_sotto.set_text(_t("chat.online") if on else ultimo_accesso(self.visti.get(self.attivo)))
         ctx = self.conv_sotto.get_style_context()
         ctx.add_class("on") if on else ctx.remove_class("on")
         for f in self.testa_avatar_slot.get_children():

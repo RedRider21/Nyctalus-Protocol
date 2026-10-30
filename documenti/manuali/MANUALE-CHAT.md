@@ -57,7 +57,14 @@ perché ti scrivano. Funziona come un numero di telefono o un indirizzo `.onion`
 3. Selezionalo nell'elenco a sinistra e scrivi nel campo in basso → **Invio** (o
    il bottone ➤).
 
-Il pallino/anello **verde** sull'avatar indica che il contatto è **in linea**.
+Il pallino/anello **verde** sull'avatar indica che il contatto è **in linea**. Non serve
+scriversi prima: all'avvio la chat «bussa» da sola ai contatti (e poi ogni tanto a chi non
+risponde, con pause crescenti fino a 10 minuti). Chi è acceso compare in linea entro pochi
+secondi, e anche lui vede te.
+
+Sotto il nome, in cima alla conversazione, c'è **«in linea»** oppure **«ultimo accesso oggi
+alle 18:05»** (ieri / data). Lo calcola il tuo dispositivo da quando ha visto il contatto
+l'ultima volta; non viene mandato a nessuno (file `~/.nyctalus-chat/visti`).
 La **cronologia** resta sul tuo computer (in `~/.nyctalus-chat/cronologia`) e si
 ricarica quando riapri una conversazione.
 

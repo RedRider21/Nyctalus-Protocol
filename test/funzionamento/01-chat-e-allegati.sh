@@ -67,4 +67,16 @@ N=0; for k in 1 2 3; do
   [ -n "$R2" ] && [ "$(sha256sum < "$TMP/insieme-$k.bin")" = "$(sha256sum < "$R2")" ] && N=$((N + 1))
 done
 [ "$N" -eq 3 ] && pass "arrivati tutti e tre, identici (nessuno perso)" || fail "arrivati integri $N allegati su 3"
+
+# --- «in linea» senza scriversi: due contatti che si sono solo aggiunti ---
+SD=davidesegreto0123456789abcdef; identita davide 19316 19326 19380 "$SD"; DAVIDE=$ADDR
+SE=elenasegreto0123456789abcdef0; identita elena 19317 19327 19380 "$SE"; ELENA=$ADDR
+sleep 4
+controllo 19326 "$SD" 3 "ADD $ELENA {hex:Elena}" > /dev/null
+controllo 19327 "$SE" 3 "ADD $DAVIDE {hex:Davide}" > /dev/null
+R=$(NYCT_FINO="^ST $ELENA 1" controllo 19326 "$SD" 90 SUB)
+echo "$R" | grep -q "^ST $ELENA 1" && pass "in linea da soli, senza scriversi (sonda di presenza)" || fail "presenza non rilevata senza messaggi"
+R=$(NYCT_FINO="^ENDC" controllo 19326 "$SD" 10 LIST)
+echo "$R" | grep -qE "^V $ELENA [0-9]{10}" && pass "ultimo accesso del contatto nell'elenco (V)" || fail "ultimo accesso mancante: $(echo "$R" | head -3)"
+grep -q "^$ELENA [0-9]" "$TMP/davide/visti" && pass "ultimo accesso salvato solo in locale (visti)" || fail "file visti"
 [ "$KO" -eq 0 ]

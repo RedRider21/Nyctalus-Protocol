@@ -63,6 +63,7 @@ pub async fn chat(
         in_arrivo: Mutex::new(HashMap::new()),
         max_file,
         segreto,
+        visti: Mutex::new(carica_visti(&dati)),
     });
 
     println!("Nyctalus chat");
@@ -80,6 +81,9 @@ pub async fn chat(
             eprintln!("controllo: {e}");
         }
     });
+
+    // «in linea» senza dover scrivere prima: si bussa ai contatti
+    tokio::spawn(stato.clone().sonda_presenza());
 
     loop {
         let (flusso, _) = ascoltatore.accept().await?;
@@ -106,7 +110,16 @@ struct Stato {
     in_arrivo: Mutex<HashMap<(String, String), InArrivo>>,   // (mittente, id) → allegato in arrivo
     max_file: u64,                                           // dimensione massima di un allegato
     segreto: Option<String>,                                 // se c'è, la UI deve presentarlo (AUTH)
+    visti: Mutex<HashMap<String, u64>>,                      // ultimo accesso visto da noi (solo locale)
 }
+
+/// Sonda di presenza: primo giro dopo questo ritardo (la rete deve salire), poi ogni giro.
+const SONDA_INIZIO: std::time::Duration = std::time::Duration::from_secs(8);
+const SONDA_GIRO: std::time::Duration = std::time::Duration::from_secs(15);
+/// Attesa fra due tentativi verso un contatto non raggiungibile: raddoppia fino al massimo.
+const SONDA_PAUSA_MIN: u64 = 15;
+const SONDA_PAUSA_MAX: u64 = 600;
+const SONDA_TEMPO: std::time::Duration = std::time::Duration::from_secs(40);
 
 /// Un allegato che sta arrivando: si scrive in `<nome>.part` e diventa
 /// definitivo solo se dimensione e impronta BLAKE3 tornano.
@@ -202,6 +215,7 @@ impl Stato {
         let sid = self.prossima_sessione.fetch_add(1, Ordering::Relaxed);
         self.sessioni.lock().unwrap().insert(peer.clone(), (sid, ch_tx));
         self.notifica(format!("ST {peer} 1"));
+        self.segna_visto(&peer);
 
         // scrittore: sigilla ogni messaggio in chiaro e lo spedisce
         let scrittore = tokio::spawn(async move {
@@ -239,6 +253,7 @@ impl Stato {
             stato.abbandona_in_arrivo(&peer, sid);
             if era_lei {
                 stato.notifica(format!("ST {peer} 0"));
+                stato.segna_visto(&peer);
             }
         });
     }
@@ -468,6 +483,49 @@ impl Stato {
         }
     }
 
+    // --- presenza ------------------------------------------------------------
+    /// Annota «visto adesso» (sessione aperta o appena chiusa) e lo dice alle UI.
+    fn segna_visto(&self, addr: &str) {
+        let ts = ora();
+        let righe: String = {
+            let mut v = self.visti.lock().unwrap();
+            v.insert(addr.to_string(), ts);
+            v.iter().map(|(a, t)| format!("{a} {t}\n")).collect()
+        };
+        let _ = std::fs::write(self.dati.join("visti"), righe);
+        self.notifica(format!("V {addr} {ts}"));
+    }
+
+    /// Bussa ai contatti senza sessione: chi è acceso risulta subito «in linea» (e
+    /// lo vede anche lui), senza dover scrivere prima. Chi non risponde viene
+    /// riprovato con pause crescenti (15 s → 10 min). Non usa il turno di
+    /// `composizione`: non deve far aspettare un messaggio che l'utente sta mandando.
+    async fn sonda_presenza(self: Arc<Self>) {
+        let mut prossimo: HashMap<String, (std::time::Instant, u64)> = HashMap::new();
+        tokio::time::sleep(SONDA_INIZIO).await;
+        loop {
+            let contatti: Vec<String> = self.contatti.lock().unwrap().iter().map(|(a, _)| a.clone()).collect();
+            for a in contatti {
+                if a == self.indirizzo || self.sessioni.lock().unwrap().contains_key(&a) {
+                    prossimo.remove(&a);
+                    continue;
+                }
+                let adesso = std::time::Instant::now();
+                if prossimo.get(&a).is_some_and(|(quando, _)| adesso < *quando) {
+                    continue;
+                }
+                let ok = matches!(tokio::time::timeout(SONDA_TEMPO, self.componi(&a)).await, Ok(Ok(())));
+                if ok {
+                    prossimo.remove(&a);
+                } else {
+                    let pausa = prossimo.get(&a).map(|(_, p)| (p * 2).min(SONDA_PAUSA_MAX)).unwrap_or(SONDA_PAUSA_MIN);
+                    prossimo.insert(a, (adesso + std::time::Duration::from_secs(pausa), pausa));
+                }
+            }
+            tokio::time::sleep(SONDA_GIRO).await;
+        }
+    }
+
     // --- persistenza ---------------------------------------------------------
     fn registra_riga(&self, addr: &str, riga: &str) {
         use std::io::Write;
@@ -611,6 +669,9 @@ impl Stato {
                     let _ = tx.send(format!("C {a} {n}\n"));
                     if let Some(ultima) = self.ultima_riga(&a) {
                         let _ = tx.send(format!("L {a} {ultima}\n"));
+                    }
+                    if let Some(ts) = self.visti.lock().unwrap().get(&a) {
+                        let _ = tx.send(format!("V {a} {ts}\n"));
                     }
                 }
                 let _ = tx.send("ENDC\n".into());
@@ -759,6 +820,17 @@ fn carica_identita(percorso: &Path) -> Risultato<Identita> {
         let _ = std::fs::set_permissions(percorso, std::fs::Permissions::from_mode(0o600));
     }
     Ok(id)
+}
+
+fn carica_visti(dati: &Path) -> HashMap<String, u64> {
+    std::fs::read_to_string(dati.join("visti"))
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|l| {
+            let (a, t) = l.split_once(' ')?;
+            Some((a.to_string(), t.trim().parse().ok()?))
+        })
+        .collect()
 }
 
 fn carica_contatti(dati: &Path) -> Vec<(String, String)> {
@@ -1004,6 +1076,7 @@ mod prove {
             in_arrivo: Mutex::new(HashMap::new()),
             max_file: 1,
             segreto: None,
+            visti: Mutex::new(HashMap::new()),
         };
         st.registra_riga("x.nyct", "in 1 6161");
         st.registra_riga("x.nyct", "out 2 6262");

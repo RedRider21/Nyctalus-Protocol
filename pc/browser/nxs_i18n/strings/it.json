@@ -1610,5 +1610,8 @@
   "chat.gal.invia": "Invia",
   "chat.gal.invia_n": "Invia (%d)",
   "chat.gal.selezionati": "%d selezionati",
-  "chat.gal.vuoto": "Nessuna foto o video recente nelle cartelle Immagini, Video e Download. Usa «Altre foto» o «File»."
+  "chat.gal.vuoto": "Nessuna foto o video recente nelle cartelle Immagini, Video e Download. Usa «Altre foto» o «File».",
+  "chat.visto_oggi": "ultimo accesso oggi alle {ora}",
+  "chat.visto_ieri": "ultimo accesso ieri alle {ora}",
+  "chat.visto_data": "ultimo accesso il {data} alle {ora}"
 }

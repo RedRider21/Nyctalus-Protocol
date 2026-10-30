@@ -111,7 +111,7 @@ const cacheContatto = (addr) => DB.scrivi("contatti", { addr, nome: S.contatti.g
 const salvato = (k, def) => { try { return JSON.parse(localStorage.getItem("nyct." + k)) ?? def; } catch (e) { return def; } };
 const salva = (k, v) => { try { localStorage.setItem("nyct." + k, JSON.stringify(v)); } catch (e) { /* niente */ } };
 const S = {
-  me: "", contatti: new Map(), online: new Set(), ultimo: new Map(), attivo: null,
+  me: "", contatti: new Map(), online: new Set(), ultimo: new Map(), visti: new Map(), attivo: null,
   nonLetti: salvato("nonLetti", {}), fissati: salvato("fissati", []),
   tema: salvato("tema", "notte"), sfondo: salvato("sfondo", "pipistrelli"), exif: salvato("exif", true),
   trasferimenti: new Map(), ultimoGiorno: null, ws: null, filtro: "",
@@ -164,6 +164,7 @@ function evento(riga) {
   else if (t === "C") { aggiornaContatto(p[1], p[2] ? daHex(p[2]) : p[1].slice(0, 10)); cacheContatto(p[1]); }
   else if (t === "L") { anteprima(p[1], p.slice(2).join(" ")); cacheContatto(p[1]); }
   else if (t === "ST") { p[2] === "1" ? S.online.add(p[1]) : S.online.delete(p[1]); disegnaElenco(); if (p[1] === S.attivo) testata(); }
+  else if (t === "V") { S.visti.set(p[1], +p[2]); if (p[1] === S.attivo) testata(); }
   else if (t === "MSG" || t === "OUT") {
     const dir = t === "MSG" ? "in" : "out", grezza = dir + " " + p[2] + " " + p[3];
     anteprima(p[1], grezza, dir === "in"); cacheAggiungiRiga(p[1], grezza); cacheContatto(p[1]);
@@ -293,11 +294,21 @@ function chiudiChat() {
 }
 window.onpopstate = () => { if (S.attivo) chiudiChat(); };
 
+// «ultimo accesso …» come Telegram: lo calcola il nostro dispositivo, non viene mandato a nessuno
+function ultimoAccesso(ts) {
+  if (!ts) return "non in linea";
+  const d = new Date(ts * 1000), oggi = new Date(), ieri = new Date(Date.now() - 86400000);
+  const ora = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (d.toDateString() === oggi.toDateString()) return "ultimo accesso oggi alle " + ora;
+  if (d.toDateString() === ieri.toDateString()) return "ultimo accesso ieri alle " + ora;
+  return "ultimo accesso il " + d.toLocaleDateString([], { day: "numeric", month: "short" }) + " alle " + ora;
+}
+
 function testata() {
   if (!S.attivo) return;
   const nome = S.contatti.get(S.attivo) || S.attivo.slice(0, 10), on = S.online.has(S.attivo);
   $("testa-nome").textContent = nome;
-  $("testa-stato").textContent = on ? "in linea" : "non in linea";
+  $("testa-stato").textContent = on ? "in linea" : ultimoAccesso(S.visti.get(S.attivo));
   $("testa-stato").classList.toggle("on", on);
   const slot = $("testa-avatar"); slot.textContent = ""; slot.appendChild(avatar(S.attivo, nome, true));
 }

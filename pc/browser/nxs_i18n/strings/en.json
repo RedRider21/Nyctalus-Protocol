@@ -1610,5 +1610,8 @@
   "chat.gal.invia": "Send",
   "chat.gal.invia_n": "Send (%d)",
   "chat.gal.selezionati": "%d selected",
-  "chat.gal.vuoto": "No recent photos or videos in Pictures, Videos and Downloads. Use «More photos» or «File»."
+  "chat.gal.vuoto": "No recent photos or videos in Pictures, Videos and Downloads. Use «More photos» or «File».",
+  "chat.visto_oggi": "last seen today at {ora}",
+  "chat.visto_ieri": "last seen yesterday at {ora}",
+  "chat.visto_data": "last seen {data} at {ora}"
 }
