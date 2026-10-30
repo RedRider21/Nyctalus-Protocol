@@ -90,8 +90,8 @@ firmato: anche se qualcuno lo alterasse, i client lo rifiuterebbero. Scegli tu d
   - <strong>PC:</strong> <code>nyctalus-rete importa NYCT1:…</code>, poi chiudi e riapri chat e browser
     (<code>nyctalus-rete importa --prova</code> per tornare alla rete di prova; <code>stato</code> per vedere
     la rete in uso);
-  - <strong>telefono:</strong> ⚙ Impostazioni → <strong>Rete condivisa</strong> → <strong>Importa codice</strong> (la rete si
-    riavvia da sola; «↩ Rete di prova» per tornare indietro).</p>
+  - <strong>telefono:</strong> nella schermata iniziale dell'app <strong>🔗 Rete</strong> → <strong>Importa codice di rete</strong>
+    (vale per chat, browser e file; la rete si riavvia da sola).</p>
 <h2 id="6-rete-di-casa-prove-senza-server">6. Rete di casa (prove senza server)</h2>
 <pre><code class="language-sh">nyctalus-rete casa            # opzioni: --nodi 4  --ip IP  --porta 18800  --porta-base 4701
 </code></pre>
@@ -109,7 +109,7 @@ sudo ufw allow from 192.168.1.0/24 to any port 4701:4704 proto udp
 </code></pre>
 <p>Valgono solo per la rete di casa. Per richiuderle usa le stesse righe con <code>delete allow</code>.</p>
 <p><strong>Impronta della rete:</strong> <code>casa</code> e <code>codice</code> stampano un'impronta breve (es. <code>92E6-9EB0</code>). Dopo
-l'importazione il telefono la mostra in ⚙ → Rete condivisa: deve essere <strong>la stessa</strong>. Così
+l'importazione il telefono la mostra nella riga <strong>🔗 Rete</strong> della schermata iniziale: deve essere <strong>la stessa</strong>. Così
 sei sicuro che nessuno sulla Wi-Fi ti abbia passato un codice diverso. La pagina è in
 <code>http</code> perché è solo nella rete locale e distribuisce dati pubblici; l'elenco dei nodi è
 firmato, e l'impronta protegge il codice.</p>
