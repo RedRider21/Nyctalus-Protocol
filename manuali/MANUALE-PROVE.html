@@ -128,6 +128,18 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 <td>un servizio <code>.nyct</code> (come la chat di un PC) spento di colpo e riacceso: chi lo cerca subito dopo lo raggiunge al primo tentativo (le registrazioni morte al punto d'incontro vengono scoperte e saltate), e le visite seguenti sono immediate</td>
 </tr>
 <tr>
+<td><code>11-rubrica</code></td>
+<td>la <strong>rubrica della rete</strong>: la rete di casa la accende e la mette nel codice; iscrizione, elenco con chi è in linea, nome non valido rifiutato, cancellazione, nessuna cronologia, file privato; pulsanti Rubrica su PC e telefono</td>
+</tr>
+<tr>
+<td><code>12-notifiche</code></td>
+<td><strong>notifiche</strong> senza Google: flusso <code>/api/notifiche</code> del servizio del telefono (negato senza il segreto, un messaggio in arrivo → riga con mittente e testo); servizio dell'app, permessi, apertura della conversazione dalla notifica, interruttore; notifica del desktop sul PC</td>
+</tr>
+<tr>
+<td><code>13-casella</code></td>
+<td><strong>casella cifrata</strong>: Bruno è spento, Anna gli scrive → la busta va nella casella (illeggibile, senza l'indirizzo di Anna, file privati, nessun registro); Bruno si accende e la riceve autenticata come di Anna, la casella la cancella; deposito anonimo via SOCKS, busta troppo grande rifiutata, busta falsa scartata</td>
+</tr>
+<tr>
 <td><code>08-app-android</code></td>
 <td>app Android: niente permesso fotocamera, scatti privati, nomi di file filtrati; il comando che l'app fa eseguire a Termux scrive il <strong>suo segreto</strong> (600) e il servizio già acceso lo accetta, il vecchio no; «Installa Nyctalus in Termux» in un <strong>Termux simulato</strong> (pacchetto con impronta sbagliata rifiutato, installazione, <code>allow-external-apps</code>, ritorno all'app, niente <code>pkg upgrade</code>); il <strong>servitore Java vero</strong> dell'app provato su JVM (404 agli indirizzi sbagliati, consegna integra, spegnimento); compila l'APK se c'è un Android SDK (<code>ANDROID_HOME</code>) e controlla che contenga il pacchetto</td>
 </tr>

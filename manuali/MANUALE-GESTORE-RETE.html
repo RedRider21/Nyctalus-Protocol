@@ -103,9 +103,17 @@ firmato: anche se qualcuno lo alterasse, i client lo rifiuterebbero. Scegli tu d
 - accende la <strong>rubrica della rete</strong> e mette il suo indirizzo nel codice: chi importa il
   codice trova nella chat il pulsante <strong>👥</strong> per iscriversi e vedere chi usa la rete;
 - importa il codice anche su questo PC.</p>
+<ul>
+<li>accende la <strong>casella cifrata</strong>, con un suo indirizzo <code>.nyct</code> anch'esso nel codice: chi usa la
+  rete può scrivere a chi non è in linea (<a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a> §3-ter);</li>
+</ul>
 <p>La rubrica tiene i suoi dati in <code>~/.nyctalus-rete/casa/rubrica/</code> (<code>rubrica.json</code>, privato,
-600): solo l'elenco degli iscritti, mai la cronologia. Porte locali (solo 127.0.0.1)
-18810-18813, cambiabili con <code>NYCTALUS_RUBRICA_PORTE=a,b,c,d</code>.</p>
+600): solo l'elenco degli iscritti, mai la cronologia. La casella in <code>rubrica/casella/</code> (cartelle
+700, buste 600, illeggibili anche per te, cancellate al ritiro o dopo 14 giorni; al massimo 200
+per destinatario e 50 MB in tutto; nessun registro di chi deposita). Porte locali (solo
+127.0.0.1) 18810-18814, cambiabili con <code>NYCTALUS_RUBRICA_PORTE=a,b,c,d,e</code>. <strong>Dopo un
+aggiornamento riaccendi <code>casa</code> e ricollega i client</strong> (📲 sul telefono, <code>importa</code> sul PC): il
+codice nuovo contiene la casella.</p>
 <p>Lascia la finestra aperta; <code>Ctrl-C</code> ferma tutto.</p>
 <p><strong>Se il telefono resta a caricare la pagina, è il firewall del PC.</strong> Su Ubuntu ufw scarta in
 silenzio ciò che arriva dalla rete locale. <code>casa</code> se ne accorge e stampa i comandi; con la
