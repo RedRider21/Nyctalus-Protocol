@@ -186,6 +186,25 @@ Nyctalus: ritento da sola…». I tentativi si fanno sempre più radi, fino a un
   <strong>○ grigia</strong> = ferma; <strong>● rossa</strong> = errore. <strong>▶ Avvia rete</strong> si può toccare solo a
   rete ferma (o dopo un errore, come «↻ Riprova»), <strong>■ Ferma rete</strong> solo a rete attiva.</li>
 </ul>
+<h2 id="5-bis-notifiche-dei-messaggi-anche-con-lapp-chiusa">5-bis. Notifiche dei messaggi (anche con l'app chiusa)</h2>
+<p>Come Telegram, ma <strong>senza Google</strong>: quando Nyctalus è pronto, l'app accende un piccolo servizio
+che resta attivo in sottofondo (nella barra c'è l'icona fissa <strong>«Nyctalus attivo»</strong>). Per ogni
+messaggio o file in arrivo compare una notifica con il nome del contatto e l'anteprima;
+<strong>toccala</strong> e si apre direttamente quella conversazione. Con l'app aperta non compaiono
+notifiche (i messaggi si vedono già) e aprendola si azzerano.</p>
+<ul>
+<li>La prima volta Android 13+ chiede il permesso di mostrare notifiche: rispondi <strong>Consenti</strong>
+  (se l'hai negato: Impostazioni → App → Nyctalus → Notifiche).</li>
+<li>Nessuno all'esterno sa quando ricevi messaggi: le notifiche nascono sul telefono, dal servizio
+  in Termux (solo <code>127.0.0.1</code>), non passano da server di Google o altri.</li>
+<li>Se Android ferma Termux, l'app lo riaccende da sola (al massimo una volta ogni 5 minuti).</li>
+<li><strong>Batteria:</strong> il servizio consuma poco ma qualcosa. Per non farlo fermare, in Impostazioni →
+  App → Nyctalus (e Termux) → Batteria scegli <strong>Senza restrizioni</strong>.</li>
+<li>Per spegnerle: <strong>Strumenti ▾ → 🔔 Notifiche dei messaggi: attive</strong> (toccalo per passare a spente).</li>
+<li>Dopo aver riacceso il telefono apri l'app una volta: da lì il servizio riparte.</li>
+</ul>
+<p>Se il telefono è spento o senza rete, i messaggi non possono arrivare: per questo è in arrivo la
+<strong>casella cifrata</strong>, che li tiene in deposito e te li consegna, con la notifica, appena torni in rete.</p>
 <h2 id="6-sicurezza-sul-telefono">6. Sicurezza sul telefono</h2>
 <ul>
 <li>Su Android <strong>ogni app</strong> può collegarsi alle porte <code>127.0.0.1</code>: per questo la web-app
