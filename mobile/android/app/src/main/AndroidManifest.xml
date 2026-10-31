@@ -7,6 +7,10 @@
     <!-- Solo mentre Termux scarica il pacchetto dall'app (vedi ServizioPacchetto). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Notifiche dei messaggi con l'app chiusa, senza Google (ServizioNotifiche): il permesso
+         di mostrarle (Android 13+) e il tipo «messaggistica» del servizio (Android 14+). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
     <!-- Per chiedere a Termux di avviare Nyctalus (intent RUN_COMMAND).
          Va abbinato a "allow-external-apps = true" in ~/.termux/termux.properties,
          riga che l'installatore di Nyctalus aggiunge da solo. -->
@@ -62,6 +66,11 @@
             android:name=".ServizioPacchetto"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <service
+            android:name=".ServizioNotifiche"
+            android:exported="false"
+            android:foregroundServiceType="remoteMessaging|dataSync" />
 
         <!-- Foto scattate dalla chat: restano nella cartella PRIVATA dell'app (non nella
              galleria del telefono); la fotocamera ci scrive con un permesso temporaneo. -->

@@ -1633,5 +1633,6 @@
   "chat.rub.nome_nota": "Visible to people on this network.",
   "chat.rub.salva": "Save",
   "chat.rub.nessuna": "This network has no directory",
-  "chat.rub.nessuna_corpo": "Networks that offer one (e.g. the home network) include it in their network code: nyctalus-rete importa CODE."
+  "chat.rub.nessuna_corpo": "Networks that offer one (e.g. the home network) include it in their network code: nyctalus-rete importa CODE.",
+  "chat.notifiche": "Notificaciones de escritorio de mensajes nuevos"
 }

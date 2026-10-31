@@ -179,6 +179,14 @@ S.rubrica = ""; S.rubricaDati = null;
 // indietro torna all'avvio; la chat compare solo scegliendo qualcuno a cui scrivere.
 S.soloRubrica = false;
 window.nyctApriRubrica = () => apriRubrica(true);
+// notifica di un messaggio toccata (app Android): si apre quella conversazione
+const ADDR_NYCT = /^[a-z2-7]{56}\.nyct$/;
+S.chatDaAprire = location.hash.startsWith("#chat=") && ADDR_NYCT.test(location.hash.slice(6)) ? location.hash.slice(6) : "";
+window.nyctApriChat = (a) => {
+  if (!ADDR_NYCT.test(a)) return;
+  if (S.soloRubrica) { esciSoloRubrica(); chiudiFoglio(); }
+  if (S.me) apriChat(a); else S.chatDaAprire = a;   // aperta appena collegati al motore
+};
 window.nyctChiudiRubrica = () => { if (S.soloRubrica) { esciSoloRubrica(); chiudiFoglio(); } };
 function esciSoloRubrica() {
   S.soloRubrica = false; document.body.classList.remove("solo-rubrica");
@@ -298,6 +306,7 @@ function evento(riga) {
     S.me = p[1]; $("mio-id-valore").textContent = S.me;
     if (S.motoreGiu) { S.motoreGiu = false; controllaServizi(); }   // di nuovo collegati
     S.ritardoWs = 1500;
+    if (S.chatDaAprire) { const a = S.chatDaAprire; S.chatDaAprire = ""; setTimeout(() => apriChat(a), 300); }
   }
   else if (t === "C") { aggiornaContatto(p[1], p[2] ? daHex(p[2]) : p[1].slice(0, 10)); cacheContatto(p[1]); }
   else if (t === "L") { anteprima(p[1], p.slice(2).join(" ")); cacheContatto(p[1]); }

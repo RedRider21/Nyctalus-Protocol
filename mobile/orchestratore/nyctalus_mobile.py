@@ -661,6 +661,58 @@ async def ponte_chat(lettore, scrittore, req):
     m_scrittore.close()
 
 
+def _da_hex(h):
+    try:
+        return bytes.fromhex(h).decode("utf-8", "replace")
+    except ValueError:
+        return ""
+
+
+async def flusso_notifiche(scrittore):
+    """Per il servizio di notifica dell'app Android: una riga JSON per ogni messaggio o file
+    in ARRIVO (mittente, nome del contatto, anteprima). Resta aperto; ogni 25 s una riga vuota
+    «{}» per accorgersi se la connessione è caduta. La rubrica della rete non notifica."""
+    scrittore.write(("HTTP/1.1 200 OK\r\nContent-Type: application/x-ndjson; charset=utf-8\r\n"
+                     "Cache-Control: no-store\r\nConnection: close\r\n\r\n").encode())
+    await scrittore.drain()
+
+    async def riga(obj):
+        scrittore.write((json.dumps(obj, ensure_ascii=False) + "\n").encode())
+        await scrittore.drain()
+
+    try:
+        m_lettore, m_scrittore = await asyncio.open_connection(*CONTROLLO)
+    except Exception:            # noqa: BLE001
+        return await riga({"tipo": "motore", "ok": False})
+    try:
+        m_scrittore.write(("AUTH %s\nLIST\nSUB\n" % SERVIZI.segreto_motore).encode())
+        await m_scrittore.drain()
+        await riga({"tipo": "motore", "ok": True})
+        nomi = {}
+        while True:
+            try:
+                dati = await asyncio.wait_for(m_lettore.readline(), 25)
+            except asyncio.TimeoutError:
+                await riga({})                       # «sono qui»: se l'app non c'è più, si chiude
+                continue
+            if not dati:
+                return await riga({"tipo": "motore", "ok": False})
+            p = dati.decode("utf-8", "replace").rstrip("\n").split(" ")
+            rubrica = leggi_config().get("rubrica", "")
+            if p[0] == "C" and len(p) >= 3:
+                nomi[p[1]] = _da_hex(p[2]) or p[1][:10]
+            elif len(p) >= 2 and p[1] == rubrica:
+                continue
+            elif p[0] == "MSG" and len(p) >= 4:
+                await riga({"tipo": "msg", "da": p[1], "nome": nomi.get(p[1], p[1][:10]),
+                            "testo": _da_hex(p[3])[:200]})
+            elif p[0] == "FILE" and len(p) >= 9 and p[2] == "in":
+                await riga({"tipo": "file", "da": p[1], "nome": nomi.get(p[1], p[1][:10]),
+                            "mime": p[6], "file": _da_hex(p[7])[:80]})
+    finally:
+        m_scrittore.close()
+
+
 async def gestisci(lettore, scrittore):
     try:
         req = await leggi_richiesta(lettore)
@@ -704,6 +756,8 @@ async def instrada(req, lettore, scrittore):
     p = req.percorso
     if p == "/ws" and req.h.get("upgrade", "").lower() == "websocket":
         return await ponte_chat(lettore, scrittore, req)
+    if p == "/api/notifiche":
+        return await flusso_notifiche(scrittore)
     if p == "/api/stato":
         return await rispondi_json(scrittore, dict(SERVIZI.info(), versione=VERSIONE))
     if p == "/api/rete":

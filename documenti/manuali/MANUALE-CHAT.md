@@ -155,6 +155,13 @@ riportano all'avvio). La chat si apre solo quando scegli qualcuno a cui scrivere
 
 ---
 
+## 4-bis. Notifiche
+
+- **PC:** se la finestra della chat non è in primo piano, un messaggio o file in arrivo fa
+  comparire una notifica del desktop con nome e anteprima (serve `notify-send`, di solito già
+  presente). Si spengono da ⚙ → **Notifiche sul desktop dei nuovi messaggi**.
+- **Telefono:** notifiche anche con l'app chiusa, senza Google: vedi `MANUALE-TELEFONO.md` §5-bis.
+
 ## 5. Aspetto e finestra
 
 - Menu **⚙** in alto: scegli il **tema** (Notte, Ardesia stile Telegram, Viola

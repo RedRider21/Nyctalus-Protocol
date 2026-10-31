@@ -117,6 +117,7 @@ _ITA = {
     "chat.invio_in_corso": "Invio",
     "chat.ricezione": "Ricezione",
     "chat.senza_exif": "Foto senza metadati (posizione GPS, fotocamera)",
+    "chat.notifiche": "Notifiche sul desktop dei nuovi messaggi",
     "chat.filtro.tutti": "Tutti i file",
     "chat.filtro.immagini": "Immagini",
     "chat.filtro.video": "Video",
@@ -942,6 +943,7 @@ class Chat(Gtk.Window):
             self._aggiorna_anteprima(addr, grezza, nuovo=True)
             if addr == self.attivo:
                 self._bolla("in", _da_hex(hx), ts, grezza)
+            self._notifica_desktop(addr, _da_hex(hx))
         elif tipo == "OUT" and len(parti) >= 4:
             addr, ts, hx = parti[1], parti[2], parti[3]
             grezza = "out %s %s" % (ts, hx)
@@ -959,6 +961,10 @@ class Chat(Gtk.Window):
             # FILE <addr> <in|out> <ts> <id> <dim> <mime> <nome hex> <percorso hex>
             grezza = " ".join(["fout" if parti[2] == "out" else "fin"] + parti[3:9])
             self._aggiorna_anteprima(parti[1], grezza, nuovo=(parti[2] == "in"))
+            if parti[2] == "in":
+                m = parti[6]
+                self._notifica_desktop(parti[1], "📷" if m.startswith("image/") else "🎬" if m.startswith("video/")
+                                       else "🎵" if m.startswith("audio/") else "📎 " + _da_hex(parti[7]))
             if parti[1] == self.attivo:
                 self._bolla_allegato(parti[2], parti[3], parti[4], parti[5], parti[6],
                                      _da_hex(parti[7]), _da_hex(parti[8]), grezza)
@@ -1683,6 +1689,19 @@ class Chat(Gtk.Window):
         self.ingresso.set_text("")
 
     # --- dialoghi --------------------------------------------------------------
+    # --- notifiche sul desktop ------------------------------------------------------
+    def _notifica_desktop(self, addr, testo):
+        """Messaggio in arrivo con la finestra non attiva: notifica del desktop (notify-send),
+        tutta locale. Con la finestra in primo piano il messaggio si vede già."""
+        if self.is_active() or not self.ui.get("notifiche", True) or not shutil.which("notify-send"):
+            return
+        nome = self.contatti.get(addr, addr[:10])
+        try:
+            subprocess.Popen(["notify-send", "-a", "Nyctalus", "-i", "nyctalus", "--", nome, testo[:200]],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError:
+            pass
+
     # --- rubrica della rete -------------------------------------------------------
     def chiedi_rubrica(self, obj):
         if self.rubrica:
@@ -1875,6 +1894,10 @@ class Chat(Gtk.Window):
         exif.set_active(self.ui.get("senza_exif", True))
         exif.connect("toggled", lambda v: (self.ui.__setitem__("senza_exif", v.get_active()), self._salva_ui()))
         menu.append(exif)
+        notif = Gtk.CheckMenuItem(label=_t("chat.notifiche"))
+        notif.set_active(self.ui.get("notifiche", True))
+        notif.connect("toggled", lambda v: (self.ui.__setitem__("notifiche", v.get_active()), self._salva_ui()))
+        menu.append(notif)
         menu.show_all()
         menu.popup_at_widget(bottone, Gdk.Gravity.SOUTH_WEST, Gdk.Gravity.NORTH_WEST, None)
 

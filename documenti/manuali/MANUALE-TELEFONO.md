@@ -163,6 +163,27 @@ Note:
   **○ grigia** = ferma; **● rossa** = errore. **▶ Avvia rete** si può toccare solo a
   rete ferma (o dopo un errore, come «↻ Riprova»), **■ Ferma rete** solo a rete attiva.
 
+## 5-bis. Notifiche dei messaggi (anche con l'app chiusa)
+
+Come Telegram, ma **senza Google**: quando Nyctalus è pronto, l'app accende un piccolo servizio
+che resta attivo in sottofondo (nella barra c'è l'icona fissa **«Nyctalus attivo»**). Per ogni
+messaggio o file in arrivo compare una notifica con il nome del contatto e l'anteprima;
+**toccala** e si apre direttamente quella conversazione. Con l'app aperta non compaiono
+notifiche (i messaggi si vedono già) e aprendola si azzerano.
+
+- La prima volta Android 13+ chiede il permesso di mostrare notifiche: rispondi **Consenti**
+  (se l'hai negato: Impostazioni → App → Nyctalus → Notifiche).
+- Nessuno all'esterno sa quando ricevi messaggi: le notifiche nascono sul telefono, dal servizio
+  in Termux (solo `127.0.0.1`), non passano da server di Google o altri.
+- Se Android ferma Termux, l'app lo riaccende da sola (al massimo una volta ogni 5 minuti).
+- **Batteria:** il servizio consuma poco ma qualcosa. Per non farlo fermare, in Impostazioni →
+  App → Nyctalus (e Termux) → Batteria scegli **Senza restrizioni**.
+- Per spegnerle: **Strumenti ▾ → 🔔 Notifiche dei messaggi: attive** (toccalo per passare a spente).
+- Dopo aver riacceso il telefono apri l'app una volta: da lì il servizio riparte.
+
+Se il telefono è spento o senza rete, i messaggi non possono arrivare: per questo è in arrivo la
+**casella cifrata**, che li tiene in deposito e te li consegna, con la notifica, appena torni in rete.
+
 ## 6. Sicurezza sul telefono
 
 - Su Android **ogni app** può collegarsi alle porte `127.0.0.1`: per questo la web-app

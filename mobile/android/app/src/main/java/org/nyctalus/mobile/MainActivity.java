@@ -61,11 +61,11 @@ import java.util.ArrayList;
 public class MainActivity extends Activity {
 
     private static final int PORTA = 18731;
-    private static final String URL_BASE = "http://127.0.0.1:" + PORTA;
+    static final String URL_BASE = "http://127.0.0.1:" + PORTA;
     private static final String TERMUX = "com.termux";
     private static final String PERMESSO_TERMUX = "com.termux.permission.RUN_COMMAND";
-    private static final String PREFS = "nyctalus";
-    private static final int RICHIESTA_PERMESSO = 1, RICHIESTA_FILE = 2;
+    static final String PREFS = "nyctalus";
+    private static final int RICHIESTA_PERMESSO = 1, RICHIESTA_FILE = 2, RICHIESTA_NOTIFICHE = 3;
     private static final long ATTESA_MAX_MS = 40000;
 
     private static final String GITHUB = "https://github.com/RedRider21/Nyctalus-Protocol";
@@ -106,6 +106,7 @@ public class MainActivity extends Activity {
             new Thread(this::avvia).start();
         }
         gestisciCollegamento(getIntent());
+        gestisciNotifica(getIntent());
     }
 
     @Override
@@ -113,6 +114,21 @@ public class MainActivity extends Activity {
         super.onNewIntent(intent);
         setIntent(intent);
         gestisciCollegamento(intent);
+        gestisciNotifica(intent);
+    }
+
+    /** Conversazione da aprire (notifica toccata): indirizzo .nyct del contatto. */
+    private String chatDaAprire;
+
+    /** Toccata una notifica di messaggio: si entra direttamente in quella conversazione. */
+    private void gestisciNotifica(Intent intent) {
+        String a = intent == null ? null : intent.getStringExtra("chat");
+        if (a == null || !a.matches("[a-z2-7]{56}\\.nyct")) return;
+        intent.removeExtra("chat");
+        chatDaAprire = a;
+        apriRubrica = false;
+        if (pronto) mostraWeb();
+        else entraAppenaPronto = true;               // l'avvio è già in corso: si entra appena pronto
     }
 
     /** Codice arrivato da un link nyctalus://rete?codice=… , da applicare a rete pronta. */
@@ -167,6 +183,44 @@ public class MainActivity extends Activity {
     public void onRequestPermissionsResult(int richiesta, String[] permessi, int[] esiti) {
         super.onRequestPermissionsResult(richiesta, permessi, esiti);
         if (richiesta == RICHIESTA_PERMESSO) new Thread(this::avvia).start();
+        if (richiesta == RICHIESTA_NOTIFICHE) ServizioNotifiche.avvia(this);
+    }
+
+    /**
+     * Notifiche dei messaggi con l'app chiusa (servizio dell'app, senza Google). Su Android
+     * 13+ serve il permesso: si chiede una volta sola; se lo si nega, il servizio gira lo
+     * stesso ma Android non mostra le notifiche (si può concedere dalle impostazioni).
+     */
+    private void avviaNotifiche() {
+        SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+        if (!p.getBoolean("notifiche", true)) return;
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS")
+                != PackageManager.PERMISSION_GRANTED && !p.getBoolean("notifiche_chieste", false)) {
+            p.edit().putBoolean("notifiche_chieste", true).apply();
+            runOnUiThread(() -> requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, RICHIESTA_NOTIFICHE));
+            return;
+        }
+        ServizioNotifiche.avvia(this);
+    }
+
+    /** Interruttore in «Strumenti»: notifiche dei messaggi con l'app chiusa sì/no. */
+    private void cambiaNotifiche(Button b) {
+        SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+        boolean attive = !p.getBoolean("notifiche", true);
+        p.edit().putBoolean("notifiche", attive).apply();
+        b.setText(testoNotifiche(attive));
+        if (attive) {
+            p.edit().putBoolean("notifiche_chieste", false).apply();
+            avviaNotifiche();
+            avviso("Notifiche attive: ricevi i messaggi anche con l'app chiusa.");
+        } else {
+            ServizioNotifiche.ferma(this);
+            avviso("Notifiche spente: i messaggi si vedono aprendo l'app.");
+        }
+    }
+
+    private static String testoNotifiche(boolean attive) {
+        return attive ? "🔔  Notifiche dei messaggi: attive" : "🔕  Notifiche dei messaggi: spente";
     }
 
     /** Stessi colori dei temi della web-app (Notte, Ardesia, Viola, Chiaro). */
@@ -207,6 +261,10 @@ public class MainActivity extends Activity {
      * in sottofondo. Tocca solo ~/.nyctalus-mobile e ~/nyctalus: niente di altri progetti.
      */
     private String comandoAvvio() {
+        return comandoAvvio(segreto);
+    }
+
+    static String comandoAvvio(String segreto) {
         return "mkdir -p ~/.nyctalus-mobile && chmod 700 ~/.nyctalus-mobile && "
              + "rm -f ~/.nyctalus-mobile/token && (umask 077; printf %s " + segreto + " > ~/.nyctalus-mobile/token) && "
              + "(command -v nyctalus-mobile >/dev/null 2>&1 && nyctalus-mobile --sfondo "
@@ -308,7 +366,11 @@ public class MainActivity extends Activity {
         Button gh = cella("☁  Aggiornamenti da GitHub (presto)", v -> aggiornamentiGithub());
         gh.setAlpha(0.45f);
         riga4.addView(gh);
-        for (LinearLayout x : new LinearLayout[]{riga1, riga2, riga3, riga4}) {
+        LinearLayout riga5 = riga();
+        Button notif = cella(testoNotifiche(getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("notifiche", true)), null);
+        notif.setOnClickListener(v -> cambiaNotifiche(notif));
+        riga5.addView(notif);
+        for (LinearLayout x : new LinearLayout[]{riga5, riga1, riga2, riga3, riga4}) {
             ((LinearLayout.LayoutParams) x.getLayoutParams()).topMargin = dp(8);
             strumenti.addView(x);
         }
@@ -388,17 +450,22 @@ public class MainActivity extends Activity {
     }
 
     private void avviaInTermux() {
+        avviaInTermux(this, segreto);
+    }
+
+    /** Chiede a Termux di avviare il servizio (anche dal servizio delle notifiche). */
+    static void avviaInTermux(android.content.Context ctx, String segreto) {
         try {
             Intent i = new Intent();
             i.setComponent(new ComponentName(TERMUX, "com.termux.app.RunCommandService"));
             i.setAction("com.termux.RUN_COMMAND");
             i.putExtra("com.termux.RUN_COMMAND_PATH", "/data/data/com.termux/files/usr/bin/bash");
-            i.putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-lc", comandoAvvio()});
+            i.putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-lc", comandoAvvio(segreto)});
             i.putExtra("com.termux.RUN_COMMAND_WORKDIR", "/data/data/com.termux/files/home");
             i.putExtra("com.termux.RUN_COMMAND_BACKGROUND", true);
             i.putExtra("com.termux.RUN_COMMAND_SESSION_ACTION", "0");
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(i);
-            else startService(i);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(i);
+            else ctx.startService(i);
         } catch (Exception ignorata) {
             // permesso negato o «allow-external-apps» assente: resta il comando da incollare
         }
@@ -446,6 +513,7 @@ public class MainActivity extends Activity {
             cambiaRete(json);
         }
         aggiornaRete();
+        avviaNotifiche();
         imposta("● Nyctalus è pronto — scegli cosa aprire");
         runOnUiThread(() -> { if (pulsanteEntra != null) pulsanteEntra.animate().alpha(1f).setDuration(300).start(); });
         if (entraAppenaPronto) mostraWeb();
@@ -462,12 +530,15 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         inPausa = true;
+        ServizioNotifiche.appInPrimoPiano = false;
     }
 
     /** Tornando nell'app (es. da Termux) si ricontrolla il servizio per qualche secondo. */
     @Override
     protected void onResume() {
         super.onResume();
+        ServizioNotifiche.appInPrimoPiano = true;
+        ServizioNotifiche.azzera(this);              // i messaggi ora si vedono nell'app
         mostraErroreBrowser();
         if (inPausa && !caricata && !avviando) {
             inPausa = false;
@@ -914,7 +985,10 @@ public class MainActivity extends Activity {
                 // «Rubrica» → la sola rubrica; «Chat» → la chat (chiude la rubrica se era rimasta aperta)
                 web.evaluateJavascript(apriRubrica ? "window.nyctApriRubrica && nyctApriRubrica()"
                         : "window.nyctChiudiRubrica && nyctChiudiRubrica()", null);
+                if (chatDaAprire != null)                // notifica toccata: quella conversazione
+                    web.evaluateJavascript("window.nyctApriChat && nyctApriChat('" + chatDaAprire + "')", null);
                 apriRubrica = false;
+                chatDaAprire = null;
             });
             return;
         }
@@ -959,7 +1033,9 @@ public class MainActivity extends Activity {
                 }
             });
             setContentView(web);
-            web.loadUrl(URL_BASE + "/?t=" + segreto + (apriRubrica ? "#rubrica" : ""));
+            web.loadUrl(URL_BASE + "/?t=" + segreto + (apriRubrica ? "#rubrica"
+                    : chatDaAprire != null ? "#chat=" + chatDaAprire : ""));
+            chatDaAprire = null;
             apriRubrica = false;
         });
     }

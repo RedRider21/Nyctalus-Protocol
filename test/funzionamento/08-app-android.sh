@@ -28,7 +28,7 @@ PY
 CMD=$(python3 - "$J" <<'PY'
 import re, sys
 s = open(sys.argv[1]).read()
-corpo = re.search(r'private String comandoAvvio\(\) \{(.*?);\n    \}', s, re.S).group(1)
+corpo = re.search(r'static String comandoAvvio\(String segreto\) \{(.*?);\n    \}', s, re.S).group(1)
 pezzi = re.findall(r'"((?:[^"\\]|\\.)*)"|\b(segreto)\b', corpo)
 print("".join(p if p else "@SEGRETO@" for p, v in pezzi).replace('\\"', '"'))
 PY
@@ -72,7 +72,7 @@ python3 - "$J" > "$TMP/inst.tpl" <<'PY'
 import re, sys
 s = open(sys.argv[1]).read()
 corpo = re.search(r'private String comandoInstallazione\(ServitorePacchetto sp\) \{\s*String cmd = (.*?);\n', s, re.S).group(1)
-avvio = re.search(r'private String comandoAvvio\(\) \{(.*?);\n    \}', s, re.S).group(1)
+avvio = re.search(r'static String comandoAvvio\(String segreto\) \{(.*?);\n    \}', s, re.S).group(1)
 def unisci(c):
     out = []
     for lit, ident in re.findall(r'"((?:[^"\\]|\\.)*)"|([A-Za-z_][\w.]*(?:\(\))?)', c):
