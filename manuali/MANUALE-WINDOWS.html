@@ -1,0 +1,107 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuale Windows (anteprima) · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html" class="qui">Manuale Windows (anteprima)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<article>
+<h1 id="manuale-windows-anteprima">Manuale Windows (anteprima)</h1>
+<p>Su Windows Nyctalus funziona <strong>come l'app del telefono</strong>: una finestra con Chat, Rubrica,
+Browser e Info. Dentro c'è lo stesso motore (<code>nyctalus.exe</code>), e <strong>Python è incluso</strong>: non serve
+installare nulla. Serve Windows 10/11 a 64 bit; la finestra la apre <strong>Edge</strong>, già presente.</p>
+<h2 id="1-avviare">1. Avviare</h2>
+<ol>
+<li>Scarica <code>Nyctalus-Windows.zip</code> (dalla release) e <strong>scompattalo</strong> in una cartella tua (es.
+   <code>Documenti\Nyctalus</code>): da dentro lo zip non parte.</li>
+<li>Doppio clic su <strong><code>Nyctalus.cmd</code></strong>. La prima volta Windows può chiedere conferma
+   («Ulteriori informazioni → Esegui comunque») e il firewall chiede l'accesso alla rete per
+   <code>nyctalus.exe</code>: <strong>Consenti</strong>.</li>
+<li>Si apre la finestra di Nyctalus. Quando dice <strong>«● Nyctalus è pronto»</strong> i riquadri si accendono.</li>
+</ol>
+<h2 id="2-collegarsi-a-una-rete">2. Collegarsi a una rete</h2>
+<p>Tocca <strong>🔗 Rete</strong> e incolla il <strong>codice di rete</strong> (<code>NYCT1:…</code>) che ti dà chi la gestisce (a casa:
+<code>nyctalus-rete casa</code> su un PC Linux, <a href="GUIDA-RETE-DI-CASA.html"><code>GUIDA-RETE-DI-CASA.md</code></a>). Controlla che l'<strong>impronta</strong>
+sia uguale a quella del gestore. Senza codice usi una rete di prova solo su questo PC.</p>
+<h2 id="3-usare">3. Usare</h2>
+<table>
+<thead>
+<tr>
+<th>Riquadro</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>💬 <strong>Chat</strong></td>
+<td>la chat in una finestra sua: contatti, allegati, spunte, casella (<a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a>)</td>
+</tr>
+<tr>
+<td>👥 <strong>Rubrica</strong></td>
+<td>chi usa la rete, chi è in linea, iscriversi con un nome</td>
+</tr>
+<tr>
+<td>🌐 <strong>Browser</strong></td>
+<td>come impostare <strong>Firefox</strong> su Nyctalus (§4)</td>
+</tr>
+<tr>
+<td>ℹ️ <strong>Info</strong></td>
+<td>il sito con i manuali</td>
+</tr>
+</tbody>
+</table>
+<p><strong>⏻ Esci da Nyctalus</strong> (in fondo) spegne tutto. Finché è acceso, Nyctalus riceve i messaggi
+anche con le finestre chiuse; riaprile con un nuovo doppio clic su <code>Nyctalus.cmd</code>.</p>
+<h2 id="4-navigare-con-nyctalus-firefox">4. Navigare con Nyctalus (Firefox)</h2>
+<p>Il browser Nyctalus non c'è ancora per Windows: si usa Firefox, meglio con un <strong>profilo dedicato</strong>.
+1. Firefox → Impostazioni → Generale → <strong>Impostazioni di rete</strong> → «Impostazioni…».
+2. <strong>Configurazione manuale dei proxy</strong>: Host SOCKS <code>127.0.0.1</code>, porta <strong>18733</strong>, <strong>SOCKS v5</strong>.
+3. Spunta <strong>«Usa il proxy DNS con SOCKS v5»</strong>.</p>
+<p>Ora i siti, anche i <code>.nyct</code>, passano da Nyctalus. Protegge meno del nostro browser: non verifica
+da solo di essere dentro la rete, e WebRTC va spento a mano (<code>about:config</code> →
+<code>media.peerconnection.enabled</code> = false).</p>
+<h2 id="5-dove-stanno-i-dati-e-come-togliere-tutto">5. Dove stanno i dati e come togliere tutto</h2>
+<ul>
+<li>Dati: <code>%USERPROFILE%\.nyctalus-mobile</code> (servizio) e <code>%USERPROFILE%\.nyctalus-chat</code> (identità,
+  contatti, cronologia).</li>
+<li>Togliere: <strong>⏻ Esci</strong>, poi cancella la cartella scompattata; cancella anche le due cartelle dei
+  dati se vuoi eliminare identità e messaggi.</li>
+</ul>
+<h2 id="6-limiti-dellanteprima">6. Limiti dell'anteprima</h2>
+<ul>
+<li>Non ancora provata su molti PC Windows: segnala cosa non va.</li>
+<li>Niente notifiche di Windows per ora: i messaggi si vedono nella finestra della chat.</li>
+<li>Nodi e gestore della rete: su Linux (<a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>, <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a>).</li>
+</ul>
+</article>
+</main>
+<button class="torna-su" id="torna-su" type="button" title="Torna su" aria-label="Torna su">↑</button>
+<script>
+(function(){var b=document.getElementById('torna-su');
+function aggiorna(){b.classList.toggle('visibile',window.scrollY>250);}
+window.addEventListener('scroll',aggiorna,{passive:true});aggiorna();
+b.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});})();
+</script>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>
