@@ -66,7 +66,12 @@ cat > "$TMP/passi.json" <<EOF
  ["js","(()=>{evento('ST '+S.attivo+' 0'); return 'VISTO '+document.getElementById('testa-stato').textContent})()"],
  ["js","impostazioni(); 'impostazioni'"],["finche","document.querySelector('.stato-rete-imp') && document.querySelector('.stato-rete-imp').dataset.fase !== 'avvio'",10],
  ["js","(()=>{const b=[...document.querySelectorAll('#dialogo .pulsanti button')]; const a=b.find(x=>x.textContent.includes('Avvia')), f=b.find(x=>x.textContent.includes('Ferma')); return 'RETE ' + document.querySelector('.stato-rete-imp').dataset.fase + ',' + a.disabled + ',' + f.disabled})()"],
- ["foto","${NYCT_FOTO:-$TMP}/impostazioni.png"]]
+ ["foto","${NYCT_FOTO:-$TMP}/impostazioni.png"],
+ ["vai","$U/?avvio=1#rubrica"],["attendi",2],
+ ["js","(()=>{const f=document.getElementById('foglio'), r=f.getBoundingClientRect(); return 'SOLO ' + document.body.classList.contains('solo-rubrica') + ',' + !f.classList.contains('nascosto') + ',' + (r.top===0 && r.height>=innerHeight-1) + ',' + !!f.querySelector('.indietro-rubrica')})()"],
+ ["js","(()=>{S.rubrica='rubricaprova.nyct'; S.rubricaDati={op:'elenco',iscritto:false,utenti:[{a:'$BOB',n:'Bob',on:true,v:0},{a:'altro.nyct',n:'Carla',on:false,v:Math.floor(Date.now()/1000)-3600}]}; disegnaRubrica(); return 'UTENTI ' + document.querySelectorAll('#foglio .rubrica-utente').length})()"],
+ ["foto","${NYCT_FOTO:-$TMP}/rubrica.png"],
+ ["js","(()=>{document.querySelector('#foglio .rubrica-utente').click(); return 'SCRIVI ' + document.body.classList.contains('solo-rubrica') + ',' + document.getElementById('foglio').classList.contains('nascosto') + ',' + (S.attivo==='$BOB')})()"]]
 EOF
 timeout 120 python3 "$STRUMENTI/cdp.py" "$TMP/chrome" "$TMP/passi.json" > "$TMP/r.txt" 2>&1
 r() { grep -oE "^js → $1 .*" "$TMP/r.txt" | head -1 | cut -d' ' -f4-; }
@@ -90,4 +95,7 @@ Q=$(r QUADRATE); [ -n "$Q" ] && [ "${Q%%/*}" = "$(echo "$Q" | cut -d/ -f2 | cut 
 r VISTO | grep -q "^ultimo accesso oggi alle" && pass "telefono: «ultimo accesso» quando il contatto esce (anche con motore vecchio)" || fail "ultimo accesso sul telefono: $(r VISTO)"
 E=$(r EMOJI); [ "${E%% *}" -ge 50 ] 2>/dev/null && [ "${E##* }" = true ] && pass "pannello emoticon: $(echo "$E" | cut -d' ' -f1) emoticon, si inseriscono nel testo" || fail "emoticon: $E"
 [ "$(r RETE)" = "pronto,true,false" ] && pass "impostazioni: rete «attiva», «Avvia» spento e «Ferma» acceso" || fail "pulsanti della rete: $(r RETE)"
+[ "$(r SOLO)" = "true,true,true,true" ] && pass "riquadro «Rubrica» (#rubrica): la sola rubrica a tutto schermo, con «←»" || fail "sola rubrica: $(r SOLO)"
+[ "$(r UTENTI)" = "2" ] && pass "rubrica: elenco degli iscritti disegnato" || fail "rubrica: $(r UTENTI)"
+[ "$(r SCRIVI)" = "false,true,true" ] && pass "dalla rubrica, scegliendo qualcuno si esce dalla rubrica e si apre la conversazione" || fail "scrivi dalla rubrica: $(r SCRIVI)"
 [ "$KO" -eq 0 ]

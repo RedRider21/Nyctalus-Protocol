@@ -616,6 +616,9 @@ class Chat(Gtk.Window):
         self.visti = {}          # ultimo accesso visto dal nostro motore (evento V)
         self.rubrica = leggi_rubrica_rete()   # indirizzo .nyct della rubrica della rete (se c'è)
         self.fin_rubrica = None
+        # aperta dal bottone «Rubrica» del mini menu: si mostra solo la rubrica, la finestra
+        # della chat compare quando si sceglie qualcuno a cui scrivere
+        self.solo_rubrica = bool(os.environ.pop("NYCTALUS_APRI_RUBRICA", ""))
         self.attivo = None
         self.righe_contatto = {} # addr -> Gtk.ListBoxRow
         self.sock = None
@@ -644,11 +647,16 @@ class Chat(Gtk.Window):
         self._costruisci()
         self.connect("delete-event", lambda *_a: (self._salva_dimensioni(), False)[1])
         self.connect("destroy", Gtk.main_quit)
-        self.show_all()
+        if self.solo_rubrica:
+            self.get_child().show_all()
+        else:
+            self.show_all()
         self._mostra_vuoto()
 
         if not self._connetti():
             self._errore_motore()
+        if self.solo_rubrica:
+            self.apri_rubrica()
 
     # --- interfaccia -----------------------------------------------------------
     def _costruisci(self):
@@ -859,13 +867,13 @@ class Chat(Gtk.Window):
         self._cmd("LIST")
         self._cmd("SUB")
         # rubrica: «ci sono» se iscritti (così risultiamo in linea), apertura chiesta dal mini menu
-        GLib.timeout_add_seconds(4, self._ci_sono)
+        GLib.timeout_add_seconds(4, lambda: self._ci_sono() and False)
         GLib.timeout_add_seconds(180, self._ci_sono)
         GLib.timeout_add(1500, self._richiesta_rubrica)
         return True
 
     def _errore_motore(self):
-        d = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.WARNING,
+        d = Gtk.MessageDialog(transient_for=self if self.get_visible() else None, modal=True, message_type=Gtk.MessageType.WARNING,
                               buttons=Gtk.ButtonsType.OK, text=_t("chat.motore_assente"))
         d.format_secondary_text(_t("chat.motore_assente_corpo"))
         d.run()
@@ -1714,11 +1722,14 @@ class Chat(Gtk.Window):
     def apri_rubrica(self):
         self.rubrica = leggi_rubrica_rete()
         if not self.rubrica:
-            d = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.INFO,
+            d = Gtk.MessageDialog(transient_for=self if self.get_visible() else None, modal=True,
+                                  message_type=Gtk.MessageType.INFO,
                                   buttons=Gtk.ButtonsType.OK, text=_t("chat.rub.nessuna"))
             d.format_secondary_text(_t("chat.rub.nessuna_corpo"))
             d.run()
             d.destroy()
+            if not self.get_visible():
+                Gtk.main_quit()            # aperta solo per la rubrica: non resta nulla da mostrare
             return
         if self.fin_rubrica is not None:
             self.fin_rubrica.present()
@@ -1726,16 +1737,25 @@ class Chat(Gtk.Window):
             return
         from .rubrica import FinestraRubrica
         self.fin_rubrica = FinestraRubrica(self, _t, lambda n, a: fai_avatar(n, a), ultimo_accesso)
-        self.fin_rubrica.connect("destroy", lambda _w: setattr(self, "fin_rubrica", None))
+        self.fin_rubrica.connect("destroy", self._rubrica_chiusa)
+
+    def _rubrica_chiusa(self, _w):
+        self.fin_rubrica = None
+        if not self.get_visible():         # c'era solo la rubrica: chiusa lei, si esce
+            Gtk.main_quit()
 
     def scrivi_a(self, addr, nome):
         """Dalla rubrica: aggiunge (se serve) e apre la conversazione."""
         if addr not in self.contatti:
             self._cmd("ADD %s %s" % (addr, nome.encode().hex()))
             self._upsert_contatto(addr, nome)
+        if not self.get_visible():         # dalla sola rubrica: ora serve la finestra della chat
+            self.show_all()
+            self._mostra_vuoto()
         riga = self.righe_contatto.get(addr)
         if riga is not None:
             self.lista.select_row(riga)
+        self.present()
 
     def _richiesta_rubrica(self):
         """Il mini menu chiede di aprire la rubrica (file-segnale), o lo chiede l'avvio."""

@@ -14,7 +14,8 @@ class FinestraRubrica(Gtk.Window):
     def __init__(self, chat, t, avatar, ultimo_accesso):
         super().__init__(title=t("chat.rub.titolo"))
         self.chat, self._t, self._avatar, self._ultimo = chat, t, avatar, ultimo_accesso
-        self.set_transient_for(chat)
+        # finestra a sé (non «figlia» della chat): aprendola dal menu non porta su la chat
+        self.set_icon_name("nyctalus")
         self.set_default_size(420, 560)
         self.get_style_context().add_class("chat-root")
         self.get_style_context().add_class("finestra-rubrica")
@@ -126,7 +127,6 @@ class FinestraRubrica(Gtk.Window):
 
     def _scrivi(self, u):
         self.chat.scrivi_a(u["a"], u["n"])
-        self.chat.present()
 
     def _chiedi_nome(self, attuale):
         t = self._t

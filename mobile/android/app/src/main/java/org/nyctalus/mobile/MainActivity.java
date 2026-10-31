@@ -77,7 +77,8 @@ public class MainActivity extends Activity {
     private TextView stato;
     private String segreto;
     private boolean caricata = false, pronto = false, entraAppenaPronto = false, inPausa = false;
-    private boolean apriRubrica = false;   // entrando, la chat si apre sulla rubrica della rete
+    private boolean apriRubrica = false;   // entrando, si apre la sola rubrica della rete
+    private volatile boolean inRubrica = false;   // la web-app mostra la sola rubrica
     private View pulsanteEntra;      // la casella «Chat»: si accende quando Nyctalus è pronto
     private int portaSocksBrowser = 18733;
     private TextView rigaRete;      // «🔗 Rete: …» — vale per TUTTA l'app (chat, browser, file)
@@ -910,7 +911,9 @@ public class MainActivity extends Activity {
         if (web != null) {                                                     // già pronta: si rientra
             runOnUiThread(() -> {
                 setContentView(web);
-                if (apriRubrica) web.evaluateJavascript("window.nyctApriRubrica && nyctApriRubrica()", null);
+                // «Rubrica» → la sola rubrica; «Chat» → la chat (chiude la rubrica se era rimasta aperta)
+                web.evaluateJavascript(apriRubrica ? "window.nyctApriRubrica && nyctApriRubrica()"
+                        : "window.nyctChiudiRubrica && nyctChiudiRubrica()", null);
                 apriRubrica = false;
             });
             return;
@@ -1044,6 +1047,18 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> MainActivity.this.apriBrowser(url, nyctalus));
         }
 
+        /** La web-app mostra (o non più) la sola rubrica: decide cosa fa il tasto indietro. */
+        @JavascriptInterface
+        public void rubrica(boolean aperta) {
+            inRubrica = aperta;
+        }
+
+        /** La sola rubrica è stata chiusa: si torna alla schermata d'avvio. */
+        @JavascriptInterface
+        public void avvio() {
+            runOnUiThread(MainActivity.this::tornaAllAvvio);
+        }
+
         @JavascriptInterface
         public void copia(String t) {
             if (t != null) copiaNegliAppunti(t);
@@ -1141,7 +1156,11 @@ public class MainActivity extends Activity {
     @Override
     public boolean onKeyDown(int tasto, KeyEvent e) {
         if (tasto == KeyEvent.KEYCODE_BACK && web != null && web.getParent() != null) {
-            if (web.canGoBack()) web.goBack();      // dentro la chat (es. da una conversazione all'elenco)
+            if (inRubrica) {                         // la sola rubrica: indietro = schermata d'avvio
+                web.evaluateJavascript("window.nyctChiudiRubrica && nyctChiudiRubrica()", null);
+                inRubrica = false;
+                tornaAllAvvio();
+            } else if (web.canGoBack()) web.goBack();      // dentro la chat (es. da una conversazione all'elenco)
             else tornaAllAvvio();                   // dall'elenco: di nuovo alla schermata di partenza
             return true;
         }

@@ -267,3 +267,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .rubrica-utente .nome { font-weight: 600; }
 .rubrica-utente .sotto { font-size: 13px; color: var(--tenue); }
 .rubrica-utente .freccia { font-size: 18px; opacity: .8; }
+/* la sola rubrica (riquadro «Rubrica» dell'app): una schermata intera, non un foglio */
+body.solo-rubrica #foglio { top: 0; bottom: 0; max-height: none; border-radius: 0; box-shadow: none;
+  padding-top: max(8px, env(safe-area-inset-top)); left: 0; width: auto; transform: none; }
+body.solo-rubrica #foglio .maniglia { display: none; }
+body.solo-rubrica #foglio .titolo { display: flex; align-items: center; gap: 10px; font-size: 18px; padding: 8px 12px 12px; }
+body.solo-rubrica #foglio .rubrica { max-height: none; }
+body.solo-rubrica #velo { background: var(--panel); }
+.indietro-rubrica { background: none; border: 0; color: var(--testo); font-size: 22px; padding: 2px 10px; border-radius: 50%; }

@@ -82,8 +82,10 @@ ti propone di aggiungerlo per rispondere.
 
 Se la rete ha una **rubrica** (la rete di casa la accende da sola, §6 del manuale del
 gestore), nella chat compare il pulsante **👥**: sul PC in alto, accanto al nome; sul
-telefono in cima all'elenco delle chat. Si apre anche direttamente: dal **menu del PC**
-(bottone **Rubrica**) e dalla **schermata d'avvio del telefono** (riquadro **👥 Rubrica**).
+telefono in cima all'elenco delle chat. Si apre anche **da sola**, senza la chat: dal **menu
+del PC** (bottone **Rubrica**: compare solo la finestra della rubrica) e dalla **schermata
+d'avvio del telefono** (riquadro **👥 Rubrica**: una schermata intera; **←** o il tasto indietro
+riportano all'avvio). La chat si apre solo quando scegli qualcuno a cui scrivere.
 
 - **Iscriviti** con un nome (1-40 caratteri): chi usa la stessa rete lo vede e può scriverti.
   **✏️ Cambia nome** e **Cancellati** sono sempre lì; cancellato, sparisci dall'elenco.

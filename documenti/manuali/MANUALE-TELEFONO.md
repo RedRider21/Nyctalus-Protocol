@@ -22,7 +22,7 @@ fila di pulsanti, come il mini menu del PC:
 | Pulsante | Cosa apre |
 |---|---|
 | 💬 **Chat** | la chat. Si accende quando la scritta dice «● Nyctalus è pronto» |
-| 👥 **Rubrica** | la chat aperta direttamente sulla **rubrica della rete**: chi usa la rete, chi è in linea, iscriversi con un nome (vedi `MANUALE-CHAT.md` §3-bis). Funziona se la rete ha una rubrica (la rete di casa sì) |
+| 👥 **Rubrica** | la sola **rubrica della rete**, a tutto schermo (← o indietro tornano qui; la chat si apre solo scegliendo qualcuno a cui scrivere): chi usa la rete, chi è in linea, iscriversi con un nome (vedi `MANUALE-CHAT.md` §3-bis). Funziona se la rete ha una rubrica (la rete di casa sì) |
 | 🌐 **Browser** | il browser: **🦇 modalità Nyctalus** (anonimo, siti `.nyct`) oppure navigazione normale; parte da DuckDuckGo |
 | 📁 **File** | in arrivo: invio e ricezione di file attraverso Nyctalus |
 | ℹ️ **Info** | il sito del progetto con i manuali online (anche toccando il logo) |

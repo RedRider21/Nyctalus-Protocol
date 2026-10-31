@@ -165,9 +165,15 @@ const postJson = (url, dati) => fetch(url, { method: "POST", headers: { "Content
 // L'elenco di chi usa questa rete (chi si è iscritto con un nome). Le richieste sono messaggi
 // della chat cifrata verso la rubrica, che quindi sa con certezza chi scrive.
 S.rubrica = ""; S.rubricaDati = null;
-// l'app Android apre la chat direttamente sulla rubrica (riquadro «Rubrica» dell'avvio)
-S.rubricaAppena = location.hash === "#rubrica";
-window.nyctApriRubrica = () => { if (S.rubrica) apriRubrica(); else S.rubricaAppena = true; };
+// Il riquadro «Rubrica» dell'avvio (app Android) apre la SOLA rubrica, a tutto schermo:
+// indietro torna all'avvio; la chat compare solo scegliendo qualcuno a cui scrivere.
+S.soloRubrica = false;
+window.nyctApriRubrica = () => apriRubrica(true);
+window.nyctChiudiRubrica = () => { if (S.soloRubrica) { esciSoloRubrica(); chiudiFoglio(); } };
+function esciSoloRubrica() {
+  S.soloRubrica = false; document.body.classList.remove("solo-rubrica");
+  if (HOST && HOST.rubrica) HOST.rubrica(false);   // l'app: il tasto indietro torna a valere per la chat
+}
 async function leggiRubrica() {
   try {
     const r = await (await fetch("/api/rete")).json();
@@ -175,7 +181,15 @@ async function leggiRubrica() {
   } catch (e) { S.rubrica = ""; }
   $("btn-rubrica").classList.toggle("nascosto", !S.rubrica);
   if (S.rubrica && localStorage.getItem("nyct-iscritto-" + S.rubrica)) chiediRubrica({ op: "ci_sono" });
-  if (S.rubricaAppena) { S.rubricaAppena = false; apriRubrica(); }
+  const box = document.querySelector("#foglio .rubrica");
+  if (S.soloRubrica && box && !S.rubricaDati) {        // la sola rubrica aspettava la rete
+    if (S.rubrica) chiediElenco();
+    else box.textContent = "Questa rete non ha una rubrica. Ce l'ha la rete di casa: vedi «🔗 Rete» nella schermata d'avvio.";
+  }
+}
+function chiediElenco() {
+  if (S.ws && S.ws.readyState === 1) chiediRubrica({ op: "elenco" });
+  else S.elencoInAttesa = true;                    // si chiede appena la chat è collegata
 }
 function chiediRubrica(obj) { if (S.rubrica) manda("SEND " + S.rubrica + " " + inHex(JSON.stringify(obj))); }
 setInterval(() => { if (S.rubrica && localStorage.getItem("nyct-iscritto-" + S.rubrica)) chiediRubrica({ op: "ci_sono" }); }, 180000);
@@ -190,12 +204,16 @@ function rispostaRubrica(testo) {
   else if (r.op === "errore") toast("Rubrica: " + r.msg);
 }
 
-function apriRubrica() {
-  if (!S.rubrica) return toast("Questa rete non ha una rubrica");
+function apriRubrica(solo) {
+  if (!S.rubrica && !solo) return toast("Questa rete non ha una rubrica");
+  if (solo) { S.soloRubrica = true; document.body.classList.add("solo-rubrica"); if (HOST && HOST.rubrica) HOST.rubrica(true); }
   S.rubricaDati = null;
-  apriFoglio("👥 Rubrica della rete", [el("div", "rubrica", "Chiedo l'elenco alla rubrica…")]);
-  if (S.ws && S.ws.readyState === 1) chiediRubrica({ op: "elenco" });
-  else S.elencoInAttesa = true;                    // si chiede appena la chat è collegata
+  apriFoglio("👥 Rubrica della rete", [el("div", "rubrica", S.rubrica ? "Chiedo l'elenco alla rubrica…" : "Collegamento alla rete…")]);
+  if (solo) {
+    const ind = el("button", "indietro-rubrica", "←"); ind.onclick = chiudiFoglio;
+    document.querySelector("#foglio .titolo").prepend(ind);
+  }
+  if (S.rubrica) chiediElenco();
 }
 function disegnaRubrica() {
   const box = document.querySelector("#foglio .rubrica");
@@ -224,6 +242,7 @@ function disegnaRubrica() {
     testo.append(el("div", "nome", u.n), el("div", "sotto", u.on ? "in linea" : ultimoAccesso(u.v)));
     riga.append(av, testo, el("span", "freccia", S.contatti.has(u.a) ? "💬" : "＋"));
     riga.onclick = () => {
+      esciSoloRubrica();                           // si passa alla chat: niente ritorno all'avvio
       chiudiFoglio();
       if (!S.contatti.has(u.a)) { manda("ADD " + u.a + " " + inHex(u.n)); aggiornaContatto(u.a, u.n); manda("LIST"); }
       apriChat(u.a);
@@ -237,7 +256,8 @@ function chiediNome(attuale) {
     [["Annulla", null], ["Salva", () => { const n = campo.value.trim(); if (n) chiediRubrica({ op: "iscrivi", nome: n }); }, "primario"]]);
   setTimeout(() => campo.focus(), 50);
 }
-$("btn-rubrica").onclick = apriRubrica;
+$("btn-rubrica").onclick = () => apriRubrica(false);
+if (location.hash === "#rubrica") apriRubrica(true);
 
 // ---------- eventi dal motore ----------------------------------------------------------
 function evento(riga) {
@@ -749,6 +769,10 @@ function apriFoglio(titolo, contenuto) {
   $("velo").classList.remove("nascosto"); f.classList.remove("nascosto");
 }
 function chiudiFoglio() {
+  if (S.soloRubrica) {                             // la sola rubrica: chiusa, si torna all'avvio
+    esciSoloRubrica();
+    if (HOST && HOST.avvio) HOST.avvio();
+  }
   const f = $("foglio");
   if (f._chiudi) { f._chiudi(); f._chiudi = null; }     // ferma il caricamento delle miniature
   $("velo").classList.add("nascosto"); $("velo").classList.remove("trasparente");
