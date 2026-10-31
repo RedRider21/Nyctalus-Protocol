@@ -101,6 +101,27 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
 - [x] **Mini-menu/launcher da desktop.** ✅ Pannello **senza bordi, trascinabile** e collocabile ovunque, con **bottoni quadrati** in **orizzontale o verticale** (dal settings), **dimensione regolabile** (Più grande/Più piccola/Normale), **tasti rapidi configurabili** (globali via Keybinder, ripiego locale) per Browser/Chat/File/mostra-nascondi, **logo** come primo bottone (apre le Pages). Lancia Browser e Chat (il gestore file arriverà). Stile flat, icone tenui, posizione/orientamento/dimensione/scorciatoie persistiti (`~/.nyctalus-launcher/config.json`). **Python + GTK3** (`launcher/nyctalus_launcher`), condivide stile e traduzioni (`nxs_i18n`). Il **motore** (demone/nodi) resta Rust; i **client** restano Python/GTK.
 - [x] **Decisioni sulle tecnologie dei client** (approvate dall'utente): **motore** (demone/nodi/protocollo) in **Rust**; **client desktop** (browser, launcher, chat, gestore file) in **Python+GTK3** (produttività, coerenza, condivisione stile/traduzioni); **mobile (Android/iOS)** come **web-app PWA** (HTML5 + JS + **IndexedDB** quando serve), con il trasporto Nyctalus lato telefono da **Termux o come servizio** — si sceglierà la via più snella all'atto pratico.
 
+## Appunti per le prossime funzioni (decisi con l'utente il 2026-10-31)
+
+**Ordine concordato:** 1) **casella cifrata** (messaggi a chi non è in linea, passo 5b);
+2) **chiamate vocali e videochiamate**: prima di scrivere codice si decide INSIEME, con una
+serie di scelte mirate, come farle (attraverso la rete Nyctalus = anonime ma con qualche
+decimo di secondo di ritardo; diretto P2P = veloce ma l'altro vede l'IP; qualità, codec,
+permessi microfono/fotocamera nell'APK, canale «a pacchetti» nel motore con i datagrammi QUIC).
+
+**Gestore dello scambio di file (richiesta dell'utente): velocità «alla torrent».** Usare
+insieme la linea in **download** e quella in **upload**, come BitTorrent:
+- il file è diviso in **pezzi** con impronta (BLAKE3, già usato per gli allegati); ogni pezzo
+  si verifica da solo, quindi può arrivare da chiunque;
+- chi sta scaricando **rimanda subito ad altri i pezzi che ha già** (scarica e carica nello
+  stesso momento): più persone hanno il file, più è veloce per tutti (sciame);
+- anche fra **due sole persone** si accelera aprendo **più circuiti in parallelo** e
+  distribuendo i pezzi fra loro (il motore ha già il multi-percorso «conflux»), con ripresa
+  dei trasferimenti interrotti;
+- da valutare insieme: anonimato dello sciame (chi partecipa resta dietro i propri circuiti
+  `.nyct`, nessun «tracker» che veda gli IP), limiti di banda in upload scelti dall'utente,
+  condivisione solo con contatti o con un link `.nyct`.
+
 ## Per ripartire
 ```sh
 cd "nyctalus protocol"
