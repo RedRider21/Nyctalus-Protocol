@@ -156,6 +156,58 @@ con l'ora in cui l'hai scritto.</p>
 <li>Quello che la casella vede comunque: che qualcuno ha lasciato posta per quell'indirizzo, quando
   e quanto è grande, e quando il destinatario la ritira.</li>
 </ul>
+<h2 id="3-quater-chiamate-vocali">3-quater. Chiamate vocali (📞)</h2>
+<p>Nella conversazione tocca <strong>📞</strong>: l'altro vede la chiamata in arrivo (sul telefono anche come
+notifica, con l'app chiusa) e tocca <strong>Rispondi</strong> o <strong>Rifiuta</strong>. Durante la chiamata:</p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🎤 <strong>Muto</strong></td>
+<td>il tuo microfono smette di trasmettere</td>
+</tr>
+<tr>
+<td>🔊 <strong>Vivavoce</strong> (telefono)</td>
+<td>altoparlante invece dell'auricolare</td>
+</tr>
+<tr>
+<td>🔊 <strong>Audio</strong> (PC)</td>
+<td>volume di chi parla e uscita: altoparlante o cuffie</td>
+</tr>
+<tr>
+<td>⌄ <strong>Riduci</strong> (telefono)</td>
+<td>torni alla chat, la chiamata continua (barretta verde in cima)</td>
+</tr>
+<tr>
+<td>✆ <strong>Riaggancia</strong></td>
+<td>chiude la chiamata</td>
+</tr>
+<tr>
+<td>📶</td>
+<td>qualità della linea: buona, discreta, scarsa</td>
+</tr>
+<tr>
+<td>🎥 <strong>Video</strong></td>
+<td>in arrivo (fase 2)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Anonime come i messaggi:</strong> la voce passa attraverso la rete Nyctalus, cifrata nella stessa
+  sessione dei messaggi; nessuno dei due vede l'IP dell'altro. Il prezzo è un piccolo ritardo
+  (qualche decimo di secondo su una rete vera).</li>
+<li>La voce è <strong>Opus</strong> a 24 kbit/s in pacchetti da 20 ms; un pacchetto arrivato tardi si salta
+  invece di aspettarlo, così la conversazione non accumula ritardo.</li>
+<li>Se l'altro è già in chiamata risulta <strong>occupato</strong>; senza risposta entro 45 secondi la
+  chiamata si chiude da sola; se la linea cade (l'altro sparisce) la chiamata si chiude.</li>
+<li>Il <strong>telefono</strong> chiede il permesso del microfono alla prima chiamata. Il PC usa microfono e
+  altoparlanti del sistema (serve GStreamer con Opus, di solito già presente).</li>
+</ul>
 <h2 id="4-allegati-file-foto-video-audio-documenti">4. Allegati: file, foto, video, audio, documenti</h2>
 <ul>
 <li><strong>Inviare</strong>: apri la chat con un contatto e premi la <strong>graffetta 📎</strong>. Si apre il

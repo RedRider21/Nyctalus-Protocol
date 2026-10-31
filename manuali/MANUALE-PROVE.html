@@ -156,6 +156,14 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 <td><strong>Windows simulato</strong>: il programma d'avvio accende il servizio una volta sola e dà l'indirizzo della finestra; la finestra d'avvio (stato «pronto», riquadri, 🔗 Rete, guida di Firefox, ⏻ Esci che spegne tutto); contenuto dello zip senza dati personali</td>
 </tr>
 <tr>
+<td><code>18-chiamate</code></td>
+<td><strong>chiamate, motore</strong>: invito, risposta, 2 s di voce a pacchetti da 20 ms nei due sensi (identici, ritardo misurato), fine, invito rifiutato, invito ricordato per chi apre la chat dopo, id non valido rifiutato</td>
+</tr>
+<tr>
+<td><code>19-chiamata-pc</code></td>
+<td><strong>chiamata dalla chat GTK</strong> con microfono e altoparlante DI PROVA: 📞, risposta, voce Opus nei due sensi, barra con durata e qualità, muto, volume, riaggancia</td>
+</tr>
+<tr>
 <td><code>08-app-android</code></td>
 <td>app Android: niente permesso fotocamera, scatti privati, nomi di file filtrati; il comando che l'app fa eseguire a Termux scrive il <strong>suo segreto</strong> (600) e il servizio già acceso lo accetta, il vecchio no; «Installa Nyctalus in Termux» in un <strong>Termux simulato</strong> (pacchetto con impronta sbagliata rifiutato, installazione, <code>allow-external-apps</code>, ritorno all'app, niente <code>pkg upgrade</code>); il <strong>servitore Java vero</strong> dell'app provato su JVM (404 agli indirizzi sbagliati, consegna integra, spegnimento); compila l'APK se c'è un Android SDK (<code>ANDROID_HOME</code>) e controlla che contenga il pacchetto</td>
 </tr>
