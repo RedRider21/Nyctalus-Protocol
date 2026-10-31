@@ -299,3 +299,4 @@ body.solo-rubrica #velo { background: var(--panel); }
 .ch-tasto:disabled { opacity: .35; }
 .ch-mini { position: fixed; top: 0; left: 0; right: 0; z-index: 35; border: 0; padding: 8px 12px;
   padding-top: max(8px, env(safe-area-inset-top)); background: #43a047; color: #fff; font-weight: 600; font-size: 14px; }
+#btn-chiama { color: #43a047; font-size: 22px; }   /* 📞 ben visibile, come in Telegram */

@@ -563,6 +563,14 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (ricaricaChat && web != null) {               // di ritorno dall'aggiornamento in Termux
+            ricaricaChat = false;
+            WebView vecchia = web;
+            web = null;
+            caricata = false;
+            if (vecchia.getParent() != null) setContentView(costruisciAvvio());
+            vecchia.post(vecchia::destroy);
+        }
         ServizioNotifiche.appInPrimoPiano = true;
         ServizioNotifiche.azzera(this);              // i messaggi ora si vedono nell'app
         mostraErroreBrowser();
@@ -636,8 +644,12 @@ public class MainActivity extends Activity {
      * l'impronta SHA-256, lancia l'installatore (che convive con gli altri progetti),
      * avvia il servizio e riporta qui. L'installazione si vede in Termux.
      */
+    /** Dopo «Installa/aggiorna Nyctalus» la chat va ricaricata: quella in memoria è la vecchia. */
+    private boolean ricaricaChat = false;
+
     private void installaNyctalus() {
         if (!termuxInstallato()) { installaTermux(); return; }
+        ricaricaChat = true;
         if (!ServitorePacchetto.presente(this)) {
             avviso("Questa versione dell'app non contiene il pacchetto: usa nyctalus-termux.tar.gz (vedi manuale).");
             return;
