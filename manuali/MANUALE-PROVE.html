@@ -19,7 +19,7 @@
   <button class="btn-icona" id="tema" title="Tema">🌓</button>
 </div></div>
 <main class="wrap manuale-doc">
-<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html" class="qui">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html" class="qui">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
 <article>
 <h1 id="manuale-delle-prove-funzionamento-e-sicurezza">Manuale delle prove (funzionamento e sicurezza)</h1>
 <p>Tutte le prove stanno nella cartella <strong><code>test/</code></strong> dei sorgenti e si rifanno quando
@@ -137,7 +137,11 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 </tr>
 <tr>
 <td><code>13-casella</code></td>
-<td><strong>casella cifrata</strong>: Bruno è spento, Anna gli scrive → la busta va nella casella (illeggibile, senza l'indirizzo di Anna, file privati, nessun registro); Bruno si accende e la riceve autenticata come di Anna, la casella la cancella; deposito anonimo via SOCKS, busta troppo grande rifiutata, busta falsa scartata</td>
+<td><strong>casella cifrata</strong>: Bruno è spento, Anna gli scrive → la busta va nella casella (illeggibile, senza l'indirizzo di Anna, file privati, nessun registro); Bruno si accende e la riceve autenticata come di Anna, la casella la cancella; <strong>spunte</strong> (📮✓ → ✓✓, ✓ → ✓✓ → ✓✓ blu) e <strong>modalità aereo</strong> (lato di Bruno congelato: il messaggio senza «ricevuto» va nella casella e arriva una volta sola); deposito anonimo via SOCKS, busta troppo grande rifiutata, busta falsa scartata</td>
+</tr>
+<tr>
+<td><code>14-siti</code></td>
+<td><strong><code>nyctalus-sito</code></strong>: sito creato con la pagina d'esempio (niente risorse esterne, file privati), messo online sulla rete di casa e <strong>visitato attraverso la rete</strong>, pagina aggiunta visibile subito, arresto pulito; sito dinamico dietro un server web locale; nomi/backend/codici sbagliati rifiutati; la chiave esportata riprende lo stesso indirizzo; unità systemd dell'utente; rimozione con copia della chiave</td>
 </tr>
 <tr>
 <td><code>08-app-android</code></td>

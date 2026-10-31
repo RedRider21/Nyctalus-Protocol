@@ -1,0 +1,143 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuale dei siti .nyct · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SITI.html" class="qui">Manuale dei siti .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<article>
+<h1 id="manuale-dei-siti-nyct">Manuale dei siti <code>.nyct</code></h1>
+<p>Un sito <strong><code>.nyct</code></strong> si raggiunge solo dalla rete Nyctalus. Chi lo visita non sa dove sta il
+computer che lo ospita, e il sito non sa chi lo visita. Tutto si fa con un comando:
+<strong><code>nyctalus-sito</code></strong>. Lo installano il pacchetto PC (<code>./installa.sh</code>) e il pacchetto server
+(<code>./nyctalus-sito</code> nella cartella scompattata).</p>
+<h2 id="1-il-modo-piu-semplice">1. Il modo più semplice</h2>
+<pre><code class="language-sh">nyctalus-sito
+</code></pre>
+<p>È una guida passo passo: chiede il nome, che tipo di sito è e su quale rete metterlo, poi
+lo mette online subito o lo tiene <strong>sempre acceso</strong>.</p>
+<h2 id="2-gli-stessi-passi-a-comandi">2. Gli stessi passi, a comandi</h2>
+<pre><code class="language-sh">nyctalus-sito crea mio-blog          # sito nuovo con una pagina d'esempio; stampa l'indirizzo .nyct
+nyctalus-sito avvia mio-blog         # online finché non premi Ctrl-C
+nyctalus-sito servizio mio-blog      # oppure: sempre acceso, anche dopo un riavvio
+nyctalus-sito elenco                 # i tuoi siti, con indirizzo e stato (online / spento)
+</code></pre>
+<ul>
+<li><strong>Il contenuto</strong> sta in <code>~/.nyctalus-siti/mio-blog/www/</code>. Modifica <code>index.html</code> e
+  <code>stile.css</code>, aggiungi pagine, cartelle e immagini: si vedono subito, senza riavviare.</li>
+<li><strong>Una cartella che hai già:</strong> <code>nyctalus-sito crea mio-blog --cartella ~/il-mio-sito</code>.
+  Se contiene già un <code>index.html</code>, non viene toccato.</li>
+<li><strong>Consiglio:</strong> tieni tutto nella cartella e usa link relativi (<code>stile.css</code>, non
+  <code>https://…</code>). Niente font, script o immagini presi da altri siti: chi naviga in modo
+  anonimo non li caricherebbe, e lascerebbero tracce.</li>
+</ul>
+<h2 id="3-siti-dinamici-php-unapplicazione-un-cms">3. Siti dinamici (PHP, un'applicazione, un CMS)</h2>
+<p>Il server integrato mostra pagine fisse. Per un sito dinamico tieni acceso il tuo server
+web <strong>solo su questo computer</strong> (<code>127.0.0.1</code>) e fai arrivare lì i visitatori:</p>
+<pre><code class="language-sh">php -S 127.0.0.1:8080 -t ~/mio-sito-php        # oppure nginx/Apache in ascolto su 127.0.0.1:8080
+nyctalus-sito crea mio-sito --backend 127.0.0.1:8080
+nyctalus-sito avvia mio-sito
+</code></pre>
+<p>Indirizzi diversi da <code>127.0.0.1</code> vengono rifiutati: il server web non deve essere
+raggiungibile da Internet, solo da Nyctalus.</p>
+<h2 id="4-su-quale-rete">4. Su quale rete</h2>
+<p>Di solito su quella di questo computer, cioè quella importata con <code>nyctalus-rete importa</code>
+o accesa con <code>nyctalus-rete casa</code>. Su un server che non usa la chat si passa il codice della
+rete:</p>
+<pre><code class="language-sh">./nyctalus-sito crea mio-sito --codice NYCT1:…     # il codice te lo dà chi gestisce la rete
+nyctalus-sito rete mio-sito                        # su quale rete sta
+nyctalus-sito rete mio-sito --codice NYCT1:…       # spostarlo su un'altra rete (poi riavvialo)
+</code></pre>
+<p>Il sito lo vede <strong>solo chi è sulla stessa rete</strong>. Con la rete di casa sono i dispositivi a cui
+hai dato il codice. Per un sito pubblico serve una rete condivisa con nodi su server diversi
+(scenario D in <a href="SCELTE-OPERATIVE.html"><code>SCELTE-OPERATIVE.md</code></a>). L'elenco dei nodi si riscarica ogni 6 ore: se cambia, il
+sito riparte da solo.</p>
+<h2 id="5-sempre-acceso">5. Sempre acceso</h2>
+<pre><code class="language-sh">nyctalus-sito servizio mio-blog            # servizio di sistema dell'utente: riparte da solo
+nyctalus-sito servizio mio-blog --togli    # torna «solo quando lo avvio io»
+</code></pre>
+<p>È un servizio <strong>systemd dell'utente</strong>, quindi non serve root. Resta acceso finché sei collegato;
+per tenerlo acceso anche dopo l'uscita (per esempio su un server) esegui una volta
+<code>sudo loginctl enable-linger $USER</code>. Il comando te lo ricorda. Stato e registro:
+<code>systemctl --user status nyctalus-sito-mio-blog</code> e <code>journalctl --user -u nyctalus-sito-mio-blog</code>.</p>
+<h2 id="6-la-chiave-e-lindirizzo">6. La chiave è l'indirizzo</h2>
+<p>Il file <code>~/.nyctalus-siti/NOME/identita</code> è la <strong>chiave del sito</strong>, e l'indirizzo <code>.nyct</code> è
+calcolato da lei:
+- <strong>fanne una copia di sicurezza:</strong> <code>nyctalus-sito esporta mio-blog ~/chiave-mio-blog.nyctkey</code>;
+- per <strong>spostare il sito</strong> su un altro computer con lo stesso indirizzo:
+  <code>nyctalus-sito crea mio-blog --chiave ~/chiave-mio-blog.nyctkey</code> (poi copia anche i file);
+- <strong>non darla a nessuno:</strong> chi la possiede può mettere online un sito falso al tuo indirizzo.</p>
+<p>Per cancellare un sito: <code>nyctalus-sito togli mio-blog</code> (chiede conferma). La chiave resta in una
+copia in <code>~/.nyctalus-siti/.chiavi-tolte/</code>, così puoi riprenderne l'indirizzo. I file di una
+cartella tua (<code>--cartella</code>) non vengono toccati.</p>
+<h2 id="7-visitare-un-sito">7. Visitare un sito</h2>
+<ul>
+<li><strong>PC:</strong> browser Nyctalus in <strong>modalità 🦇</strong>, scrivi l'indirizzo <code>….nyct</code>.</li>
+<li><strong>Telefono:</strong> app Nyctalus → <strong>🌐 Browser</strong> → modalità 🦇.</li>
+<li><strong>Da terminale</strong>, per una prova veloce:
+  <code>nyctalus browse INDIRIZZO.nyct --directory directory.txt --authority CHIAVE</code>.</li>
+</ul>
+<h2 id="8-in-breve-cosa-resta-sul-tuo-computer">8. In breve, cosa resta sul tuo computer</h2>
+<table>
+<thead>
+<tr>
+<th>Dove</th>
+<th>Cosa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~/.nyctalus-siti/NOME/sito.json</code></td>
+<td>nome, indirizzo, tipo, rete (file 600)</td>
+</tr>
+<tr>
+<td><code>~/.nyctalus-siti/NOME/identita</code></td>
+<td>la chiave del sito (600)</td>
+</tr>
+<tr>
+<td><code>~/.nyctalus-siti/NOME/www/</code></td>
+<td>le pagine (se non hai scelto un'altra cartella)</td>
+</tr>
+<tr>
+<td><code>~/.nyctalus-siti/NOME/directory.txt</code></td>
+<td>l'ultimo elenco dei nodi scaricato</td>
+</tr>
+<tr>
+<td><code>~/.config/systemd/user/nyctalus-sito-NOME.service</code></td>
+<td>solo se è «sempre acceso»</td>
+</tr>
+</tbody>
+</table>
+<p>Il server integrato non tiene registri di chi visita il sito.</p>
+</article>
+</main>
+<button class="torna-su" id="torna-su" type="button" title="Torna su" aria-label="Torna su">↑</button>
+<script>
+(function(){var b=document.getElementById('torna-su');
+function aggiorna(){b.classList.toggle('visibile',window.scrollY>250);}
+window.addEventListener('scroll',aggiorna,{passive:true});aggiorna();
+b.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});})();
+</script>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>
