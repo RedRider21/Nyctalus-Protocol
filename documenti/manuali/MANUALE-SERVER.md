@@ -90,6 +90,16 @@ Quando l'IP cambia non serve fare nulla: client e nodi risolvono il nome a ogni 
 Nota: alcuni router non permettono ai dispositivi di casa di raggiungere il proprio nome
 pubblico; in quel caso in casa si usano gli altri nodi della rete.
 
+## 6-bis. Rubrica e casella della rete (facoltativo)
+Rubrica (chi usa la rete) e casella cifrata (messaggi a chi non è in linea) devono stare su una
+macchina sempre accesa: il server va benissimo.
+```sh
+./gestore-rete/nyctalus-rete rubrica --codice NYCT1:… --servizio    # il codice della rete
+```
+Stampa due indirizzi `.nyct` (anche dopo, con `journalctl --user -u nyctalus-rubrica`): mandali
+al gestore, che li mette nel codice (`MANUALE-GESTORE-RETE.md` §6-bis). Porte solo locali
+(18810-18814): sul router o sul firewall non va aperto nulla.
+
 ## 7. Senza root
 ```sh
 ./installa.sh --utente

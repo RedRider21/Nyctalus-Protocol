@@ -23,9 +23,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          # Linux su Ubuntu 22.04 (glibc 2.35): così i binari partono anche su Debian 12,
+          # Raspberry Pi OS e Ubuntu 22.04 (compilati su 24.04 chiederebbero glibc 2.39)
+          - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
             cross: aarch64-linux-gnu
           # il motore per il telefono (Termux): col kit Android già presente sui server di GitHub,

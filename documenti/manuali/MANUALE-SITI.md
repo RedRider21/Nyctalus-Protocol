@@ -10,6 +10,19 @@ computer che lo ospita, e il sito non sa chi lo visita. Tutto si fa con un coman
 **`nyctalus-sito`**. Lo installano il pacchetto PC (`./installa.sh`) e il pacchetto server
 (`./nyctalus-sito` nella cartella scompattata).
 
+## 0. Due modi di ospitare il sito
+
+| | **Cartella** (server integrato) | **Apache / nginx** (server tuo) |
+|---|---|---|
+| Cos'è | una cartella con `index.html`, CSS, immagini: è la `www` del sito | il tuo server web, in ascolto **solo** su `127.0.0.1` |
+| Pagine | fisse (HTML, CSS, JS) | anche dinamiche: PHP, WordPress, un'applicazione |
+| Serve installare | niente: c'è dentro Nyctalus | Apache/nginx/PHP |
+| Comando | `nyctalus-sito crea NOME` (o `--cartella DIR`) | `nyctalus-sito crea NOME --backend 127.0.0.1:8080` |
+| Dettagli | §2 | §3 |
+
+In tutti e due i casi Nyctalus porta i visitatori al sito senza rivelare né chi visita né
+dove sta il sito.
+
 ## 1. Il modo più semplice
 ```sh
 nyctalus-sito

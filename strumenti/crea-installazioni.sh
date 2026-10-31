@@ -134,9 +134,11 @@ mkdir -p "$V/bin" "$V/Manuali"
 cp "$ROOT/target/release/nyctalus" "$V/bin/nyctalus"
 cp "$ROOT/server/installa-nodo.sh" "$V/installa.sh"; cp "$ROOT/server/nyctalus-server" "$ROOT/server/disinstalla.sh" "$V/"
 cp "$ROOT/pc/gestore-rete/nyctalus-sito" "$V/"        # un sito .nyct sempre acceso sul server
+mkdir -p "$V/gestore-rete"                              # rubrica e casella della rete sul server
+cp "$ROOT/pc/gestore-rete/nyctalus-rete" "$ROOT/pc/gestore-rete/rubrica.py" "$V/gestore-rete/"
 cp "$ROOT/documenti/manuali/MANUALE-SERVER.md" "$ROOT/documenti/manuali/SCELTE-OPERATIVE.md" "$ROOT/documenti/manuali/MANUALE-SITI.md" "$ROOT/LICENSE" "$V/" 2>/dev/null || true
 mv "$V"/MANUALE-SERVER.md "$V"/SCELTE-OPERATIVE.md "$V"/MANUALE-SITI.md "$V/Manuali/" 2>/dev/null || true
-chmod +x "$V"/*.sh "$V/nyctalus-server" "$V/nyctalus-sito" "$V/bin/nyctalus"
+chmod +x "$V"/*.sh "$V/nyctalus-server" "$V/nyctalus-sito" "$V/gestore-rete/nyctalus-rete" "$V/bin/nyctalus"
 cat > "$V/LEGGIMI.txt" <<'EOF'
 Nyctalus per SERVER (nodi della rete)
 =====================================
@@ -153,6 +155,11 @@ INSTALLARE (sul server)
 
 GESTIRE
    nyctalus-server stato | righe | riavvia | ferma | avvia | log
+
+RUBRICA E CASELLA CIFRATA DELLA RETE (facoltativo, sullo stesso server)
+   ./gestore-rete/nyctalus-rete rubrica --codice NYCT1:…            prova (Ctrl-C ferma)
+   ./gestore-rete/nyctalus-rete rubrica --codice NYCT1:… --servizio  sempre accese
+   Stampa due indirizzi: mandali al gestore (nyctalus-rete codice --url URL --rubrica … --casella …)
 
 UN SITO .nyct SEMPRE ACCESO (facoltativo, sullo stesso server)
    ./nyctalus-sito crea NOME --codice NYCT1:…    poi:  ./nyctalus-sito servizio NOME

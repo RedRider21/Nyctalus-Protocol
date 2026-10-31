@@ -15,6 +15,11 @@ Per il GESTORE della rete (chi la tiene in piedi):
   nyctalus-rete servi [--porta 18800]    pubblica directory.txt da questo PC (rete locale)
   nyctalus-rete casa [--nodi 4]          RETE DI CASA tutta su questo PC: nodi + elenco +
                                          codice per il telefono (Ctrl-C per fermare)
+  nyctalus-rete rubrica [--codice NYCT1:…] [--servizio [--togli|--stampa]]
+                                         RUBRICA + CASELLA CIFRATA della rete, sempre accese
+                                         (es. sul server); poi il codice le include
+  nyctalus-rete codice --url URL [--rubrica ADDR --casella ADDR]
+                                         (rubrica/casella accese su un'altra macchina)
 
 Per i CLIENT (chi usa la rete):
   nyctalus-rete importa CODICE|FILE      collega questo PC alla rete del codice
@@ -39,7 +44,9 @@ import sys
 import threading
 import time
 import html
+import types
 import urllib.parse
+import urllib.request
 from pathlib import Path
 
 DATI = Path(os.environ.get("NYCTALUS_RETE_DATI", Path.home() / ".nyctalus-rete"))
@@ -525,6 +532,109 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui):
         print("\nRete di casa fermata.")
 
 
+# --- rubrica + casella di una rete (anche fuori dalla rete di casa) ---------------------
+UNITA_RUBRICA = Path.home() / ".config" / "systemd" / "user" / "nyctalus-rubrica.service"
+AGGIORNA_ELENCO = 6 * 3600
+
+
+def rubrica(codice=None, servizio=False, togli=False, stampa=False):
+    """Rubrica e casella cifrata per una rete vera: per quella che gestisci su questo PC, o per
+    quella di un codice (es. sul server, che non ha la chiave dell'autorità)."""
+    if servizio:
+        cmd = "%s %s rubrica%s" % (sys.executable, Path(__file__).resolve(), " --codice " + codice if codice else "")
+        testo = ("# Creato da nyctalus-rete: rubrica e casella cifrata della rete, sempre accese.\n"
+                 "[Unit]\nDescription=Nyctalus: rubrica e casella della rete\nWants=network-online.target\n"
+                 "After=network-online.target\n\n[Service]\nExecStart=%s\nEnvironment=NYCTALUS_BIN=%s\n"
+                 "Restart=always\nRestartSec=15\n\n[Install]\nWantedBy=default.target\n" % (cmd, binario()))
+        if stampa:
+            return print(testo, end="")
+        if togli:
+            subprocess.run(["systemctl", "--user", "disable", "--now", UNITA_RUBRICA.name], capture_output=True)
+            UNITA_RUBRICA.unlink(missing_ok=True)
+            subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True)
+            return ok("rubrica e casella non sono più sempre accese")
+        UNITA_RUBRICA.parent.mkdir(parents=True, exist_ok=True)
+        UNITA_RUBRICA.write_text(testo)
+        subprocess.run(["systemctl", "--user", "daemon-reload"], check=False)
+        r = subprocess.run(["systemctl", "--user", "enable", "--now", UNITA_RUBRICA.name], capture_output=True, text=True)
+        if r.returncode != 0:
+            esci("systemd non l'ha avviata: %s" % r.stderr.strip())
+        ok("rubrica e casella sempre accese (servizio %s)" % UNITA_RUBRICA.name)
+        print("  Gli indirizzi da mettere nel codice: journalctl --user -u %s | grep -E 'Rubrica|Casella'" % UNITA_RUBRICA.name)
+        print("  Per tenerle accese anche senza essere collegati: sudo loginctl enable-linger %s" % os.environ.get("USER", "$USER"))
+        return
+    if codice:                                 # la rete di un codice (qui non c'è l'autorità)
+        try:
+            dati = leggi_codice(codice)
+        except ValueError as e:
+            esci(str(e))
+        d = privata(privata(DATI / "rubriche") / impronta(dati["authority"]))
+        r = types.SimpleNamespace(dir=d, f_elenco=d / "directory.txt")
+        aut, nome, url = dati["authority"], dati["nome"], dati["directory_url"]
+    else:
+        rr = Rete(DATI)
+        if not rr.esiste():
+            esci("questo PC non gestisce una rete: indica il codice della rete con --codice NYCT1:…")
+        if not rr.f_elenco.exists():
+            esci("prima firma l'elenco: nyctalus-rete firma")
+        r, aut, nome, url = rr, rr.autorita()["pubblica"], rr.autorita()["nome"], None
+
+    def scarica():                             # l'elenco dei nodi (solo per la rete di un codice)
+        if not url:
+            return False
+        with urllib.request.urlopen(url, timeout=30) as risp:
+            nuovo = risp.read(1024 * 1024)
+        vecchio = r.f_elenco.read_bytes() if r.f_elenco.exists() else b""
+        r.f_elenco.write_bytes(nuovo)
+        return nuovo != vecchio
+
+    if url:
+        try:
+            scarica()
+        except Exception as e:  # noqa: BLE001
+            if not r.f_elenco.exists():
+                esci("non riesco a scaricare l'elenco dei nodi da %s: %s" % (url, e))
+    fermo = threading.Event()
+    signal.signal(signal.SIGTERM, lambda *a: fermo.set())
+    try:
+        while not fermo.is_set():
+            proc = []
+            rub = avvia_rubrica(r, aut, proc)
+            f_cas = r.dir / "rubrica" / "casella-indirizzo"
+            cas = f_cas.read_text().strip() if f_cas.exists() else "(non partita)"
+            print("\n🦇 Rubrica e casella della rete «%s» accese" % nome)
+            print("   Rubrica: %s" % rub)
+            print("   Casella: %s" % cas)
+            if codice:
+                print("\n   Manda questi due indirizzi a chi gestisce la rete, che rifà il codice così:")
+                print("   nyctalus-rete codice --url URL --rubrica %s --casella %s" % (rub, cas))
+            else:
+                print("\n   Rifai il codice di rete (li include da solo):  nyctalus-rete codice --url URL")
+            print("   Lascia acceso (Ctrl-C ferma; sempre accese: nyctalus-rete rubrica%s --servizio)"
+                  % (" --codice …" if codice else ""))
+            prossimo = time.time() + AGGIORNA_ELENCO
+            try:
+                while not fermo.wait(5):
+                    if time.time() > prossimo:
+                        prossimo = time.time() + AGGIORNA_ELENCO
+                        try:
+                            if scarica():
+                                print("» elenco dei nodi cambiato: riavvio rubrica e casella")
+                                break
+                        except Exception:  # noqa: BLE001
+                            pass
+            except KeyboardInterrupt:
+                fermo.set()
+            for p in proc:
+                try:
+                    os.killpg(p.pid, signal.SIGTERM)
+                except Exception:  # noqa: BLE001
+                    pass
+            time.sleep(1)
+    finally:
+        print("\nRubrica e casella fermate.")
+
+
 # --- riga di comando --------------------------------------------------------------------
 def opzione(args, nome, predefinito=None):
     if nome in args:
@@ -587,6 +697,13 @@ def principale(args):
         url = opzione(args, "--url")
         if not url:
             esci("indica --url, l'indirizzo dove hai pubblicato directory.txt")
+        # rubrica e casella accese su un'altra macchina (nyctalus-rete rubrica --codice … là)
+        for chiave, nome_file in (("--rubrica", "indirizzo"), ("--casella", "casella-indirizzo")):
+            v = opzione(args, chiave)
+            if v:
+                if not re.fullmatch(r"[a-z2-7]{56}\.nyct", v):
+                    esci("%s: indirizzo .nyct non valido" % chiave)
+                (privata(rete.dir / "rubrica") / nome_file).write_text(v + "\n")
         cod = rete.codice(url)
         ok("codice di rete (dallo ai client: contiene solo la chiave PUBBLICA e l'URL):")
         print("\n  %s\n" % cod)
@@ -608,6 +725,8 @@ def principale(args):
         casa(int(opzione(args, "--nodi", "4")), int(opzione(args, "--porta-base", "4701")),
              int(opzione(args, "--porta", "18800")), opzione(args, "--ip", ip_locale()),
              "--non-importare" not in args)
+    elif cmd == "rubrica":
+        rubrica(opzione(args, "--codice"), "--servizio" in args, "--togli" in args, "--stampa" in args)
     elif cmd == "importa":
         if not args:
             esci("indica il codice di rete (o un file che lo contiene), oppure --prova")

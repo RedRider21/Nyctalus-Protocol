@@ -110,6 +110,18 @@ sei sicuro che nessuno sulla Wi-Fi ti abbia passato un codice diverso. La pagina
 `http` perché è solo nella rete locale e distribuisce dati pubblici; l'elenco dei nodi è
 firmato, e l'impronta protegge il codice.
 
+## 6-bis. Rubrica e casella per la tua rete
+La rete di casa le accende da sola. Per una rete vera vanno tenute accese su una macchina
+sempre in rete:
+- **su questo PC** (dove hai la rete): `nyctalus-rete rubrica` (sempre accese: `--servizio`), poi
+  `nyctalus-rete codice --url URL`, che le include da solo;
+- **sul server** (consigliato): là `nyctalus-rete rubrica --codice NYCT1:… --servizio`
+  (`MANUALE-SERVER.md` §6-bis), poi qui
+  `nyctalus-rete codice --url URL --rubrica INDIRIZZO --casella INDIRIZZO` con i due indirizzi
+  che ha stampato. Il codice li ricorda.
+
+Ridai il codice nuovo ai client (sul telefono 📲 o «🔗 Rete», sul PC `nyctalus-rete importa`).
+
 ## 7. Sicurezza in tre righe
 - La chiave **segreta** non esce mai da `~/.nyctalus-rete`: il codice e l'elenco
   contengono solo la pubblica.
