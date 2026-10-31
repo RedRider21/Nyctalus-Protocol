@@ -20,6 +20,7 @@ from gi.repository import GLib, Gtk  # noqa: E402
 from nyctalus_chat import media  # noqa: E402
 
 SQUILLO_MAX = 45          # secondi: poi «nessuna risposta» / invito lasciato cadere
+MUTA_MAX = 15             # secondi senza voce dall'altro: la chiamata si chiude
 
 
 def durata(sec):
@@ -133,8 +134,8 @@ class Chiamate:
         if c.get("audio"):
             c["audio"].ferma()
         self._chiudi_ui()
-        testo = motivo or (self._t("chat.ch.finita") + (" · " + durata(time.time() - c["inizio"]) if c["stato"] == "attiva" else ""))
-        if c["addr"] == self.chat.attivo:
+        testo = motivo if motivo is not None else (self._t("chat.ch.finita") + (" · " + durata(time.time() - c["inizio"]) if c["stato"] == "attiva" else ""))
+        if testo and c["addr"] == self.chat.attivo:            # "" = in silenzio
             self.chat._avviso_inline("📞 " + testo)
 
     def _accetta(self, addr, cid):
@@ -167,6 +168,9 @@ class Chiamate:
             self.c["id"] = cid
             self._barra_testo()
         elif tipo == "CALLIN":
+            if self.c and self.c["addr"] == addr and self.c.get("id") != cid:
+                self.c["id"] = None                    # ci richiama: la chiamata vecchia era morta
+                self.riaggancia("")
             if self.c or self.finestra_arrivo:
                 self.chat._cmd("CALLNO %s %s" % (addr, cid))          # occupato
             else:
@@ -225,6 +229,9 @@ class Chiamate:
         ric, per = a.ricevuti, a.persi + a.scartati
         self.c["contati"] = (ric, per, time.time())
         dr, dp = ric - ric0, per - per0
+        self.c["muta"] = self.c.get("muta", 0) + 1 if dr == 0 else 0
+        if self.c["muta"] >= MUTA_MAX:
+            return self.riaggancia(self._t("chat.ch.muta"))
         if dr == 0:
             testo = "📵 " + self._t("chat.ch.q_nessuna")
         else:

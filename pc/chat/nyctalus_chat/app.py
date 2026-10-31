@@ -119,6 +119,7 @@ _ITA = {
     "chat.senza_exif": "Foto senza metadati (posizione GPS, fotocamera)",
     "chat.notifiche": "Notifiche sul desktop dei nuovi messaggi",
     "chat.ch.chiama": "Chiamata vocale",
+    "chat.ch.muta": "Chiamata chiusa: dall'altra parte non arriva più voce",
     "chat.ch.audio": "Audio",
     "chat.ch.audio_nota": "Volume e uscita: altoparlante (vivavoce) o cuffie",
     "chat.ch.video_presto": "Videochiamata: in arrivo",

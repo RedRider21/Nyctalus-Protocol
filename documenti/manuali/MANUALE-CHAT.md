@@ -156,8 +156,12 @@ notifica, con l'app chiusa) e tocca **Rispondi** o **Rifiuta**. Durante la chiam
   invece di aspettarlo, così la conversazione non accumula ritardo.
 - Se l'altro è già in chiamata risulta **occupato**; senza risposta entro 45 secondi la
   chiamata si chiude da sola; se la linea cade (l'altro sparisce) la chiamata si chiude.
-- Il **telefono** chiede il permesso del microfono alla prima chiamata. Il PC usa microfono e
-  altoparlanti del sistema (serve GStreamer con Opus, di solito già presente).
+- Il **telefono** chiede il permesso del microfono alla prima chiamata, prima di farla partire.
+  Il PC usa microfono e altoparlanti del sistema (serve GStreamer con Opus, di solito già presente).
+- **Eco e rumore:** su entrambi i lati c'è la cancellazione dell'eco e del rumore di fondo (sul
+  telefono la voce esce come una telefonata vera; sul PC con `webrtcdsp` di GStreamer). Con le
+  cuffie la qualità è comunque migliore.
+- Se dall'altra parte non arriva più voce per 15 secondi, la chiamata si chiude da sola.
 
 ## 4. Allegati: file, foto, video, audio, documenti
 

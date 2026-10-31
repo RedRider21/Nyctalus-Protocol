@@ -13,6 +13,10 @@ const Chiamate = (() => {
   let c = null;                 // {addr, id, stato: "chiamo"|"squilla"|"attiva", inizio}
   let a = null;                 // audio: {ctx, mic, nodo, enc, dec, gain, prossimo, seq, ultimo, ricevuti, persi}
   let muto = false, vivavoce = false, ridotta = false, timer = 0;
+  let micPronto = null;          // il microfono chiesto PRIMA di chiamare/rispondere (permesso di Android)
+  const MUTA_MAX = 15;           // secondi senza voce dall'altro: la chiamata si chiude
+  const VINCOLI = { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false, channelCount: 1 } };
+  // autoGainControl: NO — nelle pause alzava sempre più il rumore di fondo (suono metallico)
 
   // --- schermata della chiamata ----------------------------------------------------------
   const sch = el("div", "chiamata nascosto");
@@ -56,21 +60,34 @@ const Chiamate = (() => {
     }
     if (a && c.stato === "attiva") {
       const r = a.ricevuti - (a.r0 || 0), p = a.persi - (a.p0 || 0); a.r0 = a.ricevuti; a.p0 = a.persi;
+      a.muta = r === 0 ? (a.muta || 0) + 1 : 0;
+      if (a.muta >= MUTA_MAX) return fine("Chiamata chiusa: dall'altra parte non arriva più voce");
       qual.textContent = r === 0 ? "📵 niente audio" : "📶 " + (p / (r + p) < 0.03 ? "linea buona" : p / (r + p) < 0.12 ? "linea discreta" : "linea scarsa");
     } else qual.textContent = "";
     disegna();
   }
 
   // --- azioni ----------------------------------------------------------------------------
-  function chiama(addr) {
+  // il microfono PRIMA di tutto: se Android deve chiedere il permesso, la chiamata non parte
+  // finché non è dato (prima la chiamata partiva, il microfono mancava e si chiudeva da sola)
+  async function preparaMicrofono() {
+    if (micPronto) return true;
+    try { micPronto = await navigator.mediaDevices.getUserMedia(VINCOLI); return true; }
+    catch (e) { toast("🎤 Senza il permesso del microfono non si può chiamare (" + (e.name || e) + ")"); return false; }
+  }
+  async function chiama(addr) {
     if (c) return toast("C'è già una chiamata in corso");
     if (!disponibile()) return toast("Questo telefono non supporta ancora le chiamate (WebView troppo vecchia)");
+    if (!(await preparaMicrofono())) return;
+    if (c) return;
     c = { addr, id: null, stato: "chiamo", inizio: Date.now() };
     ridotta = false; muto = false; vivavoce = false;
     manda("CALL " + addr);
     avviaTimer(); disegna();
   }
   async function rispondi() {
+    if (!c || c.stato !== "squilla") return;
+    if (!(await preparaMicrofono())) return rifiuta();
     if (!c || c.stato !== "squilla") return;
     manda("CALLOK " + c.addr + " " + c.id);
     c.stato = "attiva"; c.inizio = Date.now();
@@ -101,10 +118,12 @@ const Chiamate = (() => {
       if (HOST && HOST.chiamata) HOST.chiamata(true);            // l'app: audio da chiamata (auricolare)
       a = { seq: 0, ultimo: 0, ricevuti: 0, persi: 0, prossimo: 0, ts: 0 };
       a.ctx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" });
-      a.gain = a.ctx.createGain(); a.gain.connect(a.ctx.destination);
+      a.gain = a.ctx.createGain();
+      await uscitaTelefonata(a);
       a.dec = new AudioDecoder({ output: suona, error: () => {} });
       a.dec.configure({ codec: "opus", sampleRate: 48000, numberOfChannels: 1 });
-      a.mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+      a.mic = micPronto || await navigator.mediaDevices.getUserMedia(VINCOLI);
+      micPronto = null;
       if (!c || c.addr !== addr) return fermaAudio();
       await a.ctx.audioWorklet.addModule("/microfono-worklet.js");
       a.enc = new AudioEncoder({
@@ -142,8 +161,31 @@ const Chiamate = (() => {
     s.start(a.prossimo); a.prossimo += buf.duration;
     a.suonati = (a.suonati || 0) + 1;
   }
+  // La voce dell'altro esce da un collegamento WebRTC INTERNO alla pagina (niente rete): così
+  // Android la tratta come telefonata (auricolare/vivavoce veri) e la cancellazione dell'eco la
+  // conosce. Con l'uscita «musica» dell'AudioContext il microfono la riprendeva e la rimandava
+  // indietro: un'eco che si richiudeva su se stessa, sempre più forte.
+  async function uscitaTelefonata(a) {
+    try {
+      const dest = a.ctx.createMediaStreamDestination();
+      a.gain.connect(dest);
+      const p1 = new RTCPeerConnection({ iceServers: [] }), p2 = new RTCPeerConnection({ iceServers: [] });
+      p1.onicecandidate = (e) => { if (e.candidate) p2.addIceCandidate(e.candidate).catch(() => {}); };
+      p2.onicecandidate = (e) => { if (e.candidate) p1.addIceCandidate(e.candidate).catch(() => {}); };
+      a.lettore = new Audio(); a.lettore.autoplay = true;
+      p2.ontrack = (e) => { a.lettore.srcObject = e.streams[0]; a.lettore.play().catch(() => {}); };
+      dest.stream.getTracks().forEach((t) => p1.addTrack(t, dest.stream));
+      const offerta = await p1.createOffer(); await p1.setLocalDescription(offerta); await p2.setRemoteDescription(offerta);
+      const risposta = await p2.createAnswer(); await p2.setLocalDescription(risposta); await p1.setRemoteDescription(risposta);
+      a.p1 = p1; a.p2 = p2; a.uscita = "telefonata";
+    } catch (e) {
+      a.gain.connect(a.ctx.destination); a.uscita = "diretta";   // senza WebRTC: come prima
+    }
+  }
   function fermaAudio() {
+    if (micPronto) { micPronto.getTracks().forEach((t) => t.stop()); micPronto = null; }
     if (!a) return;
+    try { if (a.p1) a.p1.close(); if (a.p2) a.p2.close(); if (a.lettore) { a.lettore.srcObject = null; } } catch (e) { /* niente */ }
     try { if (a.mic) a.mic.getTracks().forEach((t) => t.stop()); } catch (e) { /* niente */ }
     try { if (a.enc && a.enc.state !== "closed") a.enc.close(); } catch (e) { /* niente */ }
     try { if (a.dec && a.dec.state !== "closed") a.dec.close(); } catch (e) { /* niente */ }
@@ -173,6 +215,7 @@ const Chiamate = (() => {
     const addr = p[1], id = p[2];
     if (t === "CALLID" && c && c.addr === addr && !c.id) c.id = id;
     else if (t === "CALLIN") {
+      if (c && c.addr === addr && c.id !== id) { c.id = null; chiudi(""); }   // ci richiama: la vecchia era morta
       if (c && !(c.stato === "squilla" && c.id === id)) { manda("CALLNO " + addr + " " + id); return true; }   // occupato
       c = { addr, id, stato: "squilla", inizio: Date.now() }; ridotta = false; muto = false; vivavoce = false;
       avviaTimer(); disegna();

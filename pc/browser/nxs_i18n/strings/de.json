@@ -1663,5 +1663,6 @@
   "chat.ch.q_nessuna": "kein Audio",
   "chat.ch.q_buona": "gute Verbindung",
   "chat.ch.q_media": "mittlere Verbindung",
-  "chat.ch.q_scarsa": "schlechte Verbindung"
+  "chat.ch.q_scarsa": "schlechte Verbindung",
+  "chat.ch.muta": "Anruf beendet: von der Gegenseite kommt keine Stimme mehr"
 }

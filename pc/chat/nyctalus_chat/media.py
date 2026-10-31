@@ -346,18 +346,32 @@ class AudioChiamata:
 
     CAPS = "audio/x-opus,rate=48000,channels=1,channel-mapping-family=0"
 
+    _contatore = 0
+
     def __init__(self, manda, uscita=None, volume=1.0):
         self.manda = manda                    # manda(seq, byte) — chiamata dal thread di GStreamer
         self.seq = self.ultimo = 0
         self.inviati = self.ricevuti = self.scartati = self.persi = 0
         self.volume = volume
-        self.cattura = None
+        self.muto_attivo = False
+        AudioChiamata._contatore += 1
+        # cancellazione dell'eco e del rumore (webrtcdsp): il microfono «sa» cosa esce
+        # dall'altoparlante (webrtcechoprobe) e lo toglie; senza, la voce dell'altro ripresa dal
+        # microfono torna indietro e si richiude su se stessa (rumore metallico che cresce)
+        self.eco = ("eco%d" % AudioChiamata._contatore) if Gst.ElementFactory.find("webrtcdsp") else None
         self.ascolto = self._ascolto(uscita)
-        self.cattura = Gst.parse_launch(
-            "%s ! audioconvert ! audioresample ! audio/x-raw,rate=48000,channels=1 ! valve name=muto drop=false "
+        self.cattura = self._cattura()
+
+    def _cattura(self):
+        dsp = ("audio/x-raw,format=S16LE,rate=48000,channels=1 ! webrtcdsp probe=%s echo-cancel=true "
+               "noise-suppression=true noise-suppression-level=high gain-control=false ! audioconvert ! " % self.eco
+               ) if self.eco else ""
+        p = Gst.parse_launch(
+            "%s ! audioconvert ! audioresample ! %saudio/x-raw,rate=48000,channels=1 ! valve name=muto drop=%s "
             "! opusenc bitrate=24000 frame-size=20 audio-type=voice ! appsink name=pacchetti emit-signals=true "
-            "sync=false max-buffers=50 drop=true" % sorgente_audio())
-        self.cattura.get_by_name("pacchetti").connect("new-sample", self._pacchetto)
+            "sync=false max-buffers=50 drop=true" % (sorgente_audio(), dsp, "true" if self.muto_attivo else "false"))
+        p.get_by_name("pacchetti").connect("new-sample", self._pacchetto)
+        return p
 
     def _ascolto(self, uscita):
         """L'altoparlante: quello predefinito o un'uscita scelta (nome PulseAudio/PipeWire)."""
@@ -365,9 +379,11 @@ class AudioChiamata:
             elemento = "pulsesink device=%s" % uscita
         else:
             elemento = os.environ.get("NYCTALUS_ALTOPARLANTE", "autoaudiosink")
+        sonda = ("audio/x-raw,format=S16LE,rate=48000,channels=1 ! webrtcechoprobe name=%s ! audioconvert ! " % self.eco
+                 ) if self.eco else ""
         p = Gst.parse_launch(
             "appsrc name=arrivo is-live=true format=time do-timestamp=true caps=%s ! opusdec plc=true "
-            "! audioconvert ! audioresample ! volume name=vol volume=%f ! %s sync=false" % (self.CAPS, self.volume, elemento))
+            "! audioconvert ! audioresample ! volume name=vol volume=%f ! %s%s sync=false" % (self.CAPS, self.volume, sonda, elemento))
         self.arrivo = p.get_by_name("arrivo")
         return p
 
@@ -377,10 +393,15 @@ class AudioChiamata:
 
     def cambia_uscita(self, uscita):
         """Vivavoce/cuffie: si rifà solo la parte che suona, la chiamata continua."""
-        vecchio = self.ascolto
+        vecchi = (self.cattura, self.ascolto)
+        for p in vecchi:
+            p.set_state(Gst.State.NULL)
+        if self.eco:                          # la sonda dell'eco è nuova: anche il microfono si rifà
+            AudioChiamata._contatore += 1
+            self.eco = "eco%d" % AudioChiamata._contatore
         self.ascolto = self._ascolto(uscita)
-        vecchio.set_state(Gst.State.NULL)
-        self.ascolto.set_state(Gst.State.PLAYING)
+        self.cattura = self._cattura()
+        self.avvia()
 
     def avvia(self):
         self.ascolto.set_state(Gst.State.PLAYING)
@@ -391,7 +412,8 @@ class AudioChiamata:
             p.set_state(Gst.State.NULL)
 
     def muto(self, attivo):
-        self.cattura.get_by_name("muto").set_property("drop", bool(attivo))
+        self.muto_attivo = bool(attivo)
+        self.cattura.get_by_name("muto").set_property("drop", self.muto_attivo)
 
     def _pacchetto(self, sink):
         campione = sink.emit("pull-sample")

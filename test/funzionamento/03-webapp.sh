@@ -70,6 +70,7 @@ cat > "$TMP/passi.json" <<EOF
  ["js","(()=>{const s=Chiamate._stato(); const aud=window._inviate.filter(r=>r.startsWith('AUD $BOB ')); window._aud=aud; return 'RISPOSTA '+window._inviate.includes('CALLOK $BOB abc123')+','+(s.c&&s.c.stato)+','+(aud.length>50)})()"],
  ["js","(()=>{window._aud.forEach(r=>{const p=r.split(' '); Chiamate._ricevi(+p[2],p[3]);}); return 'x'})()"],["attendi",1],
  ["js","'SUONATI ' + ((Chiamate._stato().a||{}).suonati||0)"],
+ ["js","'USCITA ' + (Chiamate._stato().a||{}).uscita"],
  ["foto","${NYCT_FOTO:-$TMP}/chiamata-attiva.png"],
  ["js","(()=>{document.querySelectorAll('.ch-tasti .ch-tasto')[0].click(); const m=Chiamate._stato().muto; const n=window._inviate.length; window._n=n; return 'MUTO '+m})()"],["attendi",1],
  ["js","'MUTI ' + (window._inviate.length - window._n <= 3)"],
@@ -111,6 +112,7 @@ E=$(r EMOJI); [ "${E%% *}" -ge 50 ] 2>/dev/null && [ "${E##* }" = true ] && pass
 [ "$(r SQUILLA)" = "true,squilla,true" ] && pass "chiamata in arrivo: schermata con Rifiuta/Rispondi" || fail "chiamata in arrivo: $(r SQUILLA)"
 [ "$(r RISPOSTA)" = "true,attiva,true" ] && pass "Rispondi: CALLOK e voce dal microfono (Opus 20 ms, microfono FINTO)" || fail "risposta: $(r RISPOSTA)"
 [ "${R_S:=$(r SUONATI)}" -ge 30 ] 2>/dev/null && pass "la voce ricevuta si decodifica e suona ($R_S pacchetti)" || fail "voce ricevuta: $(r SUONATI)"
+[ "$(r USCITA)" = "telefonata" ] && pass "la voce esce come telefonata (WebRTC interno): eco cancellata, auricolare/vivavoce veri" || fail "uscita della voce: $(r USCITA)"
 [ "$(r MUTO)" = "true" ] && [ "$(r MUTI)" = "true" ] && pass "🎤 muto: non parte più voce" || fail "muto: $(r MUTO) $(r MUTI)"
 [ "$(r RIDUCI)" = "true" ] && pass "⌄ riduci: barretta in cima, la chiamata continua" || fail "riduci: $(r RIDUCI)"
 [ "$(r FINE)" = "true,true,true" ] && pass "✆ riaggancia: CALLEND e schermata chiusa" || fail "fine: $(r FINE)"

@@ -1663,5 +1663,6 @@
   "chat.ch.q_nessuna": "no audio",
   "chat.ch.q_buona": "good line",
   "chat.ch.q_media": "fair line",
-  "chat.ch.q_scarsa": "poor line"
+  "chat.ch.q_scarsa": "poor line",
+  "chat.ch.muta": "Call closed: no more voice from the other side"
 }
