@@ -1217,14 +1217,25 @@ public class MainActivity extends Activity {
                 android.os.Vibrator v = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
                 if (v != null) v.cancel();
                 if (!si) return;
-                try {
-                    squillo = android.media.RingtoneManager.getRingtone(MainActivity.this,
-                            android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE));
-                    if (squillo != null) {
-                        if (Build.VERSION.SDK_INT >= 28) squillo.setLooping(true);
-                        squillo.play();
+                // suona solo se il telefono NON è in vibrazione/silenzioso (come le altre app);
+                // suoneria predefinita, altrimenti quella di notifica o di sveglia
+                android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+                boolean puoSuonare = am == null || am.getRingerMode() == android.media.AudioManager.RINGER_MODE_NORMAL;
+                if (puoSuonare) {
+                    for (int tipo : new int[]{android.media.RingtoneManager.TYPE_RINGTONE,
+                            android.media.RingtoneManager.TYPE_NOTIFICATION, android.media.RingtoneManager.TYPE_ALARM}) {
+                        try {
+                            android.net.Uri u = android.media.RingtoneManager.getActualDefaultRingtoneUri(MainActivity.this, tipo);
+                            if (u == null) u = android.media.RingtoneManager.getDefaultUri(tipo);
+                            squillo = u == null ? null : android.media.RingtoneManager.getRingtone(MainActivity.this, u);
+                            if (squillo != null) {
+                                if (Build.VERSION.SDK_INT >= 28) squillo.setLooping(true);
+                                squillo.play();
+                                break;
+                            }
+                        } catch (Exception ignorata) { squillo = null; }
                     }
-                } catch (Exception ignorata) { }
+                }
                 if (v != null) {
                     long[] ritmo = {0, 800, 600};
                     if (Build.VERSION.SDK_INT >= 26) v.vibrate(android.os.VibrationEffect.createWaveform(ritmo, 1));

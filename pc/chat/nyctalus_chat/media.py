@@ -439,16 +439,24 @@ class AudioChiamata:
 
 
 class Suoneria:
-    """Squillo della chiamata in arrivo o tono d'attesa di quella in uscita: un suono del desktop
-    ripetuto finché non si ferma (NYCTALUS_SENZA_SUONI=1 nelle prove)."""
-    SUONI = {"arrivo": "phone-incoming-call", "uscita": "phone-outgoing-calling"}
+    """Squillo della chiamata in arrivo (suono del desktop, ripetuto) o tono d'attesa di quella
+    in uscita: il tono italiano, 425 Hz per 1 s ogni 5 s (NYCTALUS_SENZA_SUONI=1 nelle prove)."""
 
     def __init__(self, quale):
         self.pb = None
+        self.timer = 0
         if Gst is None or os.environ.get("NYCTALUS_SENZA_SUONI"):
             return
+        if quale == "uscita":
+            self.pb = Gst.parse_launch("audiotestsrc is-live=true wave=sine freq=425 volume=0 name=tono "
+                                       "! audioconvert ! audioresample ! autoaudiosink")
+            self.pb.set_state(Gst.State.PLAYING)
+            self._passo = 0
+            self._tono()
+            self.timer = GLib.timeout_add(1000, self._tono)
+            return
         for base in ("/usr/share/sounds/freedesktop/stereo", "/usr/share/sounds/freedesktop"):
-            f = Path(base) / (self.SUONI[quale] + ".oga")
+            f = Path(base) / "phone-incoming-call.oga"
             if f.exists():
                 self.pb = Gst.ElementFactory.make("playbin", None)
                 self.pb.set_property("uri", f.as_uri())
@@ -459,7 +467,17 @@ class Suoneria:
                 self.pb.set_state(Gst.State.PLAYING)
                 break
 
+    def _tono(self):
+        if self.pb is None:
+            return False
+        self.pb.get_by_name("tono").set_property("volume", 0.18 if self._passo % 5 == 0 else 0.0)
+        self._passo += 1
+        return True
+
     def ferma(self):
+        if self.timer:
+            GLib.source_remove(self.timer)
+            self.timer = 0
         if self.pb is not None:
             self.pb.set_state(Gst.State.NULL)
             self.pb = None

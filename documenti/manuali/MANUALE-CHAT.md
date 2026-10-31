@@ -162,8 +162,9 @@ notifica, con l'app chiusa) e tocca **Rispondi** o **Rifiuta**. Durante la chiam
   telefono la voce esce come una telefonata vera; sul PC con `webrtcdsp` di GStreamer). Con le
   cuffie la qualità è comunque migliore.
 - Se dall'altra parte non arriva più voce per 15 secondi, la chiamata si chiude da sola.
-- **Squillo:** la chiamata in arrivo suona e vibra (telefono: suoneria di sistema; PC: suono del
-  desktop); chi chiama sente il tono d'attesa «tuu… tuu».
+- **Squillo:** la chiamata in arrivo suona e vibra (telefono: suoneria di sistema, solo vibrazione
+  se il telefono è in vibrazione o silenzioso; PC: suono del desktop); chi chiama sente il tono
+  d'attesa «tuu… tuu» (425 Hz, come in Italia).
 - **Provare con PC e telefono nella stessa stanza:** il microfono di uno riprende l'altoparlante
   dell'altro e si forma un anello (fischio o rumore «da macchinario» che cresce): nessuna
   cancellazione dell'eco può toglierlo, succede anche con le altre app. Usa l'auricolare del
