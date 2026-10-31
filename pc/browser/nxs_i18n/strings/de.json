@@ -1634,5 +1634,6 @@
   "chat.rub.salva": "Save",
   "chat.rub.nessuna": "This network has no directory",
   "chat.rub.nessuna_corpo": "Networks that offer one (e.g. the home network) include it in their network code: nyctalus-rete importa CODE.",
-  "chat.notifiche": "Desktop-Benachrichtigungen für neue Nachrichten"
+  "chat.notifiche": "Desktop-Benachrichtigungen für neue Nachrichten",
+  "chat.in_casella": "Nicht online: Die Nachricht liegt im verschlüsselten Postfach und wird zugestellt, sobald die Person online ist."
 }

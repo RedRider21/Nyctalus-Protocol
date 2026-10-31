@@ -18,19 +18,39 @@ Risposte:  {"op": "iscritto", "nome": …} · {"op": "cancellato"} ·
 
 Della rubrica resta solo l'elenco degli iscritti (nome, indirizzo, quando si sono iscritti):
 la cronologia dei messaggi con la rubrica viene cancellata subito.
-Uso: rubrica.py CARTELLA_DATI PORTA_CONTROLLO      (segreto in NYCTALUS_CHAT_TOKEN)
+
+CASELLA CIFRATA (posta per chi non è in linea):
+  - deposito: POST /deposita?a=DESTINATARIO sulla PORTA_CASELLA, che la rete raggiunge con un
+    suo indirizzo .nyct (un `site` a parte). Il mittente arriva dai circuiti SENZA presentarsi:
+    la casella sa solo che c'è posta per quell'indirizzo. La busta (Noise X) la apre solo il
+    destinatario, che ci trova dentro la prova di chi l'ha scritta.
+  - consegna: il motore del destinatario chiede «CASELLA RITIRA» dalla sua chat (autenticata:
+    solo lui ritira la sua posta); si risponde «CASELLA POSTA id busta…», lui conferma con
+    «CASELLA RICEVUTI id…» e le buste si cancellano. Se è in linea, la posta parte da sola.
+  - limiti: busta ≤ 64 KB, 200 buste per destinatario, 50 MB in tutto, 14 giorni.
+Uso: rubrica.py CARTELLA_DATI PORTA_CONTROLLO [PORTA_CASELLA]   (segreto in NYCTALUS_CHAT_TOKEN)
 """
+import http.server
 import json
 import os
 import re
 import socket
 import sys
+import threading
 import time
+import urllib.parse
 from pathlib import Path
 
 MAX_ISCRITTI = 1000
 MAX_NOME = 40
 NOME_VALIDO = re.compile(r"^[^\x00-\x1f\x7f<>]{1,40}$")
+INDIRIZZO = re.compile(r"^[a-z2-7]{56}\.nyct$")
+ID_BUSTA = re.compile(r"^[0-9]{10}-[0-9a-f]{16}$")
+BUSTA_MAX = 64 * 1024
+BUSTE_PER_DESTINATARIO = 200
+CASELLA_MAX = 50 * 1024 * 1024
+CASELLA_GIORNI = 14
+LOTTO_POSTA = 40 * 1024          # buste per messaggio di consegna (in esadecimale, sotto i 64 KB)
 
 
 def hx(t):
@@ -47,6 +67,9 @@ class Rubrica:
             self.iscritti = {}
         self.online, self.visti = set(), {}
         self.s = None
+        self.blocco = threading.Lock()           # il deposito arriva da un altro thread
+        self.casella = Path(cartella) / "casella"
+        self.casella.mkdir(mode=0o700, exist_ok=True)
 
     def salva(self):
         tmp = self.file.with_suffix(".tmp")
@@ -55,7 +78,9 @@ class Rubrica:
         tmp.replace(self.file)
 
     def manda(self, riga):
-        self.s.sendall((riga + "\n").encode())
+        with self.blocco:
+            if self.s is not None:
+                self.s.sendall((riga + "\n").encode())
 
     def rispondi(self, addr, obj):
         self.manda("SEND %s %s" % (addr, hx(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))))
@@ -66,7 +91,65 @@ class Rubrica:
         utenti.sort(key=lambda u: (not u["on"], u["n"].lower()))
         return utenti
 
+    # --- casella cifrata ------------------------------------------------------------
+    def buste(self, addr):
+        d = self.casella / addr
+        return sorted(d.glob("*.busta")) if d.is_dir() else []
+
+    def pulisci_casella(self):
+        limite = time.time() - CASELLA_GIORNI * 86400
+        for f in self.casella.glob("*/*.busta"):
+            if f.stat().st_mtime < limite:
+                f.unlink(missing_ok=True)
+
+    def deposita(self, addr, busta):
+        """Dal servizio di deposito (thread HTTP). Restituisce None o il motivo del rifiuto."""
+        if not INDIRIZZO.match(addr):
+            return "indirizzo non valido"
+        if not 96 <= len(busta) <= BUSTA_MAX:
+            return "busta di dimensione non valida"
+        self.pulisci_casella()
+        if len(self.buste(addr)) >= BUSTE_PER_DESTINATARIO:
+            return "la casella di questo destinatario è piena"
+        if sum(f.stat().st_size for f in self.casella.glob("*/*.busta")) + len(busta) > CASELLA_MAX:
+            return "la casella della rete è piena"
+        d = self.casella / addr
+        d.mkdir(mode=0o700, exist_ok=True)
+        nome = "%d-%s" % (int(time.time()), os.urandom(8).hex())
+        tmp = d / (nome + ".tmp")
+        tmp.write_bytes(busta)
+        os.chmod(tmp, 0o600)
+        tmp.replace(d / (nome + ".busta"))
+        if addr in self.online:                  # è in linea: gliela si porta subito
+            self.consegna(addr)
+        return None
+
+    def consegna(self, addr):
+        lotto, peso = [], 0
+        for f in self.buste(addr):
+            voce = "%s %s" % (f.stem, f.read_bytes().hex())
+            if lotto and peso + len(voce) > LOTTO_POSTA:
+                break
+            lotto.append(voce)
+            peso += len(voce)
+        if lotto:
+            self.manda("SEND %s %s" % (addr, hx("CASELLA POSTA " + " ".join(lotto))))
+            self.manda("CLEAR %s" % addr)
+
+    def casella_richiesta(self, addr, testo):
+        parti = testo.split()
+        if parti[:2] == ["CASELLA", "RITIRA"]:
+            self.consegna(addr)
+        elif parti[:2] == ["CASELLA", "RICEVUTI"]:
+            for i in parti[2:]:
+                if ID_BUSTA.match(i):
+                    (self.casella / addr / (i + ".busta")).unlink(missing_ok=True)
+            self.consegna(addr)                  # se ne restano, il lotto successivo
+        self.manda("CLEAR %s" % addr)
+
     def richiesta(self, addr, testo):
+        if testo.startswith("CASELLA "):
+            return self.casella_richiesta(addr, testo)
         try:
             r = json.loads(testo)
             op = r.get("op")
@@ -114,6 +197,8 @@ class Rubrica:
                         self.evento(riga.decode("utf-8", "replace"))
             except OSError:
                 pass
+            with self.blocco:
+                self.s = None
             time.sleep(2)
 
     def evento(self, riga):
@@ -127,11 +212,54 @@ class Rubrica:
         elif p[0] == "ST" and len(p) >= 3:
             (self.online.add if p[2] == "1" else self.online.discard)(p[1])
             self.visti[p[1]] = int(time.time())
+            if p[2] == "1":
+                self.consegna(p[1])              # appena in linea: la sua posta
         elif p[0] == "V" and len(p) >= 3:
             self.visti[p[1]] = int(p[2])
         elif p[0] == "FILE" and len(p) >= 3 and p[2] == "in":
             self.manda("CLEAR %s" % p[1])          # la rubrica non accetta allegati
 
 
+def servi_casella(rubrica, porta):
+    """Il servizio di deposito: lo raggiunge la rete con l'indirizzo .nyct della casella."""
+    class Deposito(http.server.BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.0"
+
+        def rispondi(self, codice, testo):
+            corpo = testo.encode()
+            self.send_response(codice)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(corpo)))
+            self.end_headers()
+            self.wfile.write(corpo)
+
+        def do_POST(self):
+            u = urllib.parse.urlsplit(self.path)
+            if u.path != "/deposita":
+                return self.rispondi(404, "sconosciuto")
+            try:
+                n = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                n = -1
+            if not 0 < n <= BUSTA_MAX:
+                return self.rispondi(413, "busta di dimensione non valida")
+            busta = self.rfile.read(n)
+            addr = urllib.parse.parse_qs(u.query).get("a", [""])[0]
+            errore = rubrica.deposita(addr, busta)
+            self.rispondi(200 if errore is None else 400, errore or "depositata")
+
+        def do_GET(self):
+            self.rispondi(200, "Casella cifrata Nyctalus: qui si lasciano solo buste chiuse.")
+
+        def log_message(self, *a):        # nessun registro di chi deposita
+            pass
+
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", porta), Deposito)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+
+
 if __name__ == "__main__":
-    Rubrica(sys.argv[1], int(sys.argv[2])).gira()
+    r = Rubrica(sys.argv[1], int(sys.argv[2]))
+    if len(sys.argv) > 3:
+        servi_casella(r, int(sys.argv[3]))
+    r.gira()

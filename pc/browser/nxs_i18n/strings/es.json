@@ -1634,5 +1634,6 @@
   "chat.rub.salva": "Save",
   "chat.rub.nessuna": "This network has no directory",
   "chat.rub.nessuna_corpo": "Networks that offer one (e.g. the home network) include it in their network code: nyctalus-rete importa CODE.",
-  "chat.notifiche": "Notificaciones de escritorio de mensajes nuevos"
+  "chat.notifiche": "Notificaciones de escritorio de mensajes nuevos",
+  "chat.in_casella": "No está en línea: el mensaje está en el buzón cifrado y le llegará en cuanto se conecte."
 }

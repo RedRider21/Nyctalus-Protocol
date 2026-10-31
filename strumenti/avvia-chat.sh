@@ -50,7 +50,14 @@ export NYCTALUS_CHAT_TOKEN
 
 # --- 1) motore (parte subito) e FINESTRA (subito) ----------------------------
 echo "» avvio il motore della chat"
-"$BIN" chat --data "$DATI" --backend "$BACKEND" --control "$CONTROL" --socks "$SOCKS" > "$WORK/chat.log" 2>&1 & MIEI+=($!)
+# rubrica e casella della rete (dal codice di rete): la posta per chi non è in linea
+POSTA=()
+if [ -n "$URL" ] && [ -n "$AUTH" ]; then
+  for k in rubrica casella; do
+    v="$(leggi_cfg "$k")"; [[ "$v" =~ ^[a-z2-7]{56}\.nyct$ ]] && POSTA+=("--$k" "$v")
+  done
+fi
+"$BIN" chat --data "$DATI" --backend "$BACKEND" --control "$CONTROL" --socks "$SOCKS" ${POSTA[@]+"${POSTA[@]}"} > "$WORK/chat.log" 2>&1 & MIEI+=($!)
 ADDR=""; for _ in $(seq 1 40); do ADDR=$(grep -oE '[a-z2-7]{56}\.nyct' "$WORK/chat.log" | head -1); [ -n "$ADDR" ] && break; sleep 0.1; done
 [ -n "$ADDR" ] && echo "  il tuo Contact ID:  $ADDR"
 

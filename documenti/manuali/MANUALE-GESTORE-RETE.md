@@ -82,9 +82,16 @@ Fa tutto da solo su questo PC:
   codice trova nella chat il pulsante **👥** per iscriversi e vedere chi usa la rete;
 - importa il codice anche su questo PC.
 
+- accende la **casella cifrata**, con un suo indirizzo `.nyct` anch'esso nel codice: chi usa la
+  rete può scrivere a chi non è in linea (`MANUALE-CHAT.md` §3-ter);
+
 La rubrica tiene i suoi dati in `~/.nyctalus-rete/casa/rubrica/` (`rubrica.json`, privato,
-600): solo l'elenco degli iscritti, mai la cronologia. Porte locali (solo 127.0.0.1)
-18810-18813, cambiabili con `NYCTALUS_RUBRICA_PORTE=a,b,c,d`.
+600): solo l'elenco degli iscritti, mai la cronologia. La casella in `rubrica/casella/` (cartelle
+700, buste 600, illeggibili anche per te, cancellate al ritiro o dopo 14 giorni; al massimo 200
+per destinatario e 50 MB in tutto; nessun registro di chi deposita). Porte locali (solo
+127.0.0.1) 18810-18814, cambiabili con `NYCTALUS_RUBRICA_PORTE=a,b,c,d,e`. **Dopo un
+aggiornamento riaccendi `casa` e ricollega i client** (📲 sul telefono, `importa` sul PC): il
+codice nuovo contiene la casella.
 
 Lascia la finestra aperta; `Ctrl-C` ferma tutto.
 

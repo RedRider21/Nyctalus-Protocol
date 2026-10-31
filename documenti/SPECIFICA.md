@@ -195,6 +195,12 @@ Le chiavi dei singoli salti saranno incorporate nell'intestazione Sphinx: una so
 - 📐 Evoluzione prevista: per pubblicare i punti d'incontro servirà un **descrittore** firmato (chiave Ed25519 del sito legata a quella X25519) nella tabella distribuita dei nodi, e un **segnale** cifrato che il client lascia al punto d'incontro (la "notizia" della VISIONE §5.3), così entrambi i lati arrivano con percorsi anonimi.
 - Un web server tradizionale (Nginx, Apache…) può stare dietro al demone come alternativa al server di file incorporato.
 
+### 6.0 Casella cifrata (posta per chi non è in linea) ✅
+- **Busta:** un solo messaggio **Noise_X_25519_ChaChaPoly_BLAKE2s** (`nyctalus-core/src/casella.rs`), prologo `Nyctalus v0 2026-10-31 casella`: `-> e, es, s, ss` + carico. Solo il destinatario (chiave del suo `.nyct`) la apre; la chiave statica del mittente viaggia cifrata e autenticata (ss). Carico: `<id casuale> <ts> <testo>`, testo ≤ 16 KB; l'`id` serve a scartare le ripetizioni (X non le impedisce). Niente forward secrecy verso la chiave del destinatario: per questo la casella tiene la posta al più 14 giorni.
+- **Deposito anonimo:** `POST /deposita?a=<destinatario>` all'indirizzo `.nyct` **della casella** (servizio a sé, diverso dalla rubrica) attraverso i circuiti, senza presentarsi: la casella sa solo che c'è posta per quell'indirizzo, quando e quanto pesa. Limiti: 64 KB a busta, 200 buste per destinatario, 50 MB in tutto.
+- **Ritiro autenticato:** dalla sessione della chat con la **rubrica** (che autentica il mittente): `CASELLA RITIRA` → `CASELLA POSTA <id> <busta hex>…` (anche spontaneo appena il destinatario risulta in linea) → `CASELLA RICEVUTI <id>…` e la casella cancella. Il motore intercetta questi messaggi: non vanno in cronologia né all'interfaccia; le buste aperte diventano messaggi del mittente vero (`MSG`, `NEW`).
+- Il motore deposita quando il contatto non risponde (o la sonda di presenza lo sa già irraggiungibile) ed emette `OUT` + `CAS <addr> <ts>`.
+
 ### 6.1 Ponte verso i siti `.onion` di Tor ✅ (via Tor di sistema)
 ✅ **Implementato** (`motore/nyctalus/src/ponte.rs`): l'uscita riconosce gli indirizzi `.onion` e li raggiunge tramite **un Tor già presente sul sistema**, aprendo un tunnel al suo proxy SOCKS5 (default `127.0.0.1:9050`, opzione `--tor-socks`). Scelta volutamente **leggera**: non si incorpora il client Tor Arti (enorme e da bootstrappare), si riusa il Tor del sistema (es. quello di NexusSec). Dal nodo ponte in poi valgono le regole e la lentezza di Tor. Incorporare Arti come alternativa resta un possibile sviluppo futuro.
 
@@ -252,6 +258,7 @@ Da decidere in fase 2 insieme alla difesa dai nodi falsi in massa (attacco Sybil
 | Derivazione chiavi, etichette | BLAKE3 (derive_key, keyed_hash) | ✅ |
 | Cifratura end-to-end | ChaCha20-Poly1305 (RFC 8439) | ✅ |
 | Scambio di chiavi | X25519 via Noise NK (+ BLAKE2s) | ✅ |
+| Buste della casella cifrata | Noise X (X25519, ChaCha20-Poly1305, BLAKE2s) | ✅ |
 | Identità di nodi e siti | Ed25519 | 📐 |
 | Pacchetti a cipolla | Sphinx | 📐 |
 | Trasporto | QUIC (RFC 9000) + TLS 1.3 | 📐 |
@@ -276,3 +283,4 @@ Misura su un solo PC (loopback, compilazione release, file casuale da 200 MB): c
 ## 12. Registro delle modifiche
 - **0.1 (27/09/2026):** prima bozza; il livello L2 è implementato in `nyctalus-core` con 18 test; aggiunti il programma di prova QUIC e il controllo del flusso.
 - **0.2 (27/09/2026):** stretta di mano Noise NK implementata (corretto IK → NK per l'anonimato del mittente); il segreto non si passa più a mano. Indirizzi `.nyct` implementati; ponte verso `.onion` progettato. 29 test.
+- **0.4 (31/10/2026):** casella cifrata (§6.0): buste Noise X, deposito anonimo, ritiro autenticato tramite la rubrica.

@@ -118,6 +118,7 @@ _ITA = {
     "chat.ricezione": "Ricezione",
     "chat.senza_exif": "Foto senza metadati (posizione GPS, fotocamera)",
     "chat.notifiche": "Notifiche sul desktop dei nuovi messaggi",
+    "chat.in_casella": "Non è in linea: il messaggio è nella casella cifrata e gli arriverà appena si collega.",
     "chat.filtro.tutti": "Tutti i file",
     "chat.filtro.immagini": "Immagini",
     "chat.filtro.video": "Video",
@@ -974,6 +975,10 @@ class Chat(Gtk.Window):
                 mime = parti[6] if len(parti) >= 8 else ""
                 nome = _da_hex(parti[7]) if len(parti) >= 8 else ""
                 self._avanzamento(parti[2], parti[3], int(parti[4]), int(parti[5]), mime, nome)
+        elif tipo == "CAS" and len(parti) >= 2:
+            # CAS <addr> <ts>: il contatto non era in linea, il messaggio è nella casella cifrata
+            if parti[1] == self.attivo:
+                self._avviso_inline("📮 " + _t("chat.in_casella"))
         elif tipo == "FERR" and len(parti) >= 4:
             # FERR <addr> <id|-> <messaggio hex>
             if parti[1] == self.attivo:

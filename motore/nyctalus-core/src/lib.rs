@@ -24,6 +24,7 @@
 //!   in base32 con controllo anti-errori di battitura).
 
 mod chiavi;
+pub mod casella;
 pub mod cifratura;
 pub mod cipolla;
 pub mod circuito;

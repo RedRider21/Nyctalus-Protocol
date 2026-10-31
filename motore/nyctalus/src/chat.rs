@@ -20,14 +20,14 @@
 //!
 //! Un'interfaccia grafica (il client GTK) parla col motore su una porta di
 //! **controllo** locale (solo loopback), con un protocollo a righe di testo.
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use nyctalus_core::stretta::{self, Identita, Mittente, SegretiSessione};
-use nyctalus_core::indirizzo;
+use nyctalus_core::{casella, indirizzo};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
@@ -38,6 +38,7 @@ use crate::{in_esadecimale, Risultato};
 /// Avvia il motore della chat: ascolta i contatti in entrata (backend), serve
 /// l'interfaccia grafica sulla porta di controllo e compone le connessioni in
 /// uscita tramite il proxy SOCKS.
+#[allow(clippy::too_many_arguments)] // le opzioni del comando `chat`, una per una
 pub async fn chat(
     identita_path: PathBuf,
     backend: SocketAddr,
@@ -46,6 +47,8 @@ pub async fn chat(
     dati: PathBuf,
     max_file: u64,
     segreto: Option<String>,
+    rubrica: Option<String>,
+    casella: Option<String>,
 ) -> Risultato<()> {
     std::fs::create_dir_all(&dati)?;
     let identita = carica_identita(&identita_path)?;
@@ -64,6 +67,10 @@ pub async fn chat(
         max_file,
         segreto,
         visti: Mutex::new(carica_visti(&dati)),
+        rubrica: rubrica.map(|a| con_suffisso(&a)),
+        casella: casella.map(|a| con_suffisso(&a)),
+        irraggiungibili: Mutex::new(HashSet::new()),
+        posta_vista: Mutex::new(carica_posta_vista(&dati)),
     });
 
     println!("Nyctalus chat");
@@ -73,6 +80,9 @@ pub async fn chat(
     println!("Uscita (SOCKS):     {socks}");
     println!("Dati:               {}", dati.display());
     println!("Allegati fino a:    {} MB", max_file / (1024 * 1024));
+    if let Some(c) = &stato.casella {
+        println!("Casella cifrata:    {c}");
+    }
 
     let ascoltatore = TcpListener::bind(backend).await?;
     let st_ctrl = stato.clone();
@@ -84,6 +94,10 @@ pub async fn chat(
 
     // «in linea» senza dover scrivere prima: si bussa ai contatti
     tokio::spawn(stato.clone().sonda_presenza());
+    // la posta lasciata nella casella mentre eravamo spenti
+    if stato.rubrica.is_some() {
+        tokio::spawn(stato.clone().ritira_posta());
+    }
 
     loop {
         let (flusso, _) = ascoltatore.accept().await?;
@@ -111,7 +125,20 @@ struct Stato {
     max_file: u64,                                           // dimensione massima di un allegato
     segreto: Option<String>,                                 // se c'è, la UI deve presentarlo (AUTH)
     visti: Mutex<HashMap<String, u64>>,                      // ultimo accesso visto da noi (solo locale)
+    rubrica: Option<String>,                                 // .nyct della rubrica della rete (ritiro della posta)
+    casella: Option<String>,                                 // .nyct della casella (deposito anonimo)
+    irraggiungibili: Mutex<HashSet<String>>,                 // contatti che non hanno risposto: posta diretta in casella
+    posta_vista: Mutex<HashSet<String>>,                     // id delle buste già ricevute (niente doppioni)
 }
+
+/// Testo massimo di un messaggio lasciato nella casella (gli allegati solo in linea).
+const TESTO_CASELLA_MAX: usize = 16 * 1024;
+/// Ritiro della posta: primo giro dopo questo ritardo, poi a ogni giro (la rubrica la
+/// consegna anche da sola appena risultiamo in linea).
+const RITIRO_INIZIO: std::time::Duration = std::time::Duration::from_secs(12);
+const RITIRO_GIRO: std::time::Duration = std::time::Duration::from_secs(120);
+/// Tempo massimo per lasciare una busta nella casella (circuito + punto d'incontro).
+const DEPOSITO_TEMPO: std::time::Duration = std::time::Duration::from_secs(90);
 
 /// Sonda di presenza: primo giro dopo questo ritardo (la rete deve salire), poi ogni giro.
 const SONDA_INIZIO: std::time::Duration = std::time::Duration::from_secs(8);
@@ -214,6 +241,7 @@ impl Stato {
         let (ch_tx, mut ch_rx) = mpsc::channel::<Vec<u8>>(CODA_SESSIONE);
         let sid = self.prossima_sessione.fetch_add(1, Ordering::Relaxed);
         self.sessioni.lock().unwrap().insert(peer.clone(), (sid, ch_tx));
+        self.irraggiungibili.lock().unwrap().remove(&peer);
         self.notifica(format!("ST {peer} 1"));
         self.segna_visto(&peer);
 
@@ -277,6 +305,9 @@ impl Stato {
         let Some(sp) = resto.iter().position(|&b| b == b' ') else { return };
         let ts = std::str::from_utf8(&resto[..sp]).ok().and_then(|t| t.parse::<u64>().ok()).unwrap_or_else(ora);
         let testo = &resto[sp + 1..];
+        if self.rubrica.as_deref() == Some(peer) && testo.starts_with(b"CASELLA ") {
+            return self.posta_dalla_rubrica(peer, &testo[8..]);
+        }
         self.registra(peer, "in", ts, testo);
         if !self.contatti.lock().unwrap().iter().any(|(a, _)| a == peer) {
             self.notifica(format!("NEW {peer}"));
@@ -304,7 +335,24 @@ impl Stato {
     async fn invia_a(self: &Arc<Self>, indirizzo_contatto: &str, testo: &[u8]) -> Risultato<()> {
         let addr = con_suffisso(indirizzo_contatto);
         let ts = ora();
-        let scrittore = self.sessione(&addr).await?;
+        let in_casella = self.casella.is_some() && self.rubrica.as_deref() != Some(addr.as_str()) && addr != self.indirizzo;
+        // già noto come non raggiungibile: dritto nella casella, senza far aspettare
+        if in_casella
+            && !self.sessioni.lock().unwrap().contains_key(&addr)
+            && self.irraggiungibili.lock().unwrap().contains(&addr)
+        {
+            return self.deposita(&addr, testo).await;
+        }
+        let scrittore = match self.sessione(&addr).await {
+            Ok(s) => s,
+            Err(e) => {
+                self.irraggiungibili.lock().unwrap().insert(addr.clone());
+                if !in_casella {
+                    return Err(e);
+                }
+                return self.deposita(&addr, testo).await.map_err(|e2| format!("{e} — casella: {e2}").into());
+            }
+        };
         let mut chiaro = format!("M {ts} ").into_bytes();
         chiaro.extend_from_slice(testo);
         scrittore.send(chiaro).await.map_err(|_| "sessione chiusa")?;
@@ -518,11 +566,107 @@ impl Stato {
                 if ok {
                     prossimo.remove(&a);
                 } else {
+                    self.irraggiungibili.lock().unwrap().insert(a.clone());
                     let pausa = prossimo.get(&a).map(|(_, p)| (p * 2).min(SONDA_PAUSA_MAX)).unwrap_or(SONDA_PAUSA_MIN);
                     prossimo.insert(a, (adesso + std::time::Duration::from_secs(pausa), pausa));
                 }
             }
             tokio::time::sleep(SONDA_GIRO).await;
+        }
+    }
+
+    // --- casella cifrata -----------------------------------------------------
+    /// Lascia un messaggio nella casella per chi non è in linea. La busta (Noise X) la apre
+    /// solo il destinatario e dentro c'è la prova di chi l'ha scritta; il deposito passa dai
+    /// circuiti verso l'indirizzo della casella SENZA presentarsi, quindi la casella non sa
+    /// chi scrive: sa solo che c'è posta per quell'indirizzo.
+    async fn deposita(self: &Arc<Self>, addr: &str, testo: &[u8]) -> Risultato<()> {
+        let casella = self.casella.clone().ok_or("nessuna casella in questa rete")?;
+        if testo.len() > TESTO_CASELLA_MAX {
+            return Err(format!("messaggio troppo lungo per la casella (massimo {} KB)", TESTO_CASELLA_MAX / 1024).into());
+        }
+        let chiave = indirizzo::in_chiave(addr).map_err(|_| "indirizzo .nyct non valido")?;
+        let ts = ora();
+        let mut carico = format!("{} {ts} ", nuovo_id()).into_bytes();
+        carico.extend_from_slice(testo);
+        let busta = casella::sigilla(&self.identita, &chiave, &carico)?;
+        tokio::time::timeout(DEPOSITO_TEMPO, consegna_busta(self.socks, &casella, addr, &busta))
+            .await
+            .map_err(|_| "la casella non risponde")??;
+        self.registra(addr, "out", ts, testo);
+        self.notifica(format!("OUT {addr} {ts} {}", in_esadecimale(testo)));
+        self.notifica(format!("CAS {addr} {ts}"));
+        Ok(())
+    }
+
+    /// Chiede alla rubrica la posta lasciata per noi: all'avvio e poi ogni tanto (se siamo in
+    /// linea, la rubrica la consegna anche da sola). Non usa il turno di `composizione`.
+    async fn ritira_posta(self: Arc<Self>) {
+        tokio::time::sleep(RITIRO_INIZIO).await;
+        loop {
+            if let Some(rub) = self.rubrica.clone() {
+                let _ = self.invia_grezzo(&rub, b"CASELLA RITIRA").await;
+            }
+            tokio::time::sleep(RITIRO_GIRO).await;
+        }
+    }
+
+    /// Messaggio di servizio (non va in cronologia né all'interfaccia).
+    async fn invia_grezzo(self: &Arc<Self>, addr: &str, testo: &[u8]) -> Risultato<()> {
+        let esistente = || self.sessioni.lock().unwrap().get(addr).map(|(_, s)| s.clone());
+        if esistente().is_none() {
+            tokio::time::timeout(SONDA_TEMPO, self.componi(addr)).await.map_err(|_| "tempo scaduto")??;
+        }
+        let scrittore = esistente().ok_or("sessione non creata")?;
+        let mut chiaro = format!("M {} ", ora()).into_bytes();
+        chiaro.extend_from_slice(testo);
+        scrittore.send(chiaro).await.map_err(|_| "sessione chiusa")?;
+        Ok(())
+    }
+
+    /// `POSTA <id> <busta hex> [<id> <busta hex> …]` dalla rubrica: si aprono le buste, i
+    /// messaggi entrano in cronologia come arrivati dal loro mittente (autenticato dalla
+    /// busta) e si conferma il ritiro, così la casella li cancella.
+    fn posta_dalla_rubrica(&self, rubrica: &str, resto: &[u8]) {
+        let Ok(resto) = std::str::from_utf8(resto) else { return };
+        let mut parti = resto.split_ascii_whitespace();
+        if parti.next() != Some("POSTA") {
+            return;
+        }
+        let mut ritirati = Vec::new();
+        let voci: Vec<&str> = parti.collect();
+        for coppia in voci.chunks(2) {
+            let [id, hex] = coppia else { break };
+            if id.len() > 64 || !id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+                continue;
+            }
+            ritirati.push(id.to_string());                   // anche le buste illeggibili: via dalla casella
+            let Ok(busta) = da_hex(hex) else { continue };
+            let Ok((chiave, carico)) = casella::apri(&self.identita, &busta) else { continue };
+            let mittente = indirizzo::da_chiave(&chiave);
+            let mut campi = carico.splitn(3, |&b| b == b' ');
+            let (Some(mid), Some(ts), Some(testo)) = (campi.next(), campi.next(), campi.next()) else { continue };
+            let mid = String::from_utf8_lossy(mid).to_string();
+            if !self.posta_vista.lock().unwrap().insert(mid.clone()) {
+                continue;                                   // già ricevuta (busta ripetuta)
+            }
+            self.registra_posta_vista(&mid);
+            let ts = std::str::from_utf8(ts).ok().and_then(|t| t.parse::<u64>().ok()).unwrap_or_else(ora);
+            self.registra(&mittente, "in", ts, testo);
+            if !self.contatti.lock().unwrap().iter().any(|(a, _)| *a == mittente) {
+                self.notifica(format!("NEW {mittente}"));
+            }
+            self.notifica(format!("MSG {mittente} {ts} {}", in_esadecimale(testo)));
+        }
+        if let (false, Some((_, s))) = (ritirati.is_empty(), self.sessioni.lock().unwrap().get(rubrica)) {
+            let _ = s.try_send(format!("M {} CASELLA RICEVUTI {}", ora(), ritirati.join(" ")).into_bytes());
+        }
+    }
+
+    fn registra_posta_vista(&self, id: &str) {
+        use std::io::Write;
+        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(self.dati.join("casella-viste")) {
+            let _ = writeln!(f, "{id}");
         }
     }
 
@@ -822,6 +966,36 @@ fn carica_identita(percorso: &Path) -> Risultato<Identita> {
     Ok(id)
 }
 
+/// Id delle buste già ricevute (gli ultimi 5000 bastano: la casella le tiene al più 14 giorni).
+fn carica_posta_vista(dati: &Path) -> HashSet<String> {
+    let testo = std::fs::read_to_string(dati.join("casella-viste")).unwrap_or_default();
+    let righe: Vec<&str> = testo.lines().collect();
+    righe[righe.len().saturating_sub(5000)..].iter().map(|s| s.to_string()).collect()
+}
+
+/// Deposito anonimo: POST della busta all'indirizzo .nyct della casella, attraverso i circuiti.
+async fn consegna_busta(socks: SocketAddr, casella: &str, per: &str, busta: &[u8]) -> Risultato<()> {
+    let mut flusso = socks5_connetti(socks, casella, 80).await?;
+    let testa = format!(
+        "POST /deposita?a={per} HTTP/1.0\r\nHost: casella\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n",
+        busta.len()
+    );
+    flusso.write_all(testa.as_bytes()).await?;
+    flusso.write_all(busta).await?;
+    flusso.flush().await?;
+    let mut risposta = Vec::new();
+    (&mut flusso).take(4096).read_to_end(&mut risposta).await?;
+    let prima = String::from_utf8_lossy(&risposta);
+    let prima = prima.lines().next().unwrap_or("");
+    if prima.split_whitespace().nth(1) == Some("200") {
+        Ok(())
+    } else {
+        let corpo = String::from_utf8_lossy(&risposta);
+        let motivo = corpo.split("\r\n\r\n").nth(1).unwrap_or(prima).trim().to_string();
+        Err(format!("casella: {motivo}").into())
+    }
+}
+
 fn carica_visti(dati: &Path) -> HashMap<String, u64> {
     std::fs::read_to_string(dati.join("visti"))
         .unwrap_or_default()
@@ -1077,6 +1251,10 @@ mod prove {
             max_file: 1,
             segreto: None,
             visti: Mutex::new(HashMap::new()),
+            rubrica: None,
+            casella: None,
+            irraggiungibili: Mutex::new(HashSet::new()),
+            posta_vista: Mutex::new(HashSet::new()),
         };
         st.registra_riga("x.nyct", "in 1 6161");
         st.registra_riga("x.nyct", "out 2 6262");

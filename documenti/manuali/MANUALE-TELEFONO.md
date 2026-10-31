@@ -179,10 +179,14 @@ notifiche (i messaggi si vedono già) e aprendola si azzerano.
 - **Batteria:** il servizio consuma poco ma qualcosa. Per non farlo fermare, in Impostazioni →
   App → Nyctalus (e Termux) → Batteria scegli **Senza restrizioni**.
 - Per spegnerle: **Strumenti ▾ → 🔔 Notifiche dei messaggi: attive** (toccalo per passare a spente).
-- Dopo aver riacceso il telefono apri l'app una volta: da lì il servizio riparte.
+- Dopo aver riacceso il telefono apri l'app una volta, oppure attiva l'avvio all'accensione (sotto).
 
-Se il telefono è spento o senza rete, i messaggi non possono arrivare: per questo è in arrivo la
-**casella cifrata**, che li tiene in deposito e te li consegna, con la notifica, appena torni in rete.
+Se il telefono è spento o senza rete, i messaggi restano nella **casella cifrata** della rete e
+ti arrivano, con la notifica, appena torni in rete (`MANUALE-CHAT.md` §3-ter).
+
+**Avvio all'accensione (a scelta):** in **Strumenti ▾ → ⏻ Avvio all'accensione del telefono** decidi
+tu se, dopo aver riacceso il telefono, Nyctalus deve ripartire da solo (servizio in Termux e
+notifiche) oppure aspettare che tu apra l'app. All'inizio è su **no**.
 
 ## 6. Sicurezza sul telefono
 

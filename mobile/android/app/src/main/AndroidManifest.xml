@@ -11,6 +11,8 @@
          di mostrarle (Android 13+) e il tipo «messaggistica» del servizio (Android 14+). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
+    <!-- Avvio all'accensione: usato SOLO se scelto in «Strumenti» (spento di default). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Per chiedere a Termux di avviare Nyctalus (intent RUN_COMMAND).
          Va abbinato a "allow-external-apps = true" in ~/.termux/termux.properties,
          riga che l'installatore di Nyctalus aggiunge da solo. -->
@@ -71,6 +73,14 @@
             android:name=".ServizioNotifiche"
             android:exported="false"
             android:foregroundServiceType="remoteMessaging|dataSync" />
+
+        <receiver
+            android:name=".AvvioAccensione"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Foto scattate dalla chat: restano nella cartella PRIVATA dell'app (non nella
              galleria del telefono); la fotocamera ci scrive con un permesso temporaneo. -->

@@ -219,6 +219,20 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** Interruttore in «Strumenti»: Nyctalus si riaccende da solo all'accensione del telefono. */
+    private void cambiaAccensione(Button b) {
+        SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+        boolean attivo = !p.getBoolean("avvio_accensione", false);
+        p.edit().putBoolean("avvio_accensione", attivo).apply();
+        b.setText(testoAccensione(attivo));
+        avviso(attivo ? "All'accensione del telefono Nyctalus ripartirà da solo (servizio in Termux e notifiche)."
+                      : "All'accensione del telefono Nyctalus resterà spento finché non apri l'app.");
+    }
+
+    private static String testoAccensione(boolean attivo) {
+        return attivo ? "⏻  Avvio all'accensione del telefono: sì" : "⏻  Avvio all'accensione del telefono: no";
+    }
+
     private static String testoNotifiche(boolean attive) {
         return attive ? "🔔  Notifiche dei messaggi: attive" : "🔕  Notifiche dei messaggi: spente";
     }
@@ -370,7 +384,11 @@ public class MainActivity extends Activity {
         Button notif = cella(testoNotifiche(getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("notifiche", true)), null);
         notif.setOnClickListener(v -> cambiaNotifiche(notif));
         riga5.addView(notif);
-        for (LinearLayout x : new LinearLayout[]{riga5, riga1, riga2, riga3, riga4}) {
+        LinearLayout riga6 = riga();
+        Button acc = cella(testoAccensione(getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("avvio_accensione", false)), null);
+        acc.setOnClickListener(v -> cambiaAccensione(acc));
+        riga6.addView(acc);
+        for (LinearLayout x : new LinearLayout[]{riga5, riga6, riga1, riga2, riga3, riga4}) {
             ((LinearLayout.LayoutParams) x.getLayoutParams()).topMargin = dp(8);
             strumenti.addView(x);
         }

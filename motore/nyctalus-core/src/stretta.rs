@@ -36,7 +36,7 @@ const PROLOGO: &[u8] = b"Nyctalus v0 2026-09-27 stretta di mano";
 pub const LUNGHEZZA_MESSAGGIO: usize = 48;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ErroreStretta(String);
+pub struct ErroreStretta(pub(crate) String);
 
 impl fmt::Display for ErroreStretta {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -86,6 +86,11 @@ impl Identita {
 
     pub fn pubblica(&self) -> [u8; 32] {
         self.pubblica
+    }
+
+    /// La chiave privata, solo dentro il nucleo (serve alle buste della casella).
+    pub(crate) fn privata(&self) -> &[u8; 32] {
+        &self.privata
     }
 }
 

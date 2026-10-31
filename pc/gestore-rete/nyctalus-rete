@@ -223,9 +223,10 @@ class Rete:
             esci("URL non valido: deve iniziare con http:// o https://")
         a = self.autorita()
         cfg = {"v": 1, "nome": a["nome"], "directory_url": url, "authority": a["pubblica"]}
-        f_rub = self.dir / "rubrica" / "indirizzo"
-        if f_rub.exists():
-            cfg["rubrica"] = f_rub.read_text().strip()     # la rubrica di questa rete (se accesa)
+        for chiave, nome_file in (("rubrica", "indirizzo"), ("casella", "casella-indirizzo")):
+            f = self.dir / "rubrica" / nome_file
+            if f.exists():
+                cfg[chiave] = f.read_text().strip()      # rubrica e casella di questa rete (se accese)
         cod = PREFISSO + base64.urlsafe_b64encode(json.dumps(cfg, separators=(",", ":")).encode()).decode().rstrip("=")
         self.f_codice.write_text(cod + "\n")
         (self.dir / "nyctalus-rete.json").write_text(json.dumps(cfg, indent=1) + "\n")
@@ -251,13 +252,14 @@ def leggi_codice(testo):
     if not re.match(r"^https?://[^\s]+$", url) or not re.fullmatch(r"[0-9a-f]{64}", aut):
         raise ValueError("codice di rete incompleto")
     rete = {"nome": str(cfg.get("nome") or "Rete Nyctalus")[:60], "directory_url": url, "authority": aut}
-    if re.fullmatch(r"[a-z2-7]{56}\.nyct", str(cfg.get("rubrica", ""))):
-        rete["rubrica"] = cfg["rubrica"]
+    for k in ("rubrica", "casella"):                     # rubrica e casella della rete
+        if re.fullmatch(r"[a-z2-7]{56}\.nyct", str(cfg.get(k, ""))):
+            rete[k] = cfg[k]
     return rete
 
 
 # --- rubrica della rete ------------------------------------------------------------------
-PORTE_RUBRICA = [int(x) for x in os.environ.get("NYCTALUS_RUBRICA_PORTE", "18810,18811,18812,18813").split(",")]
+PORTE_RUBRICA = [int(x) for x in os.environ.get("NYCTALUS_RUBRICA_PORTE", "18810,18811,18812,18813,18814").split(",")]
 
 
 def avvia_rubrica(rete, autorita_pub, proc):
@@ -266,7 +268,7 @@ def avvia_rubrica(rete, autorita_pub, proc):
     l'indirizzo .nyct della rubrica (scritto anche in rubrica/indirizzo per il codice)."""
     b = binario()
     d = privata(rete.dir / "rubrica")
-    backend, controllo, socks, monitor = PORTE_RUBRICA
+    backend, controllo, socks, monitor = PORTE_RUBRICA[:4]
     segreto = base64.b16encode(os.urandom(16)).decode().lower()
     env = dict(os.environ, NYCTALUS_CHAT_TOKEN=segreto)
     log = lambda n: open(d / (n + ".log"), "ab")     # noqa: E731
@@ -290,9 +292,26 @@ def avvia_rubrica(rete, autorita_pub, proc):
     proc.append(subprocess.Popen([b, "site", "--backend", "127.0.0.1:%d" % backend, "--identity", str(d / "identita"),
                                   "--directory", str(rete.f_elenco), "--authority", autorita_pub, "--hops", "3"],
                                  stdout=log("servizio"), stderr=subprocess.STDOUT, start_new_session=True))
+    # la casella cifrata: servizio di deposito con un SUO indirizzo .nyct (chi deposita arriva
+    # dai circuiti senza presentarsi; la posta la ritira il destinatario dalla rubrica)
+    casella = PORTE_RUBRICA[4] if len(PORTE_RUBRICA) > 4 else PORTE_RUBRICA[0] + 4
     proc.append(subprocess.Popen([sys.executable, str(Path(__file__).resolve().parent / "rubrica.py"), str(d),
-                                  str(controllo)], stdout=log("rubrica"), stderr=subprocess.STDOUT, env=env,
-                                 start_new_session=True))
+                                  str(controllo), str(casella)], stdout=log("rubrica"), stderr=subprocess.STDOUT,
+                                 env=env, start_new_session=True))
+    f_cas = d / "casella.log"
+    f_cas.write_bytes(b"")
+    proc.append(subprocess.Popen([b, "site", "--backend", "127.0.0.1:%d" % casella, "--identity",
+                                  str(d / "casella-identita"), "--directory", str(rete.f_elenco),
+                                  "--authority", autorita_pub, "--hops", "3"],
+                                 stdout=open(f_cas, "ab"), stderr=subprocess.STDOUT, start_new_session=True))
+    for _ in range(240):                                  # finché il servizio non è in rete
+        m = re.search(r"[a-z2-7]{56}\.nyct", f_cas.read_text(errors="replace"))
+        if m:
+            (d / "casella-indirizzo").write_text(m.group(0) + "\n")
+            break
+        time.sleep(0.25)
+    else:
+        print("! la casella cifrata non è partita (vedi %s): la rete funziona lo stesso, senza casella" % f_cas)
     return indirizzo
 
 
@@ -304,7 +323,7 @@ def importa(argomento):
         except Exception:     # noqa: BLE001
             cfg = {}
     if argomento == "--prova":
-        for k in ("directory_url", "authority", "nome_rete", "rubrica"):
+        for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella"):
             cfg.pop(k, None)
         msg = "questo PC torna alla rete di prova locale"
     else:
@@ -319,9 +338,10 @@ def importa(argomento):
         except ValueError as e:
             esci(str(e))
         cfg.update({"directory_url": rete["directory_url"], "authority": rete["authority"], "nome_rete": rete["nome"]})
-        cfg.pop("rubrica", None)
-        if rete.get("rubrica"):
-            cfg["rubrica"] = rete["rubrica"]
+        for k in ("rubrica", "casella"):          # rubrica e casella della rete (se ci sono)
+            cfg.pop(k, None)
+            if rete.get(k):
+                cfg[k] = rete[k]
         reti = [r for r in reti_salvate(cfg) if not (r["authority"] == rete["authority"]
                                                     and r["directory_url"] == rete["directory_url"])]
         cfg["reti"] = (reti + [rete])[-20:]
@@ -368,9 +388,10 @@ def usa_rete(n):
         esci("rete %d non trovata (nyctalus-rete reti per l'elenco)" % n)
     r = reti[n]
     cfg.update({"directory_url": r["directory_url"], "authority": r["authority"], "nome_rete": r["nome"], "reti": reti})
-    cfg.pop("rubrica", None)
-    if r.get("rubrica"):
-        cfg["rubrica"] = r["rubrica"]
+    for k in ("rubrica", "casella"):          # rubrica e casella della rete (se ci sono)
+        cfg.pop(k, None)
+        if r.get(k):
+            cfg[k] = r[k]
     CONFIG_CLIENT.write_text(json.dumps(cfg, indent=1) + "\n")
     ok("questo PC ora usa la rete «%s» (impronta %s)" % (r["nome"], impronta(r["authority"])))
     print("  Chiudi e riapri chat e browser perché la usino.")

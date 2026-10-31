@@ -91,8 +91,9 @@ def leggi_codice(testo):
     if not re.match(r"^https?://[^\s]+$", url) or not re.fullmatch(r"[0-9a-f]{64}", aut):
         raise ValueError("codice di rete incompleto")
     rete = {"nome": str(cfg.get("nome") or "Rete Nyctalus")[:60], "directory_url": url, "authority": aut}
-    if re.fullmatch(r"[a-z2-7]{56}\.nyct", str(cfg.get("rubrica", ""))):
-        rete["rubrica"] = cfg["rubrica"]                # la rubrica della rete
+    for k in ("rubrica", "casella"):                     # rubrica e casella della rete
+        if re.fullmatch(r"[a-z2-7]{56}\.nyct", str(cfg.get(k, ""))):
+            rete[k] = cfg[k]                # la rubrica della rete
     return rete
 
 
@@ -224,8 +225,13 @@ class Servizi:
 
             # 1) il motore della chat (parte subito: la web-app vede il Contact ID)
             env = dict(os.environ, NYCTALUS_CHAT_TOKEN=self.segreto_motore)
+            # rubrica e casella della rete: ritiro e deposito della posta per chi non è in linea
+            extra = []
+            for k in ("rubrica", "casella"):
+                if pubblica and re.fullmatch(r"[a-z2-7]{56}\.nyct", str(cfg.get(k, ""))):
+                    extra += ["--" + k, cfg[k]]
             self._lancia([binario, "chat", "--data", str(DATI_CHAT), "--backend", BACKEND,
-                          "--control", "%s:%d" % CONTROLLO, "--socks", socks],
+                          "--control", "%s:%d" % CONTROLLO, "--socks", socks] + extra,
                          lavoro / "chat.log", env=env)
             addr = self._attendi(lavoro / "chat.log", r"[a-z2-7]{56}\.nyct", 10)
             if not addr:
@@ -852,24 +858,26 @@ async def cambia_rete(lettore, scrittore, req):
             if via["authority"] == cfg.get("authority") and via["directory_url"] == cfg.get("directory_url"):
                 dati = {"prova": True}
         if dati.get("prova"):
-            for k in ("directory_url", "authority", "nome_rete", "rubrica"):
+            for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella"):
                 cfg.pop(k, None)
             nome = ""
         elif "usa" in dati:
             rete = reti[int(dati["usa"])]
             cfg.update(directory_url=rete["directory_url"], authority=rete["authority"], nome_rete=rete["nome"])
-            cfg.pop("rubrica", None)
-            if rete.get("rubrica"):
-                cfg["rubrica"] = rete["rubrica"]
+            for k in ("rubrica", "casella"):          # rubrica e casella della rete (se ci sono)
+                cfg.pop(k, None)
+                if rete.get(k):
+                    cfg[k] = rete[k]
             nome = rete["nome"]
         elif "togli" in dati:
             nome = cfg.get("nome_rete", "")
         else:
             rete = leggi_codice(dati.get("codice", ""))
             cfg.update(directory_url=rete["directory_url"], authority=rete["authority"], nome_rete=rete["nome"])
-            cfg.pop("rubrica", None)
-            if rete.get("rubrica"):
-                cfg["rubrica"] = rete["rubrica"]
+            for k in ("rubrica", "casella"):          # rubrica e casella della rete (se ci sono)
+                cfg.pop(k, None)
+                if rete.get(k):
+                    cfg[k] = rete[k]
             nome = rete["nome"]
             reti = [r for r in reti if not (r["authority"] == rete["authority"] and r["directory_url"] == rete["directory_url"])]
             reti.append(rete)

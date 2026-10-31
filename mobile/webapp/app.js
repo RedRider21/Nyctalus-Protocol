@@ -335,6 +335,7 @@ function evento(riga) {
     S.giroRubrica++;                               // la richiesta alla rubrica non è partita: lo si dice lì
     statoRubrica("La rubrica non è raggiungibile: " + erroreLeggibile(riga.slice(4)), true);
   }
+  else if (t === "CAS" && p[1] === S.attivo) avviso("📮 Non è in linea: il messaggio è nella casella cifrata e gli arriverà appena si collega.");
   else if (t === "ERR" && /motore non raggiungibile/.test(riga)) segnalaMotoreGiu();
   else if (t === "ERR") avviso(erroreLeggibile(riga.slice(4)));
   else if (t === "ENDC") {   // collegamento diretto: #chat=<indirizzo> apre quella conversazione
