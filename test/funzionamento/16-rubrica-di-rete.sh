@@ -18,7 +18,8 @@ for p in 20801 20802 20803 20804; do
 done
 for p in 20801 20802 20803 20804; do righe+=("$(attendi_regex "$TMP/n$p.log" "127\.0\.0\.1:$p,[0-9a-f]+,[0-9a-f]+" 15)"); done
 RETE "$G" aggiungi "${righe[@]}" > /dev/null && RETE "$G" firma > /dev/null || { fail "aggiungi/firma"; exit 1; }
-RETE "$G" servi --porta 20800 --ip 127.0.0.1 > "$TMP/servi.log" 2>&1 & PIDS+=($!)
+# lanciati DIRETTAMENTE (non dentro la funzione RETE): così la pulizia ferma proprio loro
+HOME="$G" NYCTALUS_BIN="$BIN" python3 "$ROOT/pc/gestore-rete/nyctalus-rete" servi --porta 20800 --ip 127.0.0.1 > "$TMP/servi.log" 2>&1 & PIDS+=($!)
 attendi_regex "$TMP/servi.log" "pubblico" 15 > /dev/null
 URL=http://127.0.0.1:20800/directory.txt
 COD=$(RETE "$G" codice --url "$URL" | grep -oE 'NYCT1:[A-Za-z0-9_-]+')
@@ -26,7 +27,8 @@ leggi() { python3 -c "import base64,json,sys;c=sys.argv[1][6:];print(json.loads(
 [ -z "$(leggi "$COD" rubrica)" ] && pass "rete nuova: il codice non ha ancora la rubrica" || fail "rubrica inattesa"
 
 # sul «server»: rubrica e casella con il solo codice (niente chiave dell'autorità)
-NYCTALUS_RUBRICA_PORTE=20810,20811,20812,20813,20814 RETE "$SRV" rubrica --codice "$COD" > "$TMP/rub.log" 2>&1 & PIDS+=($!)
+NYCTALUS_RUBRICA_PORTE=20810,20811,20812,20813,20814 HOME="$SRV" NYCTALUS_BIN="$BIN" \
+  python3 "$ROOT/pc/gestore-rete/nyctalus-rete" rubrica --codice "$COD" > "$TMP/rub.log" 2>&1 & PIDS+=($!)
 for _ in $(seq 1 240); do grep -q "Casella:" "$TMP/rub.log" && break; sleep 0.5; done
 RUB=$(grep -oE "Rubrica: [a-z2-7]{56}\.nyct" "$TMP/rub.log" | cut -d' ' -f2); CAS=$(grep -oE "Casella: [a-z2-7]{56}\.nyct" "$TMP/rub.log" | cut -d' ' -f2)
 [ -n "$RUB" ] && [ -n "$CAS" ] && pass "nyctalus-rete rubrica --codice: rubrica e casella accese, indirizzi stampati" || fail "rubrica: $(tail -4 "$TMP/rub.log")"

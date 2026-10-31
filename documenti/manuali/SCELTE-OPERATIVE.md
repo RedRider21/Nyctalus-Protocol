@@ -33,29 +33,11 @@ Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 Limite: non puoi parlare con nessun altro dispositivo.
 
 ## Scenario B · Rete di casa: telefono ↔ PC (nessun server)
+**Cosa:** il PC fa da nodi e da gestore sulla Wi-Fi di casa; il telefono si collega. È il modo
+per provare **due identità diverse** tra loro. Installa sul PC il **gestore** (`./installa.sh` → 2),
+poi segui **`GUIDA-RETE-DI-CASA.md`** (5 passi).
 
-> Versione in una pagina: **`GUIDA-RETE-DI-CASA.md`**.
-**Cosa:** il PC fa da nodi e da gestore sulla Wi-Fi di casa; il telefono si collega.
-È il modo per provare **due identità diverse** tra loro.
-
-1. Sul PC installa il **gestore** (`./installa.sh` → 2).
-2. Sul PC: `nyctalus-rete casa` e lascia la finestra aperta. Stampa un codice `NYCT1:…`
-   e un indirizzo `http://IP-DEL-PC:18800/`.
-3. Sul telefono, sulla **stessa Wi-Fi**, apri nel browser `http://IP-DEL-PC:18800/` e tocca
-   **📲 Collega l'app Nyctalus**: l'app si apre e chiede conferma con nome e impronta della rete.
-   In alternativa copia il codice e importalo dalla riga **🔗 Rete** della schermata iniziale.
-4. Sul PC la chat usa già la rete di casa: `casa` importa il codice anche sul PC.
-   Chiudi e riapri la chat.
-5. Controlla che l'**impronta della rete** mostrata dal PC sia uguale a quella in ⚙ → Rete
-   condivisa sul telefono.
-6. Scambiatevi i Contact ID e scrivetevi.
-
-Se il telefono resta a caricare la pagina, il firewall del PC blocca le porte: `casa` stampa
-i due comandi `sudo ufw allow …` da dare una volta sola (vedi `MANUALE-GESTORE-RETE.md` §6).
-
-Limiti: funziona solo in casa e solo finché la finestra di `casa` resta aperta.
-`Ctrl-C` la ferma. Per tornare alla rete di prova: PC `nyctalus-rete importa --prova`,
-telefono «↩ Rete di prova».
+Limiti: solo in casa e solo finché la finestra di `nyctalus-rete casa` resta aperta.
 
 ## Scenario C · Rete vera con un server (VPS)
 **Cosa:** un server in affitto con 4 nodi; chiunque abbia il codice può usare la rete.
@@ -65,8 +47,9 @@ telefono «↩ Rete di prova».
 | **Server** | `sudo ./installa.sh --nodi 4` dal pacchetto `Server-Linux` → stampa 4 righe | `MANUALE-SERVER.md` |
 | **Tuo PC (gestore)** | `nyctalus-rete crea` → `aggiungi` le 4 righe → `firma` | `MANUALE-GESTORE-RETE.md` |
 | **Dove pubblichi** | metti `directory.txt` a un indirizzo web (anche sullo stesso server) | `MANUALE-GESTORE-RETE.md` §4 |
-| **Tuo PC (gestore)** | `nyctalus-rete codice --url URL` → il codice `NYCT1:…` | `MANUALE-GESTORE-RETE.md` |
-| **Ogni client** | PC: `nyctalus-rete importa CODICE` · telefono: schermata iniziale → **🔗 Rete** → Importa codice | questo file, sopra |
+| **Server** (facoltativo) | rubrica e casella: `./gestore-rete/nyctalus-rete rubrica --codice … --servizio` | `MANUALE-SERVER.md` §6-bis |
+| **Tuo PC (gestore)** | `nyctalus-rete codice --url URL` (con `--rubrica … --casella …`) → il codice `NYCT1:…` | `MANUALE-GESTORE-RETE.md` |
+| **Ogni client** | PC: `nyctalus-rete importa CODICE` · telefono: **🔗 Rete** → Importa codice | `MANUALE-PC.md` §3, `MANUALE-TELEFONO.md` §1 |
 
 Limite: tutti i nodi stanno da un solo fornitore. La rete funziona davvero, ma quel
 fornitore vedrebbe sia l'entrata sia l'uscita: va bene per provare, non per l'anonimato.

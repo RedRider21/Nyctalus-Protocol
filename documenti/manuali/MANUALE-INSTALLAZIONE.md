@@ -70,64 +70,37 @@ identità e chat.
 
 ## 2. Telefono Android
 
-Nyctalus sul telefono funziona come **Termux-NexusSEC-OS**: dentro **Termux** gira il
-motore (lo stesso del PC) con un piccolo servizio, e l'interfaccia è una **web-app in
-stile Telegram**, che apri nel browser del telefono oppure nell'app **Nyctalus**.
+Dentro **Termux** girano il motore (lo stesso del PC) e un piccolo servizio; l'**app Nyctalus**
+mostra la chat (stile Telegram), il browser e la rubrica.
 
-**Convive con gli altri progetti in Termux:** usa solo la cartella `~/nyctalus`, i dati
-in `~/.nyctalus-mobile` e `~/.nyctalus-chat`, porte del blocco **18xxx**, comandi che
-iniziano con `nyctalus-`; installa **solo i pacchetti che mancano** e **non aggiorna
-mai** quelli già presenti; in `termux.properties` aggiunge una sola riga, senza
-riscrivere il file.
+### 2.1 Il modo semplice: con l'app
+1. Installa **Termux** da F-Droid (<https://f-droid.org/packages/com.termux/>) o da GitHub
+   (<https://github.com/termux/termux-app/releases>, file `…arm64-v8a.apk`), **non** dal Play
+   Store. Aprilo una volta e aspetta che finisca. Se lo usi già per altro, va bene quello.
+2. Installa **`Nyctalus.apk`** (dal pacchetto `Nyctalus-Android.zip` della release) e aprila;
+   concedi «Esegui comandi in Termux». Android chiede di consentire «Installa app sconosciute».
+3. Nell'app: **Strumenti ▾ → 🦇 Installa / aggiorna Nyctalus in Termux**. Termux mostra
+   l'installazione (pochi secondi: il motore è già pronto) e poi torna all'app.
+4. Collegati a una rete: `MANUALE-TELEFONO.md` §1 (a casa: `GUIDA-RETE-DI-CASA.md`).
 
-### 2.1 Cosa scaricare
-1. **Termux** — **non** dal Play Store (versione vecchia e ferma):
-   - F-Droid: <https://f-droid.org/packages/com.termux/>
-   - oppure GitHub: <https://github.com/termux/termux-app/releases> → il file
-     `termux-app_…_arm64-v8a.apk` (quasi tutti i telefoni recenti sono *arm64-v8a*).
+Solo la **prima volta** Termux può non eseguire il comando da solo: in Termux tieni premuto →
+**Incolla** → Invio (il comando è già negli appunti).
 
-   Se usi già Termux per altri progetti, va bene quello che hai.
-2. **`nyctalus-termux.tar.gz`** dalla cartella `installazioni/Android/`.
-3. Facoltativa: **`Nyctalus.apk`**, l'app Nyctalus (circa 170 KB). Senza, usi il browser
-   del telefono (funziona allo stesso modo). Per installarla Android chiede di consentire
-   «Installa app sconosciute» all'app con cui la apri (File, Chrome…).
+**Per aggiornare:** installa la nuova APK, poi di nuovo il punto 3 (ferma e riaccende da solo il
+servizio in Termux).
 
-### 2.1-bis Il modo più semplice: con l'app
-`Nyctalus.apk` contiene già il pacchetto per Termux, quindi **non serve copiare archivi**:
-1. installa **Termux**, aprilo una volta e aspetta che finisca di prepararsi;
-2. installa **`Nyctalus.apk`** e aprila; concedi il permesso «Esegui comandi in Termux»;
-3. tocca **«🦇 Installa / aggiorna Nyctalus in Termux»**. Termux si apre e mostra
-   l'installazione (lo stesso installatore del punto 2.3, che convive con gli altri
-   progetti); alla fine l'app torna davanti da sola: tocca **Entra**.
+**Convive con gli altri progetti in Termux:** usa solo `~/nyctalus`, `~/.nyctalus-mobile`,
+`~/.nyctalus-chat`, porte 18xxx e comandi `nyctalus-*`; installa solo i pacchetti che mancano,
+non aggiorna mai quelli presenti, in `termux.properties` aggiunge una sola riga.
 
-Solo la **prima volta** Termux può non eseguire il comando da solo (manca ancora
-l'impostazione `allow-external-apps`, che l'installatore poi aggiunge): in Termux tieni
-premuto → **Incolla** → Invio. Il comando è già negli appunti.
+Come arriva il pacchetto: l'app lo offre per qualche minuto su `127.0.0.1` a un indirizzo
+casuale; Termux lo scarica e ne **verifica l'impronta SHA-256** prima di installarlo.
 
-Come funziona: l'app serve il pacchetto per qualche minuto su `127.0.0.1`, a un indirizzo
-casuale; Termux lo scarica con `curl` e ne **verifica l'impronta SHA-256** prima di
-installarlo (un pacchetto diverso viene rifiutato e non si installa nulla). Durante il
-trasferimento compare la notifica «Nyctalus — Passo il pacchetto a Termux…»: serve a non
-far «congelare» l'app da Android mentre Termux è in primo piano (problema delle versioni
-fino alla 0.3, in cui `curl` restava appeso o falliva). Sparisce da sola a consegna fatta.
+### 2.2 A mano, senza l'app (facoltativo)
+Serve `nyctalus-termux.tar.gz` (nel pacchetto Android). Poi si apre la chat nel browser del
+telefono all'indirizzo che stampa `nyctalus-mobile`.
 
-Se in Termux compare *«nyctalus-mobile: No such file or directory»* (APK 0.2), Nyctalus
-non è ancora installato: tocca prima «🦇 Installa / aggiorna Nyctalus». Dalla 0.3 il
-comando copiato se ne accorge da solo e installa.
-
-Gli altri pulsanti dell'app:
-
-| Pulsante | Cosa fa |
-|---|---|
-| ⬇ Installa Termux | apre F-Droid (consigliato) o la pagina GitHub di Termux |
-| ↻ Aggiorna Termux | l'app Termux (F-Droid) oppure i pacchetti (`pkg upgrade`, chiede conferma: vale per **tutti** i progetti in Termux) |
-| 🦇 Installa / aggiorna Nyctalus | come sopra; per aggiornare: installa la nuova APK e ritocca il pulsante |
-| ⌨ Apri Termux · 📋 Comando di avvio | apre Termux; copia un comando da incollare in Termux che **avvia** Nyctalus e, se non è ancora installato, prima lo **installa** (vale 15 minuti) |
-| ☁ Aggiornamenti da GitHub | in arrivo, quando il progetto sarà pubblicato |
-
-Se preferisci fare a mano, segui i punti qui sotto.
-
-### 2.2 Portare l'archivio nel telefono
+#### Portare l'archivio nel telefono
 L'archivio deve finire nella cartella **Download** del telefono. Scegli il modo più comodo:
 - **cavo USB**: collega il telefono al PC, scegli «Trasferimento file», copia
   `nyctalus-termux.tar.gz` nella cartella `Download`;
@@ -135,10 +108,10 @@ L'archivio deve finire nella cartella **Download** del telefono. Scegli il modo 
   salvalo in Download;
 - **in rete locale** (PC e telefono sulla stessa Wi-Fi): sul PC, dalla cartella
   `installazioni/Android/`, lancia `python3 -m http.server 8080`; in Termux
-  `curl -O http://IP-DEL-PC:8080/nyctalus-termux.tar.gz` (poi al punto 2.3 usa questo
+  `curl -O http://IP-DEL-PC:8080/nyctalus-termux.tar.gz` (poi in «Installare» usa questo
   file al posto di quello in Download). Alcune reti aziendali lo bloccano.
 
-### 2.3 Installare (una volta sola)
+#### Installare (una volta sola)
 In Termux:
 ```sh
 termux-setup-storage          # appare la richiesta di accesso ai file: concedila
@@ -157,7 +130,7 @@ bash nyctalus-termux/installa.sh
 - Opzione: `bash nyctalus-termux/installa.sh --avvio-automatico` fa partire Nyctalus
   all'accensione (serve l'app **Termux:Boot**).
 
-### 2.4 Avviare
+#### Avviare
 ```sh
 nyctalus-mobile
 ```
@@ -181,7 +154,7 @@ Termux tieni premuto → Incolla → Invio, poi torna nell'app.
 
 Uso dell'app: **`MANUALE-TELEFONO.md`** e **`MANUALE-CHAT.md`**.
 
-### 2.5 Disinstallare
+### 2.3 Disinstallare
 ```sh
 bash ~/nyctalus/disinstalla.sh
 ```
@@ -192,18 +165,10 @@ python o rust, che potrebbero servire ad altri progetti.
 ---
 
 ## 3. La rete: prova locale o condivisa
-
-Senza configurazione, PC e telefono avviano una **rete di prova locale**: tutto
-funziona, ma solo su quel dispositivo, e non raggiungi altre persone. Per parlare con
-gli altri ci si collega a una **rete condivisa** col **codice di rete** (`NYCT1:…`) che
-dà chi la gestisce:
-- **PC:** `nyctalus-rete importa NYCT1:…`, poi riapri chat e browser
-  (`nyctalus-rete importa --prova` per tornare alla rete di prova);
-- **telefono:** ⚙ Impostazioni → **Rete condivisa** → **Importa codice**.
-
-Per provare **telefono ↔ PC** senza server: sul PC `nyctalus-rete casa` (rete di casa).
-Come mettere in piedi una rete vera: `SCELTE-OPERATIVE.md`, `MANUALE-SERVER.md`,
-`MANUALE-GESTORE-RETE.md`.
+Appena installati, PC e telefono usano una **rete di prova locale** (solo su quel dispositivo).
+Per parlare con altri ci si collega a una rete con il suo **codice** (`NYCT1:…`): PC
+`MANUALE-PC.md` §3, telefono `MANUALE-TELEFONO.md` §1. Provare telefono ↔ PC senza server:
+`GUIDA-RETE-DI-CASA.md`. Creare una rete: `SCELTE-OPERATIVE.md`.
 
 ## 4. Problemi frequenti
 

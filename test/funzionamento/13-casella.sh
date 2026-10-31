@@ -41,7 +41,7 @@ TESTO="Ciao Bruno, te lo lascio nella casella"
 R=$(NYCT_FINO="^(CAS|ERR) " controllo 20642 "$SA" 200 SUB "ADD $BRUNO $(printf Bruno | xxd -p)" \
     "SEND $BRUNO $(printf %s "$TESTO" | xxd -p | tr -d '\n')")
 echo "$R" | grep -q "^CAS $BRUNO " && echo "$R" | grep -q "^OUT $BRUNO " \
-  && pass "Bruno spento: il messaggio di Anna va nella casella (OUT + CAS)" || fail "deposito: $(echo "$R" | grep -E '^(ERR|CAS|OUT)' | head -3)"
+  && pass "Bruno spento: il messaggio di Anna va nella casella (OUT + CAS)" || fail "deposito: $(echo "$R" | grep -E '^(ERR|CAS|OUT)' | head -3) — rete di Anna: $(tail -4 "$TMP/anna.rete.log" | tr '\n' ' ')"
 N=$(ls "$D/$BRUNO"/*.busta 2>/dev/null | wc -l)
 [ "$N" = 1 ] && pass "nella casella c'è una busta per Bruno" || fail "buste per Bruno: $N"
 F=$(ls "$D/$BRUNO"/*.busta 2>/dev/null | head -1)

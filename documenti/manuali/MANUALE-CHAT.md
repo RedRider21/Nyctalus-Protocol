@@ -16,22 +16,12 @@ servizio del destinatario). Modello simile a Ricochet/Cwtch.
 
 ## 1. Avviare la chat
 
-- Dal **launcher**: premi il bottone **Chat**.
-- Oppure da terminale:
-  ```sh
-  ./avvia-chat.sh          # nel pacchetto
-  ./strumenti/avvia-chat.sh  # in sviluppo
-  ```
+- **PC:** bottone **Chat** del mini menu, oppure `nyctalus-chat` (senza installare:
+  `./avvia-chat.sh` nel pacchetto). **Telefono:** riquadro **💬 Chat** dell'app.
 
-La **finestra si apre subito**. La rete, però, ha bisogno di qualche secondo per
-salire (deve costruire un circuito a più salti e registrare il tuo servizio al
-punto d'incontro): finché non è pronta vedi già la finestra e il tuo Contact ID,
-ma l'invio/ricezione parte quando la rete è su. È normale, non è un blocco.
-
-> **Perché «ci mette un po'»?** Non è un difetto: a differenza di una chat
-> normale, qui non ci si collega a un server centrale. Il programma mette in
-> piedi un pezzo di rete anonima (relay + circuito cifrato + punto d'incontro)
-> prima di poter parlare. È il prezzo dell'assenza di metadati.
+La **finestra si apre subito**; la rete impiega qualche secondo a salire (costruisce un circuito
+a più salti e registra il tuo servizio al punto d'incontro). Non è un blocco: senza un server
+centrale, è il prezzo dell'assenza di metadati.
 
 ---
 
@@ -225,24 +215,13 @@ Nell'elenco vedi per ogni chat l'**ultimo messaggio**, l'ora (o il giorno), il
 
 ---
 
-## 6. Serve una rete condivisa
+## 6. Serve la stessa rete
+Per parlarvi, **tu e l'altra persona dovete essere sulla stessa rete**: ci si collega con il
+**codice di rete** (PC `MANUALE-PC.md` §3, telefono `MANUALE-TELEFONO.md` §1). Senza codice la
+chat usa una rete di prova solo sul tuo dispositivo: utile per vedere com'è fatta, non per
+raggiungere altri. A casa, PC ↔ telefono: `GUIDA-RETE-DI-CASA.md`.
 
-La chat è a **due parti**: per parlarvi, **tu e l'altra persona dovete essere
-sulla stessa rete**.
-
-- **Rete pubblica (uso reale).** Se hai configurato la rete condivisa nel file
-  `~/.nyctalus-browser/config.json` (`directory_url` + `authority`, vedi
-  `DEPLOY.md`), la chat la usa automaticamente: così raggiungi chiunque sia su
-  quella rete. È il modo con cui tu e i tuoi contatti vi parlate davvero.
-- **Rete di prova locale (solo per curiosare).** Senza quella configurazione la
-  finestra si apre comunque, ma su una rete di prova **solo sul tuo PC**: utile
-  per vedere com'è fatta, **non** per raggiungere altre persone.
-
-**Provare la chat da solo** (due finestre sul tuo computer, come due persone):
-```sh
-./strumenti/demo-chat.sh
-```
-Aggiungi in ciascuna finestra l'indirizzo dell'altra e scrivetevi.
+Provarla da solo su un PC, con due finestre come due persone: `./strumenti/demo-chat.sh`.
 
 ---
 

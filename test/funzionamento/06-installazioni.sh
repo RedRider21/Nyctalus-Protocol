@@ -26,8 +26,10 @@ mkdir -p "$TMP/srv" && python3 -c "import os,zipfile,sys;z=zipfile.ZipFile(sys.a
 V="$TMP/srv/Nyctalus-Server"
 [ -x "$V/bin/nyctalus" ] && [ -x "$V/installa.sh" ] && [ -x "$V/nyctalus-server" ] && [ -f "$V/Manuali/MANUALE-SERVER.md" ] \
   && pass "Server: motore, installatore, comando di gestione e manuale" || fail "Server: pacchetto incompleto"
-! python3 -c "import zipfile,sys;n=zipfile.ZipFile(sys.argv[1]).namelist();sys.exit(0 if any(x.endswith(('.py','.svg')) or '/chat/' in x for x in n) else 1)" "$I/Server-Linux/Nyctalus-Server-Linux.zip" \
-  && pass "Server: niente grafica né Python (solo il necessario)" || fail "Server: contiene file superflui"
+! python3 -c "import zipfile,sys;n=zipfile.ZipFile(sys.argv[1]).namelist();sys.exit(0 if any((x.endswith(('.py','.svg')) and not x.endswith('/gestore-rete/rubrica.py')) or '/chat/' in x for x in n) else 1)" "$I/Server-Linux/Nyctalus-Server-Linux.zip" \
+  && pass "Server: niente grafica (solo motore, gestione, rubrica e siti)" || fail "Server: contiene file superflui"
+[ -x "$V/gestore-rete/nyctalus-rete" ] && [ -f "$V/gestore-rete/rubrica.py" ] && [ -x "$V/nyctalus-sito" ] \
+  && pass "Server: nyctalus-rete (rubrica e casella) e nyctalus-sito" || fail "Server: mancano rubrica/siti"
 PYTHONPATH="$N/launcher:$N/browser:$N/chat" python3 -c "
 import nyctalus_launcher.app as l, nyctalus_chat.app as c, nyctalus_browser.config
 assert l.LOGO.exists() and c.LOGO.exists()" 2>/dev/null && pass "PC: launcher, chat e browser si caricano e trovano il logo" || fail "PC: moduli o logo non trovati"
