@@ -71,6 +71,9 @@ pub async fn chat(
         casella: casella.map(|a| con_suffisso(&a)),
         irraggiungibili: Mutex::new(HashSet::new()),
         posta_vista: Mutex::new(carica_posta_vista(&dati)),
+        in_volo: Mutex::new(HashMap::new()),
+        pendenti: Mutex::new(HashMap::new()),
+        letti_inviati: Mutex::new(HashMap::new()),
     });
 
     println!("Nyctalus chat");
@@ -129,6 +132,17 @@ struct Stato {
     casella: Option<String>,                                 // .nyct della casella (deposito anonimo)
     irraggiungibili: Mutex<HashSet<String>>,                 // contatti che non hanno risposto: posta diretta in casella
     posta_vista: Mutex<HashSet<String>>,                     // id delle buste già ricevute (niente doppioni)
+    in_volo: Mutex<HashMap<String, Vec<InVolo>>>,            // testi spediti senza ancora «ricevuto»
+    pendenti: Mutex<HashMap<String, Vec<Vec<u8>>>>,          // conferme da spedire appena c'è la sessione
+    letti_inviati: Mutex<HashMap<String, u64>>,              // ultimo «letto» mandato a ciascun contatto
+}
+
+/// Un messaggio spedito su una sessione e non ancora confermato («K»): se la sessione cade
+/// prima della conferma, il testo va nella casella (il destinatario scarta i doppioni).
+struct InVolo {
+    sessione: u64,
+    ts: u64,
+    testo: Vec<u8>,
 }
 
 /// Testo massimo di un messaggio lasciato nella casella (gli allegati solo in linea).
@@ -136,7 +150,10 @@ const TESTO_CASELLA_MAX: usize = 16 * 1024;
 /// Ritiro della posta: primo giro dopo questo ritardo, poi a ogni giro (la rubrica la
 /// consegna anche da sola appena risultiamo in linea).
 const RITIRO_INIZIO: std::time::Duration = std::time::Duration::from_secs(12);
-const RITIRO_GIRO: std::time::Duration = std::time::Duration::from_secs(120);
+const RITIRO_GIRO: std::time::Duration = std::time::Duration::from_secs(60);
+/// Un testo senza «ricevuto» dopo questo tempo: la sessione è data per morta (il contatto è
+/// sparito senza chiuderla, es. modalità aereo) e il testo va nella casella.
+const ATTESA_RICEVUTO: std::time::Duration = std::time::Duration::from_secs(45);
 /// Tempo massimo per lasciare una busta nella casella (circuito + punto d'incontro).
 const DEPOSITO_TEMPO: std::time::Duration = std::time::Duration::from_secs(90);
 
@@ -240,6 +257,10 @@ impl Stato {
 
         let (ch_tx, mut ch_rx) = mpsc::channel::<Vec<u8>>(CODA_SESSIONE);
         let sid = self.prossima_sessione.fetch_add(1, Ordering::Relaxed);
+        // le conferme rimaste in attesa partono per prime
+        for frame in self.pendenti.lock().unwrap().remove(&peer).unwrap_or_default() {
+            let _ = ch_tx.try_send(frame);
+        }
         self.sessioni.lock().unwrap().insert(peer.clone(), (sid, ch_tx));
         self.irraggiungibili.lock().unwrap().remove(&peer);
         self.notifica(format!("ST {peer} 1"));
@@ -279,6 +300,7 @@ impl Stato {
                 lei
             };
             stato.abbandona_in_arrivo(&peer, sid);
+            stato.rimanda_in_casella(&peer, sid);
             if era_lei {
                 stato.notifica(format!("ST {peer} 0"));
                 stato.segna_visto(&peer);
@@ -301,6 +323,22 @@ impl Stato {
         if let Some(r) = chiaro.strip_prefix(b"E ") {
             return self.ricevi_fine(peer, r);
         }
+        // spunte: «K ts» = il contatto ha ricevuto, «R ts» = ha letto fino a ts
+        if let Some(r) = chiaro.strip_prefix(b"K ") {
+            if let Some(ts) = std::str::from_utf8(r).ok().and_then(|t| t.trim().parse::<u64>().ok()) {
+                if let Some(v) = self.in_volo.lock().unwrap().get_mut(peer) {
+                    v.retain(|m| m.ts != ts);
+                }
+                self.segna(peer, ts, "2");
+            }
+            return;
+        }
+        if let Some(r) = chiaro.strip_prefix(b"R ") {
+            if let Some(ts) = std::str::from_utf8(r).ok().and_then(|t| t.trim().parse::<u64>().ok()) {
+                self.segna(peer, ts, "3");
+            }
+            return;
+        }
         let Some(resto) = chiaro.strip_prefix(b"M ") else { return };
         let Some(sp) = resto.iter().position(|&b| b == b' ') else { return };
         let ts = std::str::from_utf8(&resto[..sp]).ok().and_then(|t| t.parse::<u64>().ok()).unwrap_or_else(ora);
@@ -313,6 +351,9 @@ impl Stato {
             self.notifica(format!("NEW {peer}"));
         }
         self.notifica(format!("MSG {peer} {ts} {}", in_esadecimale(testo)));
+        if self.rubrica.as_deref() != Some(peer) {
+            self.conferma(peer, format!("K {ts}").into_bytes());
+        }
     }
 
     /// Lo scrittore della sessione con un contatto, aprendola se serve. Le aperture
@@ -355,9 +396,17 @@ impl Stato {
         };
         let mut chiaro = format!("M {ts} ").into_bytes();
         chiaro.extend_from_slice(testo);
+        let sid = self.sessioni.lock().unwrap().get(&addr).map(|(n, _)| *n).unwrap_or(0);
         scrittore.send(chiaro).await.map_err(|_| "sessione chiusa")?;
+        if in_casella {
+            self.in_volo.lock().unwrap().entry(addr.clone()).or_default().push(InVolo { sessione: sid, ts, testo: testo.to_vec() });
+            let stato = self.clone();
+            let a = addr.clone();
+            tokio::spawn(async move { stato.controlla_ricevuto(a, sid, ts).await });
+        }
         self.registra(&addr, "out", ts, testo);
         self.notifica(format!("OUT {addr} {ts} {}", in_esadecimale(testo)));
+        self.segna(&addr, ts, "1");
         Ok(())
     }
 
@@ -417,6 +466,7 @@ impl Stato {
         let percorso_hex = in_esadecimale(percorso.to_string_lossy().as_bytes());
         self.registra_riga(&addr, &format!("fout {ts} {id} {totale} {mime} {nome_hex} {percorso_hex}"));
         self.notifica(format!("FILE {addr} out {ts} {id} {totale} {mime} {nome_hex} {percorso_hex}"));
+        self.segna(&addr, ts, "1");
         Ok(())
     }
 
@@ -516,6 +566,7 @@ impl Stato {
             self.notifica(format!("NEW {peer}"));
         }
         self.notifica(format!("FILE {peer} in {} {id} {} {} {nome_hex} {percorso_hex}", a.ts, a.totale, a.mime));
+        self.conferma(peer, format!("K {}", a.ts).into_bytes());
     }
 
     /// La sessione `sid` è caduta: i SUOI allegati a metà vengono buttati (quelli che
@@ -552,7 +603,13 @@ impl Stato {
         let mut prossimo: HashMap<String, (std::time::Instant, u64)> = HashMap::new();
         tokio::time::sleep(SONDA_INIZIO).await;
         loop {
-            let contatti: Vec<String> = self.contatti.lock().unwrap().iter().map(|(a, _)| a.clone()).collect();
+            // i contatti, più chi aspetta una nostra conferma (es. ha scritto dalla casella)
+            let mut contatti: Vec<String> = self.contatti.lock().unwrap().iter().map(|(a, _)| a.clone()).collect();
+            for a in self.pendenti.lock().unwrap().keys() {
+                if !contatti.contains(a) {
+                    contatti.push(a.clone());
+                }
+            }
             for a in contatti {
                 if a == self.indirizzo || self.sessioni.lock().unwrap().contains_key(&a) {
                     prossimo.remove(&a);
@@ -581,22 +638,124 @@ impl Stato {
     /// circuiti verso l'indirizzo della casella SENZA presentarsi, quindi la casella non sa
     /// chi scrive: sa solo che c'è posta per quell'indirizzo.
     async fn deposita(self: &Arc<Self>, addr: &str, testo: &[u8]) -> Risultato<()> {
+        let ts = ora();
+        self.sigilla_e_deposita(addr, testo, ts).await?;
+        self.registra(addr, "out", ts, testo);
+        self.notifica(format!("OUT {addr} {ts} {}", in_esadecimale(testo)));
+        self.segna(addr, ts, "c");
+        Ok(())
+    }
+
+    /// Mette nella casella un testo già in cronologia (con la sua ora originale).
+    async fn sigilla_e_deposita(self: &Arc<Self>, addr: &str, testo: &[u8], ts: u64) -> Risultato<()> {
         let casella = self.casella.clone().ok_or("nessuna casella in questa rete")?;
         if testo.len() > TESTO_CASELLA_MAX {
             return Err(format!("messaggio troppo lungo per la casella (massimo {} KB)", TESTO_CASELLA_MAX / 1024).into());
         }
         let chiave = indirizzo::in_chiave(addr).map_err(|_| "indirizzo .nyct non valido")?;
-        let ts = ora();
         let mut carico = format!("{} {ts} ", nuovo_id()).into_bytes();
         carico.extend_from_slice(testo);
         let busta = casella::sigilla(&self.identita, &chiave, &carico)?;
         tokio::time::timeout(DEPOSITO_TEMPO, consegna_busta(self.socks, &casella, addr, &busta))
             .await
             .map_err(|_| "la casella non risponde")??;
-        self.registra(addr, "out", ts, testo);
-        self.notifica(format!("OUT {addr} {ts} {}", in_esadecimale(testo)));
-        self.notifica(format!("CAS {addr} {ts}"));
         Ok(())
+    }
+
+    /// La sessione `sid` con `peer` è caduta: i testi spediti lì senza «ricevuto» (il contatto
+    /// era sparito nel frattempo, es. modalità aereo) vanno nella casella.
+    fn rimanda_in_casella(self: &Arc<Self>, peer: &str, sid: u64) {
+        let persi: Vec<InVolo> = {
+            let mut g = self.in_volo.lock().unwrap();
+            let Some(v) = g.get_mut(peer) else { return };
+            let (persi, restano): (Vec<InVolo>, Vec<InVolo>) = v.drain(..).partition(|m| m.sessione == sid);
+            *v = restano;
+            persi
+        };
+        if persi.is_empty() || self.casella.is_none() {
+            return;
+        }
+        let stato = self.clone();
+        let peer = peer.to_string();
+        tokio::spawn(async move {
+            for m in persi {
+                if stato.sigilla_e_deposita(&peer, &m.testo, m.ts).await.is_ok() {
+                    stato.segna(&peer, m.ts, "c");
+                }
+            }
+        });
+    }
+
+    /// Nessun «ricevuto» entro `ATTESA_RICEVUTO`: se il contatto ha già mostrato di confermare
+    /// (versione con le spunte), la sessione è morta senza saperlo → si chiude e i testi in volo
+    /// vanno nella casella. Con chi non conferma (versione vecchia) non si fa nulla: sarebbero doppioni.
+    async fn controlla_ricevuto(self: Arc<Self>, addr: String, sid: u64, ts: u64) {
+        tokio::time::sleep(ATTESA_RICEVUTO).await;
+        let ancora = self.in_volo.lock().unwrap().get(&addr).is_some_and(|v| v.iter().any(|m| m.sessione == sid && m.ts == ts));
+        if !ancora || !self.conferma_di_solito(&addr) {
+            return;
+        }
+        let era_lei = {
+            let mut g = self.sessioni.lock().unwrap();
+            let lei = g.get(&addr).is_some_and(|(n, _)| *n == sid);
+            if lei {
+                g.remove(&addr);                             // la prossima volta se ne apre una nuova
+            }
+            lei
+        };
+        if era_lei {
+            self.notifica(format!("ST {addr} 0"));
+            self.segna_visto(&addr);
+        }
+        self.rimanda_in_casella(&addr, sid);
+    }
+
+    /// Il contatto ha già confermato almeno un messaggio (ha le spunte).
+    fn conferma_di_solito(&self, addr: &str) -> bool {
+        std::fs::read_to_string(self.dati.join("stati").join(format!("{addr}.log")))
+            .unwrap_or_default()
+            .lines()
+            .any(|l| l.ends_with(" 2") || l.ends_with(" 3"))
+    }
+
+    // --- spunte (spedito / consegnato / letto) ----------------------------------
+    /// Stato di un nostro messaggio: «1» spedito, «c» nella casella, «2» consegnato, «3» letto
+    /// (fino a quell'ora). Resta in `stati/<addr>.log` e arriva alle interfacce come
+    /// `SP <addr> <ts> <stato>` (o `CAS <addr> <ts>` per la casella).
+    fn segna(&self, addr: &str, ts: u64, stato: &str) {
+        use std::io::Write;
+        let dir = self.dati.join("stati");
+        let _ = std::fs::create_dir_all(&dir);
+        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(dir.join(format!("{addr}.log"))) {
+            let _ = writeln!(f, "{ts} {stato}");
+        }
+        self.notifica(evento_spunta(addr, ts, stato));
+    }
+
+    /// Una conferma («K ts» / «R ts») al contatto: subito se c'è la sessione, altrimenti
+    /// appena si riapre.
+    fn conferma(&self, peer: &str, frame: Vec<u8>) {
+        if let Some((_, s)) = self.sessioni.lock().unwrap().get(peer) {
+            if s.try_send(frame.clone()).is_ok() {
+                return;
+            }
+        }
+        let mut g = self.pendenti.lock().unwrap();
+        let v = g.entry(peer.to_string()).or_default();
+        if v.len() < 500 {
+            v.push(frame);
+        }
+    }
+
+    fn leggi_stati(&self, addr: &str) -> Vec<String> {
+        std::fs::read_to_string(self.dati.join("stati").join(format!("{}.log", con_suffisso(addr))))
+            .unwrap_or_default()
+            .lines()
+            .filter_map(|l| {
+                let (ts, st) = l.split_once(' ')?;
+                Some(evento_spunta(&con_suffisso(addr), ts.parse().ok()?, st.trim()))
+            })
+            .collect()
     }
 
     /// Chiede alla rubrica la posta lasciata per noi: all'avvio e poi ogni tanto (se siamo in
@@ -652,6 +811,12 @@ impl Stato {
             }
             self.registra_posta_vista(&mid);
             let ts = std::str::from_utf8(ts).ok().and_then(|t| t.parse::<u64>().ok()).unwrap_or_else(ora);
+            self.conferma(&mittente, format!("K {ts}").into_bytes());
+            // già arrivato direttamente (la sessione era caduta prima del «ricevuto»)
+            let riga = format!("in {ts} {}", in_esadecimale(testo));
+            if std::fs::read_to_string(self.file_cronologia(&mittente)).unwrap_or_default().lines().any(|l| l == riga) {
+                continue;
+            }
             self.registra(&mittente, "in", ts, testo);
             if !self.contatti.lock().unwrap().iter().any(|(a, _)| *a == mittente) {
                 self.notifica(format!("NEW {mittente}"));
@@ -843,7 +1008,26 @@ impl Stato {
                 for riga in self.leggi_cronologia(addr) {
                     let _ = tx.send(riga);
                 }
+                for riga in self.leggi_stati(addr) {
+                    let _ = tx.send(format!("{riga}\n"));
+                }
                 let _ = tx.send("ENDH\n".into());
+            }
+            "LETTO" => {
+                // l'utente ha visto la conversazione fino a <ts>: lo si dice al contatto («R»)
+                let addr = con_suffisso(it.next().unwrap_or(""));
+                let ts = it.next().and_then(|t| t.trim().parse::<u64>().ok()).unwrap_or(0);
+                let nuovo = ts > 0 && indirizzo::in_chiave(&addr).is_ok() && {
+                    let mut g = self.letti_inviati.lock().unwrap();
+                    let prima = g.get(&addr).copied().unwrap_or(0);
+                    if ts > prima {
+                        g.insert(addr.clone(), ts);
+                    }
+                    ts > prima
+                };
+                if nuovo && self.rubrica.as_deref() != Some(addr.as_str()) {
+                    self.conferma(&addr, format!("R {ts}").into_bytes());
+                }
             }
             "SEND" => {
                 let addr = it.next().unwrap_or("").to_string();
@@ -993,6 +1177,15 @@ async fn consegna_busta(socks: SocketAddr, casella: &str, per: &str, busta: &[u8
         let corpo = String::from_utf8_lossy(&risposta);
         let motivo = corpo.split("\r\n\r\n").nth(1).unwrap_or(prima).trim().to_string();
         Err(format!("casella: {motivo}").into())
+    }
+}
+
+/// Riga d'evento di una spunta: `SP <addr> <ts> 1|2|3` oppure `CAS <addr> <ts>`.
+fn evento_spunta(addr: &str, ts: u64, stato: &str) -> String {
+    if stato == "c" {
+        format!("CAS {addr} {ts}")
+    } else {
+        format!("SP {addr} {ts} {stato}")
     }
 }
 
@@ -1255,6 +1448,9 @@ mod prove {
             casella: None,
             irraggiungibili: Mutex::new(HashSet::new()),
             posta_vista: Mutex::new(HashSet::new()),
+            in_volo: Mutex::new(HashMap::new()),
+            pendenti: Mutex::new(HashMap::new()),
+            letti_inviati: Mutex::new(HashMap::new()),
         };
         st.registra_riga("x.nyct", "in 1 6161");
         st.registra_riga("x.nyct", "out 2 6262");

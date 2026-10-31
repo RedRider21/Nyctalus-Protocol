@@ -1,0 +1,494 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+"""nyctalus-sito — pubblicare un sito .nyct sulla rete Nyctalus, facendo tutto da solo.
+
+Un sito è una cartella (pagine fisse: HTML, CSS, JS, immagini) oppure un server web già
+acceso su questo computer (PHP, un'applicazione…). Diventa un indirizzo .nyct raggiungibile
+solo dalla rete Nyctalus, senza che si sappia dove sta il computer che lo ospita.
+
+    nyctalus-sito                       guida passo passo (menu)
+    nyctalus-sito crea NOME             sito nuovo con una pagina d'esempio da modificare
+         [--cartella DIR | --backend 127.0.0.1:PORTA] [--codice NYCT1:…] [--chiave FILE] [--si]
+    nyctalus-sito avvia NOME            lo mette online (resta acceso finché non premi Ctrl-C)
+    nyctalus-sito servizio NOME         sempre acceso: servizio di sistema dell'utente (si riavvia da solo)
+         [--togli] [--stampa]
+    nyctalus-sito elenco                i siti di questo computer, con indirizzo e stato
+    nyctalus-sito indirizzo NOME        solo l'indirizzo .nyct
+    nyctalus-sito rete NOME [--codice NYCT1:…]   la rete su cui sta (senza codice: quella del PC)
+    nyctalus-sito esporta NOME FILE     copia di sicurezza della CHIAVE (= l'indirizzo del sito)
+    nyctalus-sito togli NOME [--si]     lo cancella (la chiave resta in una copia di sicurezza)
+
+La chiave del sito (`identita`) È il suo indirizzo: chi la possiede può spacciarsi per il sito.
+I dati stanno in ~/.nyctalus-siti/NOME/ (cartella privata).
+"""
+import json
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import time
+import urllib.request
+from pathlib import Path
+
+DATI = Path(os.environ.get("NYCTALUS_SITI_DATI", Path.home() / ".nyctalus-siti"))
+CONFIG_CLIENT = Path.home() / ".nyctalus-browser" / "config.json"
+UNITA = Path.home() / ".config" / "systemd" / "user"
+NOME_VALIDO = re.compile(r"^[a-z0-9][a-z0-9-]{0,31}$")
+INDIRIZZO = re.compile(r"[a-z2-7]{56}\.nyct")
+BACKEND_VALIDO = re.compile(r"^127\.0\.0\.1:\d{1,5}$|^localhost:\d{1,5}$")
+AGGIORNA_ELENCO = 6 * 3600          # ogni quanto si riscarica l'elenco dei nodi
+PREFISSO = "NYCT1:"
+
+
+def esci(msg, codice=1):
+    print("✗ " + msg, file=sys.stderr)
+    sys.exit(codice)
+
+
+def ok(msg):
+    print("✓ " + msg)
+
+
+def binario():
+    b = os.environ.get("NYCTALUS_BIN") or shutil.which("nyctalus")
+    if not b:
+        qui = Path(__file__).resolve().parent
+        for c in (qui / "bin" / "nyctalus", qui.parent / "bin" / "nyctalus",
+                  qui.parent.parent / "target" / "release" / "nyctalus"):
+            if c.is_file():
+                return str(c)
+        esci("non trovo il programma «nyctalus» (installa il pacchetto o imposta NYCTALUS_BIN)")
+    return b
+
+
+def privata(cartella):
+    cartella.mkdir(parents=True, exist_ok=True)
+    os.chmod(cartella, 0o700)
+    return cartella
+
+
+# --- la rete su cui pubblicare ---------------------------------------------------------
+def leggi_codice(testo):
+    """Codice NYCT1:… → {nome, directory_url, authority} (stesso formato di nyctalus-rete)."""
+    import base64
+    testo = testo.strip()
+    if not testo.startswith(PREFISSO):
+        raise ValueError("non è un codice di rete Nyctalus (deve iniziare con %s)" % PREFISSO)
+    b = testo[len(PREFISSO):]
+    try:
+        cfg = json.loads(base64.urlsafe_b64decode(b + "=" * (-len(b) % 4)))
+    except Exception:     # noqa: BLE001
+        raise ValueError("codice di rete rovinato (copialo per intero)")
+    url, aut = str(cfg.get("directory_url", "")), str(cfg.get("authority", ""))
+    if not re.match(r"^https?://[^\s]+$", url) or not re.fullmatch(r"[0-9a-f]{64}", aut):
+        raise ValueError("codice di rete incompleto")
+    return {"nome": str(cfg.get("nome") or "Rete Nyctalus")[:60], "directory_url": url, "authority": aut}
+
+
+def rete_del_pc():
+    try:
+        cfg = json.loads(CONFIG_CLIENT.read_text())
+    except Exception:     # noqa: BLE001
+        return None
+    if cfg.get("directory_url") and re.fullmatch(r"[0-9a-f]{64}", str(cfg.get("authority", ""))):
+        return {"nome": cfg.get("nome_rete") or "Rete Nyctalus", "directory_url": cfg["directory_url"],
+                "authority": cfg["authority"]}
+    return None
+
+
+def scegli_rete(codice):
+    if codice:
+        try:
+            return leggi_codice(codice)
+        except ValueError as e:
+            esci(str(e))
+    r = rete_del_pc()
+    if not r:
+        esci("questo computer non è collegato a nessuna rete Nyctalus.\n"
+             "  Importa il codice della rete (nyctalus-rete importa NYCT1:…) oppure passalo qui con --codice NYCT1:…")
+    return r
+
+
+# --- i siti ------------------------------------------------------------------------------
+def cartella_sito(nome):
+    if not NOME_VALIDO.match(nome or ""):
+        esci("nome non valido: lettere minuscole, cifre e trattini (max 32), es. «mio-blog»")
+    return DATI / nome
+
+
+def leggi_sito(nome):
+    d = cartella_sito(nome)
+    try:
+        return d, json.loads((d / "sito.json").read_text())
+    except (OSError, ValueError):
+        esci("non c'è un sito «%s» (nyctalus-sito elenco)" % nome)
+
+
+def salva_sito(d, sito):
+    tmp = d / "sito.json.tmp"
+    tmp.write_text(json.dumps(sito, indent=1, ensure_ascii=False) + "\n")
+    os.chmod(tmp, 0o600)
+    tmp.replace(d / "sito.json")
+
+
+def indirizzo_di(d):
+    r = subprocess.run([binario(), "address", "--identity", str(d / "identita")], capture_output=True, text=True)
+    m = INDIRIZZO.search(r.stdout)
+    if not m:
+        esci("non riesco a creare la chiave del sito: %s" % (r.stderr.strip() or r.stdout.strip()))
+    return m.group(0)
+
+
+PAGINA = """<!doctype html>
+<!-- La pagina d'esempio del tuo sito .nyct: modificala come vuoi (è tua).
+     Consiglio: tieni TUTTO in questa cartella e usa link relativi; niente font, script o
+     immagini presi da altri siti (chi naviga in modo anonimo non li caricherebbe). -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{nome}</title>
+<link rel="stylesheet" href="stile.css">
+</head>
+<body>
+<main>
+  <div class="logo">🦇</div>
+  <h1>{nome}</h1>
+  <p class="indirizzo">{indirizzo}</p>
+  <p>Benvenuto sul mio sito <b>.nyct</b>: lo stai leggendo attraverso la rete
+  <b>Nyctalus</b>, senza che si sappia chi sei tu né dove sta questo sito.</p>
+  <p class="nota">Per cambiarlo modifica i file nella cartella<br><code>{cartella}</code></p>
+</main>
+</body>
+</html>
+"""
+
+STILE = """/* Stile della pagina d'esempio: modificalo come vuoi. */
+:root { color-scheme: dark light; --sfondo: #0b1020; --testo: #e6ecff; --tenue: #8a97b8; --accento: #6ea8ff; }
+@media (prefers-color-scheme: light) { :root { --sfondo: #f4f6fb; --testo: #1a2233; --tenue: #5a6680; --accento: #2f6fe0; } }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--sfondo);
+       color: var(--testo); font: 17px/1.6 system-ui, sans-serif; padding: 24px 16px; }
+main { max-width: 640px; text-align: center; }
+.logo { font-size: 64px; }
+h1 { margin: 8px 0 4px; font-size: 2rem; }
+.indirizzo { font-family: monospace; font-size: 12px; color: var(--accento); word-break: break-all; }
+.nota { color: var(--tenue); font-size: 14px; margin-top: 32px; }
+code { word-break: break-all; }
+"""
+
+
+def crea(nome, cartella=None, backend=None, codice=None, chiave=None, si=False):
+    d = cartella_sito(nome)
+    if (d / "sito.json").exists():
+        esci("il sito «%s» esiste già (nyctalus-sito elenco)" % nome)
+    if backend and not BACKEND_VALIDO.match(backend):
+        esci("--backend: solo un server di QUESTO computer, es. 127.0.0.1:8080")
+    rete = scegli_rete(codice)
+    privata(DATI)
+    privata(d)
+    if chiave:                                   # si riprende un indirizzo già esistente
+        dati_chiave = Path(chiave).read_bytes()
+        if len(dati_chiave) != 64:
+            esci("--chiave: non è la chiave di un sito Nyctalus (64 byte)")
+        (d / "identita").write_bytes(dati_chiave)
+        os.chmod(d / "identita", 0o600)
+    indirizzo = indirizzo_di(d)
+    sito = {"nome": nome, "indirizzo": indirizzo, "rete": rete, "creato": int(time.time())}
+    if backend:
+        sito["backend"] = backend
+    else:
+        www = Path(cartella).expanduser().resolve() if cartella else d / "www"
+        if not www.exists():
+            www.mkdir(parents=True)
+        if not (www / "index.html").exists():   # mai sovrascrivere un sito già scritto
+            (www / "index.html").write_text(PAGINA.format(nome=nome, indirizzo=indirizzo, cartella=www))
+            (www / "stile.css").write_text(STILE)
+        sito["cartella"] = str(www)
+    salva_sito(d, sito)
+    ok("sito «%s» creato" % nome)
+    print("   indirizzo:  %s" % indirizzo)
+    print("   contenuto:  %s" % (sito.get("cartella") or "il server web su " + backend))
+    print("   rete:       %s" % rete["nome"])
+    print("   chiave:     %s  ← È l'indirizzo: fanne una copia (nyctalus-sito esporta %s FILE)" % (d / "identita", nome))
+    print("\n   Per metterlo online:  nyctalus-sito avvia %s      (sempre acceso: nyctalus-sito servizio %s)" % (nome, nome))
+    return sito
+
+
+def scarica_elenco(d, rete):
+    with urllib.request.urlopen(rete["directory_url"], timeout=30) as r:
+        dati = r.read()
+    if len(dati) > 1024 * 1024:
+        raise ValueError("elenco dei nodi troppo grande")
+    f = d / "directory.txt"
+    vecchio = f.read_bytes() if f.exists() else b""
+    f.write_bytes(dati)
+    return dati != vecchio
+
+
+def avvia(nome):
+    d, sito = leggi_sito(nome)
+    rete = sito["rete"]
+    try:
+        scarica_elenco(d, rete)
+    except Exception as e:    # noqa: BLE001
+        if not (d / "directory.txt").exists():
+            esci("non riesco a scaricare l'elenco dei nodi da %s: %s" % (rete["directory_url"], e))
+        print("! elenco dei nodi non aggiornato (%s): uso l'ultimo scaricato" % e)
+    contenuto = ["--backend", sito["backend"]] if sito.get("backend") else ["--dir", sito["cartella"]]
+    if sito.get("cartella") and not Path(sito["cartella"]).is_dir():
+        esci("la cartella del sito non c'è più: %s" % sito["cartella"])
+    cmd = [binario(), "site"] + contenuto + ["--identity", str(d / "identita"), "--directory", str(d / "directory.txt"),
+                                            "--authority", rete["authority"], "--hops", "3"]
+    (d / "pid").write_text(str(os.getpid()))
+    figlio = None
+    fermo = {"si": False}
+
+    def basta(*_a):
+        fermo["si"] = True
+        if figlio and figlio.poll() is None:
+            figlio.terminate()
+    signal.signal(signal.SIGTERM, basta)
+    signal.signal(signal.SIGINT, basta)
+    print("» %s: metto online %s sulla rete «%s»…" % (nome, sito["indirizzo"], rete["nome"]))
+    try:
+        while not fermo["si"]:
+            figlio = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            prossimo = time.time() + AGGIORNA_ELENCO
+            import selectors
+            sel = selectors.DefaultSelector()
+            sel.register(figlio.stdout, selectors.EVENT_READ)
+            while figlio.poll() is None and not fermo["si"]:
+                for _k, _e in sel.select(timeout=5):
+                    riga = figlio.stdout.readline()
+                    if riga:
+                        if "Nyctalus site online" in riga:
+                            ok("%s è ONLINE: %s" % (nome, sito["indirizzo"]))
+                        print("   " + riga.rstrip(), flush=True)
+                if time.time() > prossimo:          # nodi cambiati? si riparte con l'elenco nuovo
+                    prossimo = time.time() + AGGIORNA_ELENCO
+                    try:
+                        if scarica_elenco(d, rete):
+                            print("» elenco dei nodi cambiato: riavvio il sito", flush=True)
+                            figlio.terminate()
+                    except Exception:   # noqa: BLE001
+                        pass
+            sel.close()
+            if figlio.poll() is None:
+                figlio.wait(10)
+            if not fermo["si"]:
+                time.sleep(5)                        # caduto o elenco nuovo: si riparte
+    finally:
+        if figlio and figlio.poll() is None:
+            figlio.kill()
+        (d / "pid").unlink(missing_ok=True)
+    print("» %s fermato" % nome)
+
+
+def acceso(d):
+    try:
+        os.kill(int((d / "pid").read_text()), 0)
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def nome_unita(nome):
+    return "nyctalus-sito-%s.service" % nome
+
+
+def servizio(nome, togli=False, stampa=False):
+    d, sito = leggi_sito(nome)
+    unita = UNITA / nome_unita(nome)
+    if togli:
+        subprocess.run(["systemctl", "--user", "disable", "--now", nome_unita(nome)], capture_output=True)
+        unita.unlink(missing_ok=True)
+        subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True)
+        return ok("«%s» non è più sempre acceso" % nome)
+    testo = ("# Creato da nyctalus-sito: il sito .nyct «%s» sempre acceso.\n"
+             "[Unit]\nDescription=Sito Nyctalus %s (%s)\nWants=network-online.target\nAfter=network-online.target\n\n"
+             "[Service]\nExecStart=%s %s avvia %s\nEnvironment=NYCTALUS_BIN=%s\nEnvironment=NYCTALUS_SITI_DATI=%s\n"
+             "Restart=on-failure\nRestartSec=15\n\n[Install]\nWantedBy=default.target\n"
+             % (nome, nome, sito["indirizzo"], sys.executable, Path(__file__).resolve(), nome, binario(), DATI))
+    if stampa:
+        return print(testo, end="")
+    if not shutil.which("systemctl"):
+        esci("qui non c'è systemd: tienilo acceso con «nyctalus-sito avvia %s» (es. dentro tmux/screen)" % nome)
+    UNITA.mkdir(parents=True, exist_ok=True)
+    unita.write_text(testo)
+    subprocess.run(["systemctl", "--user", "daemon-reload"], check=False)
+    r = subprocess.run(["systemctl", "--user", "enable", "--now", nome_unita(nome)], capture_output=True, text=True)
+    if r.returncode != 0:
+        esci("systemd non lo ha avviato: %s" % r.stderr.strip())
+    ok("«%s» è sempre acceso (riparte anche dopo un riavvio): %s" % (nome, sito["indirizzo"]))
+    print("   Stato: systemctl --user status %s   ·   registro: journalctl --user -u %s" % (nome_unita(nome), nome_unita(nome)))
+    linger = subprocess.run(["loginctl", "show-user", os.environ.get("USER", ""), "-p", "Linger"],
+                            capture_output=True, text=True).stdout.strip()
+    if linger != "Linger=yes":
+        print("   ! Ora resta acceso finché sei collegato. Per tenerlo acceso anche quando esci")
+        print("     (es. su un server) esegui una volta:  sudo loginctl enable-linger %s" % os.environ.get("USER", "$USER"))
+
+
+def elenco():
+    siti = sorted(p.parent for p in DATI.glob("*/sito.json")) if DATI.exists() else []
+    if not siti:
+        print("Nessun sito su questo computer. Creane uno: nyctalus-sito crea NOME")
+        return []
+    print("Siti .nyct su questo computer:\n")
+    for i, d in enumerate(siti, 1):
+        s = json.loads((d / "sito.json").read_text())
+        sempre = (UNITA / nome_unita(s["nome"])).exists()
+        stato = "online" if acceso(d) else "spento"
+        print("  %d) %-16s %s" % (i, s["nome"], s["indirizzo"]))
+        print("     %s · rete «%s» · %s%s" % (s.get("cartella") or "server " + s.get("backend", ""), s["rete"]["nome"],
+                                           stato, " · sempre acceso" if sempre else ""))
+    return [d.name for d in siti]
+
+
+def esporta(nome, dest):
+    d, sito = leggi_sito(nome)
+    dest = Path(dest).expanduser()
+    if dest.exists():
+        esci("%s esiste già: scegli un altro nome di file" % dest)
+    shutil.copyfile(d / "identita", dest)
+    os.chmod(dest, 0o600)
+    ok("chiave di «%s» copiata in %s" % (nome, dest))
+    print("   Tienila al sicuro: con questa chiave (nyctalus-sito crea NOME --chiave FILE) il sito")
+    print("   riprende lo stesso indirizzo anche su un altro computer; chi la ruba può spacciarsi per il tuo sito.")
+
+
+def togli(nome, si=False):
+    d, sito = leggi_sito(nome)
+    if not si and input("Cancello il sito «%s» (%s)? I file della cartella restano. [s/N] "
+                        % (nome, sito["indirizzo"])).strip().lower() not in ("s", "si", "sì", "y"):
+        return print("Lasciato com'era.")
+    if (UNITA / nome_unita(nome)).exists():
+        servizio(nome, togli=True)
+    copie = privata(DATI / ".chiavi-tolte")
+    copia = copie / ("%s-%d.chiave" % (nome, int(time.time())))
+    shutil.copyfile(d / "identita", copia)
+    os.chmod(copia, 0o600)
+    if sito.get("cartella") and Path(sito["cartella"]).resolve().parent == d.resolve():
+        shutil.move(sito["cartella"], str(copie / ("%s-%d-www" % (nome, int(time.time())))))
+    shutil.rmtree(d)
+    ok("sito «%s» tolto. Copia della chiave (per riprenderne l'indirizzo): %s" % (nome, copia))
+
+
+# --- guida passo passo -----------------------------------------------------------------
+def chiedi(domanda, predefinita=""):
+    r = input("%s%s: " % (domanda, " [%s]" % predefinita if predefinita else "")).strip()
+    return r or predefinita
+
+
+def guida():
+    print("🦇 Nyctalus · siti .nyct\n")
+    nomi = elenco()
+    print("\nCosa vuoi fare?")
+    print("  1) creare un sito nuovo")
+    if nomi:
+        print("  2) mettere online un sito adesso (finché resta aperta questa finestra)")
+        print("  3) tenere un sito sempre acceso (anche dopo un riavvio)")
+        print("  4) copia di sicurezza della chiave di un sito")
+        print("  5) togliere un sito")
+    print("  0) niente, esci")
+    scelta = chiedi("Scelta", "1")
+
+    def quale():
+        if len(nomi) == 1:
+            return nomi[0]
+        n = chiedi("Quale sito (numero)")
+        if not n.isdigit() or not 1 <= int(n) <= len(nomi):
+            esci("numero non valido")
+        return nomi[int(n) - 1]
+
+    if scelta == "1":
+        nome = chiedi("Nome del sito (minuscole, cifre, trattini)", "mio-sito")
+        print("Che sito è?\n  1) pagine fisse: preparo una cartella con una pagina d'esempio da modificare"
+              "\n  2) pagine fisse in una cartella che ho già\n  3) un server web già acceso su questo computer (PHP, un'applicazione…)")
+        tipo = chiedi("Scelta", "1")
+        cartella = backend = None
+        if tipo == "2":
+            cartella = chiedi("Percorso della cartella")
+        elif tipo == "3":
+            backend = "127.0.0.1:" + chiedi("Porta del server web (solo su 127.0.0.1)", "8080")
+        codice = None
+        r = rete_del_pc()
+        if r:
+            print("Rete: «%s» (quella di questo computer)." % r["nome"])
+            if chiedi("Usare questa rete? [S/n]", "s").lower().startswith("n"):
+                codice = chiedi("Incolla il codice della rete (NYCT1:…)")
+        else:
+            codice = chiedi("Incolla il codice della rete (NYCT1:…)")
+        crea(nome, cartella, backend, codice)
+        print()
+        dopo = chiedi("Adesso: 1) online subito  2) sempre acceso  0) dopo", "1")
+        if dopo == "1":
+            avvia(nome)
+        elif dopo == "2":
+            servizio(nome)
+    elif scelta == "2" and nomi:
+        avvia(quale())
+    elif scelta == "3" and nomi:
+        servizio(quale())
+    elif scelta == "4" and nomi:
+        n = quale()
+        esporta(n, chiedi("Dove salvarla", str(Path.home() / ("chiave-sito-%s.nyctkey" % n))))
+    elif scelta == "5" and nomi:
+        togli(quale())
+
+
+def opzione(args, nome):
+    if nome in args:
+        i = args.index(nome)
+        if i + 1 >= len(args):
+            esci("%s: manca il valore" % nome)
+        return args[i + 1]
+    return None
+
+
+def main():
+    a = sys.argv[1:]
+    if not a:
+        try:
+            return guida()
+        except (KeyboardInterrupt, EOFError):
+            return print()
+    cmd = a[0]
+    nome = a[1] if len(a) > 1 and not a[1].startswith("--") else None
+    if cmd in ("-h", "--help", "aiuto"):
+        return print(__doc__)
+    if cmd == "elenco":
+        return elenco()
+    if not nome:
+        esci("manca il NOME del sito (nyctalus-sito %s NOME)" % cmd)
+    if cmd == "crea":
+        crea(nome, opzione(a, "--cartella"), opzione(a, "--backend"), opzione(a, "--codice"), opzione(a, "--chiave"), "--si" in a)
+    elif cmd == "avvia":
+        avvia(nome)
+    elif cmd == "servizio":
+        servizio(nome, "--togli" in a, "--stampa" in a)
+    elif cmd == "indirizzo":
+        print(leggi_sito(nome)[1]["indirizzo"])
+    elif cmd == "rete":
+        d, sito = leggi_sito(nome)
+        if "--codice" in a or "--pc" in a:
+            sito["rete"] = scegli_rete(opzione(a, "--codice"))
+            salva_sito(d, sito)
+            ok("«%s» ora sta sulla rete «%s» (riavvialo per usarla)" % (nome, sito["rete"]["nome"]))
+        else:
+            print("«%s» sta sulla rete «%s» (%s)" % (nome, sito["rete"]["nome"], sito["rete"]["directory_url"]))
+    elif cmd == "esporta":
+        if len(a) < 3:
+            esci("uso: nyctalus-sito esporta NOME FILE")
+        esporta(nome, a[2])
+    elif cmd == "togli":
+        togli(nome, "--si" in a)
+    else:
+        esci("comando sconosciuto «%s» (nyctalus-sito --help)" % cmd)
+
+
+if __name__ == "__main__":
+    main()

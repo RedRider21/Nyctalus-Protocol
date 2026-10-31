@@ -4,7 +4,7 @@
 # Verificare sicurezza e anonimato
 
 Questo documento spiega **cosa si può verificare da soli** (con gli strumenti
-qui indicati e lo script [`strumenti/verifica.sh`](strumenti/verifica.sh)) e **cosa
+qui indicati e lo script [`strumenti/verifica.sh`](../strumenti/verifica.sh)) e **cosa
 invece richiede una verifica indipendente** prima di considerare Nyctalus sicuro
 per dati reali. Niente di qui sostituisce un **audit** di crittografi terzi.
 

@@ -5,7 +5,8 @@
 // l'orchestratore (WebSocket /ws) con lo STESSO protocollo a righe della
 // finestra GTK del PC:
 //   →  WHOAMI · LIST · SUB · ADD · HIST · SEND · SENDFILE · CLEAR · DEL · DELMSG
-//   ←  ME · C · L · ST · MSG · OUT · P · ENDH · FILE · PROG · FERR · NEW · OK · ERR
+//   ←  ME · C · L · ST · MSG · OUT · P · ENDH · FILE · PROG · FERR · NEW · OK · ERR · SP · CAS
+//   →  … · LETTO (ho visto la conversazione fino a quell'ora: il contatto vede le spunte blu)
 // I dati altrui finiscono SEMPRE in textContent (mai innerHTML).
 "use strict";
 
@@ -319,10 +320,11 @@ function evento(riga) {
   else if (t === "MSG" || t === "OUT") {
     const dir = t === "MSG" ? "in" : "out", grezza = dir + " " + p[2] + " " + p[3];
     anteprima(p[1], grezza, dir === "in"); cacheAggiungiRiga(p[1], grezza); cacheContatto(p[1]);
-    if (p[1] === S.attivo) bollaTesto(dir, daHex(p[3]), +p[2], grezza);
+    if (p[1] === S.attivo) { bollaTesto(dir, daHex(p[3]), +p[2], grezza); if (dir === "in") segnalaLetto(); }
   }
   else if (t === "P") { if (S.storia) S.storia.push(riga.slice(2)); else mostraRiga(riga.slice(2)); }
-  else if (t === "ENDH") fineStoria();
+  else if (t === "ENDH") { fineStoria(); segnalaLetto(); }
+  else if (t === "SP" && p.length >= 4) aggiornaSpunta(p[1], +p[2], p[3]);
   else if (t === "FILE" && p.length >= 9) {
     const grezza = [p[2] === "out" ? "fout" : "fin", ...p.slice(3, 9)].join(" ");
     anteprima(p[1], grezza, p[2] === "in"); cacheAggiungiRiga(p[1], grezza); cacheContatto(p[1]);
@@ -335,7 +337,7 @@ function evento(riga) {
     S.giroRubrica++;                               // la richiesta alla rubrica non è partita: lo si dice lì
     statoRubrica("La rubrica non è raggiungibile: " + erroreLeggibile(riga.slice(4)), true);
   }
-  else if (t === "CAS" && p[1] === S.attivo) avviso("📮 Non è in linea: il messaggio è nella casella cifrata e gli arriverà appena si collega.");
+  else if (t === "CAS") aggiornaSpunta(p[1], +p[2], "c");
   else if (t === "ERR" && /motore non raggiungibile/.test(riga)) segnalaMotoreGiu();
   else if (t === "ERR") avviso(erroreLeggibile(riga.slice(4)));
   else if (t === "ENDC") {   // collegamento diretto: #chat=<indirizzo> apre quella conversazione
@@ -487,6 +489,11 @@ function aggiungiMessaggio(dir, ts, bolla, grezza, dati) {
   }
   const riga = el("div", "msg " + dir);
   riga.appendChild(bolla);
+  if (ts) riga.dataset.ts = ts;
+  if (dir === "out" && ts) {                       // spunte come Telegram, accanto all'ora
+    const o = bolla.querySelector(".ora");
+    if (o) { const sp = el("span", "spunta"); o.appendChild(sp); disegnaSpunta(sp, S.attivo, ts); }
+  }
   if (grezza) {
     riga.oncontextmenu = (e) => { e.preventDefault(); menuMessaggio(riga, grezza, dati); };
   }
@@ -494,6 +501,43 @@ function aggiungiMessaggio(dir, ts, bolla, grezza, dati) {
   restaInFondo();
   return riga;
 }
+
+// ---------- spunte: ✓ spedito · 📮✓ nella casella · ✓✓ consegnato · ✓✓ blu letto ------------
+S.spunte = new Map();      // addr → Map(ts → "1" | "c" | "2")
+S.lettoFino = new Map();   // addr → ts: letti dal contatto tutti i nostri messaggi fino a lì
+S.lettoInviato = new Map();
+function statoSpunta(addr, ts) {
+  if ((S.lettoFino.get(addr) || 0) >= ts) return "3";
+  return (S.spunte.get(addr) || new Map()).get(ts) || "";
+}
+function disegnaSpunta(sp, addr, ts) {
+  const st = statoSpunta(addr, ts);
+  sp.textContent = st === "3" || st === "2" ? "✓✓" : st === "c" ? "📮✓" : st === "1" ? "✓" : "";
+  sp.className = "spunta" + (st === "3" ? " letto" : "");
+  sp.title = { "1": "Spedito", c: "Nella casella cifrata: arriverà appena si collega", "2": "Consegnato", "3": "Letto" }[st] || "";
+}
+function aggiornaSpunta(addr, ts, st) {
+  if (st === "3") S.lettoFino.set(addr, Math.max(S.lettoFino.get(addr) || 0, ts));
+  else {
+    if (!S.spunte.has(addr)) S.spunte.set(addr, new Map());
+    const m = S.spunte.get(addr), prima = m.get(ts);
+    if (!(prima === "2" && st !== "2")) m.set(ts, st);   // «consegnato» non torna indietro
+  }
+  if (addr !== S.attivo) return;
+  document.querySelectorAll("#messaggi .msg.out[data-ts]").forEach((r) => {
+    const sp = r.querySelector(".spunta");
+    if (sp) disegnaSpunta(sp, addr, +r.dataset.ts);
+  });
+}
+// la conversazione è davanti agli occhi: si dice al contatto fin dove abbiamo letto
+function segnalaLetto() {
+  if (!S.attivo || document.visibilityState !== "visible" || S.soloRubrica) return;
+  const ultimi = document.querySelectorAll("#messaggi .msg.in[data-ts]");
+  if (!ultimi.length) return;
+  const ts = +ultimi[ultimi.length - 1].dataset.ts;
+  if (ts > (S.lettoInviato.get(S.attivo) || 0)) { S.lettoInviato.set(S.attivo, ts); manda("LETTO " + S.attivo + " " + ts); }
+}
+document.addEventListener("visibilitychange", segnalaLetto);
 
 function bollaTesto(dir, testo, ts, grezza) {
   const b = el("div", "bolla");

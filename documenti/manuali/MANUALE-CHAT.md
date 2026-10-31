@@ -106,11 +106,29 @@ riportano all'avvio). La chat si apre solo quando scegli qualcuno a cui scrivere
   versione fino alla 0.20: il servizio vecchio, rimasto acceso, aveva tolto la rubrica dal
   codice. Ricollega una volta dopo l'aggiornamento.
 
+## 3-bis·1. Le spunte (come Telegram)
+
+Accanto all'ora dei tuoi messaggi:
+
+| Segno | Significa |
+|---|---|
+| ✓ | **spedito**: è partito verso il contatto |
+| 📮✓ | **nella casella cifrata**: il contatto non era in linea, lo riceverà appena si collega |
+| ✓✓ | **consegnato**: è arrivato sul dispositivo del contatto (anche ritirato dalla casella) |
+| ✓✓ blu | **letto**: il contatto ha aperto la conversazione |
+
+- Le conferme viaggiano cifrate dentro la stessa sessione dei messaggi; se il contatto non è
+  raggiungibile partono appena lo diventa.
+- **Messaggi mai persi:** se il contatto sparisce di colpo (es. modalità aereo) e un messaggio non
+  riceve il «consegnato» entro 45 secondi, la chat lo mette nella casella. Se poi arriva due volte,
+  il destinatario scarta il doppione.
+- Con chi ha una versione senza spunte i messaggi restano su ✓.
+
 ## 3-ter. La casella cifrata (📮 messaggi a chi non è in linea)
 
 Se la rete ha una casella (la rete di casa sì), puoi scrivere **anche a chi non è in linea**:
 telefono spento, senza rete, programma chiuso. Scrivi come sempre; se il contatto non risponde,
-in chat compare «📮 Non è in linea: il messaggio è nella casella cifrata…». Appena lui si
+accanto all'ora del messaggio compare **📮✓** (nella casella). Appena lui si
 collega, il messaggio gli arriva (con la notifica) come se glielo avessi mandato in quel momento,
 con l'ora in cui l'hai scritto.
 

@@ -58,9 +58,10 @@ Usage:
   nyctalus node    --listen 0.0.0.0:4601 [--data DIR] [--announce PUBLIC_IP:PORT] [--secret HEX] [--directory FILE --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0]
   nyctalus authority
   nyctalus directory --authority-secret HEX --entries 'addr,x,fp;addr,x,fp'
-  nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)]
+  nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)] [--cover 0]
   nyctalus test-circuit (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--message DEST]
   nyctalus site    (--dir ./folder | --backend IP:PORT) [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--identity FILE] [--hops 3] [--pool 4]
+  nyctalus address --identity FILE      (a site's key, created if missing, and its .nyct address)
   nyctalus browse  ADDRESS.nyct [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--path /] [--hops 3]
   nyctalus chat    [--data DIR] [--identity FILE] [--backend 127.0.0.1:1082] [--control 127.0.0.1:1091] [--socks 127.0.0.1:1080] [--max-file 200] [--control-token SECRET] [--rubrica ADDR.nyct] [--casella ADDR.nyct]
   nyctalus receive --out FILE [--listen 0.0.0.0:4433] [--identity FILE]
@@ -150,6 +151,13 @@ async fn esegui() -> Risultato<()> {
         "monitor" => {
             let controllo: SocketAddr = opzione(&opzioni, "control").unwrap_or("127.0.0.1:1090").parse()?;
             monitor::monitor(controllo).await
+        }
+        "address" => {
+            // la chiave di un sito (creata se manca) e il suo indirizzo, senza andare in rete
+            let file = PathBuf::from(obbligatoria(&opzioni, "identity")?);
+            let identita = incontro::carica_o_crea_identita(&file)?;
+            println!("{}", nyctalus_core::indirizzo::da_chiave(&identita.pubblica()));
+            Ok(())
         }
         "site" => {
             let modo = match (opzione(&opzioni, "dir"), opzione(&opzioni, "backend")) {

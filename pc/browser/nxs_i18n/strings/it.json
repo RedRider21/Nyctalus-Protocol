@@ -1635,5 +1635,8 @@
   "chat.rub.nessuna": "Questa rete non ha una rubrica",
   "chat.rub.nessuna_corpo": "La rubrica c'è nelle reti che la offrono (per esempio la rete di casa). Collegati con il codice di rete: nyctalus-rete importa CODICE.",
   "chat.notifiche": "Notifiche sul desktop dei nuovi messaggi",
-  "chat.in_casella": "Non è in linea: il messaggio è nella casella cifrata e gli arriverà appena si collega."
+  "chat.in_casella": "Non è in linea: il messaggio è nella casella cifrata e gli arriverà appena si collega.",
+  "chat.sp_spedito": "Spedito",
+  "chat.sp_consegnato": "Consegnato",
+  "chat.sp_letto": "Letto"
 }

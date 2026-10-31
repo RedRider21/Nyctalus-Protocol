@@ -86,7 +86,7 @@ export PYTHONPATH="${extra}\$QUI/browser\${PYTHONPATH:+:\$PYTHONPATH}"
 exec python3 -m $modulo "\$@"
 EOF
 done
-chmod +x "$P"/*.sh "$P/bin/nyctalus" "$P/gestore-rete/nyctalus-rete" "$P/server"/*
+chmod +x "$P"/*.sh "$P/bin/nyctalus" "$P/gestore-rete/nyctalus-rete" "$P/gestore-rete/nyctalus-sito" "$P/server"/*
 
 cat > "$P/LEGGIMI.txt" <<'EOF'
 Nyctalus per PC Linux
@@ -115,6 +115,9 @@ COLLEGARSI A UNA RETE CONDIVISA
    nyctalus-rete importa CODICE     (il codice te lo dà chi gestisce la rete)
    nyctalus-rete casa               rete di casa su questo PC, per provare telefono ↔ PC
 
+PUBBLICARE UN SITO .nyct
+   nyctalus-sito                    guida passo passo (crea, online, sempre acceso)
+
 DISINSTALLARE
    ~/.local/share/nyctalus/disinstalla.sh   (toglie solo Nyctalus; i dati solo se confermi)
 
@@ -129,9 +132,10 @@ V="$LAVORO/Nyctalus-Server"
 mkdir -p "$V/bin" "$V/Manuali"
 cp "$ROOT/target/release/nyctalus" "$V/bin/nyctalus"
 cp "$ROOT/server/installa-nodo.sh" "$V/installa.sh"; cp "$ROOT/server/nyctalus-server" "$ROOT/server/disinstalla.sh" "$V/"
-cp "$ROOT/documenti/manuali/MANUALE-SERVER.md" "$ROOT/documenti/manuali/SCELTE-OPERATIVE.md" "$ROOT/LICENSE" "$V/" 2>/dev/null || true
-mv "$V"/MANUALE-SERVER.md "$V"/SCELTE-OPERATIVE.md "$V/Manuali/" 2>/dev/null || true
-chmod +x "$V"/*.sh "$V/nyctalus-server" "$V/bin/nyctalus"
+cp "$ROOT/pc/gestore-rete/nyctalus-sito" "$V/"        # un sito .nyct sempre acceso sul server
+cp "$ROOT/documenti/manuali/MANUALE-SERVER.md" "$ROOT/documenti/manuali/SCELTE-OPERATIVE.md" "$ROOT/documenti/manuali/MANUALE-SITI.md" "$ROOT/LICENSE" "$V/" 2>/dev/null || true
+mv "$V"/MANUALE-SERVER.md "$V"/SCELTE-OPERATIVE.md "$V"/MANUALE-SITI.md "$V/Manuali/" 2>/dev/null || true
+chmod +x "$V"/*.sh "$V/nyctalus-server" "$V/nyctalus-sito" "$V/bin/nyctalus"
 cat > "$V/LEGGIMI.txt" <<'EOF'
 Nyctalus per SERVER (nodi della rete)
 =====================================
@@ -148,6 +152,10 @@ INSTALLARE (sul server)
 
 GESTIRE
    nyctalus-server stato | righe | riavvia | ferma | avvia | log
+
+UN SITO .nyct SEMPRE ACCESO (facoltativo, sullo stesso server)
+   ./nyctalus-sito crea NOME --codice NYCT1:…    poi:  ./nyctalus-sito servizio NOME
+   (il codice della rete te lo dà chi la gestisce; manuale: Manuali/MANUALE-SITI.md)
 
 DISINSTALLARE
    sudo /opt/nyctalus/disinstalla.sh      (le identità dei nodi restano, per reinstallare uguali)

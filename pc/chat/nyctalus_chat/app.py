@@ -118,6 +118,9 @@ _ITA = {
     "chat.ricezione": "Ricezione",
     "chat.senza_exif": "Foto senza metadati (posizione GPS, fotocamera)",
     "chat.notifiche": "Notifiche sul desktop dei nuovi messaggi",
+    "chat.sp_spedito": "Spedito",
+    "chat.sp_consegnato": "Consegnato",
+    "chat.sp_letto": "Letto",
     "chat.in_casella": "Non è in linea: il messaggio è nella casella cifrata e gli arriverà appena si collega.",
     "chat.filtro.tutti": "Tutti i file",
     "chat.filtro.immagini": "Immagini",
@@ -616,6 +619,9 @@ class Chat(Gtk.Window):
         self.contatti = {}       # addr -> nome
         self.online = set()
         self.visti = {}          # ultimo accesso visto dal nostro motore (evento V)
+        self.spunte = {}         # addr → {ts: "1"|"c"|"2"} stato dei nostri messaggi
+        self.letto_fino = {}     # addr → ts: il contatto ha letto fino a lì (spunte blu)
+        self.letto_inviato = {}  # addr → ultimo «letto» mandato
         self.rubrica = leggi_rubrica_rete()   # indirizzo .nyct della rubrica della rete (se c'è)
         self.fin_rubrica = None
         # aperta dal bottone «Rubrica» del mini menu: si mostra solo la rubrica, la finestra
@@ -649,6 +655,7 @@ class Chat(Gtk.Window):
         self._costruisci()
         self.connect("delete-event", lambda *_a: (self._salva_dimensioni(), False)[1])
         self.connect("destroy", Gtk.main_quit)
+        self.connect("notify::is-active", lambda *_a: GLib.idle_add(self._segnala_letto))
         if self.solo_rubrica:
             self.get_child().show_all()
         else:
@@ -944,6 +951,7 @@ class Chat(Gtk.Window):
             self._aggiorna_anteprima(addr, grezza, nuovo=True)
             if addr == self.attivo:
                 self._bolla("in", _da_hex(hx), ts, grezza)
+                self._segnala_letto()
             self._notifica_desktop(addr, _da_hex(hx))
         elif tipo == "OUT" and len(parti) >= 4:
             addr, ts, hx = parti[1], parti[2], parti[3]
@@ -975,10 +983,14 @@ class Chat(Gtk.Window):
                 mime = parti[6] if len(parti) >= 8 else ""
                 nome = _da_hex(parti[7]) if len(parti) >= 8 else ""
                 self._avanzamento(parti[2], parti[3], int(parti[4]), int(parti[5]), mime, nome)
-        elif tipo == "CAS" and len(parti) >= 2:
+        elif tipo == "CAS" and len(parti) >= 3:
             # CAS <addr> <ts>: il contatto non era in linea, il messaggio è nella casella cifrata
-            if parti[1] == self.attivo:
-                self._avviso_inline("📮 " + _t("chat.in_casella"))
+            self._aggiorna_spunta(parti[1], parti[2], "c")
+        elif tipo == "SP" and len(parti) >= 4:
+            # SP <addr> <ts> 1|2|3: spedito / consegnato / letto (fino a ts)
+            self._aggiorna_spunta(parti[1], parti[2], parti[3])
+        elif tipo == "ENDH":
+            self._segnala_letto()
         elif tipo == "FERR" and len(parti) >= 4:
             # FERR <addr> <id|-> <messaggio hex>
             if parti[1] == self.attivo:
@@ -1379,6 +1391,11 @@ class Chat(Gtk.Window):
         (riga, bolla) per riempirla; l'ora va in fondo alla bolla."""
         riga = Gtk.ListBoxRow()
         riga.set_selectable(False)
+        riga.direzione = direzione
+        try:
+            riga.ts = int(ts)
+        except (TypeError, ValueError):
+            riga.ts = 0
         contenitore = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         bolla = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         bolla.get_style_context().add_class("bolla")
@@ -1396,6 +1413,9 @@ class Chat(Gtk.Window):
         if ts is not None:
             oraet = Gtk.Label(label=ora_hhmm(ts), xalign=1); oraet.get_style_context().add_class("ora")
             bolla.pack_start(oraet, False, False, 0)
+            if riga.direzione == "out" and riga.ts:
+                riga.ora_et = oraet
+                self._disegna_spunta(riga)
         riga.show_all()
         self.conv.add(riga)
         GLib.idle_add(self._scorri_in_fondo)
@@ -1694,6 +1714,45 @@ class Chat(Gtk.Window):
         self.ingresso.set_text("")
 
     # --- dialoghi --------------------------------------------------------------
+    # --- spunte (✓ spedito · 📮✓ nella casella · ✓✓ consegnato · ✓✓ blu letto) -------
+    def _stato_spunta(self, addr, ts):
+        if self.letto_fino.get(addr, 0) >= ts:
+            return "3"
+        return self.spunte.get(addr, {}).get(ts, "")
+
+    def _disegna_spunta(self, riga):
+        st = self._stato_spunta(self.attivo, riga.ts)
+        segno = {"1": "✓", "c": "📮✓", "2": "✓✓", "3": '<span foreground="#4fc3f7"><b>✓✓</b></span>'}.get(st, "")
+        riga.ora_et.set_markup("%s %s" % (GLib.markup_escape_text(ora_hhmm(riga.ts)), segno))
+        riga.ora_et.set_tooltip_text({"1": _t("chat.sp_spedito"), "c": _t("chat.in_casella"),
+                                      "2": _t("chat.sp_consegnato"), "3": _t("chat.sp_letto")}.get(st))
+
+    def _aggiorna_spunta(self, addr, ts, st):
+        try:
+            ts = int(ts)
+        except ValueError:
+            return
+        if st == "3":
+            self.letto_fino[addr] = max(self.letto_fino.get(addr, 0), ts)
+        else:
+            m = self.spunte.setdefault(addr, {})
+            if not (m.get(ts) == "2" and st != "2"):      # «consegnato» non torna indietro
+                m[ts] = st
+        if addr == self.attivo:
+            for riga in self.conv.get_children():
+                if getattr(riga, "ora_et", None) is not None:
+                    self._disegna_spunta(riga)
+
+    def _segnala_letto(self, *_a):
+        """Conversazione aperta e finestra attiva: si dice al contatto fin dove abbiamo letto."""
+        if not self.attivo or not self.is_active():
+            return False
+        ultimi = [r.ts for r in self.conv.get_children() if getattr(r, "direzione", "") == "in" and getattr(r, "ts", 0)]
+        if ultimi and max(ultimi) > self.letto_inviato.get(self.attivo, 0):
+            self.letto_inviato[self.attivo] = max(ultimi)
+            self._cmd("LETTO %s %d" % (self.attivo, max(ultimi)))
+        return False
+
     # --- notifiche sul desktop ------------------------------------------------------
     def _notifica_desktop(self, addr, testo):
         """Messaggio in arrivo con la finestra non attiva: notifica del desktop (notify-send),

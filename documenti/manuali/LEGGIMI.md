@@ -13,6 +13,7 @@ per la rete di casa telefono ↔ PC, per una rete con un server e per una rete d
 |---|---|
 | [GUIDA-RETE-DI-CASA.md](GUIDA-RETE-DI-CASA.md) | **una pagina, 5 passi**: chat fra il tuo PC e il tuo telefono a casa |
 | [SCELTE-OPERATIVE.md](SCELTE-OPERATIVE.md) | i **tre ruoli** e i **quattro scenari**: cosa installare dove |
+| [MANUALE-SITI.md](MANUALE-SITI.md) | pubblicare un **sito `.nyct`** con un comando (`nyctalus-sito`): pagine fisse o sito dinamico, sempre acceso, la chiave |
 | [MANUALE-SERVER.md](MANUALE-SERVER.md) | installare i **nodi** su un server/VPS e gestirli (`nyctalus-server`) |
 | [MANUALE-GESTORE-RETE.md](MANUALE-GESTORE-RETE.md) | creare e gestire una **rete**: autorità, elenco firmato, **codice di rete**, rete di casa (`nyctalus-rete`) |
 | [MANUALE-INSTALLAZIONE.md](MANUALE-INSTALLAZIONE.md) | installare su **PC Linux** e su **Android** (Termux), portare i file nel telefono, disinstallare, problemi frequenti |

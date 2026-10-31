@@ -105,6 +105,10 @@ Nyctalus: ritento da sola…». I tentativi si fanno sempre più radi, fino a un
 
 ## 3. La conversazione
 
+Accanto all'ora dei tuoi messaggi ci sono le **spunte** come in Telegram: ✓ spedito, 📮✓ nella
+casella cifrata (il contatto non era in linea), ✓✓ consegnato, ✓✓ blu letto (vedi
+`MANUALE-CHAT.md`).
+
 - Tocca una chat per aprirla; **←** (o il tasto Indietro) torna all'elenco.
 - Scrivi in basso e tocca **➤**.
 - I messaggi sono raggruppati per giorno (**Oggi**, **Ieri**…); la chat resta in fondo

@@ -1024,7 +1024,7 @@ pub async fn tunnel_socks(
 //  Utilità comuni
 // ======================================================================
 
-fn carica_o_crea_identita(percorso: &Path) -> Risultato<Identita> {
+pub(crate) fn carica_o_crea_identita(percorso: &Path) -> Risultato<Identita> {
     use std::io::Write;
     if percorso.exists() {
         return Ok(Identita::da_byte(&std::fs::read(percorso)?)?);

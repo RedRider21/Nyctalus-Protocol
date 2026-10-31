@@ -16,7 +16,7 @@ RADICE = Path(__file__).resolve().parents[1]
 SORGENTI = sorted((RADICE / "documenti" / "manuali").glob("*.md")) + \
     [RADICE / "documenti" / "DEPLOY.md", RADICE / "documenti" / "SICUREZZA.md"]
 ORDINE = ["LEGGIMI", "GUIDA-RETE-DI-CASA", "SCELTE-OPERATIVE", "MANUALE-INSTALLAZIONE", "MANUALE-PC", "MANUALE-TELEFONO",
-          "MANUALE-CHAT", "MANUALE-SERVER", "MANUALE-GESTORE-RETE", "MANUALE-PROVE", "DEPLOY", "SICUREZZA"]
+          "MANUALE-CHAT", "MANUALE-SITI", "MANUALE-SERVER", "MANUALE-GESTORE-RETE", "MANUALE-PROVE", "DEPLOY", "SICUREZZA"]
 
 PAGINA = """<!doctype html>
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later

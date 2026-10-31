@@ -87,6 +87,10 @@ nyctalus-rete casa                # rete di casa su questo PC (prova telefono â†
 ```
 Gestire una rete propria: `MANUALE-GESTORE-RETE.md`.
 
+## 3-bis. Pubblicare un sito `.nyct`
+`nyctalus-sito` (guida passo passo) crea un sito e lo mette online sulla rete di questo PC; vedi
+`MANUALE-SITI.md`.
+
 ## 4. Dove stanno i dati
 
 | Cartella | Contenuto |

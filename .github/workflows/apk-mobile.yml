@@ -4,9 +4,10 @@ name: apk-mobile
 
 # Compila l'app Android (mobile/android) con lo stesso script usato in locale
 # (strumenti/compila-apk.sh: aapt2 → javac → d8 → apksigner, senza Gradle) e la
-# pubblica come artifact; con una Release la allega alla Release.
-# Nota: qui la chiave di firma è nuova a ogni esecuzione (chiave di sviluppo),
-# quindi prima di installare questa APK va tolta una versione firmata altrove.
+# pubblica come artifact: serve a verificare che si compili.
+# Nota: qui la chiave di firma è nuova a ogni esecuzione (chiave di sviluppo). Per questo
+# NON si allega alle Release: lì va l'APK firmata con la chiave del progetto (altrimenti
+# non si installerebbe sopra quella già presente sui telefoni).
 
 on:
   push:
@@ -16,8 +17,6 @@ on:
       - 'strumenti/compila-apk.sh'
       - '.github/workflows/apk-mobile.yml'
   workflow_dispatch:
-  release:
-    types: [ published ]
 
 permissions:
   contents: write
@@ -43,9 +42,3 @@ jobs:
         with:
           name: Nyctalus-apk
           path: mobile/android/Nyctalus.apk
-      - name: Allega alla Release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.release.tag_name }}
-          files: mobile/android/Nyctalus.apk

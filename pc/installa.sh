@@ -106,13 +106,15 @@ for c in launcher browser chat; do
     ln -sf "$DEST/avvia-$c.sh" "$L"
   fi
 done
-L="$BIN_DIR/nyctalus-rete"
-if [ -e "$L" ] && [ "$(readlink "$L" 2>/dev/null)" != "$DEST/gestore-rete/nyctalus-rete" ]; then
-  avv "$L esiste già e non è di Nyctalus: non lo tocco"
-else
-  chmod +x "$DEST/gestore-rete/nyctalus-rete"; ln -sf "$DEST/gestore-rete/nyctalus-rete" "$L"
-fi
-ok "Comandi: nyctalus-launcher, nyctalus-browser, nyctalus-chat, nyctalus-rete"
+for c in rete sito; do                       # nyctalus-rete (reti) e nyctalus-sito (siti .nyct)
+  L="$BIN_DIR/nyctalus-$c"
+  if [ -e "$L" ] && [ "$(readlink "$L" 2>/dev/null)" != "$DEST/gestore-rete/nyctalus-$c" ]; then
+    avv "$L esiste già e non è di Nyctalus: non lo tocco"
+  else
+    chmod +x "$DEST/gestore-rete/nyctalus-$c"; ln -sf "$DEST/gestore-rete/nyctalus-$c" "$L"
+  fi
+done
+ok "Comandi: nyctalus-launcher, nyctalus-browser, nyctalus-chat, nyctalus-rete, nyctalus-sito"
 case ":$PATH:" in *":$BIN_DIR:"*) ;; *) avv "$BIN_DIR non è nel PATH: i comandi funzioneranno dopo il prossimo accesso (o usa il menu)";; esac
 
 # --- 4) voci nel menu delle applicazioni -----------------------------------------

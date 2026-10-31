@@ -3,8 +3,9 @@
 # Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 # La casella cifrata: Anna scrive a Bruno che è SPENTO. Il messaggio finisce, sigillato, nella
 # casella della rete di casa (che non lo può leggere e non sa chi l'ha scritto); appena Bruno
-# si accende lo riceve, autenticato come scritto da Anna, e la casella lo cancella. Una busta
-# falsa viene scartata; una busta troppo grande rifiutata.
+# si accende lo riceve, autenticato come scritto da Anna, e la casella lo cancella. Spunte
+# (spedito, casella, consegnato, letto) e «modalità aereo» (sessione morta: il messaggio senza
+# conferma va nella casella). Una busta falsa viene scartata; una troppo grande rifiutata.
 . "$(dirname "$0")/../lib.sh"
 titolo "Funzionamento · casella cifrata (messaggi a chi non è in linea)"
 assicura_binario
@@ -59,15 +60,42 @@ grep -q "^in [0-9]* $HX$" "$TMP/bruno/cronologia/$ANNA.log" 2>/dev/null && pass 
 for _ in $(seq 1 20); do [ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && break; sleep 0.5; done
 [ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && pass "consegnata: la casella l'ha cancellata" || fail "busta ancora nella casella"
 
+# spunte: la conferma «ricevuto» di Bruno torna ad Anna (stato salvato, si rilegge con HIST)
+storia_anna() { NYCT_FINO="^ENDH" controllo 19842 "$SA" 20 "HIST $BRUNO"; }
+spunta() { local i; for i in $(seq 1 "$2"); do storia_anna | grep -qE "$1" && return 0; sleep 2; done; return 1; }
+TS1=$(grep -oE "^out [0-9]+" "$TMP/anna/cronologia/$BRUNO.log" | head -1 | cut -d' ' -f2)
+spunta "^CAS $BRUNO $TS1" 1 && spunta "^SP $BRUNO $TS1 2" 45 \
+  && pass "spunte: 📮✓ nella casella, poi ✓✓ consegnato quando Bruno la ritira" || fail "spunte del messaggio in casella: $(storia_anna | grep -E '^(SP|CAS)')"
+R=$(NYCT_FINO="^SP $BRUNO [0-9]+ 2" controllo 19842 "$SA" 90 SUB "SEND $BRUNO $(printf 'Secondo, sei in linea' | xxd -p | tr -d '\n')")
+TS2=$(echo "$R" | grep -oE "^OUT $BRUNO [0-9]+" | head -1 | awk '{print $3}')
+echo "$R" | grep -q "^SP $BRUNO $TS2 1" && echo "$R" | grep -q "^SP $BRUNO $TS2 2" \
+  && pass "Bruno in linea: ✓ spedito, poi ✓✓ consegnato" || fail "spunte dirette: $(echo "$R" | grep -E '^(SP|CAS|ERR)')"
+R=$(NYCT_FINO="^SP $BRUNO [0-9]+ 3" controllo 19842 "$SA" 60 SUB) & ATT=$!
+sleep 1; controllo 19852 "$SB" 3 "LETTO $ANNA $TS2" > /dev/null; wait $ATT
+spunta "^SP $BRUNO $TS2 3" 15 && pass "Bruno apre la conversazione (LETTO): ad Anna le spunte diventano blu" || fail "spunta di lettura"
+
+# «modalità aereo»: la rete di Bruno si blocca di colpo, la sessione sembra ancora aperta
+kill -STOP $RETE_PID $SITE_PID $CHAT_PID
+R=$(NYCT_FINO="^CAS $BRUNO " controllo 19842 "$SA" 150 SUB "SEND $BRUNO $(printf 'Terzo, in modalita aereo' | xxd -p | tr -d '\n')")
+echo "$R" | grep -q "^CAS $BRUNO " && pass "modalità aereo: il messaggio senza «ricevuto» finisce comunque nella casella" \
+  || fail "messaggio perso nella sessione morta: $(echo "$R" | grep -E '^(OUT|SP|CAS|ERR)')"
+kill -CONT $RETE_PID $SITE_PID $CHAT_PID
+H3=$(printf 'Terzo, in modalita aereo' | xxd -p | tr -d '\n')
+for _ in $(seq 1 90); do grep -q " $H3$" "$TMP/bruno/cronologia/$ANNA.log" 2>/dev/null && break; sleep 2; done
+[ "$(grep -c " $H3$" "$TMP/bruno/cronologia/$ANNA.log" 2>/dev/null)" = 1 ] \
+  && pass "tolta la modalità aereo, Bruno lo riceve (una volta sola)" || fail "terzo messaggio: $(grep -c " $H3$" "$TMP/bruno/cronologia/$ANNA.log" 2>/dev/null) copie"
+
 # una busta falsa (non sigillata da nessuno) e una troppo grande, depositate dai circuiti
+for _ in $(seq 1 30); do [ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && break; sleep 1; done
+PRIMA=$(wc -l < "$TMP/bruno/cronologia/$ANNA.log")
 head -c 300 /dev/urandom > "$TMP/falsa.bin"
 C=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 --socks5-hostname 127.0.0.1:19840 --data-binary @"$TMP/falsa.bin" "http://$CAS/deposita?a=$BRUNO")
 [ "$C" = 200 ] && pass "deposito anonimo attraverso la rete (curl via SOCKS, senza identità)" || fail "deposito via SOCKS: $C"
 head -c 70000 /dev/urandom > "$TMP/grande.bin"
 C=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 --socks5-hostname 127.0.0.1:19840 --data-binary @"$TMP/grande.bin" "http://$CAS/deposita?a=$BRUNO")
 [ "$C" = 413 ] && pass "busta troppo grande rifiutata" || fail "busta grande: $C"
-for _ in $(seq 1 60); do [ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && break; sleep 1; done
-[ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && [ "$(wc -l < "$TMP/bruno/cronologia/$ANNA.log")" = 1 ] \
+for _ in $(seq 1 150); do [ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && break; sleep 1; done
+[ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && [ "$(wc -l < "$TMP/bruno/cronologia/$ANNA.log")" = "$PRIMA" ] \
   && ! ls "$TMP/bruno/cronologia/" | grep -qv "$ANNA" \
-  && pass "busta falsa: scartata da Bruno (nessun messaggio inventato) e tolta dalla casella" || fail "busta falsa: $(ls "$D/$BRUNO" "$TMP/bruno/cronologia/" 2>&1 | tr '\n' ' ')"
+  && pass "busta falsa: scartata da Bruno (nessun messaggio inventato) e tolta dalla casella" || fail "busta falsa: $(ls "$D/$BRUNO" "$TMP/bruno/cronologia/" 2>&1 | tr '\n' ' ') $(for f in "$TMP"/bruno/cronologia/*; do echo "== $f"; cut -c1-200 "$f"; done)"
 [ "$KO" -eq 0 ]

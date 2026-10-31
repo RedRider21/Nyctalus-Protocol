@@ -159,14 +159,14 @@ Il browser è **solo uno** dei client. Il cuore di Nyctalus è un **demone** che
 
 | Tor | Nyctalus | A cosa serve |
 |---|---|---|
-| `tor` (demone) | `nyctalus avvia` | Fa girare nodo+client, apre il proxy SOCKS5 locale |
+| `tor` (demone) | `nyctalus start` | Fa girare nodo+client, apre il proxy SOCKS5 locale |
 | file `torrc` | `~/.config/nyctalus/config` | Configurazione (banda ceduta, se fare da uscita, ecc.) |
-| control port | `nyctalus stato`, `nyctalus circuiti` | Interrogare e gestire il demone in esecuzione |
+| control port | `nyctalus status`, `nyctalus monitor` | Interrogare e gestire il demone in esecuzione |
 | `nyx` (monitor) | `nyctalus monitor` | Cruscotto testuale: banda, circuiti, nodi (curses) |
-| `torsocks <prog>` | `nyctalus esec <prog>` | Lanciare un programma qualsiasi dentro la rete |
-| servizi `.onion` | `nyctalus sito ./cartella` | Pubblicare un sito `.nyct` da riga di comando |
+| `torsocks <prog>` | `nyctalus exec -- <prog>` | Lanciare un programma qualsiasi dentro la rete |
+| servizi `.onion` | `nyctalus site --dir ./cartella` (o, più semplice, `nyctalus-sito`) | Pubblicare un sito `.nyct` da riga di comando |
 
-Poiché il demone espone un **SOCKS5 standard**, i programmi che già sanno usare un proxy (curl, git, i browser via impostazioni) funzionano subito. `nyctalus esec` serve per i programmi che un proxy non lo prevedono, come fa `torsocks`.
+Poiché il demone espone un **SOCKS5 standard**, i programmi che già sanno usare un proxy (curl, git, i browser via impostazioni) funzionano subito. `nyctalus exec` serve per i programmi che un proxy non lo prevedono, come fa `torsocks`.
 
 Ordine di lavoro: **prima il SOCKS5** (sblocca sia il terminale sia il browser), poi i sottocomandi `avvia`/`stato`/`sito`, infine `monitor` ed `esec`. I comandi attuali `ricevi`/`invia` restano come strumenti di test.
 
