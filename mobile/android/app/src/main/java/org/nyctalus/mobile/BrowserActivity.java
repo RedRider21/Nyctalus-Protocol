@@ -1595,8 +1595,26 @@ public class BrowserActivity extends Activity {
                 if (!vuoleVideo && !vuoleAudio) { richiesta.deny(); return; }
                 if (vuoleVideo && checkSelfPermission(android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
                     concesse.add(PermissionRequest.RESOURCE_VIDEO_CAPTURE);
-                if (vuoleAudio && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
-                    concesse.add(PermissionRequest.RESOURCE_AUDIO_CAPTURE);
+                // Microfono: l'app lo ha per le chiamate della chat, ma un SITO lo riceve solo se
+                // l'utente lo consente per quel sito (mai in silenzio, mai in modalità 🦇).
+                if (vuoleAudio && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                    if ("allow".equals(decisione(sito, "microfono"))) {
+                        concesse.add(PermissionRequest.RESOURCE_AUDIO_CAPTURE);
+                    } else if (!vuoleVideo) {
+                        final String chi = sito;
+                        new AlertDialog.Builder(BrowserActivity.this, AlertDialog.THEME_DEVICE_DEFAULT_DARK)
+                                .setTitle("Microfono")
+                                .setMessage("«" + chi + "» vuole usare il microfono.")
+                                .setPositiveButton("Consenti", (d, k) -> {
+                                    decidi(chi, "microfono", "allow");
+                                    richiesta.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                                })
+                                .setNegativeButton("Blocca", (d, k) -> { decidi(chi, "microfono", "block"); richiesta.deny(); })
+                                .setOnCancelListener(d -> richiesta.deny())
+                                .show();
+                        return;
+                    }
+                }
                 if (!concesse.isEmpty()) { richiesta.grant(concesse.toArray(new String[0])); return; }
 
                 final ArrayList<String> mancanti = new ArrayList<>();

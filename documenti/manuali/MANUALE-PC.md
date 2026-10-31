@@ -70,7 +70,7 @@ uno, lo Stealth si accende da solo. Senza rete Nyctalus attiva **il browser li b
 
 Si avvia dal launcher (bottone Chat) o con `./avvia-chat.sh`. La finestra si apre
 subito, mentre la rete finisce di avviarsi in sottofondo. Tutto il resto (contatti,
-messaggi, allegati, fotocamera, menu del tasto destro, temi) è in **`MANUALE-CHAT.md`**.
+messaggi, allegati, fotocamera, menu del tasto destro, temi, **chiamate 📞**) è in **`MANUALE-CHAT.md`**.
 
 ---
 

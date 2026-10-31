@@ -134,6 +134,31 @@ con l'ora in cui l'hai scritto.
 - Quello che la casella vede comunque: che qualcuno ha lasciato posta per quell'indirizzo, quando
   e quanto è grande, e quando il destinatario la ritira.
 
+## 3-quater. Chiamate vocali (📞)
+
+Nella conversazione tocca **📞**: l'altro vede la chiamata in arrivo (sul telefono anche come
+notifica, con l'app chiusa) e tocca **Rispondi** o **Rifiuta**. Durante la chiamata:
+
+| Comando | Cosa fa |
+|---|---|
+| 🎤 **Muto** | il tuo microfono smette di trasmettere |
+| 🔊 **Vivavoce** (telefono) | altoparlante invece dell'auricolare |
+| 🔊 **Audio** (PC) | volume di chi parla e uscita: altoparlante o cuffie |
+| ⌄ **Riduci** (telefono) | torni alla chat, la chiamata continua (barretta verde in cima) |
+| ✆ **Riaggancia** | chiude la chiamata |
+| 📶 | qualità della linea: buona, discreta, scarsa |
+| 🎥 **Video** | in arrivo (fase 2) |
+
+- **Anonime come i messaggi:** la voce passa attraverso la rete Nyctalus, cifrata nella stessa
+  sessione dei messaggi; nessuno dei due vede l'IP dell'altro. Il prezzo è un piccolo ritardo
+  (qualche decimo di secondo su una rete vera).
+- La voce è **Opus** a 24 kbit/s in pacchetti da 20 ms; un pacchetto arrivato tardi si salta
+  invece di aspettarlo, così la conversazione non accumula ritardo.
+- Se l'altro è già in chiamata risulta **occupato**; senza risposta entro 45 secondi la
+  chiamata si chiude da sola; se la linea cade (l'altro sparisce) la chiamata si chiude.
+- Il **telefono** chiede il permesso del microfono alla prima chiamata. Il PC usa microfono e
+  altoparlanti del sistema (serve GStreamer con Opus, di solito già presente).
+
 ## 4. Allegati: file, foto, video, audio, documenti
 
 - **Inviare**: apri la chat con un contatto e premi la **graffetta 📎**. Si apre il

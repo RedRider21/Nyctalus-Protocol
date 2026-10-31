@@ -90,6 +90,11 @@ Nyctalus: ritento da sola…». I tentativi si fanno sempre più radi, fino a un
 
 ## 3. La conversazione
 
+**📞** in alto chiama il contatto (schermata a tutto schermo: Muto, Vivavoce, Riaggancia,
+⌄ per ridurla e continuare a usare la chat). Le chiamate in arrivo squillano anche con l'app
+chiusa, come notifica. Alla prima chiamata Android chiede il permesso del microfono. Dettagli:
+`MANUALE-CHAT.md` §3-quater.
+
 Accanto all'ora dei tuoi messaggi ci sono le **spunte** come in Telegram: ✓ spedito, 📮✓ nella
 casella cifrata (il contatto non era in linea), ✓✓ consegnato, ✓✓ blu letto (vedi
 `MANUALE-CHAT.md`).
