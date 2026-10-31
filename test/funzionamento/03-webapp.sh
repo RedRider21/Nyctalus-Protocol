@@ -64,6 +64,17 @@ cat > "$TMP/passi.json" <<EOF
  ["foto","${NYCT_FOTO:-$TMP}/chat-dopo-galleria.png"],
  ["js","(()=>{apriEmoji(); const b=document.querySelectorAll('.griglia-emoji button'); const n=b.length; b[0].click(); const ok=document.getElementById('testo').value.length>0; chiudiFoglio(); document.getElementById('testo').value=''; return 'EMOJI '+n+' '+ok})()"],
  ["js","(()=>{evento('ST '+S.attivo+' 0'); return 'VISTO '+document.getElementById('testa-stato').textContent})()"],
+ ["js","(()=>{window._inviate=[]; const v=S.ws.send.bind(S.ws); S.ws.send=(r)=>{ if(/^(CALL|AUD)/.test(r)) window._inviate.push(r); else v(r); }; evento('CALLIN $BOB abc123'); const s=Chiamate._stato(); return 'SQUILLA '+Chiamate.disponibile()+','+(s.c&&s.c.stato)+','+!document.querySelector('.ch-arrivo').classList.contains('nascosto')})()"],
+ ["foto","${NYCT_FOTO:-$TMP}/chiamata-arrivo.png"],
+ ["js","document.querySelector('.ch-arrivo .verde').click(); 'risposto'"],["attendi",3],
+ ["js","(()=>{const s=Chiamate._stato(); const aud=window._inviate.filter(r=>r.startsWith('AUD $BOB ')); window._aud=aud; return 'RISPOSTA '+window._inviate.includes('CALLOK $BOB abc123')+','+(s.c&&s.c.stato)+','+(aud.length>50)})()"],
+ ["js","(()=>{window._aud.forEach(r=>{const p=r.split(' '); Chiamate._ricevi(+p[2],p[3]);}); return 'x'})()"],["attendi",1],
+ ["js","'SUONATI ' + ((Chiamate._stato().a||{}).suonati||0)"],
+ ["foto","${NYCT_FOTO:-$TMP}/chiamata-attiva.png"],
+ ["js","(()=>{document.querySelectorAll('.ch-tasti .ch-tasto')[0].click(); const m=Chiamate._stato().muto; const n=window._inviate.length; window._n=n; return 'MUTO '+m})()"],["attendi",1],
+ ["js","'MUTI ' + (window._inviate.length - window._n <= 3)"],
+ ["js","(()=>{document.querySelector('.ch-riduci').click(); const r=!document.querySelector('.ch-mini').classList.contains('nascosto') && document.querySelector('.chiamata').classList.contains('nascosto'); document.querySelector('.ch-mini').click(); return 'RIDUCI '+r})()"],
+ ["js","(()=>{document.querySelector('.ch-tasti .rosso').click(); return 'FINE '+window._inviate.includes('CALLEND $BOB abc123')+','+(Chiamate._stato().c===null)+','+document.querySelector('.chiamata').classList.contains('nascosto')})()"],
  ["js","(()=>{const ts=9999999999; bollaTesto('out','prova spunte',ts); const r=[...document.querySelectorAll('#messaggi .msg.out')].pop(); if(!r) return 'SPUNTE nessuna'; const sp=()=>r.querySelector('.spunta'); const v=[]; evento('SP '+S.attivo+' '+ts+' 1'); v.push(sp().textContent); evento('CAS '+S.attivo+' '+ts); v.push(sp().textContent); evento('SP '+S.attivo+' '+ts+' 2'); v.push(sp().textContent); evento('SP '+S.attivo+' '+ts+' 3'); v.push(sp().textContent+(sp().classList.contains('letto')?'blu':'')); return 'SPUNTE '+v.join(',')})()"],
  ["js","(()=>{const n0=document.querySelectorAll('#messaggi .avviso').length; for(let i=0;i<5;i++) evento('ERR motore non raggiungibile'); const n1=document.querySelectorAll('#messaggi .avviso').length; for(let i=0;i<3;i++) evento('ERR SOCKS: connessione rifiutata'); const n2=document.querySelectorAll('#messaggi .avviso').length; const bar=!document.getElementById('stato-rete').classList.contains('nascosto'); S.motoreGiu=false; return 'SFILZA '+(n1-n0)+','+(n2-n1)+','+bar})()"],
  ["js","impostazioni(); 'impostazioni'"],["finche","document.querySelector('.stato-rete-imp') && document.querySelector('.stato-rete-imp').dataset.fase !== 'avvio'",10],
@@ -97,6 +108,12 @@ Q=$(r QUADRATE); [ -n "$Q" ] && [ "${Q%%/*}" = "$(echo "$Q" | cut -d/ -f2 | cut 
 [ "$(r NUOVE)" -ge 4 ] && pass "le 2 foto della galleria inviate e ricevute" || fail "foto dalla galleria: $(r NUOVE)"
 r VISTO | grep -q "^ultimo accesso oggi alle" && pass "telefono: «ultimo accesso» quando il contatto esce (anche con motore vecchio)" || fail "ultimo accesso sul telefono: $(r VISTO)"
 E=$(r EMOJI); [ "${E%% *}" -ge 50 ] 2>/dev/null && [ "${E##* }" = true ] && pass "pannello emoticon: $(echo "$E" | cut -d' ' -f1) emoticon, si inseriscono nel testo" || fail "emoticon: $E"
+[ "$(r SQUILLA)" = "true,squilla,true" ] && pass "chiamata in arrivo: schermata con Rifiuta/Rispondi" || fail "chiamata in arrivo: $(r SQUILLA)"
+[ "$(r RISPOSTA)" = "true,attiva,true" ] && pass "Rispondi: CALLOK e voce dal microfono (Opus 20 ms, microfono FINTO)" || fail "risposta: $(r RISPOSTA)"
+[ "${R_S:=$(r SUONATI)}" -ge 30 ] 2>/dev/null && pass "la voce ricevuta si decodifica e suona ($R_S pacchetti)" || fail "voce ricevuta: $(r SUONATI)"
+[ "$(r MUTO)" = "true" ] && [ "$(r MUTI)" = "true" ] && pass "🎤 muto: non parte più voce" || fail "muto: $(r MUTO) $(r MUTI)"
+[ "$(r RIDUCI)" = "true" ] && pass "⌄ riduci: barretta in cima, la chiamata continua" || fail "riduci: $(r RIDUCI)"
+[ "$(r FINE)" = "true,true,true" ] && pass "✆ riaggancia: CALLEND e schermata chiusa" || fail "fine: $(r FINE)"
 [ "$(r SPUNTE)" = "✓,📮✓,✓✓,✓✓blu" ] && pass "spunte come Telegram: ✓ spedito, 📮✓ casella, ✓✓ consegnato, ✓✓ blu letto" || fail "spunte: $(r SPUNTE)"
 [ "$(r SFILZA)" = "0,1,true" ] && pass "errori ripetuti: un solo avviso (motore giù → barra in alto, non 30 righe in chat)" || fail "sfilza di errori: $(r SFILZA)"
 [ "$(r RETE)" = "pronto,true,false" ] && pass "impostazioni: rete «attiva», «Avvia» spento e «Ferma» acceso" || fail "pulsanti della rete: $(r RETE)"

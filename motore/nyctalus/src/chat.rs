@@ -75,6 +75,7 @@ pub async fn chat(
         pendenti: Mutex::new(HashMap::new()),
         letti_inviati: Mutex::new(HashMap::new()),
         battito_noto: Mutex::new(HashSet::new()),
+        inviti: Mutex::new(HashMap::new()),
     });
 
     println!("Nyctalus chat");
@@ -137,7 +138,11 @@ struct Stato {
     pendenti: Mutex<HashMap<String, Vec<Vec<u8>>>>,          // conferme da spedire appena c'è la sessione
     letti_inviati: Mutex<HashMap<String, u64>>,              // ultimo «letto» mandato a ciascun contatto
     battito_noto: Mutex<HashSet<String>>,                    // contatti che rispondono al battito (PING/PONG)
+    inviti: Mutex<HashMap<String, (String, u64)>>,           // chiamate che squillano: contatto → (id, quando)
 }
+
+/// Un invito a una chiamata vale per tanto (poi chi chiama riaggancia da sé).
+const SQUILLO: u64 = 45;
 
 /// Pacchetto audio massimo di una chiamata (Opus da 20 ms sta ben sotto).
 const AUDIO_MAX: usize = 1500;
@@ -378,6 +383,14 @@ impl Stato {
         for (prefisso, evento) in [(&b"CI "[..], "CALLIN"), (b"CA ", "CALLOK"), (b"CN ", "CALLNO"), (b"CF ", "CALLEND")] {
             if let Some(r) = chiaro.strip_prefix(prefisso) {
                 if let Some(id) = std::str::from_utf8(r).ok().filter(|i| id_chiamata_valido(i)) {
+                    // l'invito si ricorda finché squilla: chi apre l'interfaccia dopo lo vede
+                    let mut inviti = self.inviti.lock().unwrap();
+                    if evento == "CALLIN" {
+                        inviti.insert(peer.to_string(), (id.to_string(), ora()));
+                    } else if inviti.get(peer).is_some_and(|(i, _)| i == id) {
+                        inviti.remove(peer);
+                    }
+                    drop(inviti);
                     self.notifica(format!("{evento} {peer} {id}"));
                 }
                 return;
@@ -1062,6 +1075,11 @@ impl Stato {
                 for a in online {
                     let _ = tx.send(format!("ST {a} 1\n"));
                 }
+                // chiamate che squillano ancora (es. app aperta dalla notifica della chiamata)
+                self.inviti.lock().unwrap().retain(|_, (_, t)| ora().saturating_sub(*t) < SQUILLO);
+                for (a, (id, _)) in self.inviti.lock().unwrap().iter() {
+                    let _ = tx.send(format!("CALLIN {a} {id}\n"));
+                }
                 let _ = tx.send("SUBOK\n".into());
             }
             "ADD" => {
@@ -1160,6 +1178,9 @@ impl Stato {
                 let addr = con_suffisso(it.next().unwrap_or(""));
                 let id = it.next().unwrap_or("").trim().to_string();
                 let prefisso = match quale { "CALLOK" => "CA", "CALLNO" => "CN", _ => "CF" };
+                if self.inviti.lock().unwrap().get(&addr).is_some_and(|(i, _)| *i == id) {
+                    self.inviti.lock().unwrap().remove(&addr);
+                }
                 if !id_chiamata_valido(&id) {
                     let _ = tx.send("ERR chiamata non valida\n".into());
                 } else {
@@ -1582,6 +1603,7 @@ mod prove {
             pendenti: Mutex::new(HashMap::new()),
             letti_inviati: Mutex::new(HashMap::new()),
             battito_noto: Mutex::new(HashSet::new()),
+            inviti: Mutex::new(HashMap::new()),
         };
         st.registra_riga("x.nyct", "in 1 6161");
         st.registra_riga("x.nyct", "out 2 6262");

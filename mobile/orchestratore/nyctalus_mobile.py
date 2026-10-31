@@ -725,6 +725,10 @@ async def flusso_notifiche(scrittore):
             elif p[0] == "MSG" and len(p) >= 4:
                 await riga({"tipo": "msg", "da": p[1], "nome": nomi.get(p[1], p[1][:10]),
                             "testo": _da_hex(p[3])[:200]})
+            elif p[0] == "CALLIN" and len(p) >= 3:
+                await riga({"tipo": "chiamata", "da": p[1], "nome": nomi.get(p[1], p[1][:10]), "id": p[2]})
+            elif p[0] in ("CALLEND", "CALLOK", "CALLNO") and len(p) >= 3:
+                await riga({"tipo": "fine_chiamata", "da": p[1], "id": p[2]})
             elif p[0] == "FILE" and len(p) >= 9 and p[2] == "in":
                 await riga({"tipo": "file", "da": p[1], "nome": nomi.get(p[1], p[1][:10]),
                             "mime": p[6], "file": _da_hex(p[7])[:80]})

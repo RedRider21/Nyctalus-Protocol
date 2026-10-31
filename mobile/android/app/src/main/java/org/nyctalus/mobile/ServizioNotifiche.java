@@ -33,7 +33,7 @@ import java.util.Map;
  */
 public class ServizioNotifiche extends Service {
 
-    static final String CANALE_ATTIVO = "attivo", CANALE_MESSAGGI = "messaggi";
+    static final String CANALE_ATTIVO = "attivo", CANALE_MESSAGGI = "messaggi", CANALE_CHIAMATE = "chiamate";
     static final int ID_ATTIVO = 2;
     /** True mentre l'app è in primo piano: lì i messaggi si vedono già, niente notifiche. */
     static volatile boolean appInPrimoPiano = false;
@@ -132,6 +132,10 @@ public class ServizioNotifiche extends Service {
 
     private void notifica(org.json.JSONObject o) {
         String tipo = o.optString("tipo"), da = o.optString("da");
+        if (("chiamata".equals(tipo) || "fine_chiamata".equals(tipo)) && da.matches("[a-z2-7]{56}\\.nyct")) {
+            chiamata(tipo, da, o.optString("nome", da.substring(0, 10)));
+            return;
+        }
         if (!("msg".equals(tipo) || "file".equals(tipo)) || !da.matches("[a-z2-7]{56}\\.nyct")) return;
         if (appInPrimoPiano) return;
         String nome = o.optString("nome", da.substring(0, 10));
@@ -159,6 +163,34 @@ public class ServizioNotifiche extends Service {
         if (Build.VERSION.SDK_INT < 26) b.setPriority(Notification.PRIORITY_HIGH).setDefaults(Notification.DEFAULT_ALL);
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.notify(1000 + (da.hashCode() & 0x7fffff), b.build());
+    }
+
+    /** Chiamata in arrivo: notifica che squilla (anche con l'app aperta in un'altra schermata). */
+    private void chiamata(String tipo, String da, String nome) {
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        int id = 500000 + (da.hashCode() & 0x7ffff);
+        if ("fine_chiamata".equals(tipo)) {
+            nm.cancel(id);
+            return;
+        }
+        if (appInPrimoPiano) return;              // app aperta: squilla già la schermata della chiamata
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel ch = new NotificationChannel(CANALE_CHIAMATE, "Chiamate", NotificationManager.IMPORTANCE_HIGH);
+            ch.setDescription("Chiamate in arrivo nella chat Nyctalus");
+            nm.createNotificationChannel(ch);
+        }
+        Notification.Builder b = Build.VERSION.SDK_INT >= 26
+                ? new Notification.Builder(this, CANALE_CHIAMATE) : new Notification.Builder(this);
+        b.setSmallIcon(R.drawable.ic_notifica)
+                .setContentTitle("📞 " + nome)
+                .setContentText("ti sta chiamando — tocca per rispondere")
+                .setCategory(Notification.CATEGORY_CALL)
+                .setAutoCancel(true)
+                .setTimeoutAfter(45000)
+                .setContentIntent(apri(da))
+                .setFullScreenIntent(apri(da), true);
+        if (Build.VERSION.SDK_INT < 26) b.setPriority(Notification.PRIORITY_MAX).setDefaults(Notification.DEFAULT_ALL);
+        nm.notify(id, b.build());
     }
 
     private static String descriviFile(String mime, String nome) {

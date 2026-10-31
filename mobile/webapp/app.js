@@ -303,6 +303,7 @@ function evento(riga) {
   const p = riga.split(" "), t = p[0];
   // la rubrica della rete parla con noi in JSON: non è una conversazione, non va in cronologia
   if (S.rubrica && p[1] === S.rubrica) { if (t === "MSG") rispostaRubrica(daHex(p[3])); return; }
+  if (typeof Chiamate !== "undefined" && Chiamate.evento(t, p)) return;   // chiamate e voce
   if (t === "ME") {
     S.me = p[1]; $("mio-id-valore").textContent = S.me;
     if (S.motoreGiu) { S.motoreGiu = false; controllaServizi(); }   // di nuovo collegati
@@ -313,6 +314,7 @@ function evento(riga) {
   else if (t === "L") { anteprima(p[1], p.slice(2).join(" ")); cacheContatto(p[1]); }
   else if (t === "ST") {
     p[2] === "1" ? S.online.add(p[1]) : S.online.delete(p[1]);
+    if (p[2] !== "1" && typeof Chiamate !== "undefined") Chiamate.offline(p[1]);
     segnaVisto(p[1], Math.floor(Date.now() / 1000));      // anche se il motore è più vecchio
     disegnaElenco(); if (p[1] === S.attivo) testata();
   }

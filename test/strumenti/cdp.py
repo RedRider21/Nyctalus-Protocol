@@ -7,7 +7,10 @@ import base64, json, os, socket, subprocess, sys, time, urllib.request
 profilo, passi = sys.argv[1], json.load(open(sys.argv[2]))
 chrome = subprocess.Popen(["google-chrome", "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
                            "--remote-debugging-port=19333", "--user-data-dir=" + profilo, "--window-size=412,915",
-                           "--force-device-scale-factor=2", "--hide-scrollbars", "about:blank"],
+                           "--force-device-scale-factor=2", "--hide-scrollbars",
+                           # microfono/fotocamera FINTI (segnale di prova): mai quelli veri
+                           "--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
+                           "--autoplay-policy=no-user-gesture-required", "about:blank"],
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 try:
     for _ in range(50):

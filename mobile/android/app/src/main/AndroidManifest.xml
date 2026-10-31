@@ -10,6 +10,10 @@
     <!-- Notifiche dei messaggi con l'app chiusa, senza Google (ServizioNotifiche): il permesso
          di mostrarle (Android 13+) e il tipo «messaggistica» del servizio (Android 14+). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Chiamate: il microfono (chiesto solo alla prima chiamata) e l'audio «da telefonata». -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
     <!-- Avvio all'accensione: usato SOLO se scelto in «Strumenti» (spento di default). -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />

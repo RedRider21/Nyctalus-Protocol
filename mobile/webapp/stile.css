@@ -278,3 +278,24 @@ body.solo-rubrica #foglio .rubrica { max-height: none; }
 body.solo-rubrica #velo { background: var(--panel); }
 .riprova-rubrica { margin-top: 12px; width: 100%; padding: 11px; border: 0; border-radius: 12px; background: rgba(var(--rgb), .16); color: var(--testo); font-weight: 600; font-size: 15px; }
 .indietro-rubrica { background: none; border: 0; color: var(--testo); font-size: 22px; padding: 2px 10px; border-radius: 50%; }
+
+/* --- chiamata (stile Telegram) ----------------------------------------------------------- */
+.chiamata { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 10px; padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  background: radial-gradient(circle at 50% 30%, #1f3b6e 0%, #0b1020 70%); color: #fff; }
+.chiamata .ch-av .avatar { width: 112px; height: 112px; font-size: 44px; }
+.chiamata .ch-nome { font-size: 26px; font-weight: 700; margin-top: 8px; }
+.chiamata .ch-stato { font-size: 15px; opacity: .8; }
+.chiamata .ch-qualita { font-size: 13px; opacity: .7; min-height: 18px; }
+.chiamata .ch-riduci { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 14px; background: none; border: 0;
+  color: #fff; font-size: 26px; opacity: .8; }
+.ch-tasti { display: flex; gap: 18px; margin-top: 48px; flex-wrap: wrap; justify-content: center; }
+.ch-tasto { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: 0; color: #fff; font-size: 12px; }
+.ch-tasto .ic { width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; font-size: 26px;
+  background: rgba(255,255,255,.16); }
+.ch-tasto.attivo .ic { background: #fff; color: #0b1020; }
+.ch-tasto.rosso .ic { background: #e53935; }
+.ch-tasto.verde .ic { background: #43a047; }
+.ch-tasto:disabled { opacity: .35; }
+.ch-mini { position: fixed; top: 0; left: 0; right: 0; z-index: 35; border: 0; padding: 8px 12px;
+  padding-top: max(8px, env(safe-area-inset-top)); background: #43a047; color: #fff; font-weight: 600; font-size: 14px; }

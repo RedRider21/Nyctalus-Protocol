@@ -65,7 +65,9 @@ public class MainActivity extends Activity {
     private static final String TERMUX = "com.termux";
     private static final String PERMESSO_TERMUX = "com.termux.permission.RUN_COMMAND";
     static final String PREFS = "nyctalus";
-    private static final int RICHIESTA_PERMESSO = 1, RICHIESTA_FILE = 2, RICHIESTA_NOTIFICHE = 3;
+    private static final int RICHIESTA_PERMESSO = 1, RICHIESTA_FILE = 2, RICHIESTA_NOTIFICHE = 3, RICHIESTA_MICROFONO = 4;
+    /** La pagina della chat chiede il microfono (chiamata): si concede dopo il permesso di Android. */
+    private android.webkit.PermissionRequest attesaMicrofono;
     private static final long ATTESA_MAX_MS = 40000;
 
     private static final String GITHUB = "https://github.com/RedRider21/Nyctalus-Protocol";
@@ -184,6 +186,12 @@ public class MainActivity extends Activity {
         super.onRequestPermissionsResult(richiesta, permessi, esiti);
         if (richiesta == RICHIESTA_PERMESSO) new Thread(this::avvia).start();
         if (richiesta == RICHIESTA_NOTIFICHE) ServizioNotifiche.avvia(this);
+        if (richiesta == RICHIESTA_MICROFONO && attesaMicrofono != null) {
+            boolean ok = esiti.length > 0 && esiti[0] == PackageManager.PERMISSION_GRANTED;
+            if (ok) attesaMicrofono.grant(new String[]{android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+            else attesaMicrofono.deny();
+            attesaMicrofono = null;
+        }
     }
 
     /**
@@ -1060,6 +1068,23 @@ public class MainActivity extends Activity {
 
     /** Collega gli <input type="file"> della web-app a galleria, file e fotocamera. */
     private class Sceglitore extends WebChromeClient {
+        /** Microfono per le chiamate: solo alla NOSTRA pagina (127.0.0.1) e solo l'audio. */
+        @Override
+        public void onPermissionRequest(android.webkit.PermissionRequest req) {
+            runOnUiThread(() -> {
+                boolean nostra = req.getOrigin() != null && URL_BASE.startsWith(req.getOrigin().toString().replaceAll("/$", ""));
+                boolean soloAudio = req.getResources().length == 1
+                        && android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(req.getResources()[0]);
+                if (!nostra || !soloAudio) { req.deny(); return; }
+                if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                    req.grant(new String[]{android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                } else {
+                    attesaMicrofono = req;
+                    requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, RICHIESTA_MICROFONO);
+                }
+            });
+        }
+
         @Override
         public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams p) {
             if (attesaFile != null) attesaFile.onReceiveValue(null);
@@ -1156,6 +1181,26 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void copia(String t) {
             if (t != null) copiaNegliAppunti(t);
+        }
+
+        /** Chiamata in corso sì/no: audio «da telefonata» (auricolare, cancellazione dell'eco). */
+        @JavascriptInterface
+        public void chiamata(boolean attiva) {
+            android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+            if (am == null) return;
+            am.setMode(attiva ? android.media.AudioManager.MODE_IN_COMMUNICATION : android.media.AudioManager.MODE_NORMAL);
+            if (!attiva) am.setSpeakerphoneOn(false);
+            runOnUiThread(() -> {
+                if (attiva) getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                else getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            });
+        }
+
+        /** Vivavoce: altoparlante (sì) o auricolare (no). */
+        @JavascriptInterface
+        public void vivavoce(boolean si) {
+            android.media.AudioManager am = (android.media.AudioManager) getSystemService(AUDIO_SERVICE);
+            if (am != null) am.setSpeakerphoneOn(si);
         }
 
         @JavascriptInterface
