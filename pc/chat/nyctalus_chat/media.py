@@ -337,6 +337,109 @@ class LettoreAudio:
             self.attuale = None
 
 
+# --- voce delle chiamate ----------------------------------------------------------------
+class AudioChiamata:
+    """La voce di una chiamata: microfono → Opus da 20 ms (pacchetti consegnati a `manda`)
+    e pacchetti Opus in arrivo → altoparlante. Chi riceve scarta i pacchetti più vecchi
+    dell'ultimo suonato: in una chiamata un pacchetto in ritardo non serve più.
+    Prove senza microfono/altoparlante veri: NYCTALUS_MIC_SRC e NYCTALUS_ALTOPARLANTE."""
+
+    CAPS = "audio/x-opus,rate=48000,channels=1,channel-mapping-family=0"
+
+    def __init__(self, manda, uscita=None, volume=1.0):
+        self.manda = manda                    # manda(seq, byte) — chiamata dal thread di GStreamer
+        self.seq = self.ultimo = 0
+        self.inviati = self.ricevuti = self.scartati = self.persi = 0
+        self.volume = volume
+        self.cattura = None
+        self.ascolto = self._ascolto(uscita)
+        self.cattura = Gst.parse_launch(
+            "%s ! audioconvert ! audioresample ! audio/x-raw,rate=48000,channels=1 ! valve name=muto drop=false "
+            "! opusenc bitrate=24000 frame-size=20 audio-type=voice ! appsink name=pacchetti emit-signals=true "
+            "sync=false max-buffers=50 drop=true" % sorgente_audio())
+        self.cattura.get_by_name("pacchetti").connect("new-sample", self._pacchetto)
+
+    def _ascolto(self, uscita):
+        """L'altoparlante: quello predefinito o un'uscita scelta (nome PulseAudio/PipeWire)."""
+        if uscita:
+            elemento = "pulsesink device=%s" % uscita
+        else:
+            elemento = os.environ.get("NYCTALUS_ALTOPARLANTE", "autoaudiosink")
+        p = Gst.parse_launch(
+            "appsrc name=arrivo is-live=true format=time do-timestamp=true caps=%s ! opusdec plc=true "
+            "! audioconvert ! audioresample ! volume name=vol volume=%f ! %s sync=false" % (self.CAPS, self.volume, elemento))
+        self.arrivo = p.get_by_name("arrivo")
+        return p
+
+    def imposta_volume(self, v):
+        self.volume = max(0.0, min(2.0, v))
+        self.ascolto.get_by_name("vol").set_property("volume", self.volume)
+
+    def cambia_uscita(self, uscita):
+        """Vivavoce/cuffie: si rifà solo la parte che suona, la chiamata continua."""
+        vecchio = self.ascolto
+        self.ascolto = self._ascolto(uscita)
+        vecchio.set_state(Gst.State.NULL)
+        self.ascolto.set_state(Gst.State.PLAYING)
+
+    def avvia(self):
+        self.ascolto.set_state(Gst.State.PLAYING)
+        self.cattura.set_state(Gst.State.PLAYING)
+
+    def ferma(self):
+        for p in (self.cattura, self.ascolto):
+            p.set_state(Gst.State.NULL)
+
+    def muto(self, attivo):
+        self.cattura.get_by_name("muto").set_property("drop", bool(attivo))
+
+    def _pacchetto(self, sink):
+        campione = sink.emit("pull-sample")
+        buf = campione.get_buffer()
+        ok, info = buf.map(Gst.MapFlags.READ)
+        if ok:
+            dati = bytes(info.data)
+            buf.unmap(info)
+            self.seq += 1
+            self.inviati += 1
+            self.manda(self.seq, dati)
+        return Gst.FlowReturn.OK
+
+    def ricevi(self, seq, dati):
+        if seq <= self.ultimo:                # arrivato dopo uno più nuovo: non serve più
+            self.scartati += 1
+            return
+        if self.ultimo and seq > self.ultimo + 1:
+            self.persi += seq - self.ultimo - 1
+        self.ultimo = seq
+        self.ricevuti += 1
+        self.arrivo.emit("push-buffer", Gst.Buffer.new_wrapped(dati))
+
+
+def uscite_audio():
+    """Le uscite audio del sistema [(nome, descrizione)], per scegliere altoparlante o cuffie."""
+    if not shutil.which("pactl"):
+        return []
+    try:
+        testo = subprocess.run(["pactl", "list", "sinks"], capture_output=True, text=True, timeout=3,
+                               env=dict(os.environ, LC_ALL="C")).stdout
+    except (OSError, subprocess.SubprocessError):
+        return []
+    uscite, nome = [], None
+    for riga in testo.splitlines():
+        riga = riga.strip()
+        if riga.startswith("Name:"):
+            nome = riga.split(":", 1)[1].strip()
+        elif riga.startswith("Description:") and nome:
+            uscite.append((nome, riga.split(":", 1)[1].strip()))
+            nome = None
+    return uscite
+
+
+def audio_chiamate_disponibile():
+    return Gst is not None and all(Gst.ElementFactory.find(e) for e in ("opusenc", "opusdec", "appsrc", "appsink"))
+
+
 # --- fotocamera ------------------------------------------------------------------
 def sorgente_video():
     # NYCTALUS_CAMERA_SRC permette di provare senza webcam (es. "videotestsrc is-live=true")

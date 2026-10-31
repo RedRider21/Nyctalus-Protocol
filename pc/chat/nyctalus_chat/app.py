@@ -118,6 +118,31 @@ _ITA = {
     "chat.ricezione": "Ricezione",
     "chat.senza_exif": "Foto senza metadati (posizione GPS, fotocamera)",
     "chat.notifiche": "Notifiche sul desktop dei nuovi messaggi",
+    "chat.ch.chiama": "Chiamata vocale",
+    "chat.ch.audio": "Audio",
+    "chat.ch.audio_nota": "Volume e uscita: altoparlante (vivavoce) o cuffie",
+    "chat.ch.video_presto": "Videochiamata: in arrivo",
+    "chat.ch.volume": "Volume di chi parla",
+    "chat.ch.uscita": "Dove ascoltare",
+    "chat.ch.predefinita": "Uscita predefinita del sistema",
+    "chat.ch.q_nessuna": "niente audio",
+    "chat.ch.q_buona": "linea buona",
+    "chat.ch.q_media": "linea discreta",
+    "chat.ch.q_scarsa": "linea scarsa",
+    "chat.ch.muto": "Muto",
+    "chat.ch.riaggancia": "Riaggancia",
+    "chat.ch.gia": "c'è già una chiamata in corso",
+    "chat.ch.senza_audio": "Chiamate non disponibili: manca il supporto audio (GStreamer con Opus)",
+    "chat.ch.finita": "Chiamata terminata",
+    "chat.ch.rifiutata": "Chiamata rifiutata o occupato",
+    "chat.ch.persa": "Chiamata persa",
+    "chat.ch.caduta": "Chiamata caduta: il contatto non è più in linea",
+    "chat.ch.nessuna_risposta": "Nessuna risposta",
+    "chat.ch.chiamo": "Chiamo",
+    "chat.ch.in_arrivo": "Chiamata in arrivo",
+    "chat.ch.ti_chiama": "ti sta chiamando",
+    "chat.ch.rifiuta": "Rifiuta",
+    "chat.ch.rispondi": "Rispondi",
     "chat.sp_spedito": "Spedito",
     "chat.sp_consegnato": "Consegnato",
     "chat.sp_letto": "Letto",
@@ -277,6 +302,12 @@ menu check, menu radio { color: @ACCENT@; }
 .puntini { background: transparent; border: none; box-shadow: none; color: @MUTED@;
            font-size: 20px; padding: 2px 10px; }
 .puntini:hover { color: @TEXT@; background: rgba(@RGB@,0.12); }
+.barra-chiamata { background: rgba(61,220,132,0.14); border-bottom: 1px solid rgba(61,220,132,0.35); }
+.barra-chiamata label { color: @TEXT@; font-weight: 600; }
+.barra-chiamata button { background-color: rgba(@RGB@,0.14); background-image: none; color: @TEXT@; border: none;
+                         border-radius: 9px; padding: 4px 12px; box-shadow: none; }
+.barra-chiamata button.destructive-action { background-color: rgba(214,69,69,0.9); color: #ffffff; }
+.barra-chiamata button:checked { background-color: rgba(214,69,69,0.35); }
 
 /* finestre di dialogo intonate al tema (aggiungi, rinomina, conferme, invio, fotocamera) */
 dialog, messagedialog, dialog > box, messagedialog > box { background-color: @PANEL@; color: @TEXT@; }
@@ -624,6 +655,7 @@ class Chat(Gtk.Window):
         self.letto_inviato = {}  # addr → ultimo «letto» mandato
         self.rubrica = leggi_rubrica_rete()   # indirizzo .nyct della rubrica della rete (se c'è)
         self.fin_rubrica = None
+        self._cmd_blocco = threading.Lock()
         # aperta dal bottone «Rubrica» del mini menu: si mostra solo la rubrica, la finestra
         # della chat compare quando si sceglie qualcuno a cui scrivere
         self.solo_rubrica = bool(os.environ.pop("NYCTALUS_APRI_RUBRICA", ""))
@@ -785,7 +817,11 @@ class Chat(Gtk.Window):
         puntini.connect("clicked", lambda b: self.attivo and self._menu_contatto(self.attivo).popup_at_widget(
             b, Gdk.Gravity.SOUTH_EAST, Gdk.Gravity.NORTH_EAST, None))
         self.testa_conv.pack_end(puntini, False, False, 0)
+        from nyctalus_chat.chiamate import Chiamate
+        self.chiamate = Chiamate(self, _t)                       # 📞 e barra della chiamata
+        self.testa_conv.pack_end(self.chiamate.pulsante, False, False, 0)
         destra.pack_start(self.testa_conv, False, False, 0)
+        destra.pack_start(self.chiamate.barra, False, False, 0)
 
         # pila: stato vuoto / conversazione
         self.pila = Gtk.Stack()
@@ -892,7 +928,8 @@ class Chat(Gtk.Window):
         if not self.sock:
             return
         try:
-            self.sock.sendall((riga + "\n").encode())
+            with self._cmd_blocco:                # anche dal thread della voce (AUD)
+                self.sock.sendall((riga + "\n").encode())
         except Exception:        # noqa: BLE001
             pass
 
@@ -922,6 +959,8 @@ class Chat(Gtk.Window):
             if tipo == "MSG" and len(parti) >= 4:
                 self._risposta_rubrica(_da_hex(parti[3]))
             return False
+        if self.chiamate.evento(tipo, parti):     # chiamate e voce
+            return False
         if tipo == "ME" and len(parti) >= 2:
             self.me = parti[1]
             self.mio_id.set_text(self.me)
@@ -938,6 +977,7 @@ class Chat(Gtk.Window):
                 self.online.add(addr)
             else:
                 self.online.discard(addr)
+                self.chiamate.contatto_offline(addr)
             self._aggiorna_pallino(addr)
             if addr == self.attivo:
                 self._aggiorna_testa()
