@@ -24,8 +24,11 @@ verifica() { # verifica "descrizione" comando...  → PASS se il comando riesce
 }
 
 pulizia() {
-  # un sottoprocesso della prova (es. un comando in sottofondo) che finisce NON deve
-  # cancellare la cartella temporanea: la prova sta ancora girando e la userebbe
+  # Solo il processo principale. Un comando lanciato in sottofondo (cmd &) e fermato con
+  # kill PRIMA di diventare il programma vero ha ancora le trappole della prova: eseguiva
+  # questa pulizia e cancellava la cartella temporanea a metà prova (errori rari e casuali,
+  # trovati nella prova 13 con NYCT_DIAG_PULIZIA=FILE, che annota chi chiama la pulizia).
+  [ -n "${NYCT_DIAG_PULIZIA:-}" ] && echo "$(date +%T) pulizia prova=$NOME_PROVA tmp=$TMP pid=$BASHPID principale=$PRINCIPALE comando=${BASH_COMMAND:-}" >> "$NYCT_DIAG_PULIZIA"
   [ "$BASHPID" = "$PRINCIPALE" ] || return 0
   for p in "${PIDS[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null; done
   sleep 0.3
