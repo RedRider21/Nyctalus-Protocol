@@ -202,6 +202,14 @@ Le chiavi dei singoli salti saranno incorporate nell'intestazione Sphinx: una so
 - Il motore deposita quando il contatto non risponde (o la sonda di presenza lo sa già irraggiungibile) ed emette `OUT` + `CAS <addr> <ts>`.
 - **Spunte:** nella sessione cifrata il destinatario risponde `K <ts>` a ogni testo o allegato ricevuto (anche dalla casella) e `R <ts>` quando l'utente ha letto fino a quell'ora (comando `LETTO <addr> <ts>` dell'interfaccia); le conferme senza sessione aspettano in coda e la sonda di presenza contatta anche chi ne attende. Stati in `stati/<addr>.log` (`1` spedito, `c` casella, `2` consegnato, `3` letto), eventi `SP <addr> <ts> <n>` / `CAS`, rinviati con `HIST`. Un testo senza `K` quando la sessione cade, o dopo 45 s se il contatto conferma di solito, va nella casella con la sua ora originale; il destinatario scarta il doppione (riga identica in cronologia). Le versioni senza spunte ignorano `K`/`R`.
 
+### 6.0-bis Nodi annunciati con un nome (IP dinamico) ✅
+Una voce dell'elenco può essere `nome:porta` (es. `miacasa.ddns.net:4601`). Il client risolve il nome
+(primo IPv4) per collegarsi; nel pacchetto Sphinx il «prossimo salto» verso un nodo con nome si
+codifica **per chiave** (`[6][primi 31 byte della X25519]`): il nodo precedente lo cerca nell'elenco
+firmato e risolve il nome in quel momento. Un cambio di IP non richiede di rifirmare l'elenco; la
+sicurezza resta quella del pinning (chiave + impronta TLS dall'elenco): un DNS falso rende il nodo
+irraggiungibile, non lo sostituisce. Le voci con IP restano codificate come prima (`[4][IPv4][porta]`).
+
 ### 6.1 Ponte verso i siti `.onion` di Tor ✅ (via Tor di sistema)
 ✅ **Implementato** (`motore/nyctalus/src/ponte.rs`): l'uscita riconosce gli indirizzi `.onion` e li raggiunge tramite **un Tor già presente sul sistema**, aprendo un tunnel al suo proxy SOCKS5 (default `127.0.0.1:9050`, opzione `--tor-socks`). Scelta volutamente **leggera**: non si incorpora il client Tor Arti (enorme e da bootstrappare), si riusa il Tor del sistema (es. quello di NexusSec). Dal nodo ponte in poi valgono le regole e la lentezza di Tor. Incorporare Arti come alternativa resta un possibile sviluppo futuro.
 

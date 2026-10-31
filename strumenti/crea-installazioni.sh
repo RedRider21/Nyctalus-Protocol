@@ -14,6 +14,7 @@
 #   │   └── LEGGIMI.txt
 #   ├── Server-Linux/
 #   │   ├── Nyctalus-Server-Linux.zip   solo il motore, per i NODI su un server (VPS)
+#   │   ├── Nyctalus-Server-Linux-arm64.zip   lo stesso per Raspberry Pi / ARM 64 bit
 #   │   └── LEGGIMI.txt
 #   ├── Android/
 #   │   ├── nyctalus-termux.tar.gz      per Termux (si apre senza installare nulla)
@@ -165,6 +166,14 @@ EOF
 mkdir -p "$OUT/Server-Linux"
 crea_zip "$V" "$OUT/Server-Linux/Nyctalus-Server-Linux.zip"
 cp "$V/LEGGIMI.txt" "$OUT/Server-Linux/LEGGIMI.txt"
+# lo stesso pacchetto per i server ARM a 64 bit (Raspberry Pi), se c'è il motore arm64
+# (lo compila GitHub: asset «nyctalus-aarch64-unknown-linux-gnu» della release)
+M_ARM="$ROOT/target/aarch64-unknown-linux-gnu/release/nyctalus"
+if [ -x "$M_ARM" ]; then
+  cp "$M_ARM" "$V/bin/nyctalus"
+  crea_zip "$V" "$OUT/Server-Linux/Nyctalus-Server-Linux-arm64.zip"
+  say "Server-Linux: anche il pacchetto arm64 (Raspberry Pi)"
+fi
 
 # ============================== Android ==============================
 say "Android: assemblo il pacchetto per Termux"
@@ -241,6 +250,7 @@ Nyctalus — cosa installare e dove
   PC Linux (x86_64)     PC-Linux/    Nyctalus-PC-Linux.zip          scompatta → ./installa.sh
                                                                      (chiede: client, gestore o nodo)
   Server / VPS (nodi)   Server-Linux/ Nyctalus-Server-Linux.zip     sul server: sudo ./installa.sh
+  Raspberry Pi (nodi)   Server-Linux/ Nyctalus-Server-Linux-arm64.zip  idem
   Telefono Android      Android/     nyctalus-termux.tar.gz (+APK)  in Termux → installa.sh
   Tutto in un colpo     —            Nyctalus-completo.zip          contiene tutte le cartelle
 

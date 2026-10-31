@@ -17,7 +17,9 @@
 //! nel nonce, così andata e ritorno non riusano mai lo stesso keystream.
 //! (L'ID di circuito esplicito per tratta arriverà con la multiplazione, punto D.)
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::collections::HashSet;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs};
+use std::sync::Mutex;
 
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
@@ -37,6 +39,40 @@ pub fn codifica_indirizzo(indirizzo: SocketAddr) -> Risultato<[u8; 32]> {
     byte[1..5].copy_from_slice(&ip.octets());
     byte[5..7].copy_from_slice(&indirizzo.port().to_be_bytes());
     Ok(byte)
+}
+
+/// Nodi dell'elenco annunciati con un NOME (es. `miacasa.ddns.net:4601`, IP dinamico): per
+/// loro il «prossimo salto» nel pacchetto Sphinx non è l'IP ma la chiave X25519 del nodo, che
+/// il nodo precedente cerca nell'elenco firmato e risolve al momento (l'IP può cambiare).
+static PER_NOME: Mutex<Option<HashSet<[u8; 32]>>> = Mutex::new(None);
+
+/// Tipo dell'indirizzo «per chiave»: `[6][primi 31 byte della chiave X25519]`.
+pub const PER_CHIAVE: u8 = 6;
+
+/// Indirizzo di una voce dell'elenco: IP così com'è, oppure un nome risolto ORA (si prende il
+/// primo indirizzo IPv4). Le voci con un nome vengono ricordate per codificarle «per chiave».
+pub fn risolvi_voce(indirizzo: &str, x25519: &[u8; 32]) -> Risultato<SocketAddr> {
+    if let Ok(a) = indirizzo.parse::<SocketAddr>() {
+        return Ok(a);
+    }
+    let a = indirizzo
+        .to_socket_addrs()
+        .map_err(|e| format!("{indirizzo}: nome non risolto ({e})"))?
+        .find(SocketAddr::is_ipv4)
+        .ok_or_else(|| format!("{indirizzo}: nessun indirizzo IPv4"))?;
+    PER_NOME.lock().unwrap().get_or_insert_with(HashSet::new).insert(*x25519);
+    Ok(a)
+}
+
+/// Il «prossimo salto» di un nodo del percorso: per IP, o per chiave se annunciato per nome.
+pub fn codifica_nodo(indirizzo: SocketAddr, x25519: &[u8; 32]) -> Risultato<[u8; 32]> {
+    if PER_NOME.lock().unwrap().as_ref().is_some_and(|s| s.contains(x25519)) {
+        let mut byte = [0u8; 32];
+        byte[0] = PER_CHIAVE;
+        byte[1..].copy_from_slice(&x25519[..31]);
+        return Ok(byte);
+    }
+    codifica_indirizzo(indirizzo)
 }
 
 /// Decodifica l'indirizzo prodotto da [`codifica_indirizzo`].

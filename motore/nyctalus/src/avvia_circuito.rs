@@ -25,7 +25,7 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 
 use crate::cella::{cmd, Cella};
-use crate::circuito_rete::{BIT_RISPOSTA, codifica_indirizzo, leggi_quadro, scrivi_quadro};
+use crate::circuito_rete::{BIT_RISPOSTA, codifica_nodo, leggi_quadro, scrivi_quadro};
 use crate::conflux::{self, Riordina};
 use crate::Risultato;
 
@@ -88,7 +88,7 @@ pub async fn avvia_circuito(
     for percorso in &percorsi {
         let nodi_sphinx: Vec<NodoPercorso> = percorso
             .iter()
-            .map(|(a, p, _)| Ok(NodoPercorso { indirizzo: codifica_indirizzo(*a)?, pubblica: *p }))
+            .map(|(a, p, _)| Ok(NodoPercorso { indirizzo: codifica_nodo(*a, p)?, pubblica: *p }))
             .collect::<Risultato<_>>()?;
         let circuito = apri_circuito(&nodi_sphinx, b"nyctalus")?;
         let chiavi: Chiavi = Arc::new(circuito.chiavi_salto);

@@ -44,7 +44,7 @@ pub async fn elenca(
         let x = &crate::in_esadecimale(&v.x25519)[..12];
         let fp = &crate::in_esadecimale(&v.impronta_tls)[..12];
         let stato = if sonda {
-            match v.indirizzo.parse::<SocketAddr>() {
+            match crate::circuito_rete::risolvi_voce(&v.indirizzo, &v.x25519) {
                 Ok(addr) => match sonda_nodo(addr, v.impronta_tls, offusca, scadenza).await {
                     Ok(rtt) => {
                         online += 1;

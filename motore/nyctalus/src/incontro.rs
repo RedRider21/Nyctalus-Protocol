@@ -37,7 +37,7 @@ use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::avvia_circuito::NodoRete;
-use crate::circuito_rete::{codifica_indirizzo, leggi_quadro, scrivi_quadro, BIT_RISPOSTA};
+use crate::circuito_rete::{codifica_nodo, leggi_quadro, scrivi_quadro, BIT_RISPOSTA};
 use crate::Risultato;
 
 /// Marca che, tolto lo strato del nodo, distingue un controllo del punto
@@ -248,7 +248,7 @@ async fn canale_diretto(nodo: &NodoRete, offusca: Option<[u8; 32]>) -> Risultato
 async fn canale_onion(percorso: &[NodoRete], offusca: Option<[u8; 32]>) -> Risultato<Canale> {
     let nodi: Vec<NodoPercorso> = percorso
         .iter()
-        .map(|(a, pubblica, _)| Ok(NodoPercorso { indirizzo: codifica_indirizzo(*a)?, pubblica: *pubblica }))
+        .map(|(a, pubblica, _)| Ok(NodoPercorso { indirizzo: codifica_nodo(*a, pubblica)?, pubblica: *pubblica }))
         .collect::<Risultato<_>>()?;
     let circuito = apri_circuito(&nodi, b"nyctalus rendezvous")?;
 

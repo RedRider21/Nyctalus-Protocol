@@ -105,6 +105,18 @@ fn impronta_attesa(auth: &Autenticazione, indirizzo: SocketAddr) -> Risultato<[u
         .ok_or_else(|| format!("node {indirizzo} not in the signed directory").into())
 }
 
+/// Il nodo dell'elenco firmato con quella chiave (primi 31 byte): indirizzo risolto ora e impronta TLS.
+async fn nodo_per_chiave(auth: &Autenticazione, chiave: &[u8]) -> Risultato<(SocketAddr, [u8; 32])> {
+    let testo = std::fs::read_to_string(&auth.elenco)?;
+    let voci = nyctalus_core::elenco::verifica_elenco(&testo, &auth.autorita)?;
+    let v = voci.into_iter().find(|v| v.x25519[..31] == *chiave).ok_or("next hop not in the signed directory")?;
+    let addr = tokio::net::lookup_host(v.indirizzo.as_str())
+        .await?
+        .find(SocketAddr::is_ipv4)
+        .ok_or_else(|| format!("{}: no IPv4 address", v.indirizzo))?;
+    Ok((addr, v.impronta_tls))
+}
+
 async fn gestisci_circuito(
     connessione: quinn::Connection,
     mut invio_monte: quinn::SendStream,
@@ -126,11 +138,20 @@ async fn gestisci_circuito(
 
     match elaborazione.passo {
         PassoNodo::Inoltra { prossimo_indirizzo, pacchetto } => {
-            let prossimo = crate::circuito_rete::decodifica_indirizzo(&prossimo_indirizzo)?;
-            // Autentica il nodo a valle se abbiamo un elenco firmato.
-            let impronta = match auth {
-                Some(a) => Some(impronta_attesa(a, prossimo)?),
-                None => None,
+            // Il nodo a valle: per IP, oppure per chiave (annunciato con un nome → si cerca
+            // nell'elenco firmato e si risolve adesso, così un IP dinamico non lo rende irraggiungibile).
+            let (prossimo, impronta) = if prossimo_indirizzo[0] == crate::circuito_rete::PER_CHIAVE {
+                let a = auth.as_ref().ok_or("next hop by key requires the signed directory (--directory)")?;
+                let (addr, fp) = nodo_per_chiave(a, &prossimo_indirizzo[1..]).await?;
+                (addr, Some(fp))
+            } else {
+                let prossimo = crate::circuito_rete::decodifica_indirizzo(&prossimo_indirizzo)?;
+                // Autentica il nodo a valle se abbiamo un elenco firmato.
+                let impronta = match auth {
+                    Some(a) => Some(impronta_attesa(a, prossimo)?),
+                    None => None,
+                };
+                (prossimo, impronta)
             };
             // `_endpoint` va tenuto in vita per tutta la durata del circuito.
             let (_endpoint, mut invio_valle, mut ricezione_valle) = collega_valle(prossimo, pacchetto, impronta, offusca).await?;

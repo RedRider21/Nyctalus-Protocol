@@ -343,7 +343,18 @@ pub(crate) fn da_esadecimale(testo: &str) -> Risultato<[u8; 32]> {
 fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_circuito::NodoRete>> {
     let testo = std::fs::read_to_string(percorso)?;
     let voci = nyctalus_core::elenco::verifica_elenco(&testo, &autorita)?;
-    voci.into_iter().map(|v| Ok((v.indirizzo.parse()?, v.x25519, Some(v.impronta_tls)))).collect()
+    // un nodo col nome che ora non si risolve (es. casa spenta) si salta: la rete funziona con gli altri
+    let mut nodi = Vec::new();
+    for v in voci {
+        match circuito_rete::risolvi_voce(&v.indirizzo, &v.x25519) {
+            Ok(a) => nodi.push((a, v.x25519, Some(v.impronta_tls))),
+            Err(e) => eprintln!("nodo saltato: {e}"),
+        }
+    }
+    if nodi.is_empty() {
+        return Err("nessun nodo raggiungibile nell'elenco".into());
+    }
+    Ok(nodi)
 }
 
 /// Override manuale del punto d'incontro (`--rendezvous` + `--fingerprint`): se

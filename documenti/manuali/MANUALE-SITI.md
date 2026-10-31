@@ -43,6 +43,14 @@ nyctalus-sito avvia mio-sito
 Indirizzi diversi da `127.0.0.1` vengono rifiutati: il server web non deve essere
 raggiungibile da Internet, solo da Nyctalus.
 
+**Con Apache** (o nginx) è come la solita cartella `www`, con tre regole:
+1. un `VirtualHost` **solo su `127.0.0.1:8080`** (`Listen 127.0.0.1:8080`): se lo stesso sito fosse
+   raggiungibile anche da Internet, chiunque potrebbe collegare il `.nyct` al tuo IP;
+2. `ServerTokens Prod` e `ServerSignature Off`: il server non dice nome e versione;
+3. nel sito niente indirizzi assoluti verso altri domini o verso il tuo IP.
+
+Apache vede tutte le visite come da `127.0.0.1`: non sa chi sta visitando.
+
 ## 4. Su quale rete
 Di solito su quella di questo computer, cioè quella importata con `nyctalus-rete importa`
 o accesa con `nyctalus-rete casa`. Su un server che non usa la chat si passa il codice della
