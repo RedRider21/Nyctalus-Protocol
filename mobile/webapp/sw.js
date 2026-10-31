@@ -3,7 +3,7 @@
 // Service worker: PRIMA LA RETE per l'interfaccia (gli aggiornamenti si vedono
 // subito), copia in cache solo come riserva. Le API e il WebSocket non passano
 // mai dalla cache.
-const CACHE = "nyctalus-v14";
+const CACHE = "nyctalus-v16";
 const GUSCIO = ["/", "/index.html", "/app.js", "/emoji.js", "/stile.css", "/logo.svg", "/sfondo-scuro.svg",
                 "/sfondo-chiaro.svg", "/manifest.webmanifest", "/icone/icona-192.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(GUSCIO)).catch(() => {})); self.skipWaiting(); });

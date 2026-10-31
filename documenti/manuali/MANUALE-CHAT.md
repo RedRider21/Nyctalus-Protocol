@@ -98,6 +98,11 @@ riportano all'avvio). La chat si apre solo quando scegli qualcuno a cui scrivere
   ne autentica il mittente: nessuno può iscriversi a nome tuo. La rubrica conserva solo
   l'elenco degli iscritti (nome, indirizzo), non la cronologia delle richieste.
 - Per farsi vedere in linea, la chat di chi è iscritto saluta la rubrica ogni 3 minuti.
+- Sul telefono la rubrica dice sempre cosa sta facendo: «Leggo la rete in uso…», «Chiedo
+  l'elenco…»; se dopo 15 secondi non ha risposta avvisa che la prima volta il collegamento può
+  richiedere fino a un minuto. Dopo 90 secondi, o se la rete in uso non ha una rubrica, spiega
+  il motivo e offre **⟳ Riprova**. Una rete importata con un codice vecchio non ha la rubrica:
+  ricollega il telefono con «📲 Collega l'app».
 
 **In arrivo:** la *casella cifrata*, per lasciare un messaggio anche a chi non è in linea
 (lo riceve quando si collega).

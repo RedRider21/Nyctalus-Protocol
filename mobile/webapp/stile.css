@@ -274,4 +274,5 @@ body.solo-rubrica #foglio .maniglia { display: none; }
 body.solo-rubrica #foglio .titolo { display: flex; align-items: center; gap: 10px; font-size: 18px; padding: 8px 12px 12px; }
 body.solo-rubrica #foglio .rubrica { max-height: none; }
 body.solo-rubrica #velo { background: var(--panel); }
+.riprova-rubrica { margin-top: 12px; width: 100%; padding: 11px; border: 0; border-radius: 12px; background: rgba(var(--rgb), .16); color: var(--testo); font-weight: 600; font-size: 15px; }
 .indietro-rubrica { background: none; border: 0; color: var(--testo); font-size: 22px; padding: 2px 10px; border-radius: 50%; }

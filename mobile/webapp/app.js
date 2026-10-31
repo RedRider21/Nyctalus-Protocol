@@ -127,7 +127,15 @@ function connetti() {
     if (S.elencoInAttesa) { S.elencoInAttesa = false; chiediRubrica({ op: "elenco" }); }
   };
   ws.onmessage = (ev) => ev.data.split("\n").forEach((r) => r && evento(r));
-  ws.onclose = () => { S.ws = null; setTimeout(controllaServizi, 1500); };
+  // se il motore non risponde si ritenta sempre più di rado (1,5 s → 30 s), non a raffica
+  ws.onclose = () => { S.ws = null; setTimeout(controllaServizi, S.ritardoWs); S.ritardoWs = Math.min(S.ritardoWs * 2, 30000); };
+}
+S.ritardoWs = 1500; S.motoreGiu = false;
+// il motore della chat non risponde: lo si dice UNA volta nella barra in alto, non in chat
+function segnalaMotoreGiu() {
+  S.motoreGiu = true;
+  $("stato-rete").classList.remove("nascosto");
+  $("stato-testo").textContent = "⚠ La chat non riesce a parlare con Nyctalus: ritento da sola…";
 }
 const manda = (riga) => { if (S.ws && S.ws.readyState === 1) S.ws.send(riga); };
 
@@ -136,7 +144,9 @@ async function controllaServizi() {
   try { info = await (await fetch("/api/stato")).json(); } catch (e) { return setTimeout(controllaServizi, 2000); }
   const barra = $("stato-rete"), testo = $("stato-testo"), btn = $("btn-avvia");
   btn.classList.add("nascosto");
-  if (info.stato === "pronto") {
+  if (info.stato === "pronto" && S.motoreGiu) {
+    barra.classList.remove("nascosto");            // resta l'avviso finché il motore non risponde
+  } else if (info.stato === "pronto") {
     barra.classList.toggle("nascosto", info.modalita !== "locale");
     testo.textContent = "Rete di prova LOCALE: per parlare con altre persone importa un codice di rete (⚙ → Rete condivisa)";
   } else if (info.stato === "avvio") {
@@ -175,22 +185,41 @@ function esciSoloRubrica() {
   if (HOST && HOST.rubrica) HOST.rubrica(false);   // l'app: il tasto indietro torna a valere per la chat
 }
 async function leggiRubrica() {
+  let letta = true;
   try {
     const r = await (await fetch("/api/rete")).json();
     S.rubrica = r.rubrica || "";
-  } catch (e) { S.rubrica = ""; }
+  } catch (e) { S.rubrica = ""; letta = false; }
   $("btn-rubrica").classList.toggle("nascosto", !S.rubrica);
   if (S.rubrica && localStorage.getItem("nyct-iscritto-" + S.rubrica)) chiediRubrica({ op: "ci_sono" });
-  const box = document.querySelector("#foglio .rubrica");
-  if (S.soloRubrica && box && !S.rubricaDati) {        // la sola rubrica aspettava la rete
+  if (S.attesaRete) {                              // la rubrica aperta aspettava di conoscere la rete
+    S.attesaRete = false;
     if (S.rubrica) chiediElenco();
-    else box.textContent = "Questa rete non ha una rubrica. Ce l'ha la rete di casa: vedi «🔗 Rete» nella schermata d'avvio.";
+    else if (!letta) statoRubrica("Il servizio Nyctalus non risponde. Torna indietro e attendi «● Nyctalus è pronto».", true);
+    else statoRubrica("La rete in uso non ha una rubrica. Ce l'ha la rete di casa: sul PC riaccendi «nyctalus-rete casa» e ricollega il telefono con «📲 Collega l'app» (il codice di rete vecchio non contiene la rubrica).", true);
+  }
+}
+// Cosa sta facendo la rubrica aperta, con «Riprova» quando serve: mai una scritta ferma per sempre.
+function statoRubrica(testo, riprova) {
+  const box = document.querySelector("#foglio .rubrica");
+  if (!box || S.rubricaDati) return;
+  box.textContent = "";
+  box.appendChild(el("div", "nota-rete", testo));
+  if (riprova) {
+    const b = el("button", "riprova-rubrica", "⟳ Riprova");
+    b.onclick = () => apriRubrica(S.soloRubrica);
+    box.appendChild(b);
   }
 }
 function chiediElenco() {
+  const giro = ++S.giroRubrica;                    // un nuovo tentativo annulla gli avvisi del precedente
+  statoRubrica("Chiedo l'elenco alla rubrica…");
   if (S.ws && S.ws.readyState === 1) chiediRubrica({ op: "elenco" });
   else S.elencoInAttesa = true;                    // si chiede appena la chat è collegata
+  setTimeout(() => { if (giro === S.giroRubrica) statoRubrica("La rubrica non ha ancora risposto: la prima volta il collegamento attraverso la rete può richiedere fino a un minuto…"); }, 15000);
+  setTimeout(() => { if (giro === S.giroRubrica) statoRubrica("La rubrica non risponde. Controlla che sul PC la rete di casa («nyctalus-rete casa») sia accesa, poi riprova.", true); }, 90000);
 }
+S.giroRubrica = 0;
 function chiediRubrica(obj) { if (S.rubrica) manda("SEND " + S.rubrica + " " + inHex(JSON.stringify(obj))); }
 setInterval(() => { if (S.rubrica && localStorage.getItem("nyct-iscritto-" + S.rubrica)) chiediRubrica({ op: "ci_sono" }); }, 180000);
 
@@ -208,12 +237,13 @@ function apriRubrica(solo) {
   if (!S.rubrica && !solo) return toast("Questa rete non ha una rubrica");
   if (solo) { S.soloRubrica = true; document.body.classList.add("solo-rubrica"); if (HOST && HOST.rubrica) HOST.rubrica(true); }
   S.rubricaDati = null;
-  apriFoglio("👥 Rubrica della rete", [el("div", "rubrica", S.rubrica ? "Chiedo l'elenco alla rubrica…" : "Collegamento alla rete…")]);
+  apriFoglio("👥 Rubrica della rete", [el("div", "rubrica", "")]);
   if (solo) {
     const ind = el("button", "indietro-rubrica", "←"); ind.onclick = chiudiFoglio;
     document.querySelector("#foglio .titolo").prepend(ind);
   }
   if (S.rubrica) chiediElenco();
+  else { S.attesaRete = true; statoRubrica("Leggo la rete in uso…"); leggiRubrica(); }
 }
 function disegnaRubrica() {
   const box = document.querySelector("#foglio .rubrica");
@@ -264,7 +294,11 @@ function evento(riga) {
   const p = riga.split(" "), t = p[0];
   // la rubrica della rete parla con noi in JSON: non è una conversazione, non va in cronologia
   if (S.rubrica && p[1] === S.rubrica) { if (t === "MSG") rispostaRubrica(daHex(p[3])); return; }
-  if (t === "ME") { S.me = p[1]; $("mio-id-valore").textContent = S.me; }
+  if (t === "ME") {
+    S.me = p[1]; $("mio-id-valore").textContent = S.me;
+    if (S.motoreGiu) { S.motoreGiu = false; controllaServizi(); }   // di nuovo collegati
+    S.ritardoWs = 1500;
+  }
   else if (t === "C") { aggiornaContatto(p[1], p[2] ? daHex(p[2]) : p[1].slice(0, 10)); cacheContatto(p[1]); }
   else if (t === "L") { anteprima(p[1], p.slice(2).join(" ")); cacheContatto(p[1]); }
   else if (t === "ST") {
@@ -288,6 +322,11 @@ function evento(riga) {
   else if (t === "PROG" && p[1] === S.attivo) avanzamento(p[2], p[3], +p[4], +p[5], p[6] || "", p[7] ? daHex(p[7]) : "");
   else if (t === "FERR" && p[1] === S.attivo) { togliTrasferimento(p[2]); avviso("⚠ " + daHex(p[3])); }
   else if (t === "NEW" && !S.contatti.has(p[1])) dialogoAggiungi(p[1], "Qualcuno ti ha scritto da un indirizzo che non è in rubrica. Aggiungilo per rispondere.");
+  else if (t === "ERR" && S.giroRubrica && !S.rubricaDati && document.querySelector("#foglio .rubrica")) {
+    S.giroRubrica++;                               // la richiesta alla rubrica non è partita: lo si dice lì
+    statoRubrica("La rubrica non è raggiungibile: " + erroreLeggibile(riga.slice(4)), true);
+  }
+  else if (t === "ERR" && /motore non raggiungibile/.test(riga)) segnalaMotoreGiu();
   else if (t === "ERR") avviso(erroreLeggibile(riga.slice(4)));
   else if (t === "ENDC") {   // collegamento diretto: #chat=<indirizzo> apre quella conversazione
     const m = location.hash.match(/chat=([a-z2-7]{56}\.nyct)/);
@@ -518,7 +557,12 @@ function avanzamento(dir, id, fatti, totale, mime, nome) {
   t.dett.textContent = (dir === "out" ? "Invio " : "Ricezione ") + dimensione(fatti) + " / " + dimensione(totale);
 }
 function togliTrasferimento(id) { const t = S.trasferimenti.get(id); if (t) { t.riga.remove(); S.trasferimenti.delete(id); } }
-function avviso(testo) { const a = el("div", "avviso", testo); $("messaggi").appendChild(a); }
+// un avviso uguale a uno già mostrato lo sostituisce (resta in fondo, uno solo): niente sfilze
+function avviso(testo) {
+  const m = $("messaggi");
+  m.querySelectorAll(".avviso").forEach((a) => { if (a.textContent === testo) a.remove(); });
+  m.appendChild(el("div", "avviso", testo));
+}
 
 async function apriFile(percorso, mime) {
   if (!apribile(mime)) return toast("Per sicurezza questo tipo di file non si apre da qui");

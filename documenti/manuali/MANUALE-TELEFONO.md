@@ -94,6 +94,11 @@ Nyctalus**: il pulsante **🦇** a sinistra della barra, oppure la voce in cima 
 **Pressione lunga su una chat** → menu: Apri · Segna come letto/non letto · Fissa in
 alto · Rinomina · Copia il Contact ID · **Cancella cronologia** · **Elimina la chat**.
 
+**Avvisi senza ripetizioni.** Se lo stesso errore si ripete (per esempio il PC con la rete di
+casa è spento), in chat resta **un solo avviso**, il più recente. Se è la chat stessa a non
+raggiungere Nyctalus, lo dice la barra in alto: «⚠ La chat non riesce a parlare con
+Nyctalus: ritento da sola…». I tentativi si fanno sempre più radi, fino a uno ogni 30 secondi.
+
 ## 3. La conversazione
 
 - Tocca una chat per aprirla; **←** (o il tasto Indietro) torna all'elenco.

@@ -64,11 +64,13 @@ cat > "$TMP/passi.json" <<EOF
  ["foto","${NYCT_FOTO:-$TMP}/chat-dopo-galleria.png"],
  ["js","(()=>{apriEmoji(); const b=document.querySelectorAll('.griglia-emoji button'); const n=b.length; b[0].click(); const ok=document.getElementById('testo').value.length>0; chiudiFoglio(); document.getElementById('testo').value=''; return 'EMOJI '+n+' '+ok})()"],
  ["js","(()=>{evento('ST '+S.attivo+' 0'); return 'VISTO '+document.getElementById('testa-stato').textContent})()"],
+ ["js","(()=>{const n0=document.querySelectorAll('#messaggi .avviso').length; for(let i=0;i<5;i++) evento('ERR motore non raggiungibile'); const n1=document.querySelectorAll('#messaggi .avviso').length; for(let i=0;i<3;i++) evento('ERR SOCKS: connessione rifiutata'); const n2=document.querySelectorAll('#messaggi .avviso').length; const bar=!document.getElementById('stato-rete').classList.contains('nascosto'); S.motoreGiu=false; return 'SFILZA '+(n1-n0)+','+(n2-n1)+','+bar})()"],
  ["js","impostazioni(); 'impostazioni'"],["finche","document.querySelector('.stato-rete-imp') && document.querySelector('.stato-rete-imp').dataset.fase !== 'avvio'",10],
  ["js","(()=>{const b=[...document.querySelectorAll('#dialogo .pulsanti button')]; const a=b.find(x=>x.textContent.includes('Avvia')), f=b.find(x=>x.textContent.includes('Ferma')); return 'RETE ' + document.querySelector('.stato-rete-imp').dataset.fase + ',' + a.disabled + ',' + f.disabled})()"],
  ["foto","${NYCT_FOTO:-$TMP}/impostazioni.png"],
  ["vai","$U/?avvio=1#rubrica"],["attendi",2],
  ["js","(()=>{const f=document.getElementById('foglio'), r=f.getBoundingClientRect(); return 'SOLO ' + document.body.classList.contains('solo-rubrica') + ',' + !f.classList.contains('nascosto') + ',' + (r.top===0 && r.height>=innerHeight-1) + ',' + !!f.querySelector('.indietro-rubrica')})()"],
+ ["js","(()=>{const b=document.querySelector('#foglio .rubrica'); return 'SENZA ' + (b.textContent.includes('non ha una rubrica') && !!b.querySelector('.riprova-rubrica'))})()"],
  ["js","(()=>{S.rubrica='rubricaprova.nyct'; S.rubricaDati={op:'elenco',iscritto:false,utenti:[{a:'$BOB',n:'Bob',on:true,v:0},{a:'altro.nyct',n:'Carla',on:false,v:Math.floor(Date.now()/1000)-3600}]}; disegnaRubrica(); return 'UTENTI ' + document.querySelectorAll('#foglio .rubrica-utente').length})()"],
  ["foto","${NYCT_FOTO:-$TMP}/rubrica.png"],
  ["js","(()=>{document.querySelector('#foglio .rubrica-utente').click(); return 'SCRIVI ' + document.body.classList.contains('solo-rubrica') + ',' + document.getElementById('foglio').classList.contains('nascosto') + ',' + (S.attivo==='$BOB')})()"]]
@@ -94,8 +96,10 @@ Q=$(r QUADRATE); [ -n "$Q" ] && [ "${Q%%/*}" = "$(echo "$Q" | cut -d/ -f2 | cut 
 [ "$(r NUOVE)" -ge 4 ] && pass "le 2 foto della galleria inviate e ricevute" || fail "foto dalla galleria: $(r NUOVE)"
 r VISTO | grep -q "^ultimo accesso oggi alle" && pass "telefono: «ultimo accesso» quando il contatto esce (anche con motore vecchio)" || fail "ultimo accesso sul telefono: $(r VISTO)"
 E=$(r EMOJI); [ "${E%% *}" -ge 50 ] 2>/dev/null && [ "${E##* }" = true ] && pass "pannello emoticon: $(echo "$E" | cut -d' ' -f1) emoticon, si inseriscono nel testo" || fail "emoticon: $E"
+[ "$(r SFILZA)" = "0,1,true" ] && pass "errori ripetuti: un solo avviso (motore giù → barra in alto, non 30 righe in chat)" || fail "sfilza di errori: $(r SFILZA)"
 [ "$(r RETE)" = "pronto,true,false" ] && pass "impostazioni: rete «attiva», «Avvia» spento e «Ferma» acceso" || fail "pulsanti della rete: $(r RETE)"
 [ "$(r SOLO)" = "true,true,true,true" ] && pass "riquadro «Rubrica» (#rubrica): la sola rubrica a tutto schermo, con «←»" || fail "sola rubrica: $(r SOLO)"
+[ "$(r SENZA)" = "true" ] && pass "rete senza rubrica: lo dice e propone «Riprova» (niente scritta ferma)" || fail "rubrica su rete senza rubrica: $(r SENZA)"
 [ "$(r UTENTI)" = "2" ] && pass "rubrica: elenco degli iscritti disegnato" || fail "rubrica: $(r UTENTI)"
 [ "$(r SCRIVI)" = "false,true,true" ] && pass "dalla rubrica, scegliendo qualcuno si esce dalla rubrica e si apre la conversazione" || fail "scrivi dalla rubrica: $(r SCRIVI)"
 [ "$KO" -eq 0 ]
