@@ -102,7 +102,9 @@ riportano all'avvio). La chat si apre solo quando scegli qualcuno a cui scrivere
   l'elenco…»; se dopo 15 secondi non ha risposta avvisa che la prima volta il collegamento può
   richiedere fino a un minuto. Dopo 90 secondi, o se la rete in uso non ha una rubrica, spiega
   il motivo e offre **⟳ Riprova**. Una rete importata con un codice vecchio non ha la rubrica:
-  ricollega il telefono con «📲 Collega l'app».
+  ricollega il telefono con «📲 Collega l'app». Lo stesso vale se hai aggiornato da una
+  versione fino alla 0.20: il servizio vecchio, rimasto acceso, aveva tolto la rubrica dal
+  codice. Ricollega una volta dopo l'aggiornamento.
 
 **In arrivo:** la *casella cifrata*, per lasciare un messaggio anche a chi non è in linea
 (lo riceve quando si collega).

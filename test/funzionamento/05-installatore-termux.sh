@@ -47,6 +47,13 @@ T bash "$A/installa.sh" --avvio-automatico > "$TMP/i3.log" 2>&1
 T bash "$H/nyctalus/nyctalus-mobile" --sfondo
 sleep 4
 T bash "$H/nyctalus/nyctalus-mobile" --stato | grep -q "In esecuzione" && pass "nyctalus-mobile --sfondo / --stato" || fail "non risulta in esecuzione"
+# aggiornamento con il servizio acceso: deve ripartire con la versione nuova
+PID1=$(cat "$H/.nyctalus-mobile/pid")
+T bash "$A/installa.sh" > "$TMP/i4.log" 2>&1; sleep 3
+PID2=$(cat "$H/.nyctalus-mobile/pid" 2>/dev/null)
+! kill -0 "$PID1" 2>/dev/null && [ -n "$PID2" ] && [ "$PID2" != "$PID1" ] && T bash "$H/nyctalus/nyctalus-mobile" --stato | grep -q "In esecuzione" \
+  && grep -q "Servizio riavviato" "$TMP/i4.log" \
+  && pass "aggiornamento: il servizio acceso viene riavviato (niente versione vecchia in memoria)" || fail "servizio non riavviato: $PID1 → $PID2 $(tail -2 "$TMP/i4.log")"
 T bash "$H/nyctalus/nyctalus-mobile" --ferma > /dev/null; sleep 1.5
 T bash "$H/nyctalus/nyctalus-mobile" --stato | grep -q "Fermo" && pass "nyctalus-mobile --ferma" || fail "non si è fermato"
 

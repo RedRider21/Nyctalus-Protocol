@@ -48,6 +48,20 @@ if manca ffmpeg; then
 fi
 
 # --- 2) copia dei file in ~/nyctalus -----------------------------------------------
+# Aggiornamento con il servizio acceso: lo si ferma PRIMA di copiare. Altrimenti il motore
+# in uso non si può sovrascrivere («Text file busy», l'installazione si fermava a metà) e in
+# memoria resterebbe la versione vecchia (es. non conoscerebbe la rubrica della rete).
+ERA_ACCESO=0
+if [ -x "$DEST/nyctalus-mobile" ] && bash "$DEST/nyctalus-mobile" --stato 2>/dev/null | grep -q "In esecuzione"; then ERA_ACCESO=1; fi
+SERVIZIO="^python[0-9.]* $DEST/orchestratore/nyctalus_mobile\.py"     # solo il NOSTRO processo Python
+if pgrep -f "$SERVIZIO" >/dev/null 2>&1; then ERA_ACCESO=1; fi
+if [ "$ERA_ACCESO" = 1 ]; then
+  say "Fermo il servizio Nyctalus acceso (ripartirà alla fine, aggiornato)"
+  bash "$DEST/nyctalus-mobile" --ferma >/dev/null 2>&1 || true
+  pkill -f "$SERVIZIO" 2>/dev/null || true
+  sleep 3
+fi
+
 say "Copio Nyctalus in $DEST"
 mkdir -p "$DEST/bin"
 rm -rf "$DEST/orchestratore" "$DEST/webapp"
@@ -57,7 +71,7 @@ chmod +x "$DEST/nyctalus-mobile" "$DEST/disinstalla.sh"
 
 # --- 3) il motore: già pronto nell'archivio, oppure compilato qui ------------------
 if [ -x "$QUI/bin/nyctalus" ]; then
-  cp "$QUI/bin/nyctalus" "$DEST/bin/nyctalus"
+  cp "$QUI/bin/nyctalus" "$DEST/bin/nyctalus.nuovo" && mv -f "$DEST/bin/nyctalus.nuovo" "$DEST/bin/nyctalus"
   ok "Motore precompilato installato"
 else
   STAMPA="$(cd "$QUI/sorgenti" && find . -type f -name '*.rs' -o -name 'Cargo.*' | sort | xargs cat | sha256sum | cut -c1-16)"
@@ -67,7 +81,7 @@ else
     say "Compilo il motore per il telefono (la prima volta richiede 10-30 minuti)…"
     rm -rf "$DEST/sorgenti"; cp -r "$QUI/sorgenti" "$DEST/sorgenti"
     ( cd "$DEST/sorgenti" && CARGO_TARGET_DIR="$DEST/.compilazione" cargo build --release -p nyctalus )
-    cp "$DEST/.compilazione/release/nyctalus" "$DEST/bin/nyctalus"
+    cp "$DEST/.compilazione/release/nyctalus" "$DEST/bin/nyctalus.nuovo" && mv -f "$DEST/bin/nyctalus.nuovo" "$DEST/bin/nyctalus"
     echo "$STAMPA" > "$DEST/bin/.sorgenti"
     ok "Motore compilato"
   fi
@@ -100,6 +114,11 @@ if [ "$AVVIO_AUTO" = 1 ]; then
   printf '#!/data/data/com.termux/files/usr/bin/sh\n# Nyctalus: avvio all accensione (Termux:Boot)\ntermux-wake-lock\n%s/nyctalus-mobile --sfondo\n' "$DEST" > "$HOME/.termux/boot/nyctalus-mobile"
   chmod +x "$HOME/.termux/boot/nyctalus-mobile"
   ok "Avvio automatico: ~/.termux/boot/nyctalus-mobile (serve l'app Termux:Boot)"
+fi
+
+# --- 7) aggiornamento: se il servizio era acceso, riparte con la versione nuova -----
+if [ "$ERA_ACCESO" = 1 ]; then
+  bash "$DEST/nyctalus-mobile" --sfondo && ok "Servizio riavviato con la versione nuova"
 fi
 
 echo
