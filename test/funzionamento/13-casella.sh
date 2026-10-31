@@ -38,6 +38,10 @@ SA=annasegreto0123456789abcdef01; SB=brunosegreto0123456789abcdef0
 utente bruno 20650 "$SB"; BRUNO=$ADDR; kill $RETE_PID $CHAT_PID $SITE_PID 2>/dev/null; sleep 1
 utente anna 20640 "$SA"; ANNA=$ADDR
 sleep 6
+# la casella deve essere registrata in rete prima di depositare (appena accesa può non esserlo)
+for _ in $(seq 1 30); do
+  curl -sf --max-time 20 --socks5-hostname 127.0.0.1:20640 "http://$CAS/" > /dev/null && break; sleep 3
+done
 TESTO="Ciao Bruno, te lo lascio nella casella"
 R=$(NYCT_FINO="^(CAS|ERR) " controllo 20642 "$SA" 200 SUB "ADD $BRUNO $(printf Bruno | xxd -p)" \
     "SEND $BRUNO $(printf %s "$TESTO" | xxd -p | tr -d '\n')")
