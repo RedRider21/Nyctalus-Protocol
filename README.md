@@ -13,6 +13,8 @@
 
 Sito e manuale: **https://redrider21.github.io/Nyctalus-Protocol/**
 
+**Scarica:** [anteprima per tester (pre-release)](https://github.com/RedRider21/Nyctalus-Protocol/releases) — `Nyctalus-PC-Linux.zip`, `Nyctalus-Android.zip` (app + pacchetto Termux), `Nyctalus-Server-Linux.zip` e il solo motore `nyctalus` per Linux, Android/Termux, Windows e macOS.
+
 ---
 
 ## Come appare

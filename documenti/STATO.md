@@ -132,6 +132,9 @@ cd "nyctalus protocol"
 cargo test          # deve dare 95 test superati
 ```
 
+## Release
+- **v0.1.0-anteprima** (31/10/2026, pre-release «anteprima per tester»): `Nyctalus-PC-Linux.zip`, `Nyctalus-Android.zip` (APK 0.24 firmata con la chiave del progetto + pacchetto Termux, motore ancora da compilare in Termux), `Nyctalus-Server-Linux.zip`; il workflow «Eseguibili» aggiunge i motori (Linux x86_64/arm64, Android aarch64, Windows, macOS). Prossimo: APK con il motore Android già pronto (scaricare l'artefatto del workflow, ~10-15 MB, con l'ok dell'utente), poi Windows (motore .exe + web-app).
+
 ## Pubblicazione (sessione 2)
 - **Repo GitHub:** https://github.com/RedRider21/Nyctalus-Protocol (pubblico, RedRider21, AGPL-3.0, topics, homepage=Pages). Sorgenti su `main`; i prossimi avanzamenti si caricano via via.
 - **Sito/Pages:** https://redrider21.github.io/Nyctalus-Protocol/ — branch `gh-pages` (repo git separato in scratchpad, NON nella cartella progetto). Sito **bilingue IT/EN** + **tema chiaro/scuro** (toggle, persistiti in localStorage), responsivo, con manuale. File: index.html, stile.css, logo.svg, .nojekyll.
