@@ -74,6 +74,7 @@ pub async fn chat(
         in_volo: Mutex::new(HashMap::new()),
         pendenti: Mutex::new(HashMap::new()),
         letti_inviati: Mutex::new(HashMap::new()),
+        battito_noto: Mutex::new(HashSet::new()),
     });
 
     println!("Nyctalus chat");
@@ -135,7 +136,12 @@ struct Stato {
     in_volo: Mutex<HashMap<String, Vec<InVolo>>>,            // testi spediti senza ancora «ricevuto»
     pendenti: Mutex<HashMap<String, Vec<Vec<u8>>>>,          // conferme da spedire appena c'è la sessione
     letti_inviati: Mutex<HashMap<String, u64>>,              // ultimo «letto» mandato a ciascun contatto
+    battito_noto: Mutex<HashSet<String>>,                    // contatti che rispondono al battito (PING/PONG)
 }
+
+/// Battito delle sessioni: ogni quanto si chiede «ci sei?» e dopo quanto silenzio la si chiude.
+const BATTITO: std::time::Duration = std::time::Duration::from_secs(25);
+const SILENZIO_MAX: std::time::Duration = std::time::Duration::from_secs(75);
 
 /// Un messaggio spedito su una sessione e non ancora confermato («K»): se la sessione cade
 /// prima della conferma, il testo va nella casella (il destinatario scarta i doppioni).
@@ -261,6 +267,7 @@ impl Stato {
         for frame in self.pendenti.lock().unwrap().remove(&peer).unwrap_or_default() {
             let _ = ch_tx.try_send(frame);
         }
+        let tx_battito = ch_tx.clone();
         self.sessioni.lock().unwrap().insert(peer.clone(), (sid, ch_tx));
         self.irraggiungibili.lock().unwrap().remove(&peer);
         self.notifica(format!("ST {peer} 1"));
@@ -276,11 +283,39 @@ impl Stato {
             }
         });
 
+        // battito: ogni BATTITO si chiede «ci sei?» (PING); se il contatto risponde di solito
+        // (versione col battito) e tace da SILENZIO_MAX, la sessione è morta senza saperlo
+        // (telefono spento di colpo, modalità aereo): si chiude, e il contatto non è più «in linea»
+        let ultimo = Arc::new(AtomicU64::new(ora()));
+        let morta = Arc::new(tokio::sync::Notify::new());
+        {
+            let (tx_b, ultimo, morta, stato, peer) = (tx_battito, ultimo.clone(), morta.clone(), self.clone(), peer.clone());
+            tokio::spawn(async move {
+                loop {
+                    tokio::time::sleep(BATTITO).await;
+                    if tx_b.is_closed() {
+                        return;
+                    }
+                    let _ = tx_b.try_send(b"PING".to_vec());
+                    let muta = ora().saturating_sub(ultimo.load(Ordering::Relaxed)) > SILENZIO_MAX.as_secs();
+                    if muta && stato.battito_noto.lock().unwrap().contains(&peer) {
+                        morta.notify_one();
+                        return;
+                    }
+                }
+            });
+        }
+
         // lettore: apre i messaggi e li consegna
         let stato = self.clone();
         tokio::spawn(async move {
             loop {
-                match leggi_frame(&mut lettura).await {
+                let frame = tokio::select! {
+                    f = leggi_frame(&mut lettura) => f,
+                    _ = morta.notified() => break,   // nessun battito: sessione morta
+                };
+                ultimo.store(ora(), Ordering::Relaxed);
+                match frame {
                     Ok(Some(frame)) => match rx.apri(&frame) {
                         Ok(chiaro) => stato.ricevi_messaggio(&peer, sid, &chiaro),
                         Err(_) => break, // frame corrotto: chiudiamo
@@ -322,6 +357,17 @@ impl Stato {
         }
         if let Some(r) = chiaro.strip_prefix(b"E ") {
             return self.ricevi_fine(peer, r);
+        }
+        // battito: si risponde a PING; un PONG dice che il contatto ha il battito
+        if chiaro == b"PING" {
+            if let Some((_, s)) = self.sessioni.lock().unwrap().get(peer) {
+                let _ = s.try_send(b"PONG".to_vec());
+            }
+            return;
+        }
+        if chiaro == b"PONG" {
+            self.battito_noto.lock().unwrap().insert(peer.to_string());
+            return;
         }
         // spunte: «K ts» = il contatto ha ricevuto, «R ts» = ha letto fino a ts
         if let Some(r) = chiaro.strip_prefix(b"K ") {
@@ -1451,6 +1497,7 @@ mod prove {
             in_volo: Mutex::new(HashMap::new()),
             pendenti: Mutex::new(HashMap::new()),
             letti_inviati: Mutex::new(HashMap::new()),
+            battito_noto: Mutex::new(HashSet::new()),
         };
         st.registra_riga("x.nyct", "in 1 6161");
         st.registra_riga("x.nyct", "out 2 6262");

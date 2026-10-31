@@ -1,0 +1,34 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol. -->
+<!-- La schermata d'avvio del PC senza GTK (Windows): la stessa dell'app del telefono, in una
+     piccola finestra (Edge in modalità app). Chat e rubrica si aprono in finestre proprie. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nyctalus</title>
+<link rel="icon" href="logo.svg">
+<link rel="stylesheet" href="avvio.css">
+</head>
+<body>
+<main>
+  <img class="logo" src="logo.svg" alt="">
+  <h1>Nyctalus</h1>
+  <div class="sotto">Anonymous Protocol</div>
+  <div id="stato" class="stato">avvio…</div>
+  <button id="rete" class="rete" type="button">🔗 Rete: …</button>
+  <div class="griglia">
+    <button id="t-chat" type="button"><span>💬</span>Chat</button>
+    <button id="t-rubrica" type="button"><span>👥</span>Rubrica</button>
+    <button id="t-browser" type="button"><span>🌐</span>Browser</button>
+    <button id="t-info" type="button"><span>ℹ️</span>Info</button>
+  </div>
+  <button id="esci" class="esci" type="button">⏻ Esci da Nyctalus</button>
+</main>
+
+<div id="velo" class="nascosto"></div>
+<div id="foglio" class="nascosto"></div>
+<script src="avvio.js"></script>
+</body>
+</html>

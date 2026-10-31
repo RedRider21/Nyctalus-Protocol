@@ -55,7 +55,8 @@ un'emoticon, entra nel testo dove stai scrivendo; il campo di scrittura resta vi
 Il pallino/anello **verde** sull'avatar indica che il contatto è **in linea**. Non serve
 scriversi prima: all'avvio la chat «bussa» da sola ai contatti (e poi ogni tanto a chi non
 risponde, con pause crescenti fino a 10 minuti). Chi è acceso compare in linea entro pochi
-secondi, e anche lui vede te.
+secondi, e anche lui vede te. Le due chat si scambiano un **battito** ogni 25 secondi: se l'altro
+sparisce di colpo (telefono spento, modalità aereo), entro un paio di minuti non risulta più in linea.
 
 Sotto il nome, in cima alla conversazione, c'è **«in linea»** oppure **«ultimo accesso oggi
 alle 18:05»** (ieri / data). Lo calcola il tuo dispositivo da quando ha visto il contatto

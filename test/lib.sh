@@ -9,6 +9,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN="$ROOT/target/release/nyctalus"
 STRUMENTI="$ROOT/test/strumenti"
 TMP="$(mktemp -d /tmp/nyctalus-test.XXXXXX)"
+PRINCIPALE=$BASHPID          # la pulizia vale solo per il processo principale della prova
 PIDS=()
 OK=0; KO=0; SALTATI=0
 NOME_PROVA="$(basename "$0" .sh)"
@@ -23,6 +24,9 @@ verifica() { # verifica "descrizione" comando...  → PASS se il comando riesce
 }
 
 pulizia() {
+  # un sottoprocesso della prova (es. un comando in sottofondo) che finisce NON deve
+  # cancellare la cartella temporanea: la prova sta ancora girando e la userebbe
+  [ "$BASHPID" = "$PRINCIPALE" ] || return 0
   for p in "${PIDS[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null; done
   sleep 0.3
   for p in "${PIDS[@]:-}"; do [ -n "$p" ] && kill -9 "$p" 2>/dev/null; done

@@ -248,6 +248,48 @@ USARE
 Manuali: cartella Manuali/ (MANUALE-INSTALLAZIONE.md, MANUALE-TELEFONO.md).
 EOF
 
+# ============================== Windows ==============================
+# Motore nyctalus.exe (lo compila GitHub) + Python «embeddable» (python.org) + il servizio e la
+# chat del telefono; la finestra d'avvio come l'app (Edge in modalità app). Si fa solo se in
+# target/ ci sono i due file scaricati (vedi documenti/STATO.md, «Windows»).
+M_WIN="$ROOT/target/x86_64-pc-windows-msvc/release/nyctalus.exe"
+PY_WIN="$(ls "$ROOT"/target/windows/python-*-embed-amd64.zip 2>/dev/null | sort -V | tail -1)"
+if [ -f "$M_WIN" ] && [ -n "$PY_WIN" ]; then
+  say "Windows: assemblo il pacchetto"
+  W="$LAVORO/Nyctalus-Windows"
+  mkdir -p "$W/bin" "$W/python" "$W/windows" "$W/Manuali"
+  cp "$M_WIN" "$W/bin/nyctalus.exe"
+  ( cd "$W/python" && unzip -q "$PY_WIN" )
+  cp -r "$ROOT/mobile/orchestratore" "$ROOT/mobile/webapp" "$W/"
+  cp "$ROOT/pc/windows/nyctalus-windows.py" "$W/windows/"
+  cp "$ROOT/pc/windows/Nyctalus.cmd" "$W/"
+  cp "$ROOT"/documenti/manuali/{MANUALE-WINDOWS,MANUALE-CHAT,GUIDA-RETE-DI-CASA,SCELTE-OPERATIVE}.md "$W/Manuali/"
+  cp "$ROOT/LICENSE" "$W/"
+  find "$W" -name __pycache__ -type d -prune -exec rm -rf {} +
+  cat > "$W/LEGGIMI.txt" <<'EOF'
+Nyctalus per Windows (anteprima)
+================================
+
+AVVIARE
+   Doppio clic su  Nyctalus.cmd   (niente da installare: Python è incluso)
+   Si apre la finestra di Nyctalus, come l'app del telefono: Chat, Rubrica, Browser, Info.
+
+COLLEGARSI A UNA RETE
+   Nella finestra tocca «🔗 Rete» e incolla il codice NYCT1:… (te lo dà chi gestisce la rete).
+
+NAVIGARE CON NYCTALUS
+   Riquadro «🌐 Browser»: come impostare Firefox su Nyctalus.
+
+SPEGNERE
+   «⏻ Esci da Nyctalus» in fondo alla finestra.
+
+Dati in %USERPROFILE%\.nyctalus-mobile e .nyctalus-chat. Manuale: Manuali\MANUALE-WINDOWS.md
+EOF
+  mkdir -p "$OUT/Windows"
+  crea_zip "$W" "$OUT/Windows/Nyctalus-Windows.zip"
+  cp "$W/LEGGIMI.txt" "$OUT/Windows/LEGGIMI.txt"
+fi
+
 cat > "$OUT/LEGGIMI.txt" <<'EOF'
 Nyctalus — cosa installare e dove
 =================================
@@ -259,6 +301,7 @@ Nyctalus — cosa installare e dove
   Server / VPS (nodi)   Server-Linux/ Nyctalus-Server-Linux.zip     sul server: sudo ./installa.sh
   Raspberry Pi (nodi)   Server-Linux/ Nyctalus-Server-Linux-arm64.zip  idem
   Telefono Android      Android/     nyctalus-termux.tar.gz (+APK)  in Termux → installa.sh
+  PC Windows (64 bit)   Windows/     Nyctalus-Windows.zip           scompatta → doppio clic su Nyctalus.cmd
   Tutto in un colpo     —            Nyctalus-completo.zip          contiene tutte le cartelle
 
 COSA INSTALLARE E DOVE, per ogni situazione: Manuali/SCELTE-OPERATIVE.md
@@ -272,6 +315,7 @@ EOF
 say "Archivio completo"
 mkdir -p "$LAVORO/Nyctalus-completo"
 cp -r "$OUT/LEGGIMI.txt" "$OUT/PC-Linux" "$OUT/Server-Linux" "$OUT/Android" "$OUT/Manuali" "$LAVORO/Nyctalus-completo/"
+[ -d "$OUT/Windows" ] && cp -r "$OUT/Windows" "$LAVORO/Nyctalus-completo/"
 crea_zip "$LAVORO/Nyctalus-completo" "$OUT/Nyctalus-completo.zip"
 
 echo

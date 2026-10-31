@@ -1,0 +1,47 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+   Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol. */
+/* Schermata d'avvio (Windows): stessi colori del tema «Notte» della chat e dell'app. */
+:root { --sfondo: #0b1020; --scheda: #0e1424; --bordo: #1b2740; --testo: #e6ecff; --tenue: #8a97b8;
+        --accento: #6ea8ff; --ok: #3ddc84; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-tema="scuro"]) { --sfondo: #f4f6fb; --scheda: #ffffff; --bordo: #d8deea; --testo: #1a2233;
+                                   --tenue: #5a6680; --accento: #2f6fe0; --ok: #1f9d55; }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--sfondo); color: var(--testo); font: 15px/1.4 "Segoe UI", system-ui, sans-serif;
+       display: grid; place-items: center; padding: 16px; user-select: none; }
+main { width: 100%; max-width: 380px; text-align: center; }
+.logo { width: 112px; height: 112px; animation: respira 4s ease-in-out infinite; }
+@keyframes respira { 50% { transform: scale(1.04); opacity: .92; } }
+h1 { margin: 6px 0 0; font-size: 26px; letter-spacing: .5px; }
+.sotto { color: var(--tenue); font-size: 13px; letter-spacing: 2px; text-transform: uppercase; }
+.stato { margin: 14px 0 10px; color: var(--tenue); font-size: 13px; min-height: 18px; }
+.stato.pronto { color: var(--ok); }
+button { font: inherit; color: var(--testo); cursor: pointer; }
+.rete { width: 100%; padding: 10px 14px; border-radius: 16px; border: 1px solid var(--bordo);
+        background: var(--scheda); text-align: left; }
+.griglia { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 18px; }
+.griglia button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 4px 10px;
+                  border-radius: 14px; border: 1px solid var(--bordo); background: var(--scheda);
+                  font-size: 12px; color: var(--tenue); }
+.griglia button span { font-size: 22px; }
+.griglia button:hover, .rete:hover { border-color: var(--accento); }
+.griglia button:disabled { opacity: .45; cursor: default; }
+.esci { margin-top: 22px; background: none; border: 0; color: var(--tenue); font-size: 13px; }
+.esci:hover { color: var(--testo); }
+.nascosto { display: none !important; }
+#velo { position: fixed; inset: 0; background: rgba(0,0,0,.5); }
+#foglio { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(92vw, 420px);
+          max-height: 88vh; overflow: auto; background: var(--scheda); border: 1px solid var(--bordo);
+          border-radius: 16px; padding: 16px; text-align: left; }
+#foglio h2 { margin: 0 0 10px; font-size: 17px; }
+#foglio p, #foglio li { color: var(--tenue); font-size: 13px; }
+#foglio textarea { width: 100%; min-height: 70px; background: var(--sfondo); color: var(--testo);
+                   border: 1px solid var(--bordo); border-radius: 10px; padding: 8px; font: 12px monospace; }
+#foglio .riga { display: flex; gap: 8px; margin-top: 10px; }
+#foglio .riga button, #foglio .voce { flex: 1; padding: 9px; border-radius: 10px; border: 1px solid var(--bordo);
+                                       background: var(--sfondo); }
+#foglio .voce { display: block; width: 100%; text-align: left; margin-top: 6px; }
+#foglio .primario { background: var(--accento); color: #fff; border-color: var(--accento); }
+#foglio code { font-size: 12px; color: var(--accento); }

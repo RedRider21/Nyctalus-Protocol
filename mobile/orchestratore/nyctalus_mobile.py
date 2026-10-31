@@ -45,6 +45,8 @@ HOME = Path.home()
 DATI_CHAT = HOME / ".nyctalus-chat"
 DATI = HOME / ".nyctalus-mobile"
 FILE_SEGRETO = DATI / "token"
+# Windows: i programmi del motore partono senza aprire una finestra nera ciascuno
+SENZA_FINESTRA = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 CONFIG = DATI / "config.json"
 INVIO = DATI / "invio"                       # file caricati dal telefono, in attesa di invio
 CACHE = DATI / "cache"
@@ -181,7 +183,7 @@ class Servizi:
     def _lancia(self, argomenti, log_file, env=None):
         f = open(log_file, "ab")
         p = subprocess.Popen(argomenti, stdout=f, stderr=subprocess.STDOUT, env=env,
-                             start_new_session=True)
+                             start_new_session=True, creationflags=SENZA_FINESTRA)
         self.proc.append(p)
         return p
 
@@ -212,7 +214,7 @@ class Servizi:
             lavoro = DATI / "servizi"
             if lavoro.exists():
                 shutil.rmtree(lavoro, ignore_errors=True)
-            lavoro.mkdir(parents=True)
+            lavoro.mkdir(parents=True, exist_ok=True)   # su Windows un registro aperto può restare
             DATI_CHAT.mkdir(parents=True, exist_ok=True)
             cfg = leggi_config()
             pubblica = bool(cfg.get("directory_url") and cfg.get("authority"))
@@ -250,7 +252,8 @@ class Servizi:
                              lavoro / "demone.log")
             else:
                 self.modalita, self.dettaglio = "locale", "rete di prova"
-                out = subprocess.run([binario, "authority"], capture_output=True, text=True).stdout
+                out = subprocess.run([binario, "authority"], capture_output=True, text=True,
+                                     creationflags=SENZA_FINESTRA).stdout
                 sec = re.search(r"secret:\s+([0-9a-f]+)", out).group(1)
                 autorita = re.search(r"public:\s+([0-9a-f]+)", out).group(1)
                 righe = []
@@ -266,7 +269,8 @@ class Servizi:
                 dirf = lavoro / "dir.txt"
                 dirf.write_text(subprocess.run([binario, "directory", "--authority-secret", sec,
                                                 "--entries", ";".join(righe)],
-                                               capture_output=True, text=True).stdout)
+                                               capture_output=True, text=True,
+                                               creationflags=SENZA_FINESTRA).stdout)
                 self._lancia([binario, "circuit", "--directory", str(dirf), "--authority", autorita,
                               "--socks", socks, "--hops", "3", "--control", "127.0.0.1:%d" % int(PORTE["monitor"])],
                              lavoro / "demone.log")
@@ -290,7 +294,10 @@ class Servizi:
     def _termina(self):
         for p in reversed(self.proc):
             try:
-                os.killpg(p.pid, signal.SIGTERM)
+                if hasattr(os, "killpg"):
+                    os.killpg(p.pid, signal.SIGTERM)    # il processo e i suoi figli
+                else:
+                    p.terminate()                       # Windows: niente gruppi di processi
             except Exception:    # noqa: BLE001
                 pass
         self.proc = []
@@ -483,7 +490,13 @@ def miniatura(percorso):
 
 
 def apri_con_app(percorso):
-    """Apre il file con l'app del sistema (telefono: termux-open; PC: xdg-open)."""
+    """Apre il file con l'app del sistema (telefono: termux-open; PC: xdg-open; Windows)."""
+    if hasattr(os, "startfile"):                        # Windows
+        try:
+            os.startfile(str(percorso))                 # noqa: S606 (file già controllato: apribile)
+            return True
+        except OSError:
+            return False
     for cmd in ("termux-open", "xdg-open"):
         if shutil.which(cmd):
             subprocess.Popen([cmd, str(percorso)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -782,6 +795,11 @@ async def instrada(req, lettore, scrittore):
     if p == "/api/servizi/avvia" and req.metodo == "POST":
         SERVIZI.avvia()
         return await rispondi_json(scrittore, SERVIZI.info())
+    if p == "/api/esci" and req.metodo == "POST":
+        # «⏻ Esci» della schermata d'avvio del PC (Windows): spegne servizi e orchestratore
+        await rispondi_json(scrittore, {"ok": True})
+        threading.Timer(0.3, lambda: (SERVIZI.ferma(), os._exit(0))).start()
+        return
     if p == "/api/servizi/ferma" and req.metodo == "POST":
         SERVIZI.ferma()
         return await rispondi_json(scrittore, SERVIZI.info())

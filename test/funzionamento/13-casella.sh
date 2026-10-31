@@ -20,7 +20,8 @@ leggi() { python3 -c "import base64,json,sys;c=sys.argv[1][6:];print(json.loads(
 RUB=$(leggi rubrica); CAS=$(leggi casella)
 [[ "$CAS" =~ ^[a-z2-7]{56}\.nyct$ ]] && [ "$CAS" != "$RUB" ] && pass "il codice di rete contiene la casella (indirizzo .nyct a sé, diverso dalla rubrica)" || { fail "casella non nel codice: $COD"; exit 1; }
 PUB=$(python3 -c "import json;print(json.load(open('$H/.nyctalus-rete/casa/autorita.json'))['pubblica'])")
-curl -s http://127.0.0.1:20620/directory.txt -o "$TMP/dir.txt"
+for _ in $(seq 1 20); do curl -sf http://127.0.0.1:20620/directory.txt -o "$TMP/dir.txt" && [ -s "$TMP/dir.txt" ] && break; sleep 1; done
+[ -s "$TMP/dir.txt" ] || { fail "elenco dei nodi non scaricato dalla rete di casa: $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:20620/directory.txt) · $(tail -3 "$TMP/casa.log")"; exit 1; }
 D="$H/.nyctalus-rete/casa/rubrica/casella"
 
 utente() { # nome base segreto → rete + chat (con rubrica e casella) + servizio; indirizzo in $ADDR
@@ -79,6 +80,12 @@ kill -STOP $RETE_PID $SITE_PID $CHAT_PID
 R=$(NYCT_FINO="^CAS $BRUNO " controllo 20642 "$SA" 150 SUB "SEND $BRUNO $(printf 'Terzo, in modalita aereo' | xxd -p | tr -d '\n')")
 echo "$R" | grep -q "^CAS $BRUNO " && pass "modalità aereo: il messaggio senza «ricevuto» finisce comunque nella casella" \
   || fail "messaggio perso nella sessione morta: $(echo "$R" | grep -E '^(OUT|SP|CAS|ERR)')"
+# battito: il contatto sparito di colpo non resta «in linea» (Anna non vede più la sessione)
+for _ in $(seq 1 30); do
+  controllo 20642 "$SA" 3 SUB 2>/dev/null | grep -q "^ST $BRUNO 1" || break; sleep 5
+done
+controllo 20642 "$SA" 3 SUB 2>/dev/null | grep -q "^ST $BRUNO 1" \
+  && fail "Bruno sparito di colpo risulta ancora in linea (manca il battito)" || pass "battito: chi sparisce di colpo non resta «in linea»"
 kill -CONT $RETE_PID $SITE_PID $CHAT_PID
 H3=$(printf 'Terzo, in modalita aereo' | xxd -p | tr -d '\n')
 for _ in $(seq 1 90); do grep -q " $H3$" "$TMP/bruno/cronologia/$ANNA.log" 2>/dev/null && break; sleep 2; done

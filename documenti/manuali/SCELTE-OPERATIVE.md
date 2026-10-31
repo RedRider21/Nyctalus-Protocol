@@ -9,8 +9,8 @@ Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 
 | Ruolo | Che cosa fa | Dove | Pacchetto |
 |---|---|---|---|
-| **Client** | usa la rete: chat, browser | PC, telefono | `PC-Linux/` (scegli 1) · `Android/` |
-| **Nodo** | tiene in piedi la rete: inoltra il traffico cifrato | **server sempre acceso** con IP pubblico (VPS) | `Server-Linux/` |
+| **Client** | usa la rete: chat, browser | PC, telefono | `PC-Linux/` (scegli 1) · `Android/` · `Windows/` (anteprima) |
+| **Nodo** | tiene in piedi la rete: inoltra il traffico cifrato | **server sempre acceso** raggiungibile da Internet (VPS, o a casa con IP dinamico) | `Server-Linux/` (anche arm64 per Raspberry Pi) |
 | **Gestore** | firma l'elenco dei nodi e dà il **codice di rete** ai client | il tuo PC (uno solo) | `PC-Linux/` (scegli 2) |
 
 - I **telefoni sono solo client**. Non possono fare da nodo: cambiano indirizzo, non
