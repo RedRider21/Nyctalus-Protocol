@@ -34,6 +34,7 @@ class Chiamate:
         self.c = None             # chiamata in corso: dict(addr, id, stato, audio, inizio, uscente)
         self.finestra_arrivo = None
         self.timer = 0
+        self.suono = None             # squillo (in arrivo) o tono d'attesa (in uscita)
 
         # pulsante 📞 nell'intestazione della conversazione
         self.pulsante = Gtk.Button(label="📞")
@@ -122,11 +123,25 @@ class Chiamate:
             return self.chat._avviso_inline("⚠ " + self._t("chat.ch.senza_audio"))
         self.c = {"addr": addr, "id": None, "stato": "chiamo", "audio": None, "inizio": time.time(), "uscente": True}
         self.chat._cmd("CALL %s" % addr)
+        self._suona("uscita")
         self._mostra()
         self.timer = GLib.timeout_add_seconds(1, self._tick)
 
+    def _suona(self, quale):
+        self._zitto()
+        try:
+            self.suono = media.Suoneria(quale)
+        except Exception:   # noqa: BLE001
+            self.suono = None
+
+    def _zitto(self):
+        if self.suono:
+            self.suono.ferma()
+            self.suono = None
+
     def riaggancia(self, motivo=None):
         c, self.c = self.c, None
+        self._zitto()
         if not c:
             return
         if c.get("id"):
@@ -140,6 +155,7 @@ class Chiamate:
 
     def _accetta(self, addr, cid):
         self._chiudi_arrivo()
+        self._zitto()
         self.c = {"addr": addr, "id": cid, "stato": "attiva", "audio": None, "inizio": time.time(), "uscente": False}
         self.chat._cmd("CALLOK %s %s" % (addr, cid))
         self._avvia_audio()
@@ -149,6 +165,7 @@ class Chiamate:
 
     def _rifiuta(self, addr, cid):
         self._chiudi_arrivo()
+        self._zitto()
         self.chat._cmd("CALLNO %s %s" % (addr, cid))
 
     # --- eventi del motore -------------------------------------------------------------
@@ -176,6 +193,7 @@ class Chiamate:
             else:
                 self._arrivo(addr, cid)
         elif tipo == "CALLOK" and self.c and self.c["id"] == cid and self.c["stato"] == "chiamo":
+            self._zitto()
             self.c.update(stato="attiva", inizio=time.time())
             self._avvia_audio()
             self._barra_testo()
@@ -188,6 +206,7 @@ class Chiamate:
                 self.riaggancia()
             elif self.finestra_arrivo and getattr(self.finestra_arrivo, "cid", None) == cid:
                 self._chiudi_arrivo()
+                self._zitto()
                 self.chat._avviso_inline("📞 " + self._t("chat.ch.persa"))
         return True
 
@@ -288,6 +307,7 @@ class Chiamate:
         w.add(box)
         w.connect("delete-event", lambda *_a: (self._rifiuta(addr, cid), True)[1])
         self.finestra_arrivo = w
+        self._suona("arrivo")
         w.show_all()
         w.present()
         GLib.timeout_add_seconds(SQUILLO_MAX, lambda: (self.finestra_arrivo is w and self._rifiuta(addr, cid), False)[1])

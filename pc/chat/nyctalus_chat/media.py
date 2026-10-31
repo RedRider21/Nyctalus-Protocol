@@ -438,6 +438,33 @@ class AudioChiamata:
         self.arrivo.emit("push-buffer", Gst.Buffer.new_wrapped(dati))
 
 
+class Suoneria:
+    """Squillo della chiamata in arrivo o tono d'attesa di quella in uscita: un suono del desktop
+    ripetuto finché non si ferma (NYCTALUS_SENZA_SUONI=1 nelle prove)."""
+    SUONI = {"arrivo": "phone-incoming-call", "uscita": "phone-outgoing-calling"}
+
+    def __init__(self, quale):
+        self.pb = None
+        if Gst is None or os.environ.get("NYCTALUS_SENZA_SUONI"):
+            return
+        for base in ("/usr/share/sounds/freedesktop/stereo", "/usr/share/sounds/freedesktop"):
+            f = Path(base) / (self.SUONI[quale] + ".oga")
+            if f.exists():
+                self.pb = Gst.ElementFactory.make("playbin", None)
+                self.pb.set_property("uri", f.as_uri())
+                bus = self.pb.get_bus()
+                bus.add_signal_watch()
+                bus.connect("message::eos", lambda *_a: self.pb and self.pb.seek_simple(
+                    Gst.Format.TIME, Gst.SeekFlags.FLUSH, 0))
+                self.pb.set_state(Gst.State.PLAYING)
+                break
+
+    def ferma(self):
+        if self.pb is not None:
+            self.pb.set_state(Gst.State.NULL)
+            self.pb = None
+
+
 def uscite_audio():
     """Le uscite audio del sistema [(nome, descrizione)], per scegliere altoparlante o cuffie."""
     if not shutil.which("pactl"):

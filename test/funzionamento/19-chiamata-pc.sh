@@ -18,7 +18,7 @@ identita alice 21111 21121 21180 "$SA"; ALICE=$ADDR
 identita bob 21112 21122 21180 "$SB"; BOB=$ADDR
 sleep 4
 HOME="$TMP/home" NYCTALUS_CHAT_PORT=21121 NYCTALUS_CHAT_TOKEN="$SA" PYTHONPATH="$ROOT/pc/chat:$ROOT/pc/browser" \
-  NYCTALUS_MIC_SRC="audiotestsrc is-live=true wave=sine freq=330" NYCTALUS_ALTOPARLANTE="fakesink" \
+  NYCTALUS_MIC_SRC="audiotestsrc is-live=true wave=sine freq=330" NYCTALUS_ALTOPARLANTE="fakesink" NYCTALUS_SENZA_SUONI=1 \
   timeout 90 python3 "$STRUMENTI/prova_chiamata_pc.py" 21122 "$SB" "$ALICE" "$BOB" "${NYCT_FOTO:-$TMP}/chiamata-pc.png" > "$TMP/r.txt" 2>"$TMP/e.txt" \
   || echo "KO prova interrotta: $(grep -v Warning "$TMP/e.txt" | tail -2)" >> "$TMP/r.txt"
 while read -r esito resto; do

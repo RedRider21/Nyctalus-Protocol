@@ -68,6 +68,7 @@ public class MainActivity extends Activity {
     private static final int RICHIESTA_PERMESSO = 1, RICHIESTA_FILE = 2, RICHIESTA_NOTIFICHE = 3, RICHIESTA_MICROFONO = 4;
     /** La pagina della chat chiede il microfono (chiamata): si concede dopo il permesso di Android. */
     private android.webkit.PermissionRequest attesaMicrofono;
+    private android.media.Ringtone squillo;   // suoneria della chiamata in arrivo
     private static final long ATTESA_MAX_MS = 40000;
 
     private static final String GITHUB = "https://github.com/RedRider21/Nyctalus-Protocol";
@@ -1205,6 +1206,30 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 if (attiva) getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 else getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            });
+        }
+
+        /** Chiamata in arrivo: suoneria e vibrazione di sistema finché non si risponde o rifiuta. */
+        @JavascriptInterface
+        public void squilla(boolean si) {
+            runOnUiThread(() -> {
+                if (squillo != null) { try { squillo.stop(); } catch (Exception ignorata) { } squillo = null; }
+                android.os.Vibrator v = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
+                if (v != null) v.cancel();
+                if (!si) return;
+                try {
+                    squillo = android.media.RingtoneManager.getRingtone(MainActivity.this,
+                            android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE));
+                    if (squillo != null) {
+                        if (Build.VERSION.SDK_INT >= 28) squillo.setLooping(true);
+                        squillo.play();
+                    }
+                } catch (Exception ignorata) { }
+                if (v != null) {
+                    long[] ritmo = {0, 800, 600};
+                    if (Build.VERSION.SDK_INT >= 26) v.vibrate(android.os.VibrationEffect.createWaveform(ritmo, 1));
+                    else v.vibrate(ritmo, 1);
+                }
             });
         }
 

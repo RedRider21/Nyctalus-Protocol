@@ -38,6 +38,29 @@ const Chiamate = (() => {
   const hex = (b) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
   const daHexB = (h) => { const b = new Uint8Array(h.length / 2); for (let i = 0; i < b.length; i++) b[i] = parseInt(h.substr(i * 2, 2), 16); return b; };
 
+  // squillo: suoneria e vibrazione di sistema (app) per la chiamata in arrivo; tono d'attesa
+  // «tuu… tuu» (425 Hz, 1 s ogni 4 s, come in Italia) per quella in uscita
+  let attesa = null;
+  function squillo(quale) {
+    zitto();
+    if (quale === "arrivo") {
+      if (HOST && HOST.squilla) HOST.squilla(true);
+      else if (navigator.vibrate) navigator.vibrate([800, 600, 800, 600, 800]);
+    } else if (quale === "uscita") {
+      try {
+        const ctx = new AudioContext(), o = ctx.createOscillator(), g = ctx.createGain();
+        o.frequency.value = 425; g.gain.value = 0; o.connect(g); g.connect(ctx.destination); o.start();
+        const t0 = ctx.currentTime + 0.1;
+        for (let i = 0; i < 12; i++) { g.gain.setValueAtTime(0.12, t0 + i * 4); g.gain.setValueAtTime(0, t0 + i * 4 + 1); }
+        attesa = ctx;
+      } catch (e) { /* senza audio: niente tono */ }
+    }
+  }
+  function zitto() {
+    if (HOST && HOST.squilla) HOST.squilla(false);
+    if (attesa) { try { attesa.close(); } catch (e) { /* niente */ } attesa = null; }
+  }
+
   function disegna() {
     if (!c) { sch.classList.add("nascosto"); mini.classList.add("nascosto"); return; }
     const n = nomeDi(c.addr);
@@ -83,10 +106,12 @@ const Chiamate = (() => {
     c = { addr, id: null, stato: "chiamo", inizio: Date.now() };
     ridotta = false; muto = false; vivavoce = false;
     manda("CALL " + addr);
+    squillo("uscita");
     avviaTimer(); disegna();
   }
   async function rispondi() {
     if (!c || c.stato !== "squilla") return;
+    zitto();
     if (!(await preparaMicrofono())) return rifiuta();
     if (!c || c.stato !== "squilla") return;
     manda("CALLOK " + c.addr + " " + c.id);
@@ -106,6 +131,7 @@ const Chiamate = (() => {
     chiudi(motivo || ("Chiamata terminata" + (era.stato === "attiva" ? " · " + durata((Date.now() - era.inizio) / 1000) : "")));
   }
   function chiudi(motivo) {
+    zitto();
     const addr = c && c.addr;
     c = null; fermaAudio(); disegna();
     if (motivo && addr === S.attivo) avviso("📞 " + motivo); else if (motivo) toast(motivo);
@@ -118,7 +144,13 @@ const Chiamate = (() => {
       if (HOST && HOST.chiamata) HOST.chiamata(true);            // l'app: audio da chiamata (auricolare)
       a = { seq: 0, ultimo: 0, ricevuti: 0, persi: 0, prossimo: 0, ts: 0 };
       a.ctx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" });
-      a.gain = a.ctx.createGain();
+      // limitatore: se si forma un anello (due apparecchi nella stessa stanza) il suono non sale
+      // all'infinito, resta contenuto
+      a.limite = a.ctx.createDynamicsCompressor();
+      a.limite.threshold.value = -20; a.limite.knee.value = 6; a.limite.ratio.value = 20;
+      a.limite.attack.value = 0.003; a.limite.release.value = 0.25;
+      a.ingresso = a.ctx.createGain(); a.ingresso.connect(a.limite);
+      a.gain = a.ctx.createGain(); a.limite.connect(a.gain);
       await uscitaTelefonata(a);
       a.dec = new AudioDecoder({ output: suona, error: () => {} });
       a.dec.configure({ codec: "opus", sampleRate: 48000, numberOfChannels: 1 });
@@ -155,7 +187,7 @@ const Chiamate = (() => {
     dati.copyTo(f, { planeIndex: 0, format: "f32-planar" });
     const buf = a.ctx.createBuffer(1, dati.numberOfFrames, dati.sampleRate); dati.close();
     buf.copyToChannel(f, 0);
-    const s = a.ctx.createBufferSource(); s.buffer = buf; s.connect(a.gain);
+    const s = a.ctx.createBufferSource(); s.buffer = buf; s.connect(a.ingresso);
     const ora = a.ctx.currentTime;
     if (a.prossimo < ora + 0.02 || a.prossimo > ora + 0.3) a.prossimo = ora + 0.06;   // margine piccolo, niente accumulo
     s.start(a.prossimo); a.prossimo += buf.duration;
@@ -219,8 +251,9 @@ const Chiamate = (() => {
       if (c && !(c.stato === "squilla" && c.id === id)) { manda("CALLNO " + addr + " " + id); return true; }   // occupato
       c = { addr, id, stato: "squilla", inizio: Date.now() }; ridotta = false; muto = false; vivavoce = false;
       avviaTimer(); disegna();
-      if (navigator.vibrate) navigator.vibrate([400, 200, 400]);
+      squillo("arrivo");
     } else if (t === "CALLOK" && c && c.id === id && c.stato === "chiamo") {
+      zitto();
       c.stato = "attiva"; c.inizio = Date.now(); disegna(); avviaAudio();
     } else if (t === "CALLNO" && c && c.id === id) { c.id = null; chiudi("Chiamata rifiutata o occupato"); }
     else if (t === "CALLEND" && c && c.id === id) {
