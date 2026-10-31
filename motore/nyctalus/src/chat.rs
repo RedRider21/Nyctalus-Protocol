@@ -139,6 +139,13 @@ struct Stato {
     battito_noto: Mutex<HashSet<String>>,                    // contatti che rispondono al battito (PING/PONG)
 }
 
+/// Pacchetto audio massimo di una chiamata (Opus da 20 ms sta ben sotto).
+const AUDIO_MAX: usize = 1500;
+
+fn id_chiamata_valido(id: &str) -> bool {
+    !id.is_empty() && id.len() <= 32 && id.chars().all(|c| c.is_ascii_alphanumeric())
+}
+
 /// Battito delle sessioni: ogni quanto si chiede «ci sei?» e dopo quanto silenzio la si chiude.
 const BATTITO: std::time::Duration = std::time::Duration::from_secs(25);
 const SILENZIO_MAX: std::time::Duration = std::time::Duration::from_secs(75);
@@ -357,6 +364,24 @@ impl Stato {
         }
         if let Some(r) = chiaro.strip_prefix(b"E ") {
             return self.ricevi_fine(peer, r);
+        }
+        // chiamate: audio «CX <seq 4 byte><opus>» e segnali «CI|CA|CN|CF <id>» (invito,
+        // accettata, rifiutata, fine). Il motore li passa all'interfaccia così come sono:
+        // la chiamata la gestisce l'interfaccia (microfono, altoparlante).
+        if let Some(r) = chiaro.strip_prefix(b"CX ") {
+            if r.len() > 4 && r.len() <= 4 + AUDIO_MAX {
+                let seq = u32::from_be_bytes([r[0], r[1], r[2], r[3]]);
+                self.notifica(format!("AUD {peer} {seq} {}", in_esadecimale(&r[4..])));
+            }
+            return;
+        }
+        for (prefisso, evento) in [(&b"CI "[..], "CALLIN"), (b"CA ", "CALLOK"), (b"CN ", "CALLNO"), (b"CF ", "CALLEND")] {
+            if let Some(r) = chiaro.strip_prefix(prefisso) {
+                if let Some(id) = std::str::from_utf8(r).ok().filter(|i| id_chiamata_valido(i)) {
+                    self.notifica(format!("{evento} {peer} {id}"));
+                }
+                return;
+            }
         }
         // battito: si risponde a PING; un PONG dice che il contatto ha il battito
         if chiaro == b"PING" {
@@ -1110,6 +1135,65 @@ impl Stato {
                 self.rimuovi_contatto(&addr);
                 let _ = std::fs::remove_file(self.file_cronologia(&addr));
                 let _ = tx.send("OK\n".into());
+            }
+            "CALL" => {
+                // CALL <addr>: invito a una chiamata (apre la sessione se serve) → CALLID <addr> <id>
+                let addr = con_suffisso(it.next().unwrap_or(""));
+                let (st, txc) = (self.clone(), tx.clone());
+                tokio::spawn(async move {
+                    let id = nuovo_id();
+                    match st.sessione(&addr).await {
+                        Ok(s) if s.send(format!("CI {id}").into_bytes()).await.is_ok() => {
+                            let _ = txc.send(format!("CALLID {addr} {id}\n"));
+                        }
+                        Ok(_) => {
+                            let _ = txc.send("ERR sessione chiusa\n".into());
+                        }
+                        Err(e) => {
+                            let _ = txc.send(format!("ERR {e}\n"));
+                        }
+                    }
+                });
+            }
+            quale @ ("CALLOK" | "CALLNO" | "CALLEND") => {
+                // risposta all'invito o fine della chiamata: CALLOK|CALLNO|CALLEND <addr> <id>
+                let addr = con_suffisso(it.next().unwrap_or(""));
+                let id = it.next().unwrap_or("").trim().to_string();
+                let prefisso = match quale { "CALLOK" => "CA", "CALLNO" => "CN", _ => "CF" };
+                if !id_chiamata_valido(&id) {
+                    let _ = tx.send("ERR chiamata non valida\n".into());
+                } else {
+                    let (st, txc, frame) = (self.clone(), tx.clone(), format!("{prefisso} {id}").into_bytes());
+                    tokio::spawn(async move {
+                        match st.sessione(&addr).await {
+                            Ok(s) if s.send(frame).await.is_ok() => {
+                                let _ = txc.send("OK\n".into());
+                            }
+                            _ => {
+                                let _ = txc.send("ERR contatto non raggiungibile\n".into());
+                            }
+                        }
+                    });
+                }
+            }
+            "AUD" => {
+                // AUD <addr> <seq> <opus hex>: un pacchetto audio. Niente risposta (sono 50 al
+                // secondo); se la coda della sessione è piena il pacchetto si scarta: in una
+                // chiamata un pacchetto in ritardo non serve più.
+                let addr = con_suffisso(it.next().unwrap_or(""));
+                let resto = it.next().unwrap_or("");
+                if let Some((seq, hex)) = resto.trim().split_once(' ') {
+                    if let (Ok(seq), Ok(dati)) = (seq.parse::<u32>(), da_hex(hex)) {
+                        if !dati.is_empty() && dati.len() <= AUDIO_MAX {
+                            if let Some((_, s)) = self.sessioni.lock().unwrap().get(&addr) {
+                                let mut frame = b"CX ".to_vec();
+                                frame.extend_from_slice(&seq.to_be_bytes());
+                                frame.extend_from_slice(&dati);
+                                let _ = s.try_send(frame);
+                            }
+                        }
+                    }
+                }
             }
             "DELMSG" => {
                 // DELMSG <addr> <riga hex>: toglie quel messaggio dalla cronologia (solo da noi)

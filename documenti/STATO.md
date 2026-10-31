@@ -116,6 +116,11 @@ Ho misurato la libreria Sphinx di Nym (`sphinx-packet` 0.8), che è collaudata e
 serie di scelte mirate, come farle (attraverso la rete Nyctalus = anonime ma con qualche
 decimo di secondo di ritardo; diretto P2P = veloce ma l'altro vede l'IP; qualità, codec,
 permessi microfono/fotocamera nell'APK, canale «a pacchetti» nel motore con i datagrammi QUIC).
+   **Scelte fatte con l'utente (31/10/2026):** solo attraverso la rete Nyctalus (niente P2P diretto);
+   prima la voce, poi il video; prima PC Linux e telefono (Windows dopo); video basso e fluido
+   (~320p, 15 fps, ~200 kbit/s). Piano: v1 voce Opus 20 ms dentro la sessione cifrata esistente,
+   chi riceve scarta i pacchetti in ritardo (niente accumulo); se il ritardo reale è troppo, v2 con
+   canale a datagrammi QUIC lungo i nodi.
 
 **Gestore dello scambio di file (richiesta dell'utente): velocità «alla torrent».** Usare
 insieme la linea in **download** e quella in **upload**, come BitTorrent:
