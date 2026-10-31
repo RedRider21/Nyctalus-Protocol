@@ -44,7 +44,7 @@ delle chat, dall'elenco a questa schermata; dal browser, chiudendo l'ultima sche
 resta aperta dietro, quindi ritoccando 💬 ci si rientra subito.
 I pulsanti per Termux (installa/aggiorna Termux, installa/aggiorna Nyctalus, apri Termux,
 comando di avvio) sono sotto **Strumenti ▾**. **Dopo aver installato un'APK nuova tocca sempre
-«Installa/aggiorna Nyctalus»**: la chat, il motore e il servizio stanno in Termux, e l'APK da
+«Installa/aggiorna Nyctalus»** (dalla 0.25 il motore è già pronto nell'app: bastano pochi secondi): la chat, il motore e il servizio stanno in Termux, e l'APK da
 sola non li aggiorna. Se il servizio è acceso, l'aggiornamento lo ferma, sostituisce i file e lo
 riaccende con la versione nuova (fino alla 0.20 restava acceso il servizio vecchio e
 l'installazione poteva fermarsi a metà). Le foto e i video scattati dalla chat con l'app restano nella sua cartella

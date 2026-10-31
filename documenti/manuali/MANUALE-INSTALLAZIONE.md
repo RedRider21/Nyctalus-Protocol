@@ -148,6 +148,9 @@ bash nyctalus-termux/installa.sh
 ```
 - `termux-setup-storage` crea `~/storage/downloads` (la tua cartella Download) e
   permette anche di vedere le **foto del telefono** nel selettore degli allegati.
+- Dalla versione **0.25** l'archivio (e quindi l'app) contiene già il **motore compilato per il
+  telefono**, preparato dai server di GitHub dagli stessi sorgenti pubblicati: l'installazione
+  dura pochi secondi.
 - Se l'archivio non contiene già il motore compilato per il telefono, l'installatore lo
   **compila sul telefono**: scarica Rust (~300 MB) e impiega 10-30 minuti, **solo la
   prima volta**. Meglio sotto Wi-Fi e col telefono in carica.

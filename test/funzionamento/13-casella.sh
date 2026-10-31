@@ -10,8 +10,8 @@
 titolo "Funzionamento · casella cifrata (messaggi a chi non è in linea)"
 assicura_binario
 H="$TMP/gestore"; mkdir -p "$H"
-NYCTALUS_RUBRICA_PORTE=19830,19831,19832,19833,19834 HOME="$H" NYCTALUS_BIN="$BIN" \
-  python3 "$ROOT/pc/gestore-rete/nyctalus-rete" casa --ip 127.0.0.1 --porta 19820 --porta-base 19821 --non-importare \
+NYCTALUS_RUBRICA_PORTE=20630,20631,20632,20633,20634 HOME="$H" NYCTALUS_BIN="$BIN" \
+  python3 "$ROOT/pc/gestore-rete/nyctalus-rete" casa --ip 127.0.0.1 --porta 20620 --porta-base 20621 --non-importare \
   < /dev/null > "$TMP/casa.log" 2>&1 & PIDS+=($!)
 for _ in $(seq 1 240); do grep -q "Rete di casa attiva" "$TMP/casa.log" && break; sleep 0.5; done
 grep -q "Rete di casa attiva" "$TMP/casa.log" || { fail "rete di casa: $(tail -3 "$TMP/casa.log")"; exit 1; }
@@ -20,7 +20,7 @@ leggi() { python3 -c "import base64,json,sys;c=sys.argv[1][6:];print(json.loads(
 RUB=$(leggi rubrica); CAS=$(leggi casella)
 [[ "$CAS" =~ ^[a-z2-7]{56}\.nyct$ ]] && [ "$CAS" != "$RUB" ] && pass "il codice di rete contiene la casella (indirizzo .nyct a sé, diverso dalla rubrica)" || { fail "casella non nel codice: $COD"; exit 1; }
 PUB=$(python3 -c "import json;print(json.load(open('$H/.nyctalus-rete/casa/autorita.json'))['pubblica'])")
-curl -s http://127.0.0.1:19820/directory.txt -o "$TMP/dir.txt"
+curl -s http://127.0.0.1:20620/directory.txt -o "$TMP/dir.txt"
 D="$H/.nyctalus-rete/casa/rubrica/casella"
 
 utente() { # nome base segreto → rete + chat (con rubrica e casella) + servizio; indirizzo in $ADDR
@@ -34,11 +34,11 @@ utente() { # nome base segreto → rete + chat (con rubrica e casella) + servizi
 }
 SA=annasegreto0123456789abcdef01; SB=brunosegreto0123456789abcdef0
 # Bruno: un'identità che esiste ma è SPENTA (si accende, si legge l'indirizzo, si spegne)
-utente bruno 19850 "$SB"; BRUNO=$ADDR; kill $RETE_PID $CHAT_PID $SITE_PID 2>/dev/null; sleep 1
-utente anna 19840 "$SA"; ANNA=$ADDR
+utente bruno 20650 "$SB"; BRUNO=$ADDR; kill $RETE_PID $CHAT_PID $SITE_PID 2>/dev/null; sleep 1
+utente anna 20640 "$SA"; ANNA=$ADDR
 sleep 6
 TESTO="Ciao Bruno, te lo lascio nella casella"
-R=$(NYCT_FINO="^(CAS|ERR) " controllo 19842 "$SA" 200 SUB "ADD $BRUNO $(printf Bruno | xxd -p)" \
+R=$(NYCT_FINO="^(CAS|ERR) " controllo 20642 "$SA" 200 SUB "ADD $BRUNO $(printf Bruno | xxd -p)" \
     "SEND $BRUNO $(printf %s "$TESTO" | xxd -p | tr -d '\n')")
 echo "$R" | grep -q "^CAS $BRUNO " && echo "$R" | grep -q "^OUT $BRUNO " \
   && pass "Bruno spento: il messaggio di Anna va nella casella (OUT + CAS)" || fail "deposito: $(echo "$R" | grep -E '^(ERR|CAS|OUT)' | head -3)"
@@ -51,8 +51,8 @@ F=$(ls "$D/$BRUNO"/*.busta 2>/dev/null | head -1)
 ! grep -rqi "$ANNA\|deposita" "$H/.nyctalus-rete/casa/rubrica/rubrica.log" 2>/dev/null && pass "nessun registro di chi deposita" || fail "il deposito lascia tracce nel registro"
 
 # Bruno si accende: deve ricevere il messaggio da Anna e la casella si svuota
-utente bruno 19850 "$SB"
-R=$(NYCT_FINO="^MSG $ANNA " controllo 19852 "$SB" 150 SUB)
+utente bruno 20650 "$SB"
+R=$(NYCT_FINO="^MSG $ANNA " controllo 20652 "$SB" 150 SUB)
 HX=$(printf %s "$TESTO" | xxd -p | tr -d '\n')
 echo "$R" | grep -q "^MSG $ANNA [0-9]* $HX$" && pass "Bruno acceso: riceve il messaggio, autenticato come scritto da Anna" || fail "ritiro: $(echo "$R" | tail -3)"
 echo "$R" | grep -q "^NEW $ANNA" && pass "Anna non era fra i contatti di Bruno: gli viene proposta (NEW)" || fail "NEW mancante"
@@ -61,22 +61,22 @@ for _ in $(seq 1 20); do [ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && break
 [ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && pass "consegnata: la casella l'ha cancellata" || fail "busta ancora nella casella"
 
 # spunte: la conferma «ricevuto» di Bruno torna ad Anna (stato salvato, si rilegge con HIST)
-storia_anna() { NYCT_FINO="^ENDH" controllo 19842 "$SA" 20 "HIST $BRUNO"; }
+storia_anna() { NYCT_FINO="^ENDH" controllo 20642 "$SA" 20 "HIST $BRUNO"; }
 spunta() { local i; for i in $(seq 1 "$2"); do storia_anna | grep -qE "$1" && return 0; sleep 2; done; return 1; }
 TS1=$(grep -oE "^out [0-9]+" "$TMP/anna/cronologia/$BRUNO.log" | head -1 | cut -d' ' -f2)
 spunta "^CAS $BRUNO $TS1" 1 && spunta "^SP $BRUNO $TS1 2" 45 \
   && pass "spunte: 📮✓ nella casella, poi ✓✓ consegnato quando Bruno la ritira" || fail "spunte del messaggio in casella: $(storia_anna | grep -E '^(SP|CAS)')"
-R=$(NYCT_FINO="^SP $BRUNO [0-9]+ 2" controllo 19842 "$SA" 90 SUB "SEND $BRUNO $(printf 'Secondo, sei in linea' | xxd -p | tr -d '\n')")
+R=$(NYCT_FINO="^SP $BRUNO [0-9]+ 2" controllo 20642 "$SA" 90 SUB "SEND $BRUNO $(printf 'Secondo, sei in linea' | xxd -p | tr -d '\n')")
 TS2=$(echo "$R" | grep -oE "^OUT $BRUNO [0-9]+" | head -1 | awk '{print $3}')
 echo "$R" | grep -q "^SP $BRUNO $TS2 1" && echo "$R" | grep -q "^SP $BRUNO $TS2 2" \
   && pass "Bruno in linea: ✓ spedito, poi ✓✓ consegnato" || fail "spunte dirette: $(echo "$R" | grep -E '^(SP|CAS|ERR)')"
-R=$(NYCT_FINO="^SP $BRUNO [0-9]+ 3" controllo 19842 "$SA" 60 SUB) & ATT=$!
-sleep 1; controllo 19852 "$SB" 3 "LETTO $ANNA $TS2" > /dev/null; wait $ATT
+R=$(NYCT_FINO="^SP $BRUNO [0-9]+ 3" controllo 20642 "$SA" 60 SUB) & ATT=$!
+sleep 1; controllo 20652 "$SB" 3 "LETTO $ANNA $TS2" > /dev/null; wait $ATT
 spunta "^SP $BRUNO $TS2 3" 15 && pass "Bruno apre la conversazione (LETTO): ad Anna le spunte diventano blu" || fail "spunta di lettura"
 
 # «modalità aereo»: la rete di Bruno si blocca di colpo, la sessione sembra ancora aperta
 kill -STOP $RETE_PID $SITE_PID $CHAT_PID
-R=$(NYCT_FINO="^CAS $BRUNO " controllo 19842 "$SA" 150 SUB "SEND $BRUNO $(printf 'Terzo, in modalita aereo' | xxd -p | tr -d '\n')")
+R=$(NYCT_FINO="^CAS $BRUNO " controllo 20642 "$SA" 150 SUB "SEND $BRUNO $(printf 'Terzo, in modalita aereo' | xxd -p | tr -d '\n')")
 echo "$R" | grep -q "^CAS $BRUNO " && pass "modalità aereo: il messaggio senza «ricevuto» finisce comunque nella casella" \
   || fail "messaggio perso nella sessione morta: $(echo "$R" | grep -E '^(OUT|SP|CAS|ERR)')"
 kill -CONT $RETE_PID $SITE_PID $CHAT_PID
@@ -89,10 +89,10 @@ for _ in $(seq 1 90); do grep -q " $H3$" "$TMP/bruno/cronologia/$ANNA.log" 2>/de
 for _ in $(seq 1 30); do [ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && break; sleep 1; done
 PRIMA=$(wc -l < "$TMP/bruno/cronologia/$ANNA.log")
 head -c 300 /dev/urandom > "$TMP/falsa.bin"
-C=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 --socks5-hostname 127.0.0.1:19840 --data-binary @"$TMP/falsa.bin" "http://$CAS/deposita?a=$BRUNO")
+C=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 --socks5-hostname 127.0.0.1:20640 --data-binary @"$TMP/falsa.bin" "http://$CAS/deposita?a=$BRUNO")
 [ "$C" = 200 ] && pass "deposito anonimo attraverso la rete (curl via SOCKS, senza identità)" || fail "deposito via SOCKS: $C"
 head -c 70000 /dev/urandom > "$TMP/grande.bin"
-C=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 --socks5-hostname 127.0.0.1:19840 --data-binary @"$TMP/grande.bin" "http://$CAS/deposita?a=$BRUNO")
+C=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 --socks5-hostname 127.0.0.1:20640 --data-binary @"$TMP/grande.bin" "http://$CAS/deposita?a=$BRUNO")
 [ "$C" = 413 ] && pass "busta troppo grande rifiutata" || fail "busta grande: $C"
 for _ in $(seq 1 150); do [ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && break; sleep 1; done
 [ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && [ "$(wc -l < "$TMP/bruno/cronologia/$ANNA.log")" = "$PRIMA" ] \
