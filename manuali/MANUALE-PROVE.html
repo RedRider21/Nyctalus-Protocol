@@ -144,6 +144,14 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 <td><strong><code>nyctalus-sito</code></strong>: sito creato con la pagina d'esempio (niente risorse esterne, file privati), messo online sulla rete di casa e <strong>visitato attraverso la rete</strong>, pagina aggiunta visibile subito, arresto pulito; sito dinamico dietro un server web locale; nomi/backend/codici sbagliati rifiutati; la chiave esportata riprende lo stesso indirizzo; unità systemd dell'utente; rimozione con copia della chiave</td>
 </tr>
 <tr>
+<td><code>15-nodi-per-nome</code></td>
+<td>nodi annunciati con un <strong>nome</strong> (IP dinamico): righe ed elenco firmato col nome, sonda dei nodi, sito <code>.nyct</code> visitato con circuiti a 3 salti fra nodi «per nome», nome irrisolvibile saltato</td>
+</tr>
+<tr>
+<td><code>16-rubrica-di-rete</code></td>
+<td><strong>rubrica e casella in una rete vera</strong>: il gestore crea la rete, il «server» le accende col solo codice (<code>nyctalus-rete rubrica --codice</code>, nessuna chiave dell'autorità), il gestore rifà il codice includendole (e le ricorda), un utente si iscrive; unità systemd</td>
+</tr>
+<tr>
 <td><code>08-app-android</code></td>
 <td>app Android: niente permesso fotocamera, scatti privati, nomi di file filtrati; il comando che l'app fa eseguire a Termux scrive il <strong>suo segreto</strong> (600) e il servizio già acceso lo accetta, il vecchio no; «Installa Nyctalus in Termux» in un <strong>Termux simulato</strong> (pacchetto con impronta sbagliata rifiutato, installazione, <code>allow-external-apps</code>, ritorno all'app, niente <code>pkg upgrade</code>); il <strong>servitore Java vero</strong> dell'app provato su JVM (404 agli indirizzi sbagliati, consegna integra, spegnimento); compila l'APK se c'è un Android SDK (<code>ANDROID_HOME</code>) e controlla che contenga il pacchetto</td>
 </tr>

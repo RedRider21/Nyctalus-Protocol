@@ -26,13 +26,30 @@
 chi. Su un server ne puoi far girare da 1 a 8. Quadro generale: <a href="SCELTE-OPERATIVE.html"><code>SCELTE-OPERATIVE.md</code></a>.</p>
 <h2 id="1-cosa-serve">1. Cosa serve</h2>
 <ul>
-<li>Un server <strong>Linux x86_64</strong> sempre acceso, con <strong>IP pubblico</strong>: un VPS va benissimo
-  (1 CPU, 512 MB-1 GB di RAM, Debian o Ubuntu).</li>
-<li>Accesso <strong>root</strong> (<code>sudo</code>). Senza root c'è <code>--utente</code>, vedi §6.</li>
+<li>Un server <strong>Linux</strong> sempre acceso e raggiungibile da Internet: un VPS (1 CPU, 512 MB-1 GB
+  di RAM, Debian o Ubuntu) oppure un computer di casa, anche un <strong>Raspberry Pi</strong> (§6).</li>
+<li>Accesso <strong>root</strong> (<code>sudo</code>). Senza root c'è <code>--utente</code>, vedi §7.</li>
 <li>Le porte <strong>UDP</strong> dei nodi aperte: per esempio 4601-4604.</li>
-<li>Il pacchetto <code>installazioni/Server-Linux/Nyctalus-Server-Linux.zip</code>. Contiene solo il
-  motore, senza grafica.</li>
+<li>Il pacchetto giusto (dalla release o da <code>installazioni/</code>), solo motore, senza grafica:</li>
 </ul>
+<table>
+<thead>
+<tr>
+<th>Server</th>
+<th>Pacchetto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PC, VPS (x86_64)</td>
+<td><code>Nyctalus-Server-Linux.zip</code></td>
+</tr>
+<tr>
+<td>Raspberry Pi 3/4/5 con sistema a 64 bit, altri ARM</td>
+<td><code>Nyctalus-Server-Linux-arm64.zip</code></td>
+</tr>
+</tbody>
+</table>
 <h2 id="2-portare-il-pacchetto-sul-server">2. Portare il pacchetto sul server</h2>
 <p>Dal tuo PC:</p>
 <pre><code class="language-sh">scp Nyctalus-Server-Linux.zip utente@IP-DEL-SERVER:
@@ -54,7 +71,7 @@ cd Nyctalus-Server
 <tbody>
 <tr>
 <td>IP pubblico</td>
-<td>quello del <strong>pannello del fornitore</strong>. L'installatore propone quello che vede, ma dietro NAT può essere sbagliato</td>
+<td>quello del <strong>pannello del fornitore</strong> (l'installatore propone quello che vede). Con l'IP che cambia: un <strong>nome</strong> (§6)</td>
 </tr>
 <tr>
 <td>Quanti nodi</td>
@@ -97,14 +114,33 @@ nyctalus-server log         # ultimi messaggi (log 4601 = solo quel nodo)
   il gestore.</li>
 <li><code>--rumore HZ</code>: celle finte di copertura verso i client (es. <code>5</code>). Consuma banda.</li>
 <li>Per cambiare IP o opzioni: modifica <code>/etc/nyctalus/server.conf</code>, poi
-  <code>nyctalus-server riavvia</code>. Se cambia l'IP, rimanda le righe al gestore.</li>
+  <code>nyctalus-server riavvia</code>. Se cambia l'IP, rimanda le righe al gestore (con un nome, §6, non serve).</li>
 </ul>
-<h2 id="6-senza-root">6. Senza root</h2>
+<h2 id="6-a-casa-con-ip-dinamico-no-ip-duckdns">6. A casa, con IP dinamico (No-IP, DuckDNS…)</h2>
+<ol>
+<li>Un <strong>nome</strong> che segue il tuo IP (es. <code>miacasa.ddns.net</code>), aggiornato dal router o dal
+   programma del servizio.</li>
+<li>Sul <strong>router</strong>: inoltra le porte <strong>UDP</strong> dei nodi (es. 4601-4604) al server/Raspberry.</li>
+<li>Installa con il nome al posto dell'IP: <code>sudo ./installa.sh --ip miacasa.ddns.net --nodi 2</code>.</li>
+<li>Manda le righe (<code>miacasa.ddns.net:4601,…</code>) al gestore.</li>
+</ol>
+<p>Quando l'IP cambia non serve fare nulla: client e nodi risolvono il nome a ogni collegamento.
+Nota: alcuni router non permettono ai dispositivi di casa di raggiungere il proprio nome
+pubblico; in quel caso in casa si usano gli altri nodi della rete.</p>
+<h2 id="6-bis-rubrica-e-casella-della-rete-facoltativo">6-bis. Rubrica e casella della rete (facoltativo)</h2>
+<p>Rubrica (chi usa la rete) e casella cifrata (messaggi a chi non è in linea) devono stare su una
+macchina sempre accesa: il server va benissimo.</p>
+<pre><code class="language-sh">./gestore-rete/nyctalus-rete rubrica --codice NYCT1:… --servizio    # il codice della rete
+</code></pre>
+<p>Stampa due indirizzi <code>.nyct</code> (anche dopo, con <code>journalctl --user -u nyctalus-rubrica</code>): mandali
+al gestore, che li mette nel codice (<a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a> §6-bis). Porte solo locali
+(18810-18814): sul router o sul firewall non va aperto nulla.</p>
+<h2 id="7-senza-root">7. Senza root</h2>
 <pre><code class="language-sh">./installa.sh --utente
 sudo loginctl enable-linger $USER     # una volta: i nodi restano accesi senza login
 </code></pre>
 <p>Tutto finisce in <code>~/.local/share/nyctalus-server</code>, con servizi <code>systemctl --user</code>.</p>
-<h2 id="7-aggiornare-e-disinstallare">7. Aggiornare e disinstallare</h2>
+<h2 id="8-aggiornare-e-disinstallare">8. Aggiornare e disinstallare</h2>
 <ul>
 <li><strong>Aggiornare:</strong> scompatta il pacchetto nuovo e rilancia <code>sudo ./installa.sh</code> con le
   stesse risposte. Le identità restano: le righe non cambiano.</li>
@@ -112,7 +148,7 @@ sudo loginctl enable-linger $USER     # una volta: i nodi restano accesi senza l
   <strong>conserva</strong> le identità. Con <code>--anche-identita</code> cancella anche quelle.
   Poi chiedi al gestore di togliere i nodi: <code>nyctalus-rete togli IP:PORTA</code>.</li>
 </ul>
-<h2 id="8-problemi">8. Problemi</h2>
+<h2 id="9-problemi">9. Problemi</h2>
 <table>
 <thead>
 <tr>
@@ -127,7 +163,11 @@ sudo loginctl enable-linger $USER     # una volta: i nodi restano accesi senza l
 </tr>
 <tr>
 <td><code>il motore non parte su questo server</code></td>
-<td>server non x86_64 (ARM): per ora serve x86_64</td>
+<td>pacchetto sbagliato: su ARM (Raspberry Pi) serve <code>Nyctalus-Server-Linux-arm64.zip</code></td>
+</tr>
+<tr>
+<td>nodi col nome «offline»</td>
+<td>il nome non punta al tuo IP attuale (servizio dinamico non aggiornato) o porte non inoltrate dal router</td>
 </tr>
 <tr>
 <td><code>nyctalus-server stato</code> → <code>failed</code></td>

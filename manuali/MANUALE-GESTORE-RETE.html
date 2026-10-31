@@ -86,13 +86,9 @@ firmato: anche se qualcuno lo alterasse, i client lo rifiuterebbero. Scegli tu d
 <p>Stampa <code>NYCT1:…</code> e lo salva in <code>~/.nyctalus-rete/codice.txt</code>.
 - Contiene solo <strong>nome, URL e chiave pubblica</strong>: puoi mandarlo per messaggio o mail.
 - <strong>Va rifatto solo se cambi l'URL.</strong> Aggiungere o togliere nodi non cambia il codice.
-- I client lo importano così:
-  - <strong>PC:</strong> <code>nyctalus-rete importa NYCT1:…</code>, poi chiudi e riapri chat e browser. Le reti
-    importate restano salvate: <code>nyctalus-rete reti</code> le elenca, <code>nyctalus-rete usa N</code> cambia rete
-    (<code>nyctalus-rete importa --prova</code> per tornare alla rete di prova; <code>stato</code> per vedere
-    la rete in uso);
-  - <strong>telefono:</strong> nella schermata iniziale dell'app <strong>🔗 Rete</strong> → <strong>Importa codice di rete</strong>
-    (vale per chat, browser e file; la rete si riavvia da sola).</p>
+- Rubrica e casella, se le hai accese, entrano nel codice (§6-bis).
+- I client lo importano: PC <code>nyctalus-rete importa NYCT1:…</code> (<a href="MANUALE-PC.html"><code>MANUALE-PC.md</code></a> §3), telefono
+  <strong>🔗 Rete</strong> → Importa codice (<a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a> §1).</p>
 <h2 id="6-rete-di-casa-prove-senza-server">6. Rete di casa (prove senza server)</h2>
 <pre><code class="language-sh">nyctalus-rete casa            # opzioni: --nodi 4  --ip IP  --porta 18800  --porta-base 4701
 </code></pre>
@@ -127,6 +123,16 @@ l'importazione il telefono la mostra nella riga <strong>🔗 Rete</strong> della
 sei sicuro che nessuno sulla Wi-Fi ti abbia passato un codice diverso. La pagina è in
 <code>http</code> perché è solo nella rete locale e distribuisce dati pubblici; l'elenco dei nodi è
 firmato, e l'impronta protegge il codice.</p>
+<h2 id="6-bis-rubrica-e-casella-per-la-tua-rete">6-bis. Rubrica e casella per la tua rete</h2>
+<p>La rete di casa le accende da sola. Per una rete vera vanno tenute accese su una macchina
+sempre in rete:
+- <strong>su questo PC</strong> (dove hai la rete): <code>nyctalus-rete rubrica</code> (sempre accese: <code>--servizio</code>), poi
+  <code>nyctalus-rete codice --url URL</code>, che le include da solo;
+- <strong>sul server</strong> (consigliato): là <code>nyctalus-rete rubrica --codice NYCT1:… --servizio</code>
+  (<a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a> §6-bis), poi qui
+  <code>nyctalus-rete codice --url URL --rubrica INDIRIZZO --casella INDIRIZZO</code> con i due indirizzi
+  che ha stampato. Il codice li ricorda.</p>
+<p>Ridai il codice nuovo ai client (sul telefono 📲 o «🔗 Rete», sul PC <code>nyctalus-rete importa</code>).</p>
 <h2 id="7-sicurezza-in-tre-righe">7. Sicurezza in tre righe</h2>
 <ul>
 <li>La chiave <strong>segreta</strong> non esce mai da <code>~/.nyctalus-rete</code>: il codice e l'elenco

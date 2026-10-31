@@ -28,10 +28,8 @@ un piccolo servizio, l'<strong>orchestratore</strong>, che avvia la rete, fa da 
 gestisce gli allegati. Installazione: <strong><a href="MANUALE-INSTALLAZIONE.html"><code>MANUALE-INSTALLAZIONE.md</code></a></strong>, capitolo 2.</p>
 <hr />
 <h2 id="1-avvio">1. Avvio</h2>
-<p>In Termux scrivi <code>nyctalus-mobile</code> e apri nel browser l'indirizzo che stampa
-(<code>http://127.0.0.1:18731/?t=…</code>). Con l'app Nyctalus basta toccare l'icona: compare la <strong>schermata di benvenuto</strong> col logo,
-e l'app avvia Nyctalus in Termux. Sotto il nome «Nyctalus · Anonymous Protocol» c'è una
-fila di pulsanti, come il mini menu del PC:</p>
+<p>Tocca l'icona <strong>Nyctalus</strong>: compare la schermata di benvenuto e l'app avvia Nyctalus in Termux.
+Sotto il logo, una fila di pulsanti come il mini menu del PC:</p>
 <table>
 <thead>
 <tr>
@@ -42,55 +40,40 @@ fila di pulsanti, come il mini menu del PC:</p>
 <tbody>
 <tr>
 <td>💬 <strong>Chat</strong></td>
-<td>la chat. Si accende quando la scritta dice «● Nyctalus è pronto»</td>
+<td>la chat; si accende con «● Nyctalus è pronto»</td>
 </tr>
 <tr>
 <td>👥 <strong>Rubrica</strong></td>
-<td>la sola <strong>rubrica della rete</strong>, a tutto schermo (← o indietro tornano qui; la chat si apre solo scegliendo qualcuno a cui scrivere): chi usa la rete, chi è in linea, iscriversi con un nome (vedi <a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a> §3-bis). Funziona se la rete ha una rubrica (la rete di casa sì)</td>
+<td>la sola <strong>rubrica della rete</strong> a tutto schermo: chi c'è, chi è in linea, iscriversi (<a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a> §3-bis)</td>
 </tr>
 <tr>
 <td>🌐 <strong>Browser</strong></td>
-<td>il browser: <strong>🦇 modalità Nyctalus</strong> (anonimo, siti <code>.nyct</code>) oppure navigazione normale; parte da DuckDuckGo</td>
+<td>il browser, con la <strong>🦇 modalità Nyctalus</strong> (§1-bis)</td>
 </tr>
 <tr>
 <td>📁 <strong>File</strong></td>
-<td>in arrivo: invio e ricezione di file attraverso Nyctalus</td>
+<td>in arrivo</td>
 </tr>
 <tr>
 <td>ℹ️ <strong>Info</strong></td>
-<td>il sito del progetto con i manuali online (anche toccando il logo)</td>
+<td>il sito con i manuali online</td>
 </tr>
 </tbody>
 </table>
-<p>Le reti che importi restano in un <strong>elenco</strong>: toccando <strong>🔗 Rete</strong> le vedi tutte (● quella in uso)
-e passi dall'una all'altra con un tocco, senza reimportare il codice; c'è anche la rete di
-prova. Toccando quella in uso puoi toglierla dall'elenco.</p>
-<p>Sotto la scritta di stato c'è la riga <strong>🔗 Rete</strong>: dice a quale rete sei collegato
-(«prova locale», oppure il nome della rete e la sua impronta). <strong>La rete è una sola per
-tutta l'app</strong>: chat, browser in modalità 🦇 e, quando ci sarà, il gestore dei file. Toccala
-per <strong>importare un codice di rete</strong> (se ne hai già copiato uno, è proposto da solo) o per
-tornare alla rete di prova. Più comodo ancora: dalla pagina della rete (per la rete di casa
-<code>http://IP-DEL-PC:18800/</code>) tocca <strong>📲 Collega l'app Nyctalus</strong>. L'app si apre e chiede conferma
-con nome e impronta della rete; l'esito resta a schermo.</p>
-<p>Il <strong>tasto indietro</strong> riporta sempre al punto di partenza: dalla conversazione all'elenco
-delle chat, dall'elenco a questa schermata; dal browser, chiudendo l'ultima scheda. La chat
-resta aperta dietro, quindi ritoccando 💬 ci si rientra subito.
-I pulsanti per Termux (installa/aggiorna Termux, installa/aggiorna Nyctalus, apri Termux,
-comando di avvio) sono sotto <strong>Strumenti ▾</strong>. <strong>Dopo aver installato un'APK nuova tocca sempre
-«Installa/aggiorna Nyctalus»</strong> (dalla 0.25 il motore è già pronto nell'app: bastano pochi secondi): la chat, il motore e il servizio stanno in Termux, e l'APK da
-sola non li aggiorna. Se il servizio è acceso, l'aggiornamento lo ferma, sostituisce i file e lo
-riaccende con la versione nuova (fino alla 0.20 restava acceso il servizio vecchio e
-l'installazione poteva fermarsi a metà). Le foto e i video scattati dalla chat con l'app restano nella sua cartella
-privata (non finiscono nella galleria) e si cancellano dopo un giorno.</p>
-<p>In cima all'elenco una striscia ti dice a che punto è la rete:
-- <strong>⏳ Avvio della rete…</strong>: pochi secondi, intanto vedi già le chat;
-- <strong>Rete di prova LOCALE</strong>: funziona solo sul telefono. Per parlare con altri importa un
-  <strong>codice di rete</strong> (vedi sotto);
-- <strong>Nyctalus è fermo</strong> con il bottone <strong>Avvia</strong>.</p>
-<p><strong>Se Android ferma Nyctalus</strong> mentre sei in un'altra app (per esempio Chrome), tornando
-nell'app questa se ne accorge e lo riaccende da sola in Termux. Per ridurre il problema,
-quando Nyctalus parte Termux resta «sveglio» (<code>termux-wake-lock</code>): compare una notifica fissa
-di Termux, ed è normale. Se resta fermo, apri Termux e scrivi <code>nyctalus-mobile --sfondo</code>.</p>
+<p><strong>🔗 Rete</strong> (sotto la scritta di stato): a quale rete sei collegato, con l'<strong>impronta</strong>. La rete è
+una sola per tutta l'app (chat, browser 🦇). Toccala per:
+- <strong>importare un codice di rete</strong> (<code>NYCT1:…</code>; se l'hai copiato, è già proposto);
+- <strong>passare</strong> a un'altra rete salvata (● quella in uso), o tornare alla rete di prova;
+- togliere una rete dall'elenco.</p>
+<p>Ancora più comodo: dalla pagina della rete (per la rete di casa <code>http://IP-DEL-PC:18800/</code>, in
+Chrome) tocca <strong>📲 Collega l'app Nyctalus</strong> e conferma nome e impronta.</p>
+<p><strong>Strumenti ▾</strong>: Termux (installa/aggiorna), <strong>🦇 Installa/aggiorna Nyctalus in Termux</strong> (da
+ritoccare <strong>dopo ogni APK nuova</strong>: aggiorna chat, motore e servizio in pochi secondi),
+🔔 notifiche (§5-bis), ⏻ avvio all'accensione, comando di avvio.</p>
+<p>Il <strong>tasto indietro</strong> riporta sempre indietro di un passo fino a questa schermata; la chat resta
+aperta dietro. Se Android ferma Nyctalus mentre sei in un'altra app, l'app lo riaccende da sola
+(se resta fermo: in Termux <code>nyctalus-mobile --sfondo</code>). La notifica fissa di Termux è normale.</p>
+<p>Senza l'app: in Termux <code>nyctalus-mobile</code> e apri in Chrome l'indirizzo che stampa.</p>
 <h2 id="1-bis-il-browser-solo-nellapp">1-bis. Il browser (solo nell'app)</h2>
 <p>È il browser di NovaOS in stile Chrome: schede, incognito, preferiti, cronologia, trova nella
 pagina, traduzione, modalità lettura, sito desktop, download. In più ha la <strong>modalità
@@ -111,6 +94,7 @@ Nyctalus</strong>: il pulsante <strong>🦇</strong> a sinistra della barra, opp
 <li>I siti <code>.nyct</code> fuori dalla modalità Nyctalus sono bloccati, come sul PC.</li>
 </ul>
 <h2 id="2-le-chat-schermata-principale">2. Le chat (schermata principale)</h2>
+<p>In cima, una striscia dice a che punto è la rete: <strong>⏳ Avvio…</strong> (pochi secondi), <strong>Rete di prova LOCALE</strong> (importa un codice di rete per parlare con altri, §1), <strong>Nyctalus è fermo</strong> (bottone <strong>Avvia</strong>).</p>
 <ul>
 <li>Ogni riga mostra <strong>avatar</strong>, <strong>nome</strong>, <strong>ultimo messaggio</strong>, <strong>ora o giorno</strong>, il
   numero di <strong>messaggi non letti</strong> e il 📌 delle chat fissate (che restano in cima).</li>
@@ -144,6 +128,7 @@ casella cifrata (il contatto non era in linea), ✓✓ consegnato, ✓✓ blu le
 <p><strong>Pressione lunga su un messaggio</strong> → Copia testo · Inoltra (a un altro contatto) ·
 <strong>Elimina per me</strong> (solo dal tuo telefono). Sugli allegati: Apri · Inoltra · Elimina.</p>
 <h2 id="4-allegati-come-telegram">4. Allegati (come Telegram)</h2>
+<p>Foto e video scattati dalla chat con l'app restano nella sua cartella privata (non nella galleria) e si cancellano dopo un giorno.</p>
 <p>Tocca <strong>📎</strong>: sale il <strong>selettore</strong>.
 - La <strong>griglia</strong> mostra le tue <strong>foto e video più recenti</strong>; la prima casella è la
   <strong>Fotocamera</strong>.

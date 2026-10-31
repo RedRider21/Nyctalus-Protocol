@@ -26,6 +26,45 @@
 computer che lo ospita, e il sito non sa chi lo visita. Tutto si fa con un comando:
 <strong><code>nyctalus-sito</code></strong>. Lo installano il pacchetto PC (<code>./installa.sh</code>) e il pacchetto server
 (<code>./nyctalus-sito</code> nella cartella scompattata).</p>
+<h2 id="0-due-modi-di-ospitare-il-sito">0. Due modi di ospitare il sito</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Cartella</strong> (server integrato)</th>
+<th><strong>Apache / nginx</strong> (server tuo)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cos'è</td>
+<td>una cartella con <code>index.html</code>, CSS, immagini: è la <code>www</code> del sito</td>
+<td>il tuo server web, in ascolto <strong>solo</strong> su <code>127.0.0.1</code></td>
+</tr>
+<tr>
+<td>Pagine</td>
+<td>fisse (HTML, CSS, JS)</td>
+<td>anche dinamiche: PHP, WordPress, un'applicazione</td>
+</tr>
+<tr>
+<td>Serve installare</td>
+<td>niente: c'è dentro Nyctalus</td>
+<td>Apache/nginx/PHP</td>
+</tr>
+<tr>
+<td>Comando</td>
+<td><code>nyctalus-sito crea NOME</code> (o <code>--cartella DIR</code>)</td>
+<td><code>nyctalus-sito crea NOME --backend 127.0.0.1:8080</code></td>
+</tr>
+<tr>
+<td>Dettagli</td>
+<td>§2</td>
+<td>§3</td>
+</tr>
+</tbody>
+</table>
+<p>In tutti e due i casi Nyctalus porta i visitatori al sito senza rivelare né chi visita né
+dove sta il sito.</p>
 <h2 id="1-il-modo-piu-semplice">1. Il modo più semplice</h2>
 <pre><code class="language-sh">nyctalus-sito
 </code></pre>
@@ -55,6 +94,12 @@ nyctalus-sito avvia mio-sito
 </code></pre>
 <p>Indirizzi diversi da <code>127.0.0.1</code> vengono rifiutati: il server web non deve essere
 raggiungibile da Internet, solo da Nyctalus.</p>
+<p><strong>Con Apache</strong> (o nginx) è come la solita cartella <code>www</code>, con tre regole:
+1. un <code>VirtualHost</code> <strong>solo su <code>127.0.0.1:8080</code></strong> (<code>Listen 127.0.0.1:8080</code>): se lo stesso sito fosse
+   raggiungibile anche da Internet, chiunque potrebbe collegare il <code>.nyct</code> al tuo IP;
+2. <code>ServerTokens Prod</code> e <code>ServerSignature Off</code>: il server non dice nome e versione;
+3. nel sito niente indirizzi assoluti verso altri domini o verso il tuo IP.</p>
+<p>Apache vede tutte le visite come da <code>127.0.0.1</code>: non sa chi sta visitando.</p>
 <h2 id="4-su-quale-rete">4. Su quale rete</h2>
 <p>Di solito su quella di questo computer, cioè quella importata con <code>nyctalus-rete importa</code>
 o accesa con <code>nyctalus-rete casa</code>. Su un server che non usa la chat si passa il codice della

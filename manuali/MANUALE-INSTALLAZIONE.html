@@ -114,78 +114,32 @@ cd Nyctalus
 identità e chat.</p>
 <hr />
 <h2 id="2-telefono-android">2. Telefono Android</h2>
-<p>Nyctalus sul telefono funziona come <strong>Termux-NexusSEC-OS</strong>: dentro <strong>Termux</strong> gira il
-motore (lo stesso del PC) con un piccolo servizio, e l'interfaccia è una <strong>web-app in
-stile Telegram</strong>, che apri nel browser del telefono oppure nell'app <strong>Nyctalus</strong>.</p>
-<p><strong>Convive con gli altri progetti in Termux:</strong> usa solo la cartella <code>~/nyctalus</code>, i dati
-in <code>~/.nyctalus-mobile</code> e <code>~/.nyctalus-chat</code>, porte del blocco <strong>18xxx</strong>, comandi che
-iniziano con <code>nyctalus-</code>; installa <strong>solo i pacchetti che mancano</strong> e <strong>non aggiorna
-mai</strong> quelli già presenti; in <code>termux.properties</code> aggiunge una sola riga, senza
-riscrivere il file.</p>
-<h3 id="21-cosa-scaricare">2.1 Cosa scaricare</h3>
+<p>Dentro <strong>Termux</strong> girano il motore (lo stesso del PC) e un piccolo servizio; l'<strong>app Nyctalus</strong>
+mostra la chat (stile Telegram), il browser e la rubrica.</p>
+<h3 id="21-il-modo-semplice-con-lapp">2.1 Il modo semplice: con l'app</h3>
 <ol>
-<li><strong>Termux</strong> — <strong>non</strong> dal Play Store (versione vecchia e ferma):
-   - F-Droid: <a href="https://f-droid.org/packages/com.termux/">https://f-droid.org/packages/com.termux/</a>
-   - oppure GitHub: <a href="https://github.com/termux/termux-app/releases">https://github.com/termux/termux-app/releases</a> → il file
-     <code>termux-app_…_arm64-v8a.apk</code> (quasi tutti i telefoni recenti sono <em>arm64-v8a</em>).</li>
+<li>Installa <strong>Termux</strong> da F-Droid (<a href="https://f-droid.org/packages/com.termux/">https://f-droid.org/packages/com.termux/</a>) o da GitHub
+   (<a href="https://github.com/termux/termux-app/releases">https://github.com/termux/termux-app/releases</a>, file <code>…arm64-v8a.apk</code>), <strong>non</strong> dal Play
+   Store. Aprilo una volta e aspetta che finisca. Se lo usi già per altro, va bene quello.</li>
+<li>Installa <strong><code>Nyctalus.apk</code></strong> (dal pacchetto <code>Nyctalus-Android.zip</code> della release) e aprila;
+   concedi «Esegui comandi in Termux». Android chiede di consentire «Installa app sconosciute».</li>
+<li>Nell'app: <strong>Strumenti ▾ → 🦇 Installa / aggiorna Nyctalus in Termux</strong>. Termux mostra
+   l'installazione (pochi secondi: il motore è già pronto) e poi torna all'app.</li>
+<li>Collegati a una rete: <a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a> §1 (a casa: <a href="GUIDA-RETE-DI-CASA.html"><code>GUIDA-RETE-DI-CASA.md</code></a>).</li>
 </ol>
-<p>Se usi già Termux per altri progetti, va bene quello che hai.
-2. <strong><code>nyctalus-termux.tar.gz</code></strong> dalla cartella <code>installazioni/Android/</code>.
-3. Facoltativa: <strong><code>Nyctalus.apk</code></strong>, l'app Nyctalus (circa 170 KB). Senza, usi il browser
-   del telefono (funziona allo stesso modo). Per installarla Android chiede di consentire
-   «Installa app sconosciute» all'app con cui la apri (File, Chrome…).</p>
-<h3 id="21-bis-il-modo-piu-semplice-con-lapp">2.1-bis Il modo più semplice: con l'app</h3>
-<p><code>Nyctalus.apk</code> contiene già il pacchetto per Termux, quindi <strong>non serve copiare archivi</strong>:
-1. installa <strong>Termux</strong>, aprilo una volta e aspetta che finisca di prepararsi;
-2. installa <strong><code>Nyctalus.apk</code></strong> e aprila; concedi il permesso «Esegui comandi in Termux»;
-3. tocca <strong>«🦇 Installa / aggiorna Nyctalus in Termux»</strong>. Termux si apre e mostra
-   l'installazione (lo stesso installatore del punto 2.3, che convive con gli altri
-   progetti); alla fine l'app torna davanti da sola: tocca <strong>Entra</strong>.</p>
-<p>Solo la <strong>prima volta</strong> Termux può non eseguire il comando da solo (manca ancora
-l'impostazione <code>allow-external-apps</code>, che l'installatore poi aggiunge): in Termux tieni
-premuto → <strong>Incolla</strong> → Invio. Il comando è già negli appunti.</p>
-<p>Come funziona: l'app serve il pacchetto per qualche minuto su <code>127.0.0.1</code>, a un indirizzo
-casuale; Termux lo scarica con <code>curl</code> e ne <strong>verifica l'impronta SHA-256</strong> prima di
-installarlo (un pacchetto diverso viene rifiutato e non si installa nulla). Durante il
-trasferimento compare la notifica «Nyctalus — Passo il pacchetto a Termux…»: serve a non
-far «congelare» l'app da Android mentre Termux è in primo piano (problema delle versioni
-fino alla 0.3, in cui <code>curl</code> restava appeso o falliva). Sparisce da sola a consegna fatta.</p>
-<p>Se in Termux compare <em>«nyctalus-mobile: No such file or directory»</em> (APK 0.2), Nyctalus
-non è ancora installato: tocca prima «🦇 Installa / aggiorna Nyctalus». Dalla 0.3 il
-comando copiato se ne accorge da solo e installa.</p>
-<p>Gli altri pulsanti dell'app:</p>
-<table>
-<thead>
-<tr>
-<th>Pulsante</th>
-<th>Cosa fa</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>⬇ Installa Termux</td>
-<td>apre F-Droid (consigliato) o la pagina GitHub di Termux</td>
-</tr>
-<tr>
-<td>↻ Aggiorna Termux</td>
-<td>l'app Termux (F-Droid) oppure i pacchetti (<code>pkg upgrade</code>, chiede conferma: vale per <strong>tutti</strong> i progetti in Termux)</td>
-</tr>
-<tr>
-<td>🦇 Installa / aggiorna Nyctalus</td>
-<td>come sopra; per aggiornare: installa la nuova APK e ritocca il pulsante</td>
-</tr>
-<tr>
-<td>⌨ Apri Termux · 📋 Comando di avvio</td>
-<td>apre Termux; copia un comando da incollare in Termux che <strong>avvia</strong> Nyctalus e, se non è ancora installato, prima lo <strong>installa</strong> (vale 15 minuti)</td>
-</tr>
-<tr>
-<td>☁ Aggiornamenti da GitHub</td>
-<td>in arrivo, quando il progetto sarà pubblicato</td>
-</tr>
-</tbody>
-</table>
-<p>Se preferisci fare a mano, segui i punti qui sotto.</p>
-<h3 id="22-portare-larchivio-nel-telefono">2.2 Portare l'archivio nel telefono</h3>
+<p>Solo la <strong>prima volta</strong> Termux può non eseguire il comando da solo: in Termux tieni premuto →
+<strong>Incolla</strong> → Invio (il comando è già negli appunti).</p>
+<p><strong>Per aggiornare:</strong> installa la nuova APK, poi di nuovo il punto 3 (ferma e riaccende da solo il
+servizio in Termux).</p>
+<p><strong>Convive con gli altri progetti in Termux:</strong> usa solo <code>~/nyctalus</code>, <code>~/.nyctalus-mobile</code>,
+<code>~/.nyctalus-chat</code>, porte 18xxx e comandi <code>nyctalus-*</code>; installa solo i pacchetti che mancano,
+non aggiorna mai quelli presenti, in <code>termux.properties</code> aggiunge una sola riga.</p>
+<p>Come arriva il pacchetto: l'app lo offre per qualche minuto su <code>127.0.0.1</code> a un indirizzo
+casuale; Termux lo scarica e ne <strong>verifica l'impronta SHA-256</strong> prima di installarlo.</p>
+<h3 id="22-a-mano-senza-lapp-facoltativo">2.2 A mano, senza l'app (facoltativo)</h3>
+<p>Serve <code>nyctalus-termux.tar.gz</code> (nel pacchetto Android). Poi si apre la chat nel browser del
+telefono all'indirizzo che stampa <code>nyctalus-mobile</code>.</p>
+<h4 id="portare-larchivio-nel-telefono">Portare l'archivio nel telefono</h4>
 <p>L'archivio deve finire nella cartella <strong>Download</strong> del telefono. Scegli il modo più comodo:
 - <strong>cavo USB</strong>: collega il telefono al PC, scegli «Trasferimento file», copia
   <code>nyctalus-termux.tar.gz</code> nella cartella <code>Download</code>;
@@ -193,9 +147,9 @@ comando copiato se ne accorge da solo e installa.</p>
   salvalo in Download;
 - <strong>in rete locale</strong> (PC e telefono sulla stessa Wi-Fi): sul PC, dalla cartella
   <code>installazioni/Android/</code>, lancia <code>python3 -m http.server 8080</code>; in Termux
-  <code>curl -O http://IP-DEL-PC:8080/nyctalus-termux.tar.gz</code> (poi al punto 2.3 usa questo
+  <code>curl -O http://IP-DEL-PC:8080/nyctalus-termux.tar.gz</code> (poi in «Installare» usa questo
   file al posto di quello in Download). Alcune reti aziendali lo bloccano.</p>
-<h3 id="23-installare-una-volta-sola">2.3 Installare (una volta sola)</h3>
+<h4 id="installare-una-volta-sola">Installare (una volta sola)</h4>
 <p>In Termux:</p>
 <pre><code class="language-sh">termux-setup-storage          # appare la richiesta di accesso ai file: concedila
 cd ~
@@ -214,7 +168,7 @@ bash nyctalus-termux/installa.sh
 <li>Opzione: <code>bash nyctalus-termux/installa.sh --avvio-automatico</code> fa partire Nyctalus
   all'accensione (serve l'app <strong>Termux:Boot</strong>).</li>
 </ul>
-<h3 id="24-avviare">2.4 Avviare</h3>
+<h4 id="avviare">Avviare</h4>
 <pre><code class="language-sh">nyctalus-mobile
 </code></pre>
 <p>Stampa un indirizzo come <code>http://127.0.0.1:18731/?t=…</code>: tienilo premuto, copialo e
@@ -253,7 +207,7 @@ Termux tieni premuto → Incolla → Invio, poi torna nell'app.</p>
 </tbody>
 </table>
 <p>Uso dell'app: <strong><a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a></strong> e <strong><a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a></strong>.</p>
-<h3 id="25-disinstallare">2.5 Disinstallare</h3>
+<h3 id="23-disinstallare">2.3 Disinstallare</h3>
 <pre><code class="language-sh">bash ~/nyctalus/disinstalla.sh
 </code></pre>
 <p>Toglie <strong>solo</strong> Nyctalus (programma, comando, avvio automatico). Chiede prima di
@@ -261,16 +215,10 @@ cancellare i tuoi dati (identità, contatti, messaggi). <strong>Non</strong> dis
 python o rust, che potrebbero servire ad altri progetti.</p>
 <hr />
 <h2 id="3-la-rete-prova-locale-o-condivisa">3. La rete: prova locale o condivisa</h2>
-<p>Senza configurazione, PC e telefono avviano una <strong>rete di prova locale</strong>: tutto
-funziona, ma solo su quel dispositivo, e non raggiungi altre persone. Per parlare con
-gli altri ci si collega a una <strong>rete condivisa</strong> col <strong>codice di rete</strong> (<code>NYCT1:…</code>) che
-dà chi la gestisce:
-- <strong>PC:</strong> <code>nyctalus-rete importa NYCT1:…</code>, poi riapri chat e browser
-  (<code>nyctalus-rete importa --prova</code> per tornare alla rete di prova);
-- <strong>telefono:</strong> ⚙ Impostazioni → <strong>Rete condivisa</strong> → <strong>Importa codice</strong>.</p>
-<p>Per provare <strong>telefono ↔ PC</strong> senza server: sul PC <code>nyctalus-rete casa</code> (rete di casa).
-Come mettere in piedi una rete vera: <a href="SCELTE-OPERATIVE.html"><code>SCELTE-OPERATIVE.md</code></a>, <a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>,
-<a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a>.</p>
+<p>Appena installati, PC e telefono usano una <strong>rete di prova locale</strong> (solo su quel dispositivo).
+Per parlare con altri ci si collega a una rete con il suo <strong>codice</strong> (<code>NYCT1:…</code>): PC
+<a href="MANUALE-PC.html"><code>MANUALE-PC.md</code></a> §3, telefono <a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a> §1. Provare telefono ↔ PC senza server:
+<a href="GUIDA-RETE-DI-CASA.html"><code>GUIDA-RETE-DI-CASA.md</code></a>. Creare una rete: <a href="SCELTE-OPERATIVE.html"><code>SCELTE-OPERATIVE.md</code></a>.</p>
 <h2 id="4-problemi-frequenti">4. Problemi frequenti</h2>
 <table>
 <thead>

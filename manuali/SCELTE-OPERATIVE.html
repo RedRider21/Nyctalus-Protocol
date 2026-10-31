@@ -72,29 +72,10 @@
 </ol>
 <p>Limite: non puoi parlare con nessun altro dispositivo.</p>
 <h2 id="scenario-b-rete-di-casa-telefono-pc-nessun-server">Scenario B · Rete di casa: telefono ↔ PC (nessun server)</h2>
-<blockquote>
-<p>Versione in una pagina: <strong><a href="GUIDA-RETE-DI-CASA.html"><code>GUIDA-RETE-DI-CASA.md</code></a></strong>.
-<strong>Cosa:</strong> il PC fa da nodi e da gestore sulla Wi-Fi di casa; il telefono si collega.
-È il modo per provare <strong>due identità diverse</strong> tra loro.</p>
-</blockquote>
-<ol>
-<li>Sul PC installa il <strong>gestore</strong> (<code>./installa.sh</code> → 2).</li>
-<li>Sul PC: <code>nyctalus-rete casa</code> e lascia la finestra aperta. Stampa un codice <code>NYCT1:…</code>
-   e un indirizzo <code>http://IP-DEL-PC:18800/</code>.</li>
-<li>Sul telefono, sulla <strong>stessa Wi-Fi</strong>, apri nel browser <code>http://IP-DEL-PC:18800/</code> e tocca
-   <strong>📲 Collega l'app Nyctalus</strong>: l'app si apre e chiede conferma con nome e impronta della rete.
-   In alternativa copia il codice e importalo dalla riga <strong>🔗 Rete</strong> della schermata iniziale.</li>
-<li>Sul PC la chat usa già la rete di casa: <code>casa</code> importa il codice anche sul PC.
-   Chiudi e riapri la chat.</li>
-<li>Controlla che l'<strong>impronta della rete</strong> mostrata dal PC sia uguale a quella in ⚙ → Rete
-   condivisa sul telefono.</li>
-<li>Scambiatevi i Contact ID e scrivetevi.</li>
-</ol>
-<p>Se il telefono resta a caricare la pagina, il firewall del PC blocca le porte: <code>casa</code> stampa
-i due comandi <code>sudo ufw allow …</code> da dare una volta sola (vedi <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a> §6).</p>
-<p>Limiti: funziona solo in casa e solo finché la finestra di <code>casa</code> resta aperta.
-<code>Ctrl-C</code> la ferma. Per tornare alla rete di prova: PC <code>nyctalus-rete importa --prova</code>,
-telefono «↩ Rete di prova».</p>
+<p><strong>Cosa:</strong> il PC fa da nodi e da gestore sulla Wi-Fi di casa; il telefono si collega. È il modo
+per provare <strong>due identità diverse</strong> tra loro. Installa sul PC il <strong>gestore</strong> (<code>./installa.sh</code> → 2),
+poi segui <strong><a href="GUIDA-RETE-DI-CASA.html"><code>GUIDA-RETE-DI-CASA.md</code></a></strong> (5 passi).</p>
+<p>Limiti: solo in casa e solo finché la finestra di <code>nyctalus-rete casa</code> resta aperta.</p>
 <h2 id="scenario-c-rete-vera-con-un-server-vps">Scenario C · Rete vera con un server (VPS)</h2>
 <p><strong>Cosa:</strong> un server in affitto con 4 nodi; chiunque abbia il codice può usare la rete.</p>
 <table>
@@ -122,14 +103,19 @@ telefono «↩ Rete di prova».</p>
 <td><a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a> §4</td>
 </tr>
 <tr>
+<td><strong>Server</strong> (facoltativo)</td>
+<td>rubrica e casella: <code>./gestore-rete/nyctalus-rete rubrica --codice … --servizio</code></td>
+<td><a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a> §6-bis</td>
+</tr>
+<tr>
 <td><strong>Tuo PC (gestore)</strong></td>
-<td><code>nyctalus-rete codice --url URL</code> → il codice <code>NYCT1:…</code></td>
+<td><code>nyctalus-rete codice --url URL</code> (con <code>--rubrica … --casella …</code>) → il codice <code>NYCT1:…</code></td>
 <td><a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a></td>
 </tr>
 <tr>
 <td><strong>Ogni client</strong></td>
-<td>PC: <code>nyctalus-rete importa CODICE</code> · telefono: schermata iniziale → <strong>🔗 Rete</strong> → Importa codice</td>
-<td>questo file, sopra</td>
+<td>PC: <code>nyctalus-rete importa CODICE</code> · telefono: <strong>🔗 Rete</strong> → Importa codice</td>
+<td><a href="MANUALE-PC.html"><code>MANUALE-PC.md</code></a> §3, <a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a> §1</td>
 </tr>
 </tbody>
 </table>

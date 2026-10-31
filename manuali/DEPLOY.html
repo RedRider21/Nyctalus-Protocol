@@ -178,72 +178,29 @@ Quando aggiungi/togli nodi, ri-firmi e ri-pubblichi il file.</p>
 </code></pre>
 <hr />
 <h2 id="4-configurare-i-client-i-tester">4. Configurare i client (i tester)</h2>
-<p>I tester installano il <strong>browser</strong> e lo puntano alla tua rete. Basta un file di
-configurazione <code>~/.nyctalus-browser/config.json</code>:</p>
-<pre><code class="language-json">{
-  &quot;directory_url&quot;: &quot;https://tuo-sito/directory.txt&quot;,
-  &quot;authority&quot;: &quot;&lt;PUBBLICA&gt;&quot;,
-  &quot;socks_host&quot;: &quot;127.0.0.1&quot;,
-  &quot;socks_port&quot;: 1080
-}
+<p>Dai ai tester il <strong>codice di rete</strong> (<code>nyctalus-rete codice --url URL</code>, <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a>):
+- <strong>PC:</strong> <code>nyctalus-rete importa NYCT1:…</code> (<a href="MANUALE-PC.html"><code>MANUALE-PC.md</code></a> §3);
+- <strong>telefono:</strong> riga <strong>🔗 Rete</strong> dell'app (<a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a> §1).</p>
+<p>A mano, da terminale (senza grafica):</p>
+<pre><code class="language-sh">curl -s https://tuo-sito/directory.txt &gt; directory.txt
+nyctalus start --directory directory.txt --authority &lt;PUBBLICA&gt; --socks 127.0.0.1:1080
 </code></pre>
-<p>Poi: avviano il browser (<code>demo-locale-nav-normal.sh</code> o <code>python3 -m nyctalus_browser</code>),
-cliccano <strong>Stealth</strong> → il browser <strong>scarica la directory, la fa verificare al
-demone</strong> (che controlla la firma con la chiave dell'autorità) e instrada il
-traffico. Il pulsante mostra <strong>"Stealth ON"</strong>.</p>
-<ul>
-<li><strong>Senza</strong> <code>directory_url</code>/<code>authority</code> nel config, cliccando Stealth il browser
-  avvia una <strong>rete di prova locale</strong> (sul PC del tester) → pulsante "Stealth ON ·
-  prova locale": utile a provare, ma non è la rete condivisa.</li>
-<li>Chi preferisce il terminale può lanciare il demone a mano:
-  <code>sh
-  curl -s https://tuo-sito/directory.txt &gt; directory.txt
-  nyctalus start --directory directory.txt --authority &lt;PUBBLICA&gt; --socks 127.0.0.1:1080</code></li>
-</ul>
+<p>Senza codice, chat e browser usano una <strong>rete di prova locale</strong> (solo su quel dispositivo).</p>
 <h3 id="i-tester-che-vogliono-far-crescere-la-rete">I tester che vogliono far crescere la rete</h3>
-<p>Possono far girare un <strong>nodo</strong> (serve una porta pubblica) e mandarti la loro
-riga <code>directory entry</code>: tu la aggiungi, ri-firmi e ri-pubblichi la directory.
-(La registrazione automatica dei nodi è un miglioramento futuro.)</p>
+<p>Possono far girare un <strong>nodo</strong> (<a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>, anche a casa con IP dinamico) e mandarti la
+loro riga: tu la aggiungi, firmi e ripubblichi <code>directory.txt</code>. Il codice non cambia.</p>
 <hr />
-<h2 id="5-pubblicare-un-sito-nyct">5. Pubblicare un sito <code>.nyct</code></h2>
-<p>Su qualunque macchina connessa alla rete (serve <code>directory.txt</code> + autorità):</p>
-<pre><code class="language-sh"># una cartella di file HTML/JS…
-nyctalus site --dir ./mio-sito --identity sito.key --directory directory.txt --authority &lt;PUB&gt;
-#   address:  &lt;ADDR&gt;.nyct     &lt;- l'indirizzo da condividere
-
-# …oppure un web server esistente (Nginx/Apache) dietro al demone
-nyctalus site --backend 127.0.0.1:8080 --directory directory.txt --authority &lt;PUB&gt;
-</code></pre>
-<p>I visitatori aprono <code>http://&lt;ADDR&gt;.nyct</code> dal browser (con lo Stealth attivo) o con
-<code>nyctalus browse &lt;ADDR&gt;.nyct</code>.</p>
-<hr />
-<h2 id="6-la-chat-nyct-senza-server-senza-metadati">6. La chat <code>.nyct</code> (senza server, senza metadati)</h2>
-<p>Ogni utente <strong>è</strong> un indirizzo <code>.nyct</code>: quello è il suo <strong>Contact ID</strong>, l'unica cosa
-da scambiarsi. Non esiste un server centrale né una rubrica globale: i messaggi
-viaggiano punto-a-punto nella rete (circuito → punto d'incontro → servizio),
-cifrati end-to-end. Il mittente è <strong>autenticato crittograficamente</strong> (un secondo
-handshake Noise NK dentro il tunnel: solo chi possiede la chiave privata
-dell'indirizzo che dichiara può concludere la conversazione), quindi nessuno può
-spacciarsi per un tuo contatto.</p>
-<p><strong>Serve la rete condivisa.</strong> La chat è a due parti: per parlarsi, <strong>entrambi</strong>
-devono essere sulla <strong>stessa rete</strong> (quella pubblica di §3, configurata nei client
-come in §4 — <code>directory_url</code> + <code>authority</code>). Senza configurazione la finestra si
-apre comunque, ma su una rete di prova <strong>locale</strong> (non raggiungi altre persone).</p>
-<p><strong>Avvio (uso reale):</strong></p>
-<pre><code class="language-sh">./avvia-chat.sh          # nel pacchetto; oppure strumenti/avvia-chat.sh in sviluppo
-</code></pre>
-<p>Fa tutto da sé: avvia/riusa il proxy SOCKS, pubblica il tuo servizio <code>.nyct</code>, avvia
-il motore e apre la finestra. Al primo avvio crea la tua identità in
-<code>~/.nyctalus-chat/identita</code> (il tuo Contact ID non cambia più). Nella finestra:
-copia il tuo Contact ID e dallo agli amici; premi « + » per aggiungere il loro
-indirizzo; scrivi.</p>
-<p><strong>Provarla da solo su un PC</strong> (due identità, due finestre, rete locale):</p>
-<pre><code class="language-sh">./strumenti/demo-chat.sh
-</code></pre>
-<p><strong>A mano</strong> (se vuoi controllare i pezzi): servono <code>nyctalus start</code> (il SOCKS),
-<code>nyctalus site --backend 127.0.0.1:1082 --identity ~/.nyctalus-chat/identita …</code>
-(l'entrata) e <code>nyctalus chat</code> (il motore); l'interfaccia è
-<code>python3 -m nyctalus_chat</code> con <code>PYTHONPATH</code> su <code>chat/</code> e <code>browser/</code>.</p>
+<h2 id="5-siti-nyct-e-chat">5. Siti <code>.nyct</code> e chat</h2>
+<ul>
+<li><strong>Siti:</strong> <a href="MANUALE-SITI.html"><code>MANUALE-SITI.md</code></a> (<code>nyctalus-sito</code>, cartella o Apache). A mano:
+  <code>nyctalus site --dir ./mio-sito --identity sito.key --directory directory.txt --authority &lt;PUB&gt;</code>
+  oppure <code>--backend 127.0.0.1:8080</code>.</li>
+<li><strong>Chat:</strong> <a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a>. A mano servono <code>nyctalus start</code> (il SOCKS),
+  <code>nyctalus site --backend 127.0.0.1:1082 --identity ~/.nyctalus-chat/identita …</code> (l'entrata) e
+  <code>nyctalus chat</code> (il motore, con <code>--rubrica</code>/<code>--casella</code> se la rete le ha); l'interfaccia è
+  <code>python3 -m nyctalus_chat</code>. Su un PC: <code>./strumenti/demo-chat.sh</code> (due identità, rete locale).</li>
+<li><strong>Rubrica e casella</strong> della rete: <code>nyctalus-rete rubrica</code> (<a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a> §6-bis).</li>
+</ul>
 <hr />
 <h2 id="7-riassunto-delle-opzioni-cosa-scegliere">7. Riassunto delle opzioni (cosa scegliere)</h2>
 <table>
@@ -264,7 +221,7 @@ indirizzo; scrivi.</p>
 </tr>
 <tr>
 <td>Usare la <strong>chat</strong> per davvero</td>
-<td><code>./avvia-chat.sh</code> (serve la rete condivisa, §3–4)</td>
+<td><code>nyctalus-chat</code> (installata) o <code>./avvia-chat.sh</code>, sulla rete del codice (§4)</td>
 </tr>
 <tr>
 <td>Solo il browser normale</td>
@@ -272,7 +229,7 @@ indirizzo; scrivi.</p>
 </tr>
 <tr>
 <td>Una rete condivisa per i tester</td>
-<td>§3 (nodi pubblici + directory pubblicata) + §4 (config dei client)</td>
+<td><a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a> + <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a> (a mano: §3) + §4</td>
 </tr>
 <tr>
 <td>Più anonimato (più lento)</td>
