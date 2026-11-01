@@ -19,11 +19,11 @@
   <button class="btn-icona" id="tema" title="Tema">🌓</button>
 </div></div>
 <main class="wrap manuale-doc">
-<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><a href="MANUALE-SERVER.html" class="qui">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html" class="qui">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
-<h1 id="manuale-del-server-nodi-della-rete">Manuale del server (nodi della rete)</h1>
+<h1 id="manuale-del-server-nodi-della-rete">Manuale del server (nodi della rete)</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-cosa-serve">1. Cosa serve</a><a href="#2-portare-il-pacchetto-sul-server">2. Portare il pacchetto sul server</a><a href="#3-installare">3. Installare</a><a href="#4-gestire">4. Gestire</a><a href="#5-opzioni-in-piu">5. Opzioni in più</a><a href="#6-a-casa-con-ip-dinamico-no-ip-duckdns">6. A casa, con IP dinamico (No-IP, DuckDNS…)</a><a href="#6-bis-rubrica-e-casella-della-rete-facoltativo">6-bis. Rubrica e casella della rete (facoltativo)</a><a href="#7-senza-root">7. Senza root</a><a href="#8-aggiornare-e-disinstallare">8. Aggiornare e disinstallare</a><a href="#9-problemi">9. Problemi</a></nav>
 <p>Un <strong>nodo</strong> inoltra il traffico cifrato della rete. Non vede cosa passa né chi parla con
-chi. Su un server ne puoi far girare da 1 a 8. Quadro generale: <a href="SCELTE-OPERATIVE.html"><code>SCELTE-OPERATIVE.md</code></a>.</p>
+chi. Su un server ne puoi far girare da 1 a 8. Quadro generale: <a href="index.html"><code>LEGGIMI.md</code></a> (Inizia qui).</p>
 <h2 id="1-cosa-serve">1. Cosa serve</h2>
 <ul>
 <li>Un server <strong>Linux</strong> sempre acceso e raggiungibile da Internet: un VPS (1 CPU, 512 MB-1 GB
@@ -86,12 +86,14 @@ cd Nyctalus-Server
 <p>Senza domande:</p>
 <pre><code class="language-sh">sudo ./installa.sh --ip 203.0.113.5 --nodi 4 --porta 4601 --si
 </code></pre>
-<p>Cosa fa:
-- motore in <code>/opt/nyctalus</code>;
-- un servizio <code>nyctalus-nodo@PORTA</code> per nodo, che riparte da solo dopo un riavvio, gira
-  con un utente dedicato <code>nyctalus</code> e privilegi ridotti;
-- identità dei nodi in <code>/var/lib/nyctalus</code>;
-- apre le porte su <code>ufw</code>/<code>firewalld</code>, se attivi.</p>
+<p>Cosa fa:</p>
+<ul>
+<li>motore in <code>/opt/nyctalus</code>;</li>
+<li>un servizio <code>nyctalus-nodo@PORTA</code> per nodo, che riparte da solo dopo un riavvio, gira
+  con un utente dedicato <code>nyctalus</code> e privilegi ridotti;</li>
+<li>identità dei nodi in <code>/var/lib/nyctalus</code>;</li>
+<li>apre le porte su <code>ufw</code>/<code>firewalld</code>, se attivi.</li>
+</ul>
 <p><strong>Alla fine stampa le RIGHE D'ELENCO</strong>, una per nodo:</p>
 <pre><code>203.0.113.5:4601,1f59a3…,2ecd48…
 </code></pre>

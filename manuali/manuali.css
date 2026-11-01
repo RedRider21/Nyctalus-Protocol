@@ -17,4 +17,9 @@
 .manuale-doc pre { overflow-x: auto; padding: 12px 14px; border-radius: 10px; background: rgba(127,127,127,.12); }
 .manuale-doc code { font-size: .92em; }
 .manuale-doc blockquote { margin: 1em 0; padding: 8px 14px; border-left: 4px solid #e0a63a; background: rgba(224,166,58,.08); border-radius: 0 8px 8px 0; }
+.indice-manuali .gruppo { margin: 14px 10px 4px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .55; }
+.sommario { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin: 4px 0 24px; padding: 12px 14px; border-radius: 12px; background: rgba(127,127,127,.08); font-size: 14px; }
+.sommario b { margin-right: 6px; opacity: .7; font-weight: 600; }
+.sommario a { padding: 3px 10px; border-radius: 999px; background: rgba(127,127,127,.12); text-decoration: none; color: inherit; }
+.sommario a:hover { background: color-mix(in srgb, var(--acc2) 22%, transparent); }
 @media (max-width: 760px) { .manuale-doc { grid-template-columns: 1fr; } .indice-manuali { position: static; flex-direction: row; flex-wrap: wrap; } }

@@ -1,0 +1,236 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guida: provare con un amico via Internet · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html" class="qui">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
+<article>
+<h1 id="guida-provare-con-un-amico-via-internet">Guida: provare con un amico via Internet</h1><nav class="sommario"><b>In questa pagina</b><a href="#cosa-serve">Cosa serve</a><a href="#passo-1-controlla-di-avere-un-ip-pubblico-2-minuti">Passo 1 · Controlla di avere un IP pubblico (2 minuti)</a><a href="#passo-2-il-nome-no-ip-sempre-aggiornato-5-minuti">Passo 2 · Il nome No-IP sempre aggiornato (5 minuti)</a><a href="#passo-3-dai-al-pc-un-indirizzo-fisso-in-casa-2-minuti">Passo 3 · Dai al PC un indirizzo fisso in casa (2 minuti)</a><a href="#passo-4-inoltra-le-porte-sul-router-5-minuti">Passo 4 · Inoltra le porte sul router (5 minuti)</a><a href="#passo-5-accendi-la-rete-raggiungibile-da-internet">Passo 5 · Accendi la rete raggiungibile da Internet</a><a href="#passo-6-il-tuo-amico-si-collega">Passo 6 · Il tuo amico si collega</a><a href="#passo-7-trovatevi-e-provate-tutto">Passo 7 · Trovatevi e provate tutto</a><a href="#se-qualcosa-non-va">Se qualcosa non va</a><a href="#da-sapere-onestamente">Da sapere (onestamente)</a></nav>
+<p>Tu a casa tua, il tuo amico in un'altra città: chat, file, chiamate e videochiamate
+attraverso <strong>la vostra</strong> rete Nyctalus. Tempo: circa mezz'ora la prima volta.</p>
+<p><strong>Come funziona, in una riga:</strong> il <strong>tuo PC</strong> tiene accesa la rete (4 nodi + l'elenco dei
+nodi) e la rende raggiungibile da Internet; il tuo amico <strong>si collega</strong> e basta, dal suo PC
+(Linux o Windows) o dal telefono. Lui non deve aprire nulla sul suo router.</p>
+<blockquote>
+<p>Chi ospita la rete può essere anche il tuo amico: con un <strong>IP statico</strong> è perfino più
+semplice (al posto del nome No-IP si usa direttamente l'IP). I passi sono gli stessi a
+parti invertite.</p>
+</blockquote>
+<h2 id="cosa-serve">Cosa serve</h2>
+<table>
+<thead>
+<tr>
+<th>Chi</th>
+<th>Cosa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tu</strong> (ospiti la rete)</td>
+<td>PC Linux con il pacchetto <strong>PC-Linux</strong> installato come <em>gestore</em> (<code>./installa.sh</code> → scelta 2); un <strong>nome No-IP</strong> che segue il tuo IP (es. <code>miacasa.ddns.net</code>); accesso al <strong>router</strong></td>
+</tr>
+<tr>
+<td><strong>Il tuo amico</strong></td>
+<td>il pacchetto per il suo apparecchio, <strong>della stessa data del tuo</strong>: PC-Linux (scelta 1), Windows, oppure l'app Android</td>
+</tr>
+<tr>
+<td><strong>Entrambi</strong></td>
+<td>i pacchetti dalla stessa release su GitHub; un modo per sentirvi a voce o per messaggio (per confrontare l'impronta)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="passo-1-controlla-di-avere-un-ip-pubblico-2-minuti">Passo 1 · Controlla di avere un IP pubblico (2 minuti)</h2>
+<p>Senza IP pubblico, gli altri non possono raggiungere il tuo PC e nessuna impostazione
+del router può rimediare.</p>
+<ol>
+<li>Nella pagina del router guarda l'<strong>IP WAN</strong> (o «IP pubblico», «Indirizzo Internet»).</li>
+<li>Apri un sito come <code>https://ifconfig.me</code> e confronta.</li>
+<li><strong>Uguali</strong> → va bene, prosegui. <strong>Diversi</strong>, oppure l'IP WAN inizia con <code>100.64</code>–<code>100.127</code>,
+   <code>10.</code>, <code>192.168.</code> → sei dietro <strong>CGNAT</strong>. Chiedi all'operatore un IP pubblico (spesso è
+   gratuito), oppure fai ospitare la rete al tuo amico.</li>
+</ol>
+<p><strong>TIM su fibra o ADSL</strong> di solito dà un IP pubblico <strong>dinamico</strong>: va bene, è proprio il
+caso del nome No-IP. Le offerte via radio (FWA/5G) di solito no.</p>
+<h2 id="passo-2-il-nome-no-ip-sempre-aggiornato-5-minuti">Passo 2 · Il nome No-IP sempre aggiornato (5 minuti)</h2>
+<p>Il nome deve puntare sempre al tuo IP attuale:</p>
+<ul>
+<li><strong>meglio nel router</strong>: cerca la sezione <strong>DNS dinamico</strong> (DDNS), scegli No-IP e inserisci
+  nome, utente e password;</li>
+<li><strong>altrimenti sul PC</strong>: installa il programma di aggiornamento di No-IP (DUC).</li>
+</ul>
+<p>Prova: <code>ping miacasa.ddns.net</code> deve mostrare lo stesso IP del passo 1.
+Il nome gratuito di No-IP va <strong>confermato ogni 30 giorni</strong> (arriva una mail).</p>
+<h2 id="passo-3-dai-al-pc-un-indirizzo-fisso-in-casa-2-minuti">Passo 3 · Dai al PC un indirizzo fisso in casa (2 minuti)</h2>
+<p>Nel router, sezione <strong>DHCP</strong> (o «Dispositivi»), <strong>riserva</strong> l'indirizzo attuale del PC
+(es. <code>192.168.1.14</code>). Così l'inoltro del passo 4 non si rompe quando il PC si riaccende.
+Il comando del passo 5 ti ricorda quale indirizzo ha il PC.</p>
+<h2 id="passo-4-inoltra-le-porte-sul-router-5-minuti">Passo 4 · Inoltra le porte sul router (5 minuti)</h2>
+<p>Sezione <strong>Port forwarding</strong> / <strong>Inoltro porte</strong> / <strong>Virtual server</strong> / <strong>Port mapping</strong>
+(sul TIM Hub di solito sta fra le impostazioni avanzate). Crea due regole verso
+l'indirizzo del PC:</p>
+<table>
+<thead>
+<tr>
+<th>Protocollo</th>
+<th>Porte esterne</th>
+<th>Verso il PC, porte</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>UDP</strong></td>
+<td>4701-4704</td>
+<td>4701-4704 (i nodi)</td>
+</tr>
+<tr>
+<td><strong>TCP</strong></td>
+<td>18800</td>
+<td>18800 (l'elenco dei nodi e la pagina del codice)</td>
+</tr>
+</tbody>
+</table>
+<p>Nient'altro va aperto: le porte della rubrica e della casella restano solo dentro il PC.</p>
+<h2 id="passo-5-accendi-la-rete-raggiungibile-da-internet">Passo 5 · Accendi la rete raggiungibile da Internet</h2>
+<p>Se è accesa la rete di casa (<code>nyctalus-rete casa</code>), fermala con <strong>Ctrl-C</strong>: usa le stesse
+porte. Poi:</p>
+<pre><code class="language-sh">nyctalus-rete casa --internet miacasa.ddns.net
+</code></pre>
+<p>Il comando:</p>
+<ul>
+<li>accende 4 nodi che si presentano col <strong>nome</strong> (non con l'IP: se l'IP cambia, non serve fare nulla);</li>
+<li>crea una rete a sé, «<strong>Rete Internet di prova</strong>», che non tocca la rete di casa;</li>
+<li>se il firewall del PC è attivo, chiede di aprire le porte (serve la password);</li>
+<li>ricorda quali porte inoltrare e verso quale indirizzo;</li>
+<li><strong>prova i nodi</strong> passando dal nome pubblico: devono risultare <code>● online</code>;</li>
+<li>stampa il <strong>codice di rete</strong> e l'<strong>impronta</strong> (es. <code>93CF-D836</code>).</li>
+</ul>
+<p><strong>Lascia la finestra aperta</strong> finché fate le prove; Ctrl-C spegne tutto.</p>
+<blockquote>
+<p>Se la prova dice che i nodi <strong>non rispondono</strong>, spesso la causa è il router di casa che
+non fa «tornare dentro» i pacchetti diretti al proprio nome (<em>NAT loopback</em>). Da fuori
+funziona, ma il PC non riesce a raggiungersi da solo. Rimedio, <strong>solo su questo PC</strong>:
+aggiungi a <code>/etc/hosts</code> la riga <code>127.0.0.1 miacasa.ddns.net</code> e rilancia il comando.
+Il telefono, se è in casa sulla Wi-Fi, in quel caso usalo con i <strong>dati mobili</strong>.</p>
+</blockquote>
+<h2 id="passo-6-il-tuo-amico-si-collega">Passo 6 · Il tuo amico si collega</h2>
+<p><strong>Prima prova (dal suo browser, 10 secondi):</strong> apre <code>http://miacasa.ddns.net:18800/</code>.
+Se vede la pagina «Rete «Rete Internet di prova»» con l'impronta, l'inoltro funziona.
+Se non si apre, vedi la tabella dei problemi.</p>
+<p>Poi, a seconda dell'apparecchio:</p>
+<table>
+<thead>
+<tr>
+<th>Apparecchio</th>
+<th>Come si collega</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Telefono Android</strong></td>
+<td>dalla pagina appena aperta tocca <strong>📲 Collega l'app Nyctalus</strong> e conferma</td>
+</tr>
+<tr>
+<td><strong>PC Linux</strong></td>
+<td><code>nyctalus-rete importa 'NYCT1:…'</code> con il codice che gli mandi (anche per messaggio: non è segreto), poi chiude e riapre chat e browser</td>
+</tr>
+<tr>
+<td><strong>Windows</strong></td>
+<td>nella finestra di Nyctalus tocca <strong>🔗 Rete</strong> e incolla il codice</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Confrontate a voce l'impronta</strong>: quella che vede lui dopo l'importazione deve essere
+uguale a quella stampata dal tuo PC. Così siete sicuri che nessuno abbia sostituito il codice.</p>
+<p>Anche <strong>tu</strong> usi questa rete: il PC si collega da solo; sul telefono apri la stessa pagina
+e tocca 📲.</p>
+<h2 id="passo-7-trovatevi-e-provate-tutto">Passo 7 · Trovatevi e provate tutto</h2>
+<ol>
+<li>Aprite la <strong>chat</strong> (PC: mini menu → Chat · telefono: 💬 Chat).</li>
+<li><strong>👥 Rubrica</strong>: iscrivetevi con un nome e vi vedrete a vicenda «in linea». Un clic sul
+   nome e il contatto è aggiunto. In alternativa vi scambiate i Contact ID.</li>
+<li>Provate nell'ordine: <strong>messaggio</strong> → <strong>foto o file</strong> → <strong>chiamata</strong> (menu ⋮ → Chiamata
+   vocale) → <strong>videochiamata</strong> (⋮ → Videochiamata, oppure 📹 durante la chiamata).</li>
+<li>Annotate, per le chiamate: ritardo percepito, qualità (📶) e se la voce si interrompe.
+   Su Internet ogni pacchetto fa 3 salti fra i nodi, quindi un piccolo ritardo è normale.</li>
+</ol>
+<h2 id="se-qualcosa-non-va">Se qualcosa non va</h2>
+<table>
+<thead>
+<tr>
+<th>Sintomo</th>
+<th>Causa probabile · cosa fare</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>l'amico non apre <code>http://NOME:18800/</code></td>
+<td>inoltro TCP 18800 mancante o verso l'indirizzo sbagliato (passi 3-4); nome No-IP non aggiornato (<code>ping NOME</code> ≠ IP del router); firewall del PC (il comando del passo 5 lo dice); CGNAT (passo 1)</td>
+</tr>
+<tr>
+<td>la pagina si apre ma la chat dice «rete non raggiungibile»</td>
+<td>inoltro <strong>UDP 4701-4704</strong> mancante (la pagina usa TCP, i nodi UDP: servono tutte e due le regole)</td>
+</tr>
+<tr>
+<td>sul tuo PC i nodi non rispondono, all'amico sì</td>
+<td>NAT loopback del router: riga in <code>/etc/hosts</code> (passo 5)</td>
+</tr>
+<tr>
+<td>funzionava, poi più nulla</td>
+<td>il PC è stato riavviato o la finestra chiusa (rilancia il passo 5); l'IP è cambiato e No-IP non si è aggiornato; il nome gratuito non è stato confermato</td>
+</tr>
+<tr>
+<td>impronte diverse</td>
+<td><strong>non usate quella rete</strong>: rifate l'importazione dal codice giusto</td>
+</tr>
+<tr>
+<td>chiamata a scatti</td>
+<td>linea di upload lenta su uno dei due lati o sul tuo (che ospita i nodi: tutto il traffico passa da te). Provate solo voce</td>
+</tr>
+</tbody>
+</table>
+<h2 id="da-sapere-onestamente">Da sapere (onestamente)</h2>
+<ul>
+<li>È un'<strong>anteprima</strong>: va benissimo per provare, ma il codice non è ancora stato verificato
+  da esperti esterni. Non affidateci segreti veri.</li>
+<li>Con tutti i nodi sul tuo PC la rete <strong>funziona</strong>, ma verso di <strong>te</strong> non è anonima: tu
+  ospiti ogni salto. Per l'anonimato vero servono nodi su macchine e linee diverse.</li>
+<li><strong>Passo successivo, facoltativo:</strong> il tuo amico, con l'IP statico, ospita <strong>anche lui</strong> un
+  paio di nodi (pacchetto Server-Linux su un PC Linux o un Raspberry). Così la rete diventa
+  distribuita fra due città. Si fa con <a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a> e <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a>.</li>
+<li>Tutto il traffico in rete è cifrato e senza parole riconoscibili: lo dimostra la prova
+  «Wireshark in mezzo» (<a href="SICUREZZA.html"><code>SICUREZZA.md</code></a> §1.1). Da fuori si capisce solo <strong>quando</strong> state
+  usando molta banda, non cosa né con chi.</li>
+</ul>
+</article>
+</main>
+<button class="torna-su" id="torna-su" type="button" title="Torna su" aria-label="Torna su">↑</button>
+<script>
+(function(){var b=document.getElementById('torna-su');
+function aggiorna(){b.classList.toggle('visibile',window.scrollY>250);}
+window.addEventListener('scroll',aggiorna,{passive:true});aggiorna();
+b.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});})();
+</script>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>

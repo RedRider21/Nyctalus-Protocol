@@ -19,9 +19,9 @@
   <button class="btn-icona" id="tema" title="Tema">🌓</button>
 </div></div>
 <main class="wrap manuale-doc">
-<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html" class="qui">Verificare sicurezza e anonimato</a></nav>
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="SICUREZZA.html" class="qui">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
-<h1 id="verificare-sicurezza-e-anonimato">Verificare sicurezza e anonimato</h1>
+<h1 id="verificare-sicurezza-e-anonimato">Verificare sicurezza e anonimato</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-verifiche-automatiche-subito-in-locale">1. Verifiche automatiche (subito, in locale)</a><a href="#2-verifiche-manuali-su-rete-reale-con-unuscita-remota">2. Verifiche manuali su rete reale (con un'uscita remota)</a><a href="#3-cosa-serve-luno-e-cosa-non-basta-da-soli">3. Cosa serve l'uno (e cosa non basta da soli)</a><a href="#4-riferimenti-rapidi-agli-strumenti">4. Riferimenti rapidi agli strumenti</a></nav>
 <p>Questo documento spiega <strong>cosa si può verificare da soli</strong> (con gli strumenti
 qui indicati e lo script <a href="../strumenti/verifica.sh"><code>strumenti/verifica.sh</code></a>) e <strong>cosa
 invece richiede una verifica indipendente</strong> prima di considerare Nyctalus sicuro
@@ -49,6 +49,63 @@ conclusioni forti sull'anonimato richiedono misure su rete reale e revisione.</p
 </ol>
 <p>Questi quattro punti provano proprietà concrete: integrità/autenticità
 dell'elenco dei nodi, e che l'offuscamento del trasporto sia davvero attivo.</p>
+<h3 id="11-wireshark-in-mezzo-cosa-passa-davvero-in-rete">1.1 «Wireshark in mezzo»: cosa passa davvero in rete</h3>
+<pre><code class="language-sh">bash test/sicurezza/07-traffico.sh                                  # la prova
+NYCT_CATTURA=~/nyctalus.pcap bash test/sicurezza/07-traffico.sh     # e tieni la cattura per Wireshark
+</code></pre>
+<p>Una rete di prova completa (4 nodi + due apparecchi, Alice e Bob, ognuno con il proprio client)
+gira in uno <strong>spazio di rete isolato</strong> (senza permessi di amministratore, la tua rete non si
+tocca) dove <strong>dumpcap</strong> — il motore di cattura di Wireshark — registra <strong>ogni pacchetto</strong>.
+Alice e Bob si scambiano un <strong>messaggio</strong>, un <strong>file</strong> e una <strong>videochiamata</strong> (voce + immagini);
+in ogni contenuto c'è una <strong>parola spia</strong>. Poi la cattura si legge con gli occhi di chi sta
+in mezzo alla rete:</p>
+<table>
+<thead>
+<tr>
+<th>Controllo</th>
+<th>Esito</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>parole spia di testo, file, voce, video (in chiaro o in esadecimale)</td>
+<td><strong>mai</strong> nei pacchetti in rete</td>
+</tr>
+<tr>
+<td>indirizzi <code>.nyct</code> di Alice e Bob</td>
+<td><strong>mai</strong> nei pacchetti in rete</td>
+</tr>
+<tr>
+<td>controllo della ricerca</td>
+<td>le parole spia <strong>ci sono</strong> nel traffico locale app ↔ motore (127.0.0.1, non esce dall'apparecchio): la ricerca funziona</td>
+</tr>
+<tr>
+<td>chi parla con chi</td>
+<td>ogni pacchetto va <strong>a o da un nodo</strong>: nessun collegamento diretto fra Alice e Bob</td>
+</tr>
+<tr>
+<td>fughe</td>
+<td><strong>nessun</strong> pacchetto DNS, DNS su TLS, mDNS, SSDP, STUN/TURN (WebRTC), NTP</td>
+</tr>
+<tr>
+<td>TCP</td>
+<td>solo locale (app ↔ motore); <strong>nessuna</strong> connessione TCP in rete</td>
+</tr>
+<tr>
+<td>aspetto</td>
+<td>entropia 7,999 bit/byte = <strong>rumore casuale</strong>; ogni pacchetto ha la forma <strong>QUIC v1</strong> (come HTTP/3, cifrato TLS 1.3), con il «bit fisso» reso casuale di proposito (RFC 9287)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>HTTP in chiaro?</strong> Solo <em>dentro</em> l'apparecchio: la pagina della chat parla con il proprio
+motore su 127.0.0.1 (con un segreto d'accesso). In rete viaggia solo QUIC cifrato con TLS 1.3 —
+come l'HTTPS — e <strong>dentro</strong> ci sono gli strati a cipolla (uno per nodo) e la cifratura fra i
+due contatti (Noise).</p>
+<p><strong>Cosa si capisce comunque (onestamente):</strong> chi osserva la linea di un apparecchio vede
+<strong>quando</strong> passa molto traffico: in videochiamata il ritmo è circa <strong>40 volte</strong> quello a
+riposo. Non vede <em>cosa</em> passa né <em>con chi</em>. La maggior parte dei pacchetti ha la stessa
+dimensione (~1420 byte, celle a lunghezza fissa). Per nascondere anche il ritmo esiste il
+<strong>rumore di fondo</strong> (<code>--cover</code>, §2.5), a costo di banda.</p>
 <hr />
 <h2 id="2-verifiche-manuali-su-rete-reale-con-unuscita-remota">2. Verifiche manuali su <strong>rete reale</strong> (con un'uscita remota)</h2>
 <p>Alcune cose <strong>non</strong> si possono provare in locale (dove client, nodi e uscita sono
@@ -70,19 +127,23 @@ che lo risolve <strong>dentro la rete</strong>: il tuo resolver locale non deve 
 che visiti. Verifica con un monitor DNS locale o osservando che le query non
 escono dal tuo PC quando lo Stealth è attivo.</p>
 <h3 id="23-i-nodi-vedono-solo-cio-che-devono">2.3 I nodi vedono solo ciò che devono</h3>
-<p>Su una rete a 3+ salti con nodi istrumentati:
-- il <strong>guard</strong> (1º nodo) vede il tuo IP ma <strong>non</strong> la destinazione;
-- il <strong>nodo di mezzo</strong> non vede <strong>né</strong> IP <strong>né</strong> destinazione;
-- l'<strong>uscita</strong> vede la destinazione ma <strong>non</strong> il tuo IP.</p>
+<p>Su una rete a 3+ salti con nodi istrumentati:</p>
+<ul>
+<li>il <strong>guard</strong> (1º nodo) vede il tuo IP ma <strong>non</strong> la destinazione;</li>
+<li>il <strong>nodo di mezzo</strong> non vede <strong>né</strong> IP <strong>né</strong> destinazione;</li>
+<li>l'<strong>uscita</strong> vede la destinazione ma <strong>non</strong> il tuo IP.</li>
+</ul>
 <p>Lo si controlla facendo girare i nodi con i log e verificando che l'indirizzo
 del client <strong>non</strong> compaia oltre il guard, e che la destinazione <strong>non</strong> compaia
 prima dell'uscita.</p>
 <h3 id="24-osservare-il-filo">2.4 Osservare il filo</h3>
-<p>Con <strong>Wireshark</strong> o <code>tcpdump</code> sul collegamento di un nodo:
-- il traffico è <strong>QUIC/UDP</strong> (o, con <code>--obfuscation</code>, <strong>rumore casuale</strong> senza
-  firma di QUIC): un DPI non riconosce "Nyctalus";
-- i siti <code>.nyct</code> viaggiano <strong>cifrati end-to-end</strong> (Noise): il nodo d'incontro e i
-  relè non vedono il contenuto in chiaro.</p>
+<p>La versione automatica è la prova §1.1. A mano, con <strong>Wireshark</strong> o <code>tcpdump</code> sul collegamento di un nodo:</p>
+<ul>
+<li>il traffico è <strong>QUIC/UDP</strong> (o, con <code>--obfuscation</code>, <strong>rumore casuale</strong> senza
+  firma di QUIC): un DPI non riconosce "Nyctalus";</li>
+<li>i siti <code>.nyct</code> viaggiano <strong>cifrati end-to-end</strong> (Noise): il nodo d'incontro e i
+  relè non vedono il contenuto in chiaro.</li>
+</ul>
 <blockquote>
 <p>Nota: la <strong>lunghezza fissa delle celle</strong> (1372 byte) protegge dall'analisi di
 dimensione <em>da parte di un nodo che decifra il suo strato</em>; sul filo i

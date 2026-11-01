@@ -19,9 +19,9 @@
   <button class="btn-icona" id="tema" title="Tema">🌓</button>
 </div></div>
 <main class="wrap manuale-doc">
-<nav class="indice-manuali"><a href="index.html">Manuali di Nyctalus</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="SCELTE-OPERATIVE.html">Scelte operative: cosa installare e dove</a><a href="MANUALE-INSTALLAZIONE.html" class="qui">Manuale d&#x27;installazione</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a></nav>
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html" class="qui">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
-<h1 id="manuale-dinstallazione">Manuale d'installazione</h1>
+<h1 id="manuale-dinstallazione">Manuale d'installazione</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-pc-linux">1. PC Linux</a><a href="#2-telefono-android">2. Telefono Android</a><a href="#3-la-rete-prova-locale-o-condivisa">3. La rete: prova locale o condivisa</a><a href="#4-problemi-frequenti">4. Problemi frequenti</a></nav>
 <blockquote>
 <p>⚠️ <strong>Prototipo</strong> non ancora verificato da revisori indipendenti: usalo per provare
 funzionamento, usabilità e stabilità, <strong>non</strong> per proteggere dati reali.</p>
@@ -60,7 +60,7 @@ dispositivo (la crea <code>strumenti/crea-installazioni.sh</code> partendo dai s
 </tbody>
 </table>
 <p>Prima di iniziare: <strong>cosa installare e dove</strong> dipende da cosa vuoi fare. Lo spiega
-<a href="SCELTE-OPERATIVE.html"><code>SCELTE-OPERATIVE.md</code></a> (client, nodo server, gestore della rete).</p>
+<a href="index.html"><code>LEGGIMI.md</code></a> (Inizia qui: client, nodo server, gestore della rete).</p>
 <hr />
 <h2 id="1-pc-linux">1. PC Linux</h2>
 <h3 id="11-cosa-installare-dal-sistema">1.1 Cosa installare dal sistema</h3>
@@ -140,15 +140,17 @@ casuale; Termux lo scarica e ne <strong>verifica l'impronta SHA-256</strong> pri
 <p>Serve <code>nyctalus-termux.tar.gz</code> (nel pacchetto Android). Poi si apre la chat nel browser del
 telefono all'indirizzo che stampa <code>nyctalus-mobile</code>.</p>
 <h4 id="portare-larchivio-nel-telefono">Portare l'archivio nel telefono</h4>
-<p>L'archivio deve finire nella cartella <strong>Download</strong> del telefono. Scegli il modo più comodo:
-- <strong>cavo USB</strong>: collega il telefono al PC, scegli «Trasferimento file», copia
-  <code>nyctalus-termux.tar.gz</code> nella cartella <code>Download</code>;
-- <strong>mandalo a te stesso</strong> (mail, Telegram «Messaggi salvati», Drive…) e sul telefono
-  salvalo in Download;
-- <strong>in rete locale</strong> (PC e telefono sulla stessa Wi-Fi): sul PC, dalla cartella
+<p>L'archivio deve finire nella cartella <strong>Download</strong> del telefono. Scegli il modo più comodo:</p>
+<ul>
+<li><strong>cavo USB</strong>: collega il telefono al PC, scegli «Trasferimento file», copia
+  <code>nyctalus-termux.tar.gz</code> nella cartella <code>Download</code>;</li>
+<li><strong>mandalo a te stesso</strong> (mail, Telegram «Messaggi salvati», Drive…) e sul telefono
+  salvalo in Download;</li>
+<li><strong>in rete locale</strong> (PC e telefono sulla stessa Wi-Fi): sul PC, dalla cartella
   <code>installazioni/Android/</code>, lancia <code>python3 -m http.server 8080</code>; in Termux
   <code>curl -O http://IP-DEL-PC:8080/nyctalus-termux.tar.gz</code> (poi in «Installare» usa questo
-  file al posto di quello in Download). Alcune reti aziendali lo bloccano.</p>
+  file al posto di quello in Download). Alcune reti aziendali lo bloccano.</li>
+</ul>
 <h4 id="installare-una-volta-sola">Installare (una volta sola)</h4>
 <p>In Termux:</p>
 <pre><code class="language-sh">termux-setup-storage          # appare la richiesta di accesso ai file: concedila
@@ -218,7 +220,7 @@ python o rust, che potrebbero servire ad altri progetti.</p>
 <p>Appena installati, PC e telefono usano una <strong>rete di prova locale</strong> (solo su quel dispositivo).
 Per parlare con altri ci si collega a una rete con il suo <strong>codice</strong> (<code>NYCT1:…</code>): PC
 <a href="MANUALE-PC.html"><code>MANUALE-PC.md</code></a> §3, telefono <a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a> §1. Provare telefono ↔ PC senza server:
-<a href="GUIDA-RETE-DI-CASA.html"><code>GUIDA-RETE-DI-CASA.md</code></a>. Creare una rete: <a href="SCELTE-OPERATIVE.html"><code>SCELTE-OPERATIVE.md</code></a>.</p>
+<a href="GUIDA-RETE-DI-CASA.html"><code>GUIDA-RETE-DI-CASA.md</code></a>. Con un amico via Internet: <a href="GUIDA-INTERNET.html"><code>GUIDA-INTERNET.md</code></a>. Creare una rete: <a href="index.html"><code>LEGGIMI.md</code></a>.</p>
 <h2 id="4-problemi-frequenti">4. Problemi frequenti</h2>
 <table>
 <thead>
