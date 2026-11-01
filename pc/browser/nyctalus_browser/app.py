@@ -318,6 +318,7 @@ class Browser(FunzioniExtra, Gtk.Window):
         self._tabs = {}         # WebView -> tab EventBox
         self._view_mode = {}    # WebView -> bool (True = scheda stealth)
         self._contexts = {}     # bool stealth -> WebKit2.WebContext (lazy)
+        self._ctx_protetti = set()   # contesti col proxy Nyctalus davvero applicato
         self._tor_ok = None     # None=non verificato, True/False
         # Servizi Nyctalus avviati dal browser (demone + eventuale rete di prova).
         self._servizi_avviati = False
@@ -792,11 +793,12 @@ class Browser(FunzioniExtra, Gtk.Window):
                 ctx = WebKit2.WebContext.new_ephemeral()
             except Exception:
                 ctx = WebKit2.WebContext.new()
-            if self._ensure_tor():         # instrada tutto via Tor (IP nascosto)
+            if self._ensure_tor():         # instrada tutto nella rete Nyctalus (IP nascosto)
                 try:
                     ps = WebKit2.NetworkProxySettings.new(TOR_SOCKS, None)
                     ctx.set_network_proxy_settings(
                         WebKit2.NetworkProxyMode.CUSTOM, ps)
+                    self._ctx_protetti.add(ctx)   # SOLO così le schede 🦇 possono navigare
                 except Exception:
                     pass
         else:
@@ -1169,25 +1171,31 @@ class Browser(FunzioniExtra, Gtk.Window):
         self.new_tab(url, stealth=True)
 
     def _guardia_interni(self, view, decisione, tipo):
-        """Impedisce che un sito .nyct/.onion parta SENZA la rete Nyctalus
-        attiva: altrimenti la richiesta uscirebbe in chiaro e il nome potrebbe
-        risolversi su localhost (es. un Apache locale). Mostra un avviso."""
+        """A PROVA DI ERRORE: una scheda 🦇 non apre NESSUN sito finché la sua scheda non
+        ha davvero il proxy della rete Nyctalus (rete pronta e proxy applicato al suo
+        contesto): altrimenti, nei secondi in cui la rete si accende, la pagina partirebbe
+        in chiaro col tuo IP. Quando la rete è pronta le schede 🦇 si rifanno e ripartono.
+        Anche i siti .nyct/.onion partono solo così (fuori dalla rete il nome potrebbe
+        risolversi su localhost, es. un Apache locale). Mostra un avviso."""
         if tipo != WebKit2.PolicyDecisionType.NAVIGATION_ACTION:
             return False
         try:
             uri = decisione.get_navigation_action().get_request().get_uri()
         except Exception:            # noqa: BLE001
             return False
-        if not _host_interno(uri):
+        if uri.startswith(("about:", "data:", "blob:")):
             return False
-        # Serve una scheda stealth CON la rete raggiungibile (proxy attivo).
-        if self._view_mode.get(view, self.stealth) and self._tor_ok is True:
+        anonima = self._view_mode.get(view, self.stealth)
+        protetta = view.get_context() in self._ctx_protetti and self._tor_ok is True
+        if anonima and protetta:
+            return False
+        if not anonima and not _host_interno(uri):
             return False
         decisione.ignore()
-        self._pagina_rete_assente(view, uri)
+        self._pagina_rete_assente(view, uri, interno=_host_interno(uri) or not anonima)
         return True
 
-    def _pagina_rete_assente(self, view, uri):
+    def _pagina_rete_assente(self, view, uri, interno=True):
         pagina = """<!doctype html><meta charset="utf-8"><title>%(t)s</title>
 <style>body{font-family:system-ui,sans-serif;background:#0b1020;color:#e6ecff;
 display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
@@ -1195,8 +1203,8 @@ display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0
 h1{font-size:22px;margin:.4em 0}p{color:#9fb0d9;line-height:1.6}
 code{color:#5aa9ff}</style><div class="b"><div class="bat">🦇</div>
 <h1>%(t)s</h1><p>%(d)s</p><p><code>%(u)s</code></p></div>""" % {
-            "t": html.escape(_t("br.nored.title")),
-            "d": _t("br.nored.body"),
+            "t": html.escape(_t("br.nored.title" if interno else "br.attesa.title")),
+            "d": _t("br.nored.body" if interno else "br.attesa.body"),
             "u": html.escape(uri)}
         try:
             view.load_alternate_html(pagina, uri, None)

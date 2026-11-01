@@ -1677,5 +1677,7 @@
   "chat.ch.termina": "Colgar",
   "chat.ch.apri": "Abrir",
   "chat.ch.apri_nota": "Volver a la ventana de la llamada",
-  "lau.tema": "Tema"
+  "lau.tema": "Tema",
+  "br.attesa.title": "Red Nyctalus iniciándose",
+  "br.attesa.body": "La pestaña 🦇 no abre nada hasta que la red Nyctalus esté lista: ninguna página sale en claro con tu dirección. Se abre sola en cuanto la red responde (normalmente unos segundos)."
 }

@@ -58,6 +58,12 @@ in mezzo alla rete:
 | TCP | solo locale (app ↔ motore); **nessuna** connessione TCP in rete |
 | aspetto | entropia 7,999 bit/byte = **rumore casuale**; ogni pacchetto ha la forma **QUIC v1** (come HTTP/3, cifrato TLS 1.3), con il «bit fisso» reso casuale di proposito (RFC 9287) |
 
+**Browser del PC** (`test/sicurezza/08-browser-pc.sh`, stesso spazio isolato con cattura): una
+scheda 🦇 **non apre nulla finché la rete non è pronta e il proxy non è applicato** («a prova
+di errore»: prima, nei secondi in cui la rete si accendeva, la pagina partiva in chiaro — difetto
+trovato da questa prova e corretto); poi tutto passa dal proxy, i nomi dei siti li risolve la
+rete (zero pacchetti DNS), il sito non riceve visite dirette.
+
 **HTTP in chiaro?** Solo *dentro* l'apparecchio: la pagina della chat parla con il proprio
 motore su 127.0.0.1 (con un segreto d'accesso). In rete viaggia solo QUIC cifrato con TLS 1.3 —
 come l'HTTPS — e **dentro** ci sono gli strati a cipolla (uno per nodo) e la cifratura fra i

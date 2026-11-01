@@ -1677,5 +1677,7 @@
   "chat.ch.termina": "Raccrocher",
   "chat.ch.apri": "Ouvrir",
   "chat.ch.apri_nota": "Revenir à la fenêtre d'appel",
-  "lau.tema": "Thème"
+  "lau.tema": "Thème",
+  "br.attesa.title": "Réseau Nyctalus en démarrage",
+  "br.attesa.body": "L'onglet 🦇 n'ouvre rien tant que le réseau Nyctalus n'est pas prêt : aucune page ne part en clair avec votre adresse. Il s'ouvre tout seul dès que le réseau répond (quelques secondes en général)."
 }

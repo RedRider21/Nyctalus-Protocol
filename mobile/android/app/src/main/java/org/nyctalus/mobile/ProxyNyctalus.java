@@ -30,7 +30,8 @@ final class ProxyNyctalus {
 
     /** Le funzioni che dichiariamo di saper usare (come fa androidx.webkit): la WebView
      *  abilita solo quelle che sanno usare entrambe le parti. */
-    private static final String[] NOSTRE = {"PROXY_OVERRIDE", "PROXY_OVERRIDE_REVERSE_BYPASS", "DOCUMENT_START_SCRIPT"};
+    private static final String[] NOSTRE = {"PROXY_OVERRIDE", "PROXY_OVERRIDE:3", "PROXY_OVERRIDE_REVERSE_BYPASS",
+            "DOCUMENT_START_SCRIPT", "DOCUMENT_START_SCRIPT:1"};
 
     private static InvocationHandler fabbrica;
     /** Perché l'ultima operazione non è riuscita (per il messaggio all'utente). */
@@ -70,16 +71,20 @@ final class ProxyNyctalus {
         return h.invoke(null, m, argomenti.length == 0 ? null : argomenti);
     }
 
-    /** Le funzioni che questa WebView offre (es. PROXY_OVERRIDE, DOCUMENT_START_SCRIPT). */
+    /**
+     * Le funzioni che questa WebView offre (es. PROXY_OVERRIDE, DOCUMENT_START_SCRIPT). Le
+     * WebView recenti le annunciano con la versione attaccata («PROXY_OVERRIDE:3»,
+     * «DOCUMENT_START_SCRIPT:1»): vale anche quella forma.
+     */
     static boolean supporta(String funzione) {
         try {
             Object f = chiama(fabbrica(), metodo("WebViewProviderFactoryBoundaryInterface", "getSupportedFeatures"));
-            if (f instanceof String[]) {
-                for (String s : (String[]) f) if (funzione.equals(s)) return true;
-            } else if (f instanceof Collection) {
-                return ((Collection<?>) f).contains(funzione);
-            }
-            ultimoErrore = "la WebView non offre " + funzione;
+            java.util.List<String> offerte = new java.util.ArrayList<>();
+            if (f instanceof String[]) offerte.addAll(java.util.Arrays.asList((String[]) f));
+            else if (f instanceof Collection) for (Object o : (Collection<?>) f) offerte.add(String.valueOf(o));
+            for (String s : offerte)
+                if (funzione.equals(s) || s.startsWith(funzione + ":")) return true;
+            ultimoErrore = "la WebView non offre " + funzione + " (offre: " + String.join(", ", offerte) + ")";
         } catch (Throwable e) {
             Throwable c = e.getCause() != null ? e.getCause() : e;
             ultimoErrore = c.getClass().getSimpleName() + ": " + c.getMessage();
