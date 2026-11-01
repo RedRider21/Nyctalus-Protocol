@@ -7,6 +7,8 @@
 2. **Browser dell'app (anche quello aperto per i manuali online):** manca un pulsante per tornare alla home dell'APK; ora bisogna premere indietro tante volte o chiudere dalle miniature delle app. Aggiungere un pulsante «🏠 Home» (e far sì che indietro all'inizio della cronologia torni alla home).
 3. **GitHub: l'utente non vede le «releases» ma solo i tag.** Intende quelle create da https://github.com/RedRider21/Nyctalus-Protocol/releases/new. La v0.2.0 è stata creata via API (è una release vera, «Latest», 11 file: https://github.com/RedRider21/Nyctalus-Protocol/releases/tag/v0.2.0). Verificare con l'utente cosa vede: forse nelle impostazioni del repository (⚙ «About» della pagina principale) è spenta la voce «Releases», quindi la sezione non compare nella colonna di destra; oppure guarda la scheda «Tags». Controllare e sistemare insieme.
 
+4. **Più temi**: l'utente ne vorrebbe altri (es. sul **verdino**, sul **celeste**), o meglio un **selettore di colore** (scegli l'accento con un codice colore e il tema si costruisce da sé). Vale ovunque: PC (`pc/browser/nxs_tema`: TEMI + CHBASE), telefono (`stile.css` [data-tema], `MainActivity.caricaTema/TEMI`), chiamate, mini menu, browser. Proposta: temi nuovi già pronti + «Personalizzato» con selettore (colore d'accento + chiaro/scuro), da cui si ricavano automaticamente fondo, pannelli e bolle con buon contrasto.
+
 ## Fatto ✅
 
 | Cosa | Dove |
