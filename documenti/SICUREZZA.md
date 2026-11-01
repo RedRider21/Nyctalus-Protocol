@@ -34,6 +34,41 @@ Controlla, e riporta PASS/FAIL:
 Questi quattro punti provano proprietà concrete: integrità/autenticità
 dell'elenco dei nodi, e che l'offuscamento del trasporto sia davvero attivo.
 
+### 1.1 «Wireshark in mezzo»: cosa passa davvero in rete
+
+```sh
+bash test/sicurezza/07-traffico.sh                                  # la prova
+NYCT_CATTURA=~/nyctalus.pcap bash test/sicurezza/07-traffico.sh     # e tieni la cattura per Wireshark
+```
+
+Una rete di prova completa (4 nodi + due apparecchi, Alice e Bob, ognuno con il proprio client)
+gira in uno **spazio di rete isolato** (senza permessi di amministratore, la tua rete non si
+tocca) dove **dumpcap** — il motore di cattura di Wireshark — registra **ogni pacchetto**.
+Alice e Bob si scambiano un **messaggio**, un **file** e una **videochiamata** (voce + immagini);
+in ogni contenuto c'è una **parola spia**. Poi la cattura si legge con gli occhi di chi sta
+in mezzo alla rete:
+
+| Controllo | Esito |
+|---|---|
+| parole spia di testo, file, voce, video (in chiaro o in esadecimale) | **mai** nei pacchetti in rete |
+| indirizzi `.nyct` di Alice e Bob | **mai** nei pacchetti in rete |
+| controllo della ricerca | le parole spia **ci sono** nel traffico locale app ↔ motore (127.0.0.1, non esce dall'apparecchio): la ricerca funziona |
+| chi parla con chi | ogni pacchetto va **a o da un nodo**: nessun collegamento diretto fra Alice e Bob |
+| fughe | **nessun** pacchetto DNS, DNS su TLS, mDNS, SSDP, STUN/TURN (WebRTC), NTP |
+| TCP | solo locale (app ↔ motore); **nessuna** connessione TCP in rete |
+| aspetto | entropia 7,999 bit/byte = **rumore casuale**; ogni pacchetto ha la forma **QUIC v1** (come HTTP/3, cifrato TLS 1.3), con il «bit fisso» reso casuale di proposito (RFC 9287) |
+
+**HTTP in chiaro?** Solo *dentro* l'apparecchio: la pagina della chat parla con il proprio
+motore su 127.0.0.1 (con un segreto d'accesso). In rete viaggia solo QUIC cifrato con TLS 1.3 —
+come l'HTTPS — e **dentro** ci sono gli strati a cipolla (uno per nodo) e la cifratura fra i
+due contatti (Noise).
+
+**Cosa si capisce comunque (onestamente):** chi osserva la linea di un apparecchio vede
+**quando** passa molto traffico: in videochiamata il ritmo è circa **40 volte** quello a
+riposo. Non vede *cosa* passa né *con chi*. La maggior parte dei pacchetti ha la stessa
+dimensione (~1420 byte, celle a lunghezza fissa). Per nascondere anche il ritmo esiste il
+**rumore di fondo** (`--cover`, §2.5), a costo di banda.
+
 ---
 
 ## 2. Verifiche manuali su **rete reale** (con un'uscita remota)
@@ -71,7 +106,7 @@ del client **non** compaia oltre il guard, e che la destinazione **non** compaia
 prima dell'uscita.
 
 ### 2.4 Osservare il filo
-Con **Wireshark** o `tcpdump` sul collegamento di un nodo:
+La versione automatica è la prova §1.1. A mano, con **Wireshark** o `tcpdump` sul collegamento di un nodo:
 - il traffico è **QUIC/UDP** (o, con `--obfuscation`, **rumore casuale** senza
   firma di QUIC): un DPI non riconosce "Nyctalus";
 - i siti `.nyct` viaggiano **cifrati end-to-end** (Noise): il nodo d'incontro e i
