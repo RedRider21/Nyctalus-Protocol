@@ -29,34 +29,39 @@ gestisce gli allegati. Installazione: <strong><a href="MANUALE-INSTALLAZIONE.htm
 <hr />
 <h2 id="1-avvio">1. Avvio</h2>
 <p>Tocca l'icona <strong>Nyctalus</strong>: compare la schermata di benvenuto e l'app avvia Nyctalus in Termux.
-Sotto il logo, una fila di pulsanti come il mini menu del PC:</p>
+Sotto il logo, una fila di sei pulsanti quadrati con la sola icona, come il mini menu del PC
+(tenendo premuto un pulsante compare il suo nome):</p>
 <table>
 <thead>
 <tr>
-<th>Pulsante</th>
+<th>Icona</th>
 <th>Cosa apre</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>💬 <strong>Chat</strong></td>
+<td>fumetto · <strong>Chat</strong></td>
 <td>la chat; si accende con «● Nyctalus è pronto»</td>
 </tr>
 <tr>
-<td>👥 <strong>Rubrica</strong></td>
+<td>persone · <strong>Rubrica</strong></td>
 <td>la sola <strong>rubrica della rete</strong> a tutto schermo: chi c'è, chi è in linea, iscriversi (<a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a> §3-bis)</td>
 </tr>
 <tr>
-<td>🌐 <strong>Browser</strong></td>
+<td>globo · <strong>Browser</strong></td>
 <td>il browser, con la <strong>🦇 modalità Nyctalus</strong> (§1-bis)</td>
 </tr>
 <tr>
-<td>📁 <strong>File</strong></td>
-<td>in arrivo</td>
+<td>cartella · <strong>File</strong></td>
+<td>in preparazione (attenuato)</td>
 </tr>
 <tr>
-<td>ℹ️ <strong>Info</strong></td>
+<td>i · <strong>Info e manuali</strong></td>
 <td>il sito con i manuali online</td>
+</tr>
+<tr>
+<td>cursori · <strong>Impostazioni</strong></td>
+<td>tutte le impostazioni (sotto)</td>
 </tr>
 </tbody>
 </table>
@@ -69,14 +74,12 @@ una sola per tutta l'app (chat, browser 🦇). Toccala per:</p>
 </ul>
 <p>Ancora più comodo: dalla pagina della rete (per la rete di casa <code>http://IP-DEL-PC:18800/</code>, in
 Chrome) tocca <strong>📲 Collega l'app Nyctalus</strong> e conferma nome e impronta.</p>
-<p><strong>⚙️ Impostazioni</strong> (fra le caselle delle funzioni): le impostazioni generali dell'app.</p>
-<ul>
-<li><strong>Tema</strong>: Notte, Ardesia, Viola, Chiaro. Vale per <strong>tutta l'app</strong>: schermata iniziale, chat,
-  chiamate e videochiamate; anche con la chat già aperta cambia al volo. Scegliere il tema
-  dentro la chat (☰) è lo stesso: le due scelte sono sempre allineate.</li>
-<li>🔔 <strong>Notifiche dei messaggi</strong> con l'app chiusa (§5-bis);</li>
-<li>⏻ <strong>Avvio all'accensione</strong> del telefono.</li>
-</ul>
+<p><strong>Impostazioni</strong> (l'ultimo pulsante): <strong>tutte</strong> le impostazioni, a schermo intero — le stesse del
+☰ della chat (§5: Contact ID, tema, sfondo, foto senza metadati, rete Nyctalus, rete condivisa)
+più la sezione <strong>App</strong>: 🔔 notifiche dei messaggi con l'app chiusa (§5-bis) e ⏻ ripartenza
+all'accensione del telefono. <strong>←</strong> (o il tasto indietro) torna alla schermata iniziale.
+Il <strong>tema</strong> vale per tutta l'app: schermata iniziale, chat, chiamate, anche al volo.
+Se Nyctalus non è ancora pronto si apre una finestra ridotta (tema, notifiche, accensione).</p>
 <p><strong>Strumenti ▾</strong>: Termux (installa/aggiorna), <strong>🦇 Installa/aggiorna Nyctalus in Termux</strong> (da
 ritoccare <strong>dopo ogni APK nuova</strong>: aggiorna chat, motore e servizio in pochi secondi),
 comando di avvio.</p>
@@ -182,7 +185,7 @@ casella cifrata (il contatto non era in linea), ✓✓ consegnato, ✓✓ blu le
 <h2 id="5-impostazioni">5. Impostazioni (☰)</h2>
 <ul>
 <li>il tuo <strong>Contact ID</strong> con <strong>Copia</strong> e <strong>Condividi</strong>;</li>
-<li><strong>Tema</strong>: Notte, Ardesia (stile Telegram), Viola, Chiaro (lo stesso delle ⚙️ Impostazioni della schermata iniziale: vale per tutta l'app);</li>
+<li><strong>Tema</strong>: Notte, Ardesia (stile Telegram), Viola, Chiaro (vale per tutta l'app);</li>
 <li><strong>Sfondo della chat</strong>: pipistrelli, velo di colore, tinta unita;</li>
 <li><strong>Foto senza metadati</strong>;</li>
 <li><strong>Rete condivisa</strong> (la stessa della riga 🔗 Rete della schermata iniziale: vale per tutta
@@ -211,12 +214,12 @@ notifiche (i messaggi si vedono già) e aprendola si azzerano.</p>
 <li>Se Android ferma Termux, l'app lo riaccende da sola (al massimo una volta ogni 5 minuti).</li>
 <li><strong>Batteria:</strong> il servizio consuma poco ma qualcosa. Per non farlo fermare, in Impostazioni →
   App → Nyctalus (e Termux) → Batteria scegli <strong>Senza restrizioni</strong>.</li>
-<li>Per spegnerle: <strong>⚙️ Impostazioni → 🔔 Notifiche dei messaggi: attive</strong> (toccalo per passare a spente).</li>
+<li>Per spegnerle: <strong>Impostazioni → App → 🔔 Notifiche</strong> (toccalo per passare a spente).</li>
 <li>Dopo aver riacceso il telefono apri l'app una volta, oppure attiva l'avvio all'accensione (sotto).</li>
 </ul>
 <p>Se il telefono è spento o senza rete, i messaggi restano nella <strong>casella cifrata</strong> della rete e
 ti arrivano, con la notifica, appena torni in rete (<a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a> §3-ter).</p>
-<p><strong>Avvio all'accensione (a scelta):</strong> in <strong>⚙️ Impostazioni → ⏻ Avvio all'accensione del telefono</strong> decidi
+<p><strong>Avvio all'accensione (a scelta):</strong> in <strong>Impostazioni → App → ⏻ Riparti all'accensione</strong> decidi
 tu se, dopo aver riacceso il telefono, Nyctalus deve ripartire da solo (servizio in Termux e
 notifiche) oppure aspettare che tu apra l'app. All'inizio è su <strong>no</strong>.</p>
 <h2 id="6-sicurezza-sul-telefono">6. Sicurezza sul telefono</h2>
