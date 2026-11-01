@@ -438,6 +438,117 @@ class AudioChiamata:
         self.arrivo.emit("push-buffer", Gst.Buffer.new_wrapped(dati))
 
 
+class VideoChiamata:
+    """Il video di una chiamata. Invio: webcam → 320×240, 15 fps → VP8 (~200 kbit/s, un
+    fotogramma completo ogni 2 s o su richiesta) → `manda(seq, completo, byte)`, con anteprima.
+    Ricezione: immagini VP8 → schermo; se se ne perde una si aspetta un fotogramma completo e lo
+    si chiede (`chiedi_completo()`), così l'immagine si ripara invece di restare rovinata.
+    Prove senza webcam: NYCTALUS_CAMERA_SRC (es. videotestsrc)."""
+
+    CAPS = "video/x-vp8,width=320,height=240,framerate=15/1"
+
+    def __init__(self, manda, chiedi_completo):
+        self.manda, self.chiedi_completo = manda, chiedi_completo
+        self.seq = self.ultimo = 0
+        self.inviate = self.ricevute = self.scartate = 0
+        self.attende_completo = True          # all'inizio serve un fotogramma completo
+        self.ultima_richiesta = 0.0
+        self.invio = None
+        self.ricezione = Gst.parse_launch(
+            "appsrc name=arrivo is-live=true format=time do-timestamp=true caps=%s ! vp8dec ! videoconvert "
+            "! gtksink name=schermo sync=false" % self.CAPS)
+        self.arrivo = self.ricezione.get_by_name("arrivo")
+        self.ricezione_avviata = False
+        self.schermo = self.ricezione.get_by_name("schermo").get_property("widget")
+        self.anteprima = None
+
+    # --- la nostra telecamera -------------------------------------------------------------
+    def accendi(self):
+        if self.invio:
+            return
+        self.invio = Gst.parse_launch(
+            "%s ! videoconvert ! videoscale ! videorate ! video/x-raw,width=320,height=240,framerate=15/1 "
+            "! tee name=t t. ! queue leaky=downstream max-size-buffers=2 ! vp8enc name=enc deadline=1 cpu-used=8 "
+            "target-bitrate=200000 keyframe-max-dist=30 error-resilient=1 end-usage=cbr "
+            "! appsink name=immagini emit-signals=true sync=false drop=true max-buffers=3 "
+            "t. ! queue leaky=downstream max-size-buffers=2 ! videoscale ! video/x-raw,width=160,height=120 "
+            "! videoconvert ! gtksink name=anteprima sync=false"
+            % sorgente_video())
+        self.invio.get_by_name("immagini").connect("new-sample", self._immagine)
+        self.anteprima = self.invio.get_by_name("anteprima").get_property("widget")
+        # parte con trasmetti(), DOPO aver messo l'anteprima in una finestra: gtksink, se parte
+        # prima, si crea una finestra sua e il riquadro non si può più spostare
+
+    def trasmetti(self):
+        if self.invio:
+            self.invio.set_state(Gst.State.PLAYING)
+
+    def spegni(self):
+        if self.invio:
+            self.invio.set_state(Gst.State.NULL)
+            self.invio = None
+            self.anteprima = None
+
+    def fotogramma_completo(self):
+        """L'altro ha perso immagini: il prossimo fotogramma sarà completo."""
+        if self.invio:
+            enc = self.invio.get_by_name("enc")
+            enc.get_static_pad("sink").send_event(Gst.Event.new_custom(
+                Gst.EventType.CUSTOM_DOWNSTREAM, Gst.Structure.new_from_string("GstForceKeyUnit, all-headers=(boolean)true")))
+
+    def _immagine(self, sink):
+        campione = sink.emit("pull-sample")
+        buf = campione.get_buffer()
+        completo = not buf.has_flags(Gst.BufferFlags.DELTA_UNIT)
+        ok, info = buf.map(Gst.MapFlags.READ)
+        if ok:
+            dati = bytes(info.data)
+            buf.unmap(info)
+            if len(dati) <= 60000:
+                self.seq += 1
+                self.inviate += 1
+                self.manda(self.seq, completo, dati)
+        return Gst.FlowReturn.OK
+
+    # --- le immagini dell'altro --------------------------------------------------------------
+    def avvia(self):
+        """Da chiamare DOPO aver messo `schermo` in una finestra (vedi trasmetti)."""
+        if self.ricezione_avviata:
+            return
+        self.ricezione_avviata = True
+        self.ricezione.set_state(Gst.State.PLAYING)
+        self.attende_completo = True           # le immagini di prima sono andate perse
+        self.ultima_richiesta = time.time()
+        self.chiedi_completo()
+
+    def ricevi(self, seq, completo, dati):
+        if not self.ricezione_avviata:
+            return                             # finestra non ancora pronta
+        if seq <= self.ultimo:
+            self.scartate += 1
+            return
+        if self.ultimo and seq != self.ultimo + 1 and not completo:
+            self.attende_completo = True       # immagine persa: le successive sarebbero rovinate
+        self.ultimo = seq
+        if self.attende_completo and not completo:
+            self.scartate += 1
+            if time.time() - self.ultima_richiesta > 1:
+                self.ultima_richiesta = time.time()
+                self.chiedi_completo()
+            return
+        self.attende_completo = False
+        self.ricevute += 1
+        self.arrivo.emit("push-buffer", Gst.Buffer.new_wrapped(dati))
+
+    def ferma(self):
+        self.spegni()
+        self.ricezione.set_state(Gst.State.NULL)
+
+
+def video_chiamate_disponibile():
+    return Gst is not None and all(Gst.ElementFactory.find(e) for e in ("vp8enc", "vp8dec", "gtksink", "appsrc"))
+
+
 class Suoneria:
     """Squillo della chiamata in arrivo (suono del desktop, ripetuto) o tono d'attesa di quella
     in uscita: il tono italiano, 425 Hz per 1 s ogni 5 s (NYCTALUS_SENZA_SUONI=1 nelle prove)."""

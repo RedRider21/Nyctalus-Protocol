@@ -1665,5 +1665,16 @@
   "chat.ch.q_media": "mittlere Verbindung",
   "chat.ch.q_scarsa": "schlechte Verbindung",
   "chat.ch.muta": "Anruf beendet: von der Gegenseite kommt keine Stimme mehr",
-  "chat.ch.videochiama": "Videoanruf"
+  "chat.ch.videochiama": "Videoanruf",
+  "chat.ch.passa_video": "Zu Video wechseln (Kamera an)",
+  "chat.ch.solo_voce": "Nur Sprache",
+  "chat.ch.video_in_arrivo": "Eingehender Videoanruf",
+  "chat.ch.ti_videochiama": "ruft dich per Video an",
+  "chat.ch.telecamera_spenta": "Kamera aus",
+  "chat.ch.senza_video": "Video nicht verfügbar: GStreamer mit VP8 fehlt",
+  "chat.ch.senza_webcam": "Kamera nicht verfügbar",
+  "chat.ch.video": "Video",
+  "chat.ch.termina": "Beenden",
+  "chat.ch.apri": "Öffnen",
+  "chat.ch.apri_nota": "Zurück zum Anruffenster"
 }

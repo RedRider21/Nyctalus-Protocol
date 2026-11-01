@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
-# Chiamata dalla chat GTK del PC (microfono e altoparlante DI PROVA, mai quelli veri): 📞,
+# Chiamata dalla chat GTK del PC (microfono, telecamera e altoparlante DI PROVA, mai quelli veri): 📞,
 # risposta, voce Opus nei due sensi attraverso la rete di prova, barra con durata, muto,
-# volume, riaggancia.
+# volume, passaggio alla videochiamata (VP8) e ritorno alla voce, riaggancia.
 . "$(dirname "$0")/../lib.sh"
 titolo "Funzionamento · chiamata dalla chat del PC"
 [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] || { salta "nessun display grafico"; exit 0; }
@@ -18,8 +18,8 @@ identita alice 21111 21121 21180 "$SA"; ALICE=$ADDR
 identita bob 21112 21122 21180 "$SB"; BOB=$ADDR
 sleep 4
 HOME="$TMP/home" NYCTALUS_CHAT_PORT=21121 NYCTALUS_CHAT_TOKEN="$SA" PYTHONPATH="$ROOT/pc/chat:$ROOT/pc/browser" \
-  NYCTALUS_MIC_SRC="audiotestsrc is-live=true wave=sine freq=330" NYCTALUS_ALTOPARLANTE="fakesink" NYCTALUS_SENZA_SUONI=1 \
-  timeout 90 python3 "$STRUMENTI/prova_chiamata_pc.py" 21122 "$SB" "$ALICE" "$BOB" "${NYCT_FOTO:-$TMP}/chiamata-pc.png" > "$TMP/r.txt" 2>"$TMP/e.txt" \
+  NYCTALUS_MIC_SRC="audiotestsrc is-live=true wave=sine freq=330" NYCTALUS_ALTOPARLANTE="fakesink" NYCTALUS_SENZA_SUONI=1 NYCTALUS_CAMERA_SRC="videotestsrc is-live=true pattern=ball" \
+  timeout 120 python3 "$STRUMENTI/prova_chiamata_pc.py" 21122 "$SB" "$ALICE" "$BOB" "${NYCT_FOTO:-$TMP}/chiamata-pc.png" > "$TMP/r.txt" 2>"$TMP/e.txt" \
   || echo "KO prova interrotta: $(grep -v Warning "$TMP/e.txt" | tail -2)" >> "$TMP/r.txt"
 while read -r esito resto; do
   case "$esito" in OK) pass "$resto" ;; KO) fail "$resto" ;; esac

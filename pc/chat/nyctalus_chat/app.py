@@ -119,6 +119,17 @@ _ITA = {
     "chat.senza_exif": "Foto senza metadati (posizione GPS, fotocamera)",
     "chat.notifiche": "Notifiche sul desktop dei nuovi messaggi",
     "chat.ch.chiama": "Chiamata vocale",
+    "chat.ch.video": "Video",
+    "chat.ch.termina": "Termina",
+    "chat.ch.apri": "Apri",
+    "chat.ch.apri_nota": "Torna alla finestra della chiamata",
+    "chat.ch.passa_video": "Passa alla videochiamata (accendi la telecamera)",
+    "chat.ch.solo_voce": "Solo voce",
+    "chat.ch.video_in_arrivo": "Videochiamata in arrivo",
+    "chat.ch.ti_videochiama": "ti sta videochiamando",
+    "chat.ch.telecamera_spenta": "telecamera spenta",
+    "chat.ch.senza_video": "Video non disponibile: manca GStreamer con VP8",
+    "chat.ch.senza_webcam": "Telecamera non disponibile",
     "chat.ch.videochiama": "Videochiamata",
     "chat.ch.muta": "Chiamata chiusa: dall'altra parte non arriva più voce",
     "chat.ch.audio": "Audio",
@@ -305,6 +316,19 @@ menu check, menu radio { color: @ACCENT@; }
            font-size: 20px; padding: 2px 10px; }
 .puntini:hover { color: @TEXT@; background: rgba(@RGB@,0.12); }
 .barra-chiamata { background: rgba(61,220,132,0.14); border-bottom: 1px solid rgba(61,220,132,0.35); }
+/* finestra della chiamata, come Telegram Web */
+.finestra-chiamata { background-image: radial-gradient(circle at 50% 30%, #1f3b6e 0%, #0b1020 72%); background-color: #0b1020; }
+.finestra-chiamata label { color: #ffffff; }
+.chiamata-nome { font-size: 22px; font-weight: 700; }
+.chiamata-stato { font-size: 13px; color: rgba(255,255,255,0.75); }
+.finestra-chiamata label.avatar-chiamata { min-width: 124px; min-height: 124px; border-radius: 62px; font-size: 48px; }
+.tondo-btn { background: none; background-image: none; border: none; box-shadow: none; padding: 0; }
+.tondo { min-width: 58px; min-height: 58px; border-radius: 29px; background-color: rgba(255,255,255,0.16); font-size: 23px; }
+.tondo-btn:hover .tondo { background-color: rgba(255,255,255,0.28); }
+.tondo.attivo { background-color: #ffffff; color: #0b1020; }
+.tondo.rosso { background-color: #e53935; }
+.tondo-testo { font-size: 11px; color: rgba(255,255,255,0.85); }
+.anteprima-video { border: 2px solid rgba(255,255,255,0.7); border-radius: 12px; background-color: #000000; }
 .barra-chiamata label { color: @TEXT@; font-weight: 600; }
 .barra-chiamata button { background-color: rgba(@RGB@,0.14); background-image: none; color: @TEXT@; border: none;
                          border-radius: 9px; padding: 4px 12px; box-shadow: none; }

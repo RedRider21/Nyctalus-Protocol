@@ -18,7 +18,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk  # noqa: E402
 from nyctalus_chat import app as chatapp  # noqa: E402
 
-bob = {"inviti": [], "audio": 0, "fine": [], "s": None}
+bob = {"inviti": [], "audio": 0, "fine": [], "s": None, "video": 0, "vidstato": []}
 
 
 def motore_bob():
@@ -40,6 +40,14 @@ def motore_bob():
             elif p[0] == "AUD":
                 bob["audio"] += 1
                 s.sendall(("AUD %s %s %s\n" % (ind_a, p[2], p[3])).encode())  # eco
+            elif p[0] == "VID":
+                bob["video"] += 1
+                s.sendall(("VID %s %s %s %s\n" % (ind_a, p[2], p[3], p[4])).encode())   # eco delle immagini
+            elif p[0] == "VIDKEY":                                              # chiede un fotogramma completo:
+                s.sendall(("VIDKEY %s\n" % ind_a).encode())                     # (eco) lo fa produrre ad Alice
+            elif p[0] == "VIDSTATO":
+                bob["vidstato"].append(p[2])
+                s.sendall(("VIDSTATO %s %s\n" % (ind_a, p[2])).encode())          # anche Bob accende/spegne
             elif p[0] == "CALLEND":
                 bob["fine"].append(p[2])
 
@@ -74,6 +82,29 @@ def passo3(n):
     ch.muto.set_active(False)
     ch._volume(1.5)
     esito(abs(a.ascolto.get_by_name("vol").get_property("volume") - 1.5) < 0.01, "🔊 volume regolabile durante la chiamata")
+    ch.video(True)                                   # 📹 passa alla videochiamata
+    GLib.timeout_add(6000, passo_video)
+    return False
+
+
+def passo_video():
+    v = ch.c and ch.c.get("video")
+    esito(bob["vidstato"][:1] == ["1"] and bob["video"] > 30, "📹 passa al video: Bob riceve le immagini VP8 (%d)" % bob["video"])
+    vede = bool(ch.finestra_video) and ch._schermo.get_visible_child_name() == "video" and v.schermo.get_mapped()
+    anteprima = bool(v and v.anteprima and v.anteprima.get_mapped())
+    esito(vede and anteprima and v.ricevute > 20, "finestra video: si vede l'altro (%d immagini, schermo=%s) e la propria anteprima (%s); suo=%s" % (
+        v.ricevute if v else 0, ch._schermo.get_visible_child_name() if ch.finestra_video else "-", anteprima, ch.c.get("video_suo")))
+    if ch.finestra_video:
+        subprocess.run(["import", "-window", str(ch.finestra_video.get_window().get_xid()), foto.replace(".png", "-video.png")], capture_output=True)
+    ch.video(False)
+    GLib.timeout_add(1500, lambda: (ch.finestra_video and subprocess.run(["import", "-window", str(ch.finestra_video.get_window().get_xid()),
+                                     foto.replace(".png", "-voce.png")], capture_output=True), False)[1])                                  # 📞 torna alla sola voce
+    GLib.timeout_add(3000, passo_voce)
+    return False
+
+
+def passo_voce():
+    esito(bob["vidstato"][-1:] == ["0"] and ch.c and ch.c["stato"] == "attiva", "📞 torna alla sola voce: telecamera spenta, la chiamata continua")
     w = chat.get_window()
     subprocess.run(["import", "-window", str(w.get_xid()), foto], capture_output=True)
     ch.riaggancia()
@@ -88,5 +119,5 @@ def passo4():
 
 
 GLib.timeout_add(7000, passo1)
-GLib.timeout_add(60000, lambda: (esito(False, "tempo scaduto"), Gtk.main_quit()))
+GLib.timeout_add(90000, lambda: (esito(False, "tempo scaduto"), Gtk.main_quit()))
 Gtk.main()

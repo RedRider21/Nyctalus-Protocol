@@ -1665,5 +1665,16 @@
   "chat.ch.q_media": "ligne moyenne",
   "chat.ch.q_scarsa": "mauvaise ligne",
   "chat.ch.muta": "Appel fermé : plus de voix de l'autre côté",
-  "chat.ch.videochiama": "Appel vidéo"
+  "chat.ch.videochiama": "Appel vidéo",
+  "chat.ch.passa_video": "Passer en vidéo (activer la caméra)",
+  "chat.ch.solo_voce": "Voix seulement",
+  "chat.ch.video_in_arrivo": "Appel vidéo entrant",
+  "chat.ch.ti_videochiama": "vous appelle en vidéo",
+  "chat.ch.telecamera_spenta": "caméra éteinte",
+  "chat.ch.senza_video": "Vidéo indisponible : GStreamer avec VP8 manquant",
+  "chat.ch.senza_webcam": "Caméra indisponible",
+  "chat.ch.video": "Vidéo",
+  "chat.ch.termina": "Raccrocher",
+  "chat.ch.apri": "Ouvrir",
+  "chat.ch.apri_nota": "Revenir à la fenêtre d'appel"
 }
