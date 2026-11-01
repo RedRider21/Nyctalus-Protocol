@@ -156,9 +156,12 @@ con l'ora in cui l'hai scritto.</p>
 <li>Quello che la casella vede comunque: che qualcuno ha lasciato posta per quell'indirizzo, quando
   e quanto è grande, e quando il destinatario la ritira.</li>
 </ul>
-<h2 id="3-quater-chiamate-vocali">3-quater. Chiamate vocali (📞)</h2>
-<p>Nella conversazione tocca <strong>📞</strong>: l'altro vede la chiamata in arrivo (sul telefono anche come
-notifica, con l'app chiusa) e tocca <strong>Rispondi</strong> o <strong>Rifiuta</strong>. Durante la chiamata:</p>
+<h2 id="3-quater-chiamate-e-videochiamate">3-quater. Chiamate e videochiamate (📞 📹)</h2>
+<p>Nella conversazione apri il menu <strong>⋮</strong> in alto a destra (come in Telegram) e scegli
+<strong>Chiamata vocale</strong> o <strong>Videochiamata</strong>. L'altro vede la chiamata in arrivo (sul telefono anche
+come notifica, con l'app chiusa: «📹 videochiamata in arrivo») e tocca <strong>Rispondi</strong> o
+<strong>Rifiuta</strong>; a una videochiamata può anche rispondere <strong>Solo voce</strong> (la sua telecamera resta
+spenta). Durante la chiamata:</p>
 <table>
 <thead>
 <tr>
@@ -173,40 +176,65 @@ notifica, con l'app chiusa) e tocca <strong>Rispondi</strong> o <strong>Rifiuta<
 </tr>
 <tr>
 <td>🔊 <strong>Vivavoce</strong> (telefono)</td>
-<td>altoparlante invece dell'auricolare</td>
+<td>altoparlante invece dell'auricolare (con il video si accende da solo)</td>
 </tr>
 <tr>
 <td>🔊 <strong>Audio</strong> (PC)</td>
 <td>volume di chi parla e uscita: altoparlante o cuffie</td>
 </tr>
 <tr>
-<td>⌄ <strong>Riduci</strong> (telefono)</td>
-<td>torni alla chat, la chiamata continua (barretta verde in cima)</td>
+<td>📹 <strong>Video</strong></td>
+<td>passi da voce a videochiamata: la tua telecamera si accende</td>
 </tr>
 <tr>
-<td>✆ <strong>Riaggancia</strong></td>
+<td>📞 <strong>Solo voce</strong></td>
+<td>(al posto di 📹 col video acceso) spegni la telecamera e torni alla voce</td>
+</tr>
+<tr>
+<td>🔄 <strong>Gira</strong> (telefono)</td>
+<td>telecamera frontale ↔ posteriore</td>
+</tr>
+<tr>
+<td>⌄ <strong>Riduci</strong> (telefono) / ⤢ <strong>Apri</strong> (PC)</td>
+<td>torni alla chat, la chiamata continua (barretta in cima)</td>
+</tr>
+<tr>
+<td>✆ <strong>Termina</strong></td>
 <td>chiude la chiamata</td>
 </tr>
 <tr>
 <td>📶</td>
 <td>qualità della linea: buona, discreta, scarsa</td>
 </tr>
-<tr>
-<td>🎥 <strong>Video</strong></td>
-<td>in arrivo (fase 2)</td>
-</tr>
 </tbody>
 </table>
+<p><strong>Le immagini, come in Telegram:</strong> chi parla occupa lo schermo intero, tu sei nel <strong>riquadro</strong>
+piccolo. Il riquadro:
+- si <strong>trascina</strong> dove vuoi e si aggancia all'angolo più vicino;
+- con un <strong>tocco</strong> si <strong>scambia</strong> con lo schermo intero (ti vedi in grande, l'altro nel riquadro);
+- si <strong>ingrandisce o rimpicciolisce</strong> con due dita (sul PC/Windows con la rotella del mouse);
+  il <strong>doppio tocco</strong> lo riporta alla misura normale.</p>
+<p>Un tocco sul video grande nasconde i comandi per vedere meglio; un altro li fa ricomparire. Se
+l'altro spegne la telecamera torni alla schermata della voce, con il suo avatar.
+La schermata della chiamata prende i <strong>colori del tema</strong> scelto.</p>
 <ul>
 <li><strong>Anonime come i messaggi:</strong> la voce passa attraverso la rete Nyctalus, cifrata nella stessa
   sessione dei messaggi; nessuno dei due vede l'IP dell'altro. Il prezzo è un piccolo ritardo
   (qualche decimo di secondo su una rete vera).</li>
 <li>La voce è <strong>Opus</strong> a 24 kbit/s in pacchetti da 20 ms; un pacchetto arrivato tardi si salta
   invece di aspettarlo, così la conversazione non accumula ritardo.</li>
+<li>Il video è <strong>VP8</strong> leggero e fluido: 320×240 (240×320 col telefono in verticale), 15 immagini
+  al secondo, circa 200 kbit/s; ogni 2 secondi parte un'immagine completa, così dopo un buco
+  della rete si riparte subito.</li>
 <li>Se l'altro è già in chiamata risulta <strong>occupato</strong>; senza risposta entro 45 secondi la
   chiamata si chiude da sola; se la linea cade (l'altro sparisce) la chiamata si chiude.</li>
-<li>Il <strong>telefono</strong> chiede il permesso del microfono alla prima chiamata, prima di farla partire.
-  Il PC usa microfono e altoparlanti del sistema (serve GStreamer con Opus, di solito già presente).</li>
+<li>Il <strong>telefono</strong> chiede il permesso del microfono alla prima chiamata e quello della telecamera
+  alla prima videochiamata, prima di farla partire. Microfono e telecamera vanno <strong>solo</strong> alla
+  chat: i siti aperti nel browser dell'app li ricevono solo se tocchi «Consenti» per quel sito,
+  e mai in modalità 🦇. La telecamera si accende solo quando chiami in video o tocchi 📹, e si
+  spegne appena tocchi 📞 o chiudi.</li>
+<li>Il PC usa microfono, altoparlanti e webcam del sistema (serve GStreamer con Opus e VP8, di
+  solito già presente). Senza webcam si riceve comunque il video dell'altro.</li>
 <li><strong>Eco e rumore:</strong> su entrambi i lati c'è la cancellazione dell'eco e del rumore di fondo (sul
   telefono la voce esce come una telefonata vera; sul PC con <code>webrtcdsp</code> di GStreamer). Con le
   cuffie la qualità è comunque migliore.</li>
@@ -274,7 +302,9 @@ notifica, con l'app chiusa) e tocca <strong>Rispondi</strong> o <strong>Rifiuta<
 <ul>
 <li>Menu <strong>⚙</strong> in alto: scegli il <strong>tema</strong> (Notte, Ardesia stile Telegram, Viola
   notturno, Chiaro) e lo <strong>sfondo</strong> della chat (trama a pipistrelli, velo di
-  colore, tinta unita).</li>
+  colore, tinta unita). Il tema è <strong>globale</strong>: sul PC vale anche per il mini menu e il
+  browser (si sceglie pure da ⚙ → Tema del mini menu), sul telefono per tutta l'app
+  (⚙️ Impostazioni della schermata iniziale); cambia al volo ovunque.</li>
 <li>La finestra si ricorda <strong>dimensione, posizione</strong> e se era <strong>massimizzata</strong>:
   la ritrovi come l'hai lasciata.</li>
 <li>Finché non apri una conversazione vedi solo il benvenuto col pipistrello; il

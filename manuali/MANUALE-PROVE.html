@@ -101,7 +101,7 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 </tr>
 <tr>
 <td><code>03-webapp</code></td>
-<td>la web-app in Chrome a misura di telefono: elenco, cache IndexedDB, conversazione in fondo, pressione lunga, foto senza EXIF, <strong>selettore allegati</strong> (griglia, selezione numerata, «Invia (2)»), messaggi e foto a se stessi <strong>attraverso la rete</strong>; pulsanti della rete accesi/spenti secondo la fase</td>
+<td>la web-app in Chrome a misura di telefono: elenco, cache IndexedDB, conversazione in fondo, pressione lunga, foto senza EXIF, <strong>selettore allegati</strong> (griglia, selezione numerata, «Invia (2)»), messaggi e foto a se stessi <strong>attraverso la rete</strong>; pulsanti della rete accesi/spenti secondo la fase; <strong>chiamata e videochiamata</strong> con microfono e telecamera FINTI di Chrome (VP8 inviato e ridecodificato, riquadro trascinato/scambiato/ingrandito, VIDKEY, «Solo voce», videochiamata in arrivo)</td>
 </tr>
 <tr>
 <td><code>04-fotocamera</code></td>
@@ -157,11 +157,15 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 </tr>
 <tr>
 <td><code>18-chiamate</code></td>
-<td><strong>chiamate, motore</strong>: invito, risposta, 2 s di voce a pacchetti da 20 ms nei due sensi (identici, ritardo misurato), fine, invito rifiutato, invito ricordato per chi apre la chat dopo, id non valido rifiutato</td>
+<td><strong>chiamate, motore</strong>: invito, risposta, 2 s di voce a pacchetti da 20 ms nei due sensi (identici, ritardo misurato), fine, invito rifiutato, invito ricordato per chi apre la chat dopo, id non valido rifiutato; <strong>video</strong>: invito video, VIDSTATO, immagini VP8, VIDKEY</td>
 </tr>
 <tr>
 <td><code>19-chiamata-pc</code></td>
-<td><strong>chiamata dalla chat GTK</strong> con microfono e altoparlante DI PROVA: 📞, risposta, voce Opus nei due sensi, barra con durata e qualità, muto, volume, riaggancia</td>
+<td><strong>chiamata dalla chat GTK</strong> con microfono, altoparlante e webcam DI PROVA: 📞, risposta, voce Opus nei due sensi, barra con durata e qualità, muto, volume, passaggio voce↔video nella finestra stile Telegram Web (VP8 nei due sensi, immagine completa su richiesta), riaggancia</td>
+</tr>
+<tr>
+<td><code>20-tema-globale</code></td>
+<td><strong>tema globale del PC</strong>: mini menu e chat aperti insieme; tema scelto nel mini menu (⚙ → Tema) → la chat cambia colori al volo; scelto nella chat → il mini menu si ricolora (configurazione temporanea)</td>
 </tr>
 <tr>
 <td><code>08-app-android</code></td>
