@@ -32,6 +32,12 @@ except Exception:                # noqa: BLE001
     Keybinder = None
     HA_KEYBINDER = False
 
+# Tema globale (uno solo per mini menu, chat, browser): nxs_tema sta col browser.
+try:
+    import nxs_tema
+except Exception:                # noqa: BLE001
+    nxs_tema = None
+
 # Traduzioni: riusa quelle del browser (nxs_i18n); fallback alla chiave.
 try:
     from nxs_i18n import t as _t
@@ -63,25 +69,44 @@ DIM_MIN, DIM_MAX, DIM_DEF, PASSO_DIM = 36, 104, 50, 8
 
 # Look piatto e pulito: pannello scuro arrotondato, bottoni senza bordo con solo
 # un leggero evidenziatore al passaggio.
-CSS = b"""
-.nyct-launcher { background: #0e1221; border-radius: 16px;
-                 border: 1px solid rgba(90,169,255,0.18); }
+CSS = """
+/* finestra trasparente: si vede solo il pannello arrotondato (senza compositore: angoli
+   del colore del pannello invece che neri) */
+.nyct-finestra { background-color: transparent; }
+.nyct-finestra.senza-trasparenza { background-color: @PANEL@; }
+.nyct-launcher { background: @PANEL@; border-radius: 16px;
+                 border: 1px solid rgba(@RGB@,0.20); }
 .nyct-launcher button { border: none; background: transparent; box-shadow: none;
                         border-radius: 12px; padding: 7px; margin: 0;
                         min-width: 0; min-height: 0;
-                        color: #8a9bb8;                 /* icone tenui, leggibili ma non accese */
+                        color: @MUTED@;                 /* icone tenui, leggibili ma non accese */
                         -gtk-icon-shadow: none;
                         transition: background 120ms ease, color 120ms ease; }
-.nyct-launcher button image { color: #8a9bb8; }
-.nyct-launcher button:hover { background: rgba(90,169,255,0.18); color: #dfe8ff; }
-.nyct-launcher button:hover image { color: #dfe8ff; }
-.nyct-launcher button:active { background: rgba(90,169,255,0.32); }
-/* il bottone-logo ha un alone tenue: il suo disco scuro e' quasi come il pannello */
-.nyct-launcher button.logo { background: rgba(99,208,224,0.12); }
-.nyct-launcher button.logo:hover { background: rgba(99,208,224,0.22); }
-.nyct-launcher separator { background: rgba(255,255,255,0.08);
+.nyct-launcher button image { color: @MUTED@; }
+.nyct-launcher button:hover { background: rgba(@RGB@,0.18); color: @TEXT@; }
+.nyct-launcher button:hover image { color: @TEXT@; }
+.nyct-launcher button:active { background: rgba(@RGB@,0.32); }
+/* il bottone-logo ha un alone tenue dell'accento */
+.nyct-launcher button.logo { background: rgba(@RGB@,0.12); }
+.nyct-launcher button.logo:hover { background: rgba(@RGB@,0.22); }
+.nyct-launcher separator { background: rgba(@RGB@,0.12);
                            min-width: 1px; min-height: 1px; margin: 4px; }
 """
+# colori del pannello se il tema globale non è disponibile (blu notte)
+_NOTTE = {"PANEL": "#0e1221", "RGB": "90,169,255", "MUTED": "#8a9bb8", "TEXT": "#dfe8ff"}
+
+
+def _css(nome=None):
+    c = dict(_NOTTE)
+    if nxs_tema is not None:
+        t = nxs_tema.colori(nome)
+        c.update({"PANEL": t["PANEL"], "RGB": t["RGB"], "TEXT": t["TEXT"],
+                  "MUTED": "#5d6880" if not nxs_tema.scuro(nome) else "#8a9bb8"})
+    css = CSS
+    for k, v in c.items():
+        css = css.replace("@%s@" % k, v)
+    return css.encode()
+
 
 
 class Launcher(Gtk.Window):
@@ -100,11 +125,21 @@ class Launcher(Gtk.Window):
         self.cfg = self._carica_cfg()
         self._salva_pendente = 0
 
-        prov = Gtk.CssProvider()
-        prov.load_from_data(CSS)
+        self.prov = Gtk.CssProvider()
+        self.prov.load_from_data(_css())
         Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(), prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-        self.get_style_context().add_class("nyct-launcher")
+            Gdk.Screen.get_default(), self.prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        # tema globale: cambiato qui o nella chat, il pannello si ricolora al volo
+        self._oss_tema = nxs_tema.osserva(lambda n: self.prov.load_from_data(_css(n))) if nxs_tema is not None else None
+        # finestra trasparente: angoli del pannello davvero arrotondati (anche col tema chiaro)
+        self.get_style_context().add_class("nyct-finestra")
+        schermo = self.get_screen()
+        visuale = schermo.get_rgba_visual()
+        if visuale is not None and schermo.is_composited():
+            self.set_visual(visuale)
+            self.set_app_paintable(True)
+        else:
+            self.get_style_context().add_class("senza-trasparenza")
 
         self.set_keep_above(bool(self.cfg.get("sopra", True)))
         self._accel = Gtk.AccelGroup()       # ripiego locale (finestra a fuoco)
@@ -141,6 +176,7 @@ class Launcher(Gtk.Window):
         self.dim = max(DIM_MIN, min(DIM_MAX, int(self.cfg.get("dimensione", DIM_DEF))))
         orient = Gtk.Orientation.VERTICAL if verticale else Gtk.Orientation.HORIZONTAL
         self.box = Gtk.Box(orientation=orient, spacing=4)
+        self.box.get_style_context().add_class("nyct-launcher")    # il pannello arrotondato
         self.box.set_border_width(6)
         self.add(self.box)
         # il logo (a sinistra/in alto) apre il sito/guida su GitHub Pages
@@ -393,6 +429,20 @@ class Launcher(Gtk.Window):
         sopra.set_active(bool(self.cfg.get("sopra", True)))
         sopra.connect("toggled", self._cambia_sopra)
         menu.append(sopra)
+        if nxs_tema is not None:
+            # Tema: uno solo per mini menu, chat, browser e chiamate
+            menu.append(Gtk.SeparatorMenuItem())
+            tema = Gtk.MenuItem(label=_t("lau.tema"))
+            sotto = Gtk.Menu()
+            attuale, primo = nxs_tema.leggi(), None
+            for nome in nxs_tema.TEMI:
+                r = Gtk.RadioMenuItem.new_with_label_from_widget(primo, _t("chat.tema.%s" % nome))
+                primo = primo or r
+                r.set_active(nome == attuale)
+                r.connect("toggled", lambda w, n=nome: w.get_active() and self._scegli_tema(n))
+                sotto.append(r)
+            tema.set_submenu(sotto)
+            menu.append(tema)
         menu.append(Gtk.SeparatorMenuItem())
         voce(_t("lau.tasti_rapidi") + "…", self._dialogo_scorciatoie)
         menu.append(Gtk.SeparatorMenuItem())
@@ -461,6 +511,10 @@ class Launcher(Gtk.Window):
         d.format_secondary_text(corpo)
         d.run()
         d.destroy()
+
+    def _scegli_tema(self, nome):
+        if nxs_tema.scrivi(nome):
+            self.prov.load_from_data(_css(nome))
 
     def _carica_cfg(self):
         try:

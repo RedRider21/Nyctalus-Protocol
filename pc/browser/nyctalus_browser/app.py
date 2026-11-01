@@ -52,6 +52,11 @@ from nyctalus_browser.security import Antitracciamento, SoloHttps
 from nyctalus_browser.translate import Traduttore
 
 try:
+    import nxs_tema               # tema GLOBALE di Nyctalus (mini menu, chat, browser)
+except Exception:                # noqa: BLE001
+    nxs_tema = None
+
+try:
     from nxs_i18n import t as _t
 except Exception:                # noqa: BLE001
     def _t(key, **kw):           # fallback: non rompe mai la UI
@@ -298,6 +303,9 @@ class Browser(FunzioniExtra, Gtk.Window):
         # COLLASSATA: si vedono subito le icone dei preferiti in colonna; si
         # espande (elenco completo) a richiesta.
         self.dark_mode = bool(config.get("dark_mode", True))
+        if nxs_tema is not None and nxs_tema.file_tema().exists():
+            self.dark_mode = nxs_tema.scuro()          # il tema scelto per tutto Nyctalus
+        self._oss_tema = nxs_tema.osserva(self._tema_globale) if nxs_tema is not None else None
         # Browser NORMALE di default: lo stealth (rete Nyctalus) si accende col
         # bottone. Eccezione: un indirizzo .nyct/.onion passato all'avvio è
         # raggiungibile solo via rete anonima, quindi accende lo stealth da sé.
@@ -1554,6 +1562,19 @@ code{color:#5aa9ff}</style><div class="b"><div class="bat">🦇</div>
     def toggle_theme(self):
         self.dark_mode = not self.dark_mode
         config.set("dark_mode", self.dark_mode)
+        if nxs_tema is not None:      # chiaro/scuro vale per tutto Nyctalus
+            if not self.dark_mode:
+                if nxs_tema.leggi() != "chiaro":
+                    config.set("tema_scuro", nxs_tema.leggi())
+                nxs_tema.scrivi("chiaro")
+            else:
+                nxs_tema.scrivi(config.get("tema_scuro", "notte"))
+        self.apply_theme()
+
+    def _tema_globale(self, nome):
+        """Tema cambiato nel mini menu o nella chat: chiaro/scuro e accento al volo."""
+        self.dark_mode = nxs_tema.scuro(nome)
+        config.set("dark_mode", self.dark_mode)
         self.apply_theme()
 
     def _profile_accent(self):
@@ -1563,6 +1584,8 @@ code{color:#5aa9ff}</style><div class="b"><div class="bat">🦇</div>
             from nxs_profiles import model
             return model.accent()
         except Exception:
+            if nxs_tema is not None:      # fuori da NexusSec: l'accento del tema Nyctalus
+                return nxs_tema.colori()["ACCENT"]
             return "#0060df"  # blu di Firefox
 
     def _accent_css(self):

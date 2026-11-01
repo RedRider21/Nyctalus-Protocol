@@ -8,7 +8,9 @@
 titolo "Funzionamento · app Android (APK)"
 A="$ROOT/mobile/android/app/src/main"; M="$A/AndroidManifest.xml"; J="$A/java/org/nyctalus/mobile/MainActivity.java"
 
-! grep -q 'permission.CAMERA' "$M" && pass "nessun permesso fotocamera (usa l'app del telefono)" || fail "chiede il permesso fotocamera"
+J8="$(dirname "$M")/java/org/nyctalus/mobile/MainActivity.java"
+grep -q 'permission.CAMERA' "$M" && grep -q 'scattoInAttesa = i;' "$J8" \
+  && pass "fotocamera: permesso solo per le videochiamate; le foto usano l'app del telefono (chiesto prima dello scatto)" || fail "permesso fotocamera"
 grep -q 'allowBackup="false"' "$M" && pass "backup dell'app disattivato (il segreto non finisce nei backup)" || fail "allowBackup"
 grep -A3 'FotoProvider' "$M" | grep -q 'exported="false"' && pass "FotoProvider non esportato (scatti privati)" || fail "FotoProvider esportato"
 grep -q 'SecureRandom' "$J" && pass "segreto generato con SecureRandom" || fail "segreto non casuale"

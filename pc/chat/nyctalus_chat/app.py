@@ -35,6 +35,10 @@ try:
     from nxs_i18n import t as _t_base
 except Exception:                # noqa: BLE001
     _t_base = None
+try:
+    import nxs_tema               # tema GLOBALE del PC (mini menu, chat, browser)
+except Exception:                # noqa: BLE001
+    nxs_tema = None
 
 
 def _t(key, **kw):
@@ -708,6 +712,7 @@ class Chat(Gtk.Window):
         Gtk.StyleContext.add_provider_for_screen(
             Gdk.Screen.get_default(), self.prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self._applica_aspetto()
+        self._oss_tema = nxs_tema.osserva(self._tema_globale) if nxs_tema is not None else None
         self.get_style_context().add_class("chat-root")
         # dimensione/stato della finestra come all'ultima chiusura
         self.set_default_size(int(self.ui.get("larghezza", 880)), int(self.ui.get("altezza", 600)))
@@ -1965,6 +1970,8 @@ class Chat(Gtk.Window):
             d = json.loads(self._file_ui().read_text(encoding="utf-8"))
         except Exception:        # noqa: BLE001
             d = {}
+        if nxs_tema is not None:      # il tema è uno solo per tutti i programmi
+            d["tema"] = nxs_tema.leggi(d.get("tema"))
         if d.get("tema") not in TEMI:
             d["tema"] = TEMA_DEF
         if d.get("sfondo") not in SFONDI:
@@ -2050,6 +2057,15 @@ class Chat(Gtk.Window):
         self.ui[chiave] = valore
         self._salva_ui()
         self._applica_aspetto()
+        if chiave == "tema" and nxs_tema is not None:
+            nxs_tema.scrivi(valore)       # vale anche per il mini menu e il browser
+
+    def _tema_globale(self, nome):
+        """Il tema è stato cambiato altrove (mini menu ⚙): colori nuovi al volo."""
+        if nome in TEMI and self.ui.get("tema") != nome:
+            self.ui["tema"] = nome
+            self._salva_ui()
+            self._applica_aspetto()
 
     def _apri_manuale(self, _w):
         """Apre il manuale nel browser Nyctalus; se non c'è, nel browser di
