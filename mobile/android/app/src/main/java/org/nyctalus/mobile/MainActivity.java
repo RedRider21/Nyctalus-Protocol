@@ -83,6 +83,7 @@ public class MainActivity extends Activity {
     private String segreto;
     private boolean caricata = false, pronto = false, entraAppenaPronto = false, inPausa = false;
     private boolean apriRubrica = false;   // entrando, si apre la sola rubrica della rete
+    private boolean apriImpostazioni = false;   // entrando, si aprono le impostazioni complete
     private volatile boolean inRubrica = false;   // la web-app mostra la sola rubrica
     private View pulsanteEntra;      // la casella «Chat»: si accende quando Nyctalus è pronto
     private int portaSocksBrowser = 18733;
@@ -277,6 +278,11 @@ public class MainActivity extends Activity {
         TextView nota = testo("Vale per tutta l'app: avvio, chat, chiamate.", C_TENUE, 12);
         nota.setGravity(Gravity.START);
         box.addView(nota);
+        TextView tutte = testo("Contact ID, sfondo, foto senza metadati e rete: qui quando Nyctalus è pronto "
+                + "(● verde), con tutte le impostazioni.", C_TENUE, 12);
+        tutte.setGravity(Gravity.START);
+        tutte.setPadding(0, dp(6), 0, 0);
+        box.addView(tutte);
 
         box.addView(sezione("GENERALI"));
         Button notif = cella(testoNotifiche(getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("notifiche", true)), null);
@@ -319,10 +325,14 @@ public class MainActivity extends Activity {
 
     /** Interruttore nelle impostazioni: notifiche dei messaggi con l'app chiusa sì/no. */
     private void cambiaNotifiche(Button b) {
-        SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
-        boolean attive = !p.getBoolean("notifiche", true);
-        p.edit().putBoolean("notifiche", attive).apply();
+        boolean attive = !getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("notifiche", true);
+        impostaNotifiche(attive);
         b.setText(testoNotifiche(attive));
+    }
+
+    private void impostaNotifiche(boolean attive) {
+        SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+        p.edit().putBoolean("notifiche", attive).apply();
         if (attive) {
             p.edit().putBoolean("notifiche_chieste", false).apply();
             avviaNotifiche();
@@ -335,10 +345,13 @@ public class MainActivity extends Activity {
 
     /** Interruttore nelle impostazioni: Nyctalus si riaccende da solo all'accensione del telefono. */
     private void cambiaAccensione(Button b) {
-        SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
-        boolean attivo = !p.getBoolean("avvio_accensione", false);
-        p.edit().putBoolean("avvio_accensione", attivo).apply();
+        boolean attivo = !getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("avvio_accensione", false);
+        impostaAccensione(attivo);
         b.setText(testoAccensione(attivo));
+    }
+
+    private void impostaAccensione(boolean attivo) {
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("avvio_accensione", attivo).apply();
         avviso(attivo ? "All'accensione del telefono Nyctalus ripartirà da solo (servizio in Termux e notifiche)."
                       : "All'accensione del telefono Nyctalus resterà spento finché non apri l'app.");
     }
@@ -467,17 +480,21 @@ public class MainActivity extends Activity {
         // le funzioni, come il mini menu del PC: una fila di pulsanti piatti, tutti uguali
         LinearLayout griglia = riga();
         ((LinearLayout.LayoutParams) griglia.getLayoutParams()).topMargin = dp(20);
-        pulsanteEntra = casella("💬", "Chat", v -> { apriRubrica = false; entra(); });
+        pulsanteEntra = casella(R.drawable.ic_avvio_chat, "Chat", v -> { apriRubrica = false; apriImpostazioni = false; entra(); });
         pulsanteEntra.setAlpha(pronto ? 1f : 0.55f);
         griglia.addView(pulsanteEntra);
-        griglia.addView(casella("👥", "Rubrica", v -> { apriRubrica = true; entra(); }));
-        griglia.addView(casella("🌐", "Browser", v -> sceltaBrowser()));
-        View file = casella("📁", "File", v -> avviso(
+        griglia.addView(casella(R.drawable.ic_avvio_rubrica, "Rubrica", v -> { apriRubrica = true; apriImpostazioni = false; entra(); }));
+        griglia.addView(casella(R.drawable.ic_avvio_browser, "Browser", v -> sceltaBrowser()));
+        View file = casella(R.drawable.ic_avvio_file, "File (in preparazione)", v -> avviso(
                 "Il gestore dei file (invio e ricezione attraverso Nyctalus) è in preparazione."));
         file.setAlpha(0.45f);
         griglia.addView(file);
-        griglia.addView(casella("ℹ️", "Info", v -> apriBrowser(SITO, false)));
-        griglia.addView(casella("⚙️", "Impostazioni", v -> impostazioni()));
+        griglia.addView(casella(R.drawable.ic_avvio_info, "Info e manuali", v -> apriBrowser(SITO, false)));
+        // impostazioni COMPLETE (le stesse della chat + la sezione «App»); finché Nyctalus non è
+        // pronto, quelle dell'app (tema, notifiche, accensione)
+        griglia.addView(casella(R.drawable.ic_avvio_impostazioni, "Impostazioni", v -> {
+            if (pronto) { apriImpostazioni = true; apriRubrica = false; entra(); } else impostazioni();
+        }));
         r.addView(griglia);
         r.addView(spazio());
 
@@ -794,32 +811,39 @@ public class MainActivity extends Activity {
     }
 
     /** Un pulsante del menu: piatto, tutti dello stesso colore, icona sopra e nome sotto. */
-    private View casella(String icona, String nome, View.OnClickListener cl) {
-        LinearLayout c = new LinearLayout(this);
-        c.setOrientation(LinearLayout.VERTICAL);
-        c.setGravity(Gravity.CENTER);
-        c.setPadding(dp(4), dp(10), dp(4), dp(8));
+    /** Una casella quadrata con la sola icona (colore del tema); il nome tenendo premuto. */
+    private View casella(int icona, String nome, View.OnClickListener cl) {
+        Quadrato c = new Quadrato(this);
         GradientDrawable g = new GradientDrawable();
-        g.setCornerRadius(dp(14));
+        g.setCornerRadius(dp(16));
         g.setColor(C_SCHEDA);
         g.setStroke(dp(1), C_BORDO);
         GradientDrawable maschera = new GradientDrawable();
-        maschera.setCornerRadius(dp(14));
+        maschera.setCornerRadius(dp(16));
         maschera.setColor(0xFFFFFFFF);
         c.setBackground(new android.graphics.drawable.RippleDrawable(
                 android.content.res.ColorStateList.valueOf((C_ACCENTO & 0x00FFFFFF) | 0x40000000), g, maschera));
-        TextView i = testo(icona, C_TESTO, 20);
-        TextView n = testo(nome, C_TENUE, 11);
-        n.setLetterSpacing(0.04f);
-        n.setPadding(0, dp(4), 0, 0);
-        c.addView(i);
-        c.addView(n);
+        ImageView i = new ImageView(this);
+        i.setImageResource(icona);
+        i.setImageTintList(android.content.res.ColorStateList.valueOf(C_TESTO));
+        android.widget.FrameLayout.LayoutParams ip = new android.widget.FrameLayout.LayoutParams(dp(26), dp(26));
+        ip.gravity = Gravity.CENTER;
+        c.addView(i, ip);
+        c.setContentDescription(nome);                       // lettori di schermo
+        if (Build.VERSION.SDK_INT >= 26) c.setTooltipText(nome);   // tenendo premuto
+        else c.setOnLongClickListener(v -> { Toast.makeText(this, nome, Toast.LENGTH_SHORT).show(); return true; });
         c.setClickable(true);
         c.setOnClickListener(cl);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        lp.setMargins(dp(4), 0, dp(4), 0);
+        lp.setMargins(dp(5), 0, dp(5), 0);
         c.setLayoutParams(lp);
         return c;
+    }
+
+    /** Sempre quadrata: alta quanto è larga (le caselle sono tutte uguali). */
+    static final class Quadrato extends android.widget.FrameLayout {
+        Quadrato(Context c) { super(c); }
+        @Override protected void onMeasure(int w, int h) { super.onMeasure(w, w); }
     }
 
     // ------------------------------------------------------------------ rete (per tutta l'app)
@@ -1120,11 +1144,13 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 setContentView(web);
                 // «Rubrica» → la sola rubrica; «Chat» → la chat (chiude la rubrica se era rimasta aperta)
-                web.evaluateJavascript(apriRubrica ? "window.nyctApriRubrica && nyctApriRubrica()"
+                web.evaluateJavascript(apriImpostazioni ? "window.nyctApriImpostazioni && nyctApriImpostazioni()"
+                        : apriRubrica ? "window.nyctApriRubrica && nyctApriRubrica()"
                         : "window.nyctChiudiRubrica && nyctChiudiRubrica()", null);
                 if (chatDaAprire != null)                // notifica toccata: quella conversazione
                     web.evaluateJavascript("window.nyctApriChat && nyctApriChat('" + chatDaAprire + "')", null);
                 apriRubrica = false;
+                apriImpostazioni = false;
                 chatDaAprire = null;
             });
             return;
@@ -1170,10 +1196,11 @@ public class MainActivity extends Activity {
                 }
             });
             setContentView(web);
-            web.loadUrl(URL_BASE + "/?t=" + segreto + (apriRubrica ? "#rubrica"
+            web.loadUrl(URL_BASE + "/?t=" + segreto + (apriImpostazioni ? "#impostazioni" : apriRubrica ? "#rubrica"
                     : chatDaAprire != null ? "#chat=" + chatDaAprire : ""));
             chatDaAprire = null;
             apriRubrica = false;
+            apriImpostazioni = false;
         });
     }
 
@@ -1291,6 +1318,27 @@ public class MainActivity extends Activity {
                 getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("tema", id).apply();
                 runOnUiThread(MainActivity.this::caricaTema);
             }
+        }
+
+        /** Sezione «App» delle impostazioni della chat: notifiche e avvio all'accensione. */
+        @JavascriptInterface
+        public boolean notificheAttive() {
+            return getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("notifiche", true);
+        }
+
+        @JavascriptInterface
+        public void impostaNotifiche(boolean attive) {
+            runOnUiThread(() -> MainActivity.this.impostaNotifiche(attive));
+        }
+
+        @JavascriptInterface
+        public boolean accensioneAttiva() {
+            return getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("avvio_accensione", false);
+        }
+
+        @JavascriptInterface
+        public void impostaAccensione(boolean attivo) {
+            runOnUiThread(() -> MainActivity.this.impostaAccensione(attivo));
         }
 
         /** Il tema scelto nelle impostazioni generali (la web-app lo usa all'avvio). */

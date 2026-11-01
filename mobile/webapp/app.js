@@ -297,6 +297,11 @@ function chiediNome(attuale) {
 }
 $("btn-rubrica").onclick = () => apriRubrica(false);
 if (location.hash === "#rubrica") apriRubrica(true);
+if (location.hash === "#impostazioni") setTimeout(() => impostazioni(true), 0);   // dopo la definizione completa
+window.addEventListener("hashchange", () => {     // anche senza ricaricare la pagina
+  if (location.hash === "#impostazioni") impostazioni(true);
+  else if (location.hash === "#rubrica") apriRubrica(true);
+});
 
 // ---------- eventi dal motore ----------------------------------------------------------
 function evento(riga) {
@@ -306,6 +311,7 @@ function evento(riga) {
   if (typeof Chiamate !== "undefined" && Chiamate.evento(t, p)) return;   // chiamate e voce
   if (t === "ME") {
     S.me = p[1]; $("mio-id-valore").textContent = S.me;
+    document.querySelectorAll(".codice-id").forEach((x) => { x.textContent = S.me; });   // impostazioni già aperte
     if (S.motoreGiu) { S.motoreGiu = false; controllaServizi(); }   // di nuovo collegati
     S.ritardoWs = 1500;
     if (S.chatDaAprire) { const a = S.chatDaAprire; S.chatDaAprire = ""; setTimeout(() => apriChat(a), 300); }
@@ -965,7 +971,11 @@ function dialogoRinomina(addr) {
   setTimeout(() => n.focus(), 50);
 }
 
-function impostazioni() {
+// Impostazioni: le stesse nel menu ☰ della chat (finestra) e nel ⚙️ della schermata iniziale
+// dell'app (`solo`: una schermata intera, «indietro» torna all'avvio). Nell'app c'è in più la
+// sezione «App» (notifiche ad app chiusa, avvio all'accensione), che vive nell'app Android.
+window.nyctApriImpostazioni = () => impostazioni(true);
+function impostazioni(solo) {
   const id = el("div", "codice-id", S.me || "…");
   const bott = el("div", "pulsanti"); bott.style.justifyContent = "flex-start"; bott.style.marginTop = "0";
   const bc = el("button", "", "📋 Copia"); bc.onclick = () => copia(S.me);
@@ -1038,10 +1048,30 @@ function impostazioni() {
     const r = await postJson("/api/rete", { prova: true });
     if (r.ok) { toast("Torno alla rete di prova…"); controllaServizi(); } else toast("✗ " + (r.errore || "non riuscito"));
   };
-  const giro = setInterval(() => { if (!statoRete.isConnected || $("dialogo").classList.contains("nascosto")) clearInterval(giro); else leggiRete(); }, 1000);
-  dialogo("Impostazioni", [el("p", "", "Il tuo Contact ID — dallo agli amici perché ti scrivano (non è segreto):"), id, bott,
-    el("p", "", "Tema"), temi, el("p", "", "Sfondo della chat"), sfondi, l, el("p", "", "Rete Nyctalus"), statoRete, servizi,
-    el("p", "", "Rete condivisa"), quale, condivisa],
+  const giro = setInterval(() => { if (!statoRete.isConnected || statoRete.offsetParent === null) clearInterval(giro); else leggiRete(); }, 1000);
+  // sezione «App» (solo nell'app Android): interruttori che vivono nell'app, non nella chat
+  const app = [];
+  if (HOST && HOST.notificheAttive) {
+    const interr = (testo, attivo, cambia) => {
+      const r = el("label", "spunta"), c2 = el("input"); c2.type = "checkbox"; c2.checked = attivo;
+      c2.onchange = () => cambia(c2.checked); r.append(c2, el("span", "", testo)); return r;
+    };
+    app.push(el("p", "", "App"),
+      interr("🔔 Notifiche dei messaggi anche con l'app chiusa", HOST.notificheAttive(), (v) => HOST.impostaNotifiche(v)),
+      interr("⏻ Riparti da solo all'accensione del telefono", HOST.accensioneAttiva(), (v) => HOST.impostaAccensione(v)));
+  }
+  const contenuto = [el("p", "", "Il tuo Contact ID — dallo agli amici perché ti scrivano (non è segreto):"), id, bott,
+    el("p", "", "Tema"), temi, el("p", "", "Sfondo della chat"), sfondi, l, ...app, el("p", "", "Rete Nyctalus"), statoRete, servizi,
+    el("p", "", "Rete condivisa"), quale, condivisa];
+  if (solo) {
+    S.soloRubrica = true; document.body.classList.add("solo-rubrica"); if (HOST && HOST.rubrica) HOST.rubrica(true);
+    const box = el("div", "impostazioni-pagina"); box.append(...contenuto);
+    apriFoglio("Impostazioni", [box]);
+    const ind = el("button", "indietro-rubrica", "←"); ind.onclick = chiudiFoglio;
+    document.querySelector("#foglio .titolo").prepend(ind);
+    return;
+  }
+  dialogo("Impostazioni", contenuto,
     HOST ? [["Esci dall'app", () => HOST.esci()], ["Chiudi", null, "primario"]] : [["Chiudi", null, "primario"]]);
 }
 

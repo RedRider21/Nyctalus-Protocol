@@ -165,9 +165,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 #dialogo input[type=text] { width: 100%; padding: 11px 14px; border-radius: 12px; border: 1px solid rgba(var(--rgb), .25);
   background: var(--bg); color: var(--testo); font-size: 15px; margin-bottom: 10px; outline: none; }
 #dialogo input[type=text]:focus { border-color: var(--accento); }
-#dialogo .pulsanti { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
-#dialogo .pulsanti button { border: 0; border-radius: 10px; padding: 9px 18px; background: rgba(var(--rgb), .14); font-weight: 600; }
-#dialogo .pulsanti button:disabled { opacity: .35; cursor: default; }
+#dialogo .pulsanti, .impostazioni-pagina .pulsanti { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+#dialogo .pulsanti button, .impostazioni-pagina .pulsanti button { border: 0; border-radius: 10px; padding: 9px 18px; background: rgba(var(--rgb), .14); font-weight: 600; }
+#dialogo .pulsanti button:disabled, .impostazioni-pagina .pulsanti button:disabled { opacity: .35; cursor: default; }
 .stato-rete-imp { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 2px 0 8px; }
 .stato-rete-imp .luce { width: 10px; height: 10px; border-radius: 50%; background: var(--tenue); flex: none; }
 .stato-rete-imp[data-fase="pronto"] .luce { background: #3ec46d; box-shadow: 0 0 6px #3ec46d; }
@@ -177,8 +177,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .nota-rete { font-size: 13px; color: var(--tenue); margin: 2px 0 8px; }
 .campo-codice { width: 100%; box-sizing: border-box; font: 13px monospace; padding: 10px; border-radius: 10px;
   border: 1px solid rgba(var(--rgb), .35); background: rgba(var(--rgb), .08); color: var(--testo); resize: vertical; }
-#dialogo .pulsanti .primario { background: var(--invia); color: #fff; }
-#dialogo .pulsanti .pericoloso { background: #d64545; color: #fff; }
+#dialogo .pulsanti .primario, .impostazioni-pagina .pulsanti .primario { background: var(--invia); color: #fff; }
+#dialogo .pulsanti .pericoloso, .impostazioni-pagina .pulsanti .pericoloso { background: #d64545; color: #fff; }
 #dialogo label.spunta { display: flex; gap: 10px; align-items: center; color: var(--testo); margin: 8px 0; }
 .miniature { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; margin-bottom: 10px; }
 .miniature img, .miniature video { width: 100%; height: 110px; object-fit: cover; border-radius: 10px; display: block; }
@@ -275,6 +275,15 @@ body.solo-rubrica #foglio { top: 0; bottom: 0; max-height: none; border-radius: 
 body.solo-rubrica #foglio .maniglia { display: none; }
 body.solo-rubrica #foglio .titolo { display: flex; align-items: center; gap: 10px; font-size: 18px; padding: 8px 12px 12px; }
 body.solo-rubrica #foglio .rubrica { max-height: none; }
+/* le impostazioni a schermo intero (⚙️ della schermata iniziale dell'app) */
+.impostazioni-pagina { padding: 0 16px max(24px, env(safe-area-inset-bottom)); overflow-y: auto; }
+.impostazioni-pagina > p:not([class]) { margin: 22px 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--accento); }
+.impostazioni-pagina > p:not([class]):first-child { margin-top: 6px; text-transform: none; letter-spacing: 0; font-weight: 400;
+  font-size: 14px; color: var(--tenue); }
+.impostazioni-pagina .spunta { display: flex; gap: 10px; align-items: center; padding: 8px 0; color: var(--testo); }
+.impostazioni-pagina .pulsanti button { color: var(--testo); padding: 10px 18px; }
+.impostazioni-pagina .nota-rete { line-height: 1.45; }
 body.solo-rubrica #velo { background: var(--panel); }
 .riprova-rubrica { margin-top: 12px; width: 100%; padding: 11px; border: 0; border-radius: 12px; background: rgba(var(--rgb), .16); color: var(--testo); font-weight: 600; font-size: 15px; }
 .indietro-rubrica { background: none; border: 0; color: var(--testo); font-size: 22px; padding: 2px 10px; border-radius: 50%; }

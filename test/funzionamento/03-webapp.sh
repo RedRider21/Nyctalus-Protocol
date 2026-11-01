@@ -106,7 +106,11 @@ cat > "$TMP/passi.json" <<EOF
  ["js","(()=>{const b=document.querySelector('#foglio .rubrica'); return 'SENZA ' + (b.textContent.includes('non ha una rubrica') && !!b.querySelector('.riprova-rubrica'))})()"],
  ["js","(()=>{S.rubrica='rubricaprova.nyct'; S.rubricaDati={op:'elenco',iscritto:false,utenti:[{a:'$BOB',n:'Bob',on:true,v:0},{a:'altro.nyct',n:'Carla',on:false,v:Math.floor(Date.now()/1000)-3600}]}; disegnaRubrica(); return 'UTENTI ' + document.querySelectorAll('#foglio .rubrica-utente').length})()"],
  ["foto","${NYCT_FOTO:-$TMP}/rubrica.png"],
- ["js","(()=>{document.querySelector('#foglio .rubrica-utente').click(); return 'SCRIVI ' + document.body.classList.contains('solo-rubrica') + ',' + document.getElementById('foglio').classList.contains('nascosto') + ',' + (S.attivo==='$BOB')})()"]]
+ ["js","(()=>{document.querySelector('#foglio .rubrica-utente').click(); return 'SCRIVI ' + document.body.classList.contains('solo-rubrica') + ',' + document.getElementById('foglio').classList.contains('nascosto') + ',' + (S.attivo==='$BOB')})()"],
+ ["vai","$U/?avvio=1#impostazioni"],["attendi",2.5],
+ ["js","(()=>{const f=document.getElementById('foglio'), r=f.getBoundingClientRect(), p=f.querySelector('.impostazioni-pagina'); return 'SOLOIMP ' + document.body.classList.contains('solo-rubrica') + ',' + (r.top===0 && r.height>=innerHeight-1) + ',' + !!f.querySelector('.indietro-rubrica') + ',' + (p?p.querySelectorAll('.scelta-tema').length:0) + ',' + (p&&p.querySelector('.codice-id').textContent.endsWith('.nyct')) + ',' + !!(p&&p.querySelector('.stato-rete-imp'))})()"],
+ ["foto","${NYCT_FOTO:-$TMP}/impostazioni-schermo.png"],
+ ["js","(()=>{document.querySelector('#foglio .indietro-rubrica').click(); return 'ESCIIMP ' + document.body.classList.contains('solo-rubrica') + ',' + document.getElementById('foglio').classList.contains('nascosto')})()"]]
 EOF
 timeout 120 python3 "$STRUMENTI/cdp.py" "$TMP/chrome" "$TMP/passi.json" > "$TMP/r.txt" 2>&1
 r() { grep -oE "^js → $1 .*" "$TMP/r.txt" | head -1 | cut -d' ' -f4-; }
@@ -155,4 +159,6 @@ r PESO | grep -q "^true" && pass "immagini sotto il limite del motore ($(r PESO 
 [ "$(r SENZA)" = "true" ] && pass "rete senza rubrica: lo dice e propone «Riprova» (niente scritta ferma)" || fail "rubrica su rete senza rubrica: $(r SENZA)"
 [ "$(r UTENTI)" = "2" ] && pass "rubrica: elenco degli iscritti disegnato" || fail "rubrica: $(r UTENTI)"
 [ "$(r SCRIVI)" = "false,true,true" ] && pass "dalla rubrica, scegliendo qualcuno si esce dalla rubrica e si apre la conversazione" || fail "scrivi dalla rubrica: $(r SCRIVI)"
+[ "$(r SOLOIMP)" = "true,true,true,2,true,true" ] && pass "⚙️ dell'app (#impostazioni): le impostazioni COMPLETE a tutto schermo (Contact ID, tema, sfondo, rete), con «←»" || fail "impostazioni a schermo intero: $(r SOLOIMP)"
+[ "$(r ESCIIMP)" = "false,true" ] && pass "«←» chiude le impostazioni (nell'app si torna alla schermata iniziale)" || fail "uscita dalle impostazioni: $(r ESCIIMP)"
 [ "$KO" -eq 0 ]
