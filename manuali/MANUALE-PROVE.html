@@ -79,6 +79,10 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 <td><strong>«Wireshark in mezzo»</strong>: rete di prova in uno spazio di rete isolato, cattura di ogni pacchetto con dumpcap mentre Alice e Bob si scambiano messaggio, file e videochiamata con parole spia; in rete mai parole spia né indirizzi, nessun collegamento diretto, niente DNS/STUN/mDNS, TCP solo locale, pacchetti QUIC v1 indistinguibili da rumore; riporta dimensioni e ritmo (<code>NYCT_CATTURA=file.pcap</code> tiene la cattura per Wireshark)</td>
 </tr>
 <tr>
+<td><code>08-browser-pc</code></td>
+<td><strong>browser del PC in modalità 🦇</strong>, in uno spazio di rete isolato con cattura: a rete non ancora pronta la scheda 🦇 non contatta il sito (pagina d'attesa), poi riparte da sola passando dal proxy, i nomi li risolve la rete (zero DNS nella cattura), il sito non riceve visite dirette; una scheda normale sì (controllo). Col browser precedente la prova falliva: la scheda 🦇 partiva in chiaro nei secondi d'avvio della rete</td>
+</tr>
+<tr>
 <td><code>05-orchestratore</code></td>
 <td>il servizio del telefono: niente accesso senza segreto (anche WebSocket), niente file di sistema (<code>/etc/passwd</code>), niente <code>../</code> fuori dalla web-app, niente comandi da altri siti, nomi caricati ripuliti, caricamenti enormi rifiutati</td>
 </tr>

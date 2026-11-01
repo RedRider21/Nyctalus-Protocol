@@ -97,6 +97,11 @@ in mezzo alla rete:</p>
 </tr>
 </tbody>
 </table>
+<p><strong>Browser del PC</strong> (<code>test/sicurezza/08-browser-pc.sh</code>, stesso spazio isolato con cattura): una
+scheda 🦇 <strong>non apre nulla finché la rete non è pronta e il proxy non è applicato</strong> («a prova
+di errore»: prima, nei secondi in cui la rete si accendeva, la pagina partiva in chiaro — difetto
+trovato da questa prova e corretto); poi tutto passa dal proxy, i nomi dei siti li risolve la
+rete (zero pacchetti DNS), il sito non riceve visite dirette.</p>
 <p><strong>HTTP in chiaro?</strong> Solo <em>dentro</em> l'apparecchio: la pagina della chat parla con il proprio
 motore su 127.0.0.1 (con un segreto d'accesso). In rete viaggia solo QUIC cifrato con TLS 1.3 —
 come l'HTTPS — e <strong>dentro</strong> ci sono gli strati a cipolla (uno per nodo) e la cifratura fra i
