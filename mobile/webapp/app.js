@@ -1045,6 +1045,10 @@ function impostazioni() {
     HOST ? [["Esci dall'app", () => HOST.esci()], ["Chiudi", null, "primario"]] : [["Chiudi", null, "primario"]]);
 }
 
+// tema scelto nelle ⚙️ Impostazioni generali dell'app (Android): vale anche qui, e cambia al volo
+try { if (HOST && HOST.temaApp) { const t = HOST.temaApp(); if (/^[a-z]{1,20}$/.test(t)) { S.tema = t; salva("tema", t); } } } catch (e) { /* niente */ }
+window.nyctTema = (t) => { if (!/^[a-z]{1,20}$/.test(t)) return; S.tema = t; salva("tema", t); applicaAspetto(); };
+
 function applicaAspetto() {
   document.documentElement.dataset.tema = S.tema;
   document.documentElement.dataset.sfondo = S.sfondo;

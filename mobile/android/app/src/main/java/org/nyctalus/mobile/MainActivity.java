@@ -223,7 +223,101 @@ public class MainActivity extends Activity {
         ServizioNotifiche.avvia(this);
     }
 
-    /** Interruttore in «Strumenti»: notifiche dei messaggi con l'app chiusa sì/no. */
+    // ------------------------------------------------------------ impostazioni generali
+    static final String[][] TEMI = {{"notte", "Notte", "#5AA9FF", "#0A0E1A"}, {"ardesia", "Ardesia", "#6AB3F3", "#0E1621"},
+            {"viola", "Viola", "#9D85FF", "#120F1C"}, {"chiaro", "Chiaro", "#2F6FE0", "#EEF1F6"}};
+
+    /**
+     * ⚙️ Impostazioni generali (valgono per tutta l'app: schermata d'avvio, chat, chiamate):
+     * tema, notifiche con l'app chiusa, avvio all'accensione.
+     */
+    private void impostazioni() {
+        android.app.AlertDialog[] d = new android.app.AlertDialog[1];
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20), dp(18), dp(20), dp(8));
+        GradientDrawable fondo = new GradientDrawable();
+        fondo.setCornerRadius(dp(20));
+        fondo.setColor(C_SCHEDA);
+        box.setBackground(fondo);
+        TextView titolo = testo("Impostazioni", C_TESTO, 20);
+        titolo.setGravity(Gravity.START);
+        titolo.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        box.addView(titolo);
+
+        box.addView(sezione("TEMA"));
+        LinearLayout temi = new LinearLayout(this);
+        temi.setOrientation(LinearLayout.HORIZONTAL);
+        String scelto = getSharedPreferences(PREFS, MODE_PRIVATE).getString("tema", "notte");
+        for (String[] t : TEMI) {
+            LinearLayout c = new LinearLayout(this);
+            c.setOrientation(LinearLayout.VERTICAL);
+            c.setGravity(Gravity.CENTER);
+            c.setPadding(0, dp(6), 0, dp(6));
+            View tondo = new View(this);
+            GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                    new int[]{android.graphics.Color.parseColor(t[3]), android.graphics.Color.parseColor(t[2])});
+            g.setShape(GradientDrawable.OVAL);
+            boolean sel = t[0].equals(scelto);
+            g.setStroke(dp(sel ? 3 : 1), sel ? C_ACCENTO : C_BORDO);
+            tondo.setBackground(g);
+            c.addView(tondo, new LinearLayout.LayoutParams(dp(46), dp(46)));
+            TextView n = testo(t[1], sel ? C_TESTO : C_TENUE, 12);
+            n.setPadding(0, dp(6), 0, 0);
+            c.addView(n);
+            c.setClickable(true);
+            c.setOnClickListener(v -> {
+                cambiaTema(t[0]);
+                if (d[0] != null) d[0].dismiss();
+                impostazioni();                     // si riapre con i nuovi colori
+            });
+            temi.addView(c, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        }
+        box.addView(temi);
+        TextView nota = testo("Vale per tutta l'app: avvio, chat, chiamate.", C_TENUE, 12);
+        nota.setGravity(Gravity.START);
+        box.addView(nota);
+
+        box.addView(sezione("GENERALI"));
+        Button notif = cella(testoNotifiche(getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("notifiche", true)), null);
+        notif.setOnClickListener(v -> cambiaNotifiche(notif));
+        box.addView(notif);
+        Button acc = cella(testoAccensione(getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("avvio_accensione", false)), null);
+        acc.setOnClickListener(v -> cambiaAccensione(acc));
+        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        ap.topMargin = dp(8);
+        box.addView(acc, ap);
+        TextView chiudi = testo("Chiudi", C_ACCENTO, 15);
+        chiudi.setGravity(Gravity.END);
+        chiudi.setPadding(dp(8), dp(18), dp(8), dp(10));
+        chiudi.setOnClickListener(v -> d[0].dismiss());
+        box.addView(chiudi);
+
+        android.widget.ScrollView sc = new android.widget.ScrollView(this);
+        sc.addView(box);
+        d[0] = new android.app.AlertDialog.Builder(this).setView(sc).create();
+        d[0].show();
+        if (d[0].getWindow() != null) d[0].getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0));
+    }
+
+    private TextView sezione(String nome) {
+        TextView t = testo(nome, C_ACCENTO, 11);
+        t.setGravity(Gravity.START);
+        t.setLetterSpacing(0.14f);
+        t.setPadding(0, dp(18), 0, dp(8));
+        return t;
+    }
+
+    /** Il tema cambia ovunque: schermata d'avvio subito, chat (anche già aperta) al volo. */
+    private void cambiaTema(String id) {
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("tema", id).apply();
+        caricaTema();
+        if (web == null || web.getParent() == null) setContentView(costruisciAvvio());
+        if (pronto) imposta("● Nyctalus è pronto — scegli cosa aprire");
+        if (web != null) web.evaluateJavascript("window.nyctTema && nyctTema('" + id + "')", null);
+    }
+
+    /** Interruttore nelle impostazioni: notifiche dei messaggi con l'app chiusa sì/no. */
     private void cambiaNotifiche(Button b) {
         SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
         boolean attive = !p.getBoolean("notifiche", true);
@@ -239,7 +333,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** Interruttore in «Strumenti»: Nyctalus si riaccende da solo all'accensione del telefono. */
+    /** Interruttore nelle impostazioni: Nyctalus si riaccende da solo all'accensione del telefono. */
     private void cambiaAccensione(Button b) {
         SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
         boolean attivo = !p.getBoolean("avvio_accensione", false);
@@ -383,6 +477,7 @@ public class MainActivity extends Activity {
         file.setAlpha(0.45f);
         griglia.addView(file);
         griglia.addView(casella("ℹ️", "Info", v -> apriBrowser(SITO, false)));
+        griglia.addView(casella("⚙️", "Impostazioni", v -> impostazioni()));
         r.addView(griglia);
         r.addView(spazio());
 
@@ -400,15 +495,7 @@ public class MainActivity extends Activity {
         Button gh = cella("☁  Aggiornamenti da GitHub (presto)", v -> aggiornamentiGithub());
         gh.setAlpha(0.45f);
         riga4.addView(gh);
-        LinearLayout riga5 = riga();
-        Button notif = cella(testoNotifiche(getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("notifiche", true)), null);
-        notif.setOnClickListener(v -> cambiaNotifiche(notif));
-        riga5.addView(notif);
-        LinearLayout riga6 = riga();
-        Button acc = cella(testoAccensione(getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("avvio_accensione", false)), null);
-        acc.setOnClickListener(v -> cambiaAccensione(acc));
-        riga6.addView(acc);
-        for (LinearLayout x : new LinearLayout[]{riga5, riga6, riga1, riga2, riga3, riga4}) {
+        for (LinearLayout x : new LinearLayout[]{riga1, riga2, riga3, riga4}) {
             ((LinearLayout.LayoutParams) x.getLayoutParams()).topMargin = dp(8);
             strumenti.addView(x);
         }
@@ -1200,8 +1287,16 @@ public class MainActivity extends Activity {
         /** La web-app comunica il tema scelto: la schermata d'avvio userà gli stessi colori. */
         @JavascriptInterface
         public void tema(String id) {
-            if (id != null && id.matches("[a-z]{1,20}"))
+            if (id != null && id.matches("[a-z]{1,20}")) {
                 getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("tema", id).apply();
+                runOnUiThread(MainActivity.this::caricaTema);
+            }
+        }
+
+        /** Il tema scelto nelle impostazioni generali (la web-app lo usa all'avvio). */
+        @JavascriptInterface
+        public String temaApp() {
+            return getSharedPreferences(PREFS, MODE_PRIVATE).getString("tema", "notte");
         }
 
         @JavascriptInterface
