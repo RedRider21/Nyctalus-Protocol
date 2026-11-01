@@ -15,6 +15,8 @@ Per il GESTORE della rete (chi la tiene in piedi):
   nyctalus-rete servi [--porta 18800]    pubblica directory.txt da questo PC (rete locale)
   nyctalus-rete casa [--nodi 4]          RETE DI CASA tutta su questo PC: nodi + elenco +
                                          codice per il telefono (Ctrl-C per fermare)
+  nyctalus-rete casa --internet NOME     la stessa, raggiungibile DA INTERNET (NOME = No-IP/
+                                         DuckDNS o IP pubblico; porte da inoltrare sul router)
   nyctalus-rete rubrica [--codice NYCT1:…] [--servizio [--togli|--stampa]]
                                          RUBRICA + CASELLA CIFRATA della rete, sempre accese
                                          (es. sul server); poi il codice le include
@@ -471,6 +473,7 @@ def servitore(rete, porta, ip):
 def aspetta_ctrl_c():
     fermo = threading.Event()
     signal.signal(signal.SIGTERM, lambda *a: fermo.set())
+    signal.signal(signal.SIGINT, signal.default_int_handler)   # anche se avviato da chi ignora Ctrl-C
     try:
         while not fermo.wait(1):
             pass
@@ -479,11 +482,45 @@ def aspetta_ctrl_c():
 
 
 # --- rete di casa: tutto su questo PC ---------------------------------------------------
-def casa(nodi, porta_base, porta_web, ip, importa_qui):
+def apri_firewall_internet(porta_web, porte_nodi, cartella):
+    """Rete raggiungibile da Internet: le porte vanno aperte a tutti (il router poi le inoltra)."""
+    fw = firewall_chiuso()
+    if not fw:
+        return
+    if fw == "ufw":
+        comandi = [["ufw", "allow", "%d/tcp" % porta_web], ["ufw", "allow", "%d:%d/udp" % (porte_nodi[0], porte_nodi[-1])]]
+    else:
+        comandi = [["firewall-cmd", "--add-port=%d/tcp" % porta_web, "--add-port=%d-%d/udp" % (porte_nodi[0], porte_nodi[-1])]]
+    segno = cartella / "firewall-aperto"
+    firma = "%s internet %d %d-%d" % (fw, porta_web, porte_nodi[0], porte_nodi[-1])
+    if segno.exists() and segno.read_text().strip() == firma:
+        return
+    print("\n⚠️  Il firewall del PC (%s) bloccherebbe chi arriva da Internet." % fw)
+    if sys.stdin.isatty():
+        r = input("   Apro le porte UDP %d-%d e TCP %d? Serve la password. [S/n] "
+                  % (porte_nodi[0], porte_nodi[-1], porta_web)).strip().lower()
+        if r in ("", "s", "si", "sì", "y", "yes"):
+            if all(subprocess.run(["sudo"] + c).returncode == 0 for c in comandi):
+                segno.write_text(firma + "\n")
+                ok("porte aperte")
+                return
+            print("   Non riuscito.")
+    print("   Aprile tu, una volta sola:")
+    for c in comandi:
+        print("     sudo " + " ".join(c))
+
+
+def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None):
+    """Rete di casa sul PC. Con `internet` (un nome tipo miacasa.ddns.net, o l'IP pubblico) la
+    stessa rete si raggiunge da Internet: è una rete a sé («Rete Internet di prova»), i nodi si
+    annunciano col nome e l'elenco si scarica da http://NOME:porta/."""
     privata(DATI)
-    r = Rete(privata(DATI / "casa"))
+    lan = ip
+    if internet:
+        ip = internet
+    r = Rete(privata(DATI / ("internet" if internet else "casa")))
     if not r.esiste():
-        r.crea("Rete di casa")
+        r.crea("Rete Internet di prova" if internet else "Rete di casa")
     b, proc, righe = binario(), [], []
     try:
         for i in range(nodi):
@@ -510,9 +547,38 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui):
         srv, url = servitore(r, porta_web, ip)
         cod = r.codice(url)
         imp = impronta(r.autorita()["pubblica"])
-        apri_firewall(porta_web, [porta_base + i for i in range(nodi)], ip, r.dir)
+        if internet:
+            apri_firewall_internet(porta_web, [porta_base + i for i in range(nodi)], r.dir)
+        else:
+            apri_firewall(porta_web, [porta_base + i for i in range(nodi)], ip, r.dir)
         if importa_qui:
             importa(cod)
+        if internet:
+            ultima = porta_base + nodi - 1
+            print("\n🌍 Rete raggiungibile da Internet come «%s» · %d nodi · impronta %s\n" % (internet, nodi, imp))
+            print("Sul ROUTER inoltra verso questo PC (%s) — una volta sola:" % lan)
+            print("  • UDP %d-%d   (i nodi)" % (porta_base, ultima))
+            print("  • TCP %d       (l'elenco dei nodi e la pagina del codice)" % porta_web)
+            print("\nProva dei nodi attraverso il nome pubblico (da questo PC):")
+            esito = subprocess.run([b, "nodes", "--directory", str(r.f_elenco), "--authority",
+                                    r.autorita()["pubblica"], "--probe"], capture_output=True, text=True, timeout=60)
+            print("  " + (esito.stdout.strip() or esito.stderr.strip()).replace("\n", "\n  "))
+            if esito.returncode != 0:
+                print("  ⚠️  Da qui i nodi non rispondono col nome pubblico. Cause tipiche:")
+                print("     - il nome non punta ancora all'IP attuale (No-IP: aggiornamento in corso?)")
+                print("     - inoltro delle porte mancante sul router")
+                print("     - il router non fa «tornare indietro» i pacchetti verso il proprio nome (NAT")
+                print("       loopback): allora SOLO su questo PC aggiungi a /etc/hosts la riga")
+                print("         127.0.0.1 %s" % internet)
+                print("     - linea senza IP pubblico (CGNAT): l'inoltro delle porte non può funzionare")
+            print("\nPer chi si collega (anche da un'altra città):")
+            print("  • telefono: apri nel browser  http://%s:%d/  e tocca «📲 Collega l'app Nyctalus»" % (internet, porta_web))
+            print("  • PC:       nyctalus-rete importa '%s'" % cod)
+            print("  • l'impronta mostrata dopo l'importazione deve essere %s (confrontatela a voce)" % imp)
+            print("\nLascia questa finestra aperta: Ctrl-C ferma la rete.")
+            aspetta_ctrl_c()
+            srv.shutdown()
+            return
         print("\n🦇 Rete di casa attiva su questo PC (%s) · %d nodi · impronta %s\n" % (ip, nodi, imp))
         print("Ora:")
         print("  1. Sul telefono (stessa Wi-Fi), nel browser:  http://%s:%d/" % (ip, porta_web))
@@ -529,7 +595,7 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui):
                 os.killpg(p.pid, signal.SIGTERM)
             except Exception:  # noqa: BLE001
                 pass
-        print("\nRete di casa fermata.")
+        print("\n%s fermata." % ("Rete Internet di prova" if internet else "Rete di casa"))
 
 
 # --- rubrica + casella di una rete (anche fuori dalla rete di casa) ---------------------
@@ -722,9 +788,12 @@ def principale(args):
         print("  Codice di rete: %s" % rete.f_codice.read_text().strip())
         aspetta_ctrl_c()
     elif cmd == "casa":
+        internet = opzione(args, "--internet")
+        if internet is not None and not re.fullmatch(r"[A-Za-z0-9.-]{3,253}", internet):
+            esci("--internet: indica il nome pubblico (es. miacasa.ddns.net) o l'IP pubblico")
         casa(int(opzione(args, "--nodi", "4")), int(opzione(args, "--porta-base", "4701")),
              int(opzione(args, "--porta", "18800")), opzione(args, "--ip", ip_locale()),
-             "--non-importare" not in args)
+             "--non-importare" not in args, internet)
     elif cmd == "rubrica":
         rubrica(opzione(args, "--codice"), "--servizio" in args, "--togli" in args, "--stampa" in args)
     elif cmd == "importa":
