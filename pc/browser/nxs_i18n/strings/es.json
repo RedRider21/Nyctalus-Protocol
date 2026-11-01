@@ -1664,5 +1664,6 @@
   "chat.ch.q_buona": "buena línea",
   "chat.ch.q_media": "línea regular",
   "chat.ch.q_scarsa": "línea mala",
-  "chat.ch.muta": "Llamada cerrada: ya no llega voz del otro lado"
+  "chat.ch.muta": "Llamada cerrada: ya no llega voz del otro lado",
+  "chat.ch.videochiama": "Videollamada"
 }

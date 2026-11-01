@@ -266,4 +266,3 @@ const Chiamate = (() => {
 
   return { chiama, evento, offline, disponibile, _stato: () => ({ c, a, muto, vivavoce, ridotta }), _ricevi: ricevi };
 })();
-$("btn-chiama").onclick = () => S.attivo && Chiamate.chiama(S.attivo);

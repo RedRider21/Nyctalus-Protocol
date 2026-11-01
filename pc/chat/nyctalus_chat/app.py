@@ -119,6 +119,7 @@ _ITA = {
     "chat.senza_exif": "Foto senza metadati (posizione GPS, fotocamera)",
     "chat.notifiche": "Notifiche sul desktop dei nuovi messaggi",
     "chat.ch.chiama": "Chiamata vocale",
+    "chat.ch.videochiama": "Videochiamata",
     "chat.ch.muta": "Chiamata chiusa: dall'altra parte non arriva più voce",
     "chat.ch.audio": "Audio",
     "chat.ch.audio_nota": "Volume e uscita: altoparlante (vivavoce) o cuffie",
@@ -820,7 +821,6 @@ class Chat(Gtk.Window):
         self.testa_conv.pack_end(puntini, False, False, 0)
         from nyctalus_chat.chiamate import Chiamate
         self.chiamate = Chiamate(self, _t)                       # 📞 e barra della chiamata
-        self.testa_conv.pack_end(self.chiamate.pulsante, False, False, 0)
         destra.pack_start(self.testa_conv, False, False, 0)
         destra.pack_start(self.chiamate.barra, False, False, 0)
 
@@ -1174,6 +1174,11 @@ class Chat(Gtk.Window):
         menu = self._nuovo_menu()
         nl = int(self.ui["non_letti"].get(addr, 0))
         fiss = addr in self.ui["fissati"]
+        self._voce(menu, _t("chat.ch.chiama"), lambda: (self.scrivi_a(addr, self.contatti.get(addr, addr[:10])),
+                                                        self.chiamate.chiama(addr)), icona="call-start-symbolic")
+        self._voce(menu, _t("chat.ch.videochiama"), lambda: (self.scrivi_a(addr, self.contatti.get(addr, addr[:10])),
+                                                             self.chiamate.chiama(addr, video=True)), icona="camera-video-symbolic")
+        menu.append(Gtk.SeparatorMenuItem())
         self._voce(menu, _t("chat.menu.apri"), lambda: self._apri_contatto(addr), icona="document-open-symbolic")
         self._voce(menu, _t("chat.menu.letto") if nl else _t("chat.menu.non_letto"),
                    lambda: self._segna_letto(addr, bool(nl)), icona="mail-read-symbolic" if nl else "mail-unread-symbolic")

@@ -887,6 +887,8 @@ const voce = (ic, testo, az, pericolosa) => {
 function menuContatto(addr) {
   const nome = S.contatti.get(addr) || addr.slice(0, 10), nl = S.nonLetti[addr], fiss = S.fissati.includes(addr);
   apriFoglio(nome, [
+    voce("📞", "Chiamata vocale", () => { if (S.attivo !== addr) apriChat(addr); Chiamate.chiama(addr); }),
+    voce("📹", "Videochiamata", () => { if (S.attivo !== addr) apriChat(addr); Chiamate.chiama(addr, true); }),
     voce("💬", "Apri la chat", () => apriChat(addr)),
     voce(nl ? "✉️" : "📩", nl ? "Segna come letto" : "Segna come non letto", () => {
       nl ? delete S.nonLetti[addr] : (S.nonLetti[addr] = 1); salva("nonLetti", S.nonLetti); disegnaElenco(); }),

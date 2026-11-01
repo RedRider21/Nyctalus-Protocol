@@ -1664,5 +1664,6 @@
   "chat.ch.q_buona": "linea buona",
   "chat.ch.q_media": "linea discreta",
   "chat.ch.q_scarsa": "linea scarsa",
-  "chat.ch.muta": "Chiamata chiusa: dall'altra parte non arriva più voce"
+  "chat.ch.muta": "Chiamata chiusa: dall'altra parte non arriva più voce",
+  "chat.ch.videochiama": "Videochiamata"
 }

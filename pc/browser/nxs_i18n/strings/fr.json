@@ -1664,5 +1664,6 @@
   "chat.ch.q_buona": "bonne ligne",
   "chat.ch.q_media": "ligne moyenne",
   "chat.ch.q_scarsa": "mauvaise ligne",
-  "chat.ch.muta": "Appel fermé : plus de voix de l'autre côté"
+  "chat.ch.muta": "Appel fermé : plus de voix de l'autre côté",
+  "chat.ch.videochiama": "Appel vidéo"
 }

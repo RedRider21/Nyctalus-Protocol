@@ -146,6 +146,9 @@ const SQUILLO: u64 = 45;
 
 /// Pacchetto audio massimo di una chiamata (Opus da 20 ms sta ben sotto).
 const AUDIO_MAX: usize = 1500;
+/// Immagine video massima (VP8 ~320p: anche un fotogramma completo sta molto sotto; il quadro
+/// della sessione arriva a 64 KB).
+const VIDEO_MAX: usize = 60_000;
 
 fn id_chiamata_valido(id: &str) -> bool {
     !id.is_empty() && id.len() <= 32 && id.chars().all(|c| c.is_ascii_alphanumeric())
@@ -380,18 +383,44 @@ impl Stato {
             }
             return;
         }
+        // video: «CV <seq 4 byte><1 se fotogramma completo><VP8>», «CK» (mandami un fotogramma
+        // completo: ne ho persi), «CW 0|1» (telecamera spenta/accesa)
+        if let Some(r) = chiaro.strip_prefix(b"CV ") {
+            if r.len() > 5 && r.len() <= 5 + VIDEO_MAX {
+                let seq = u32::from_be_bytes([r[0], r[1], r[2], r[3]]);
+                self.notifica(format!("VID {peer} {seq} {} {}", r[4] & 1, in_esadecimale(&r[5..])));
+            }
+            return;
+        }
+        if chiaro == b"CK" {
+            self.notifica(format!("VIDKEY {peer}"));
+            return;
+        }
+        if let Some(r) = chiaro.strip_prefix(b"CW ") {
+            if r == b"0" || r == b"1" {
+                self.notifica(format!("VIDSTATO {peer} {}", r[0] as char));
+            }
+            return;
+        }
         for (prefisso, evento) in [(&b"CI "[..], "CALLIN"), (b"CA ", "CALLOK"), (b"CN ", "CALLNO"), (b"CF ", "CALLEND")] {
             if let Some(r) = chiaro.strip_prefix(prefisso) {
-                if let Some(id) = std::str::from_utf8(r).ok().filter(|i| id_chiamata_valido(i)) {
+                // «CI <id> v» = videochiamata
+                let testo = std::str::from_utf8(r).unwrap_or("");
+                let (id_parte, video) = match testo.split_once(' ') {
+                    Some((i, "v")) => (i, true),
+                    _ => (testo, false),
+                };
+                let v = if video && evento == "CALLIN" { " v" } else { "" };
+                if let Some(id) = Some(id_parte).filter(|i| id_chiamata_valido(i)) {
                     // l'invito si ricorda finché squilla: chi apre l'interfaccia dopo lo vede
                     let mut inviti = self.inviti.lock().unwrap();
                     if evento == "CALLIN" {
-                        inviti.insert(peer.to_string(), (id.to_string(), ora()));
-                    } else if inviti.get(peer).is_some_and(|(i, _)| i == id) {
+                        inviti.insert(peer.to_string(), (format!("{id}{v}"), ora()));
+                    } else if inviti.get(peer).is_some_and(|(i, _)| i.split(' ').next() == Some(id)) {
                         inviti.remove(peer);
                     }
                     drop(inviti);
-                    self.notifica(format!("{evento} {peer} {id}"));
+                    self.notifica(format!("{evento} {peer} {id}{v}"));
                 }
                 return;
             }
@@ -1155,13 +1184,15 @@ impl Stato {
                 let _ = tx.send("OK\n".into());
             }
             "CALL" => {
-                // CALL <addr>: invito a una chiamata (apre la sessione se serve) → CALLID <addr> <id>
+                // CALL <addr> [v]: invito a una chiamata (v = videochiamata; apre la sessione se
+                // serve) → CALLID <addr> <id>
                 let addr = con_suffisso(it.next().unwrap_or(""));
+                let video = it.next().map(str::trim) == Some("v");
                 let (st, txc) = (self.clone(), tx.clone());
                 tokio::spawn(async move {
                     let id = nuovo_id();
                     match st.sessione(&addr).await {
-                        Ok(s) if s.send(format!("CI {id}").into_bytes()).await.is_ok() => {
+                        Ok(s) if s.send(format!("CI {id}{}", if video { " v" } else { "" }).into_bytes()).await.is_ok() => {
                             let _ = txc.send(format!("CALLID {addr} {id}\n"));
                         }
                         Ok(_) => {
@@ -1178,7 +1209,7 @@ impl Stato {
                 let addr = con_suffisso(it.next().unwrap_or(""));
                 let id = it.next().unwrap_or("").trim().to_string();
                 let prefisso = match quale { "CALLOK" => "CA", "CALLNO" => "CN", _ => "CF" };
-                if self.inviti.lock().unwrap().get(&addr).is_some_and(|(i, _)| *i == id) {
+                if self.inviti.lock().unwrap().get(&addr).is_some_and(|(i, _)| i.split(' ').next() == Some(id.as_str())) {
                     self.inviti.lock().unwrap().remove(&addr);
                 }
                 if !id_chiamata_valido(&id) {
@@ -1214,6 +1245,38 @@ impl Stato {
                             }
                         }
                     }
+                }
+            }
+            "VID" => {
+                // VID <addr> <seq> <1|0 fotogramma completo> <vp8 hex>: un'immagine. Come la voce:
+                // niente risposta, e se la coda è piena si scarta (un'immagine vecchia non serve).
+                let addr = con_suffisso(it.next().unwrap_or(""));
+                let resto = it.next().unwrap_or("").trim();
+                let mut c = resto.splitn(3, ' ');
+                if let (Some(seq), Some(k), Some(hex)) = (c.next(), c.next(), c.next()) {
+                    if let (Ok(seq), Ok(dati)) = (seq.parse::<u32>(), da_hex(hex)) {
+                        if !dati.is_empty() && dati.len() <= VIDEO_MAX {
+                            if let Some((_, s)) = self.sessioni.lock().unwrap().get(&addr) {
+                                let mut frame = b"CV ".to_vec();
+                                frame.extend_from_slice(&seq.to_be_bytes());
+                                frame.push(u8::from(k == "1"));
+                                frame.extend_from_slice(&dati);
+                                let _ = s.try_send(frame);
+                            }
+                        }
+                    }
+                }
+            }
+            quale @ ("VIDKEY" | "VIDSTATO") => {
+                // VIDKEY <addr>: chiedi un fotogramma completo · VIDSTATO <addr> 0|1: telecamera
+                let addr = con_suffisso(it.next().unwrap_or(""));
+                let frame = if quale == "VIDKEY" {
+                    b"CK".to_vec()
+                } else {
+                    format!("CW {}", if it.next().map(str::trim) == Some("1") { 1 } else { 0 }).into_bytes()
+                };
+                if let Some((_, s)) = self.sessioni.lock().unwrap().get(&addr) {
+                    let _ = s.try_send(frame);
                 }
             }
             "DELMSG" => {

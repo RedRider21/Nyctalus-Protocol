@@ -96,15 +96,42 @@ giusti_a = sum(1 for i, p in enumerate(pacchetti, 1) if ris_a.get(i) == p)
 mediano = lambda v: sorted(v)[len(v) // 2] if v else 99
 esito(giusti_b >= 95, "audio A → B: %d/100 pacchetti identici, ritardo mediano %d ms" % (giusti_b, mediano(rit_b) * 1000))
 esito(giusti_a >= 95, "audio B → A: %d/100 pacchetti identici, ritardo mediano %d ms" % (giusti_a, mediano(rit_a) * 1000))
+# video: A accende la telecamera, manda 30 immagini (VP8 finto da 3 KB), B chiede un fotogramma completo
+A.manda("VIDSTATO %s 1" % ind_b)
+r = B.aspetta("VIDSTATO " + ind_a, 30)
+esito(r == "VIDSTATO %s 1" % ind_a, "A accende la telecamera: B lo sa (passaggio voce → video)")
+immagini = [os.urandom(3000) for _ in range(30)]
+for i, im in enumerate(immagini, 1):
+    A.manda("VID %s %d %d %s" % (ind_b, i, 1 if i == 1 else 0, im.hex()))
+    time.sleep(1 / 15)
+viste = {}
+fine = time.time() + 20
+while time.time() < fine and len(viste) < 30:
+    try:
+        t, rr = B.q.get(timeout=0.3)
+    except queue.Empty:
+        continue
+    p = rr.split(" ")
+    if p[0] == "VID" and p[1] == ind_a:
+        viste[int(p[2])] = (p[3], bytes.fromhex(p[4]))
+giuste = sum(1 for i, im in enumerate(immagini, 1) if viste.get(i, ("", b""))[1] == im)
+esito(giuste >= 28 and viste.get(1, ("0",))[0] == "1", "video A → B: %d/30 immagini identiche (la prima è un fotogramma completo)" % giuste)
+B.manda("VIDKEY " + ind_a)
+r = A.aspetta("VIDKEY " + ind_b, 20)
+esito(r == "VIDKEY " + ind_b, "B chiede un fotogramma completo: A lo sa")
+A.manda("VIDSTATO %s 0" % ind_b)
+r = B.aspetta("VIDSTATO " + ind_a, 20)
+esito(r == "VIDSTATO %s 0" % ind_a, "A spegne la telecamera: B lo sa (passaggio video → voce)")
 A.manda("CALLEND %s %s" % (ind_b, cid))
 r = B.aspetta("CALLEND " + ind_a, 30)
 esito(r == "CALLEND %s %s" % (ind_a, cid), "A riaggancia: B lo sa")
 
-# invito rifiutato
-A.manda("CALL " + ind_b)
+# invito a una VIDEOchiamata, rifiutato
+A.manda("CALL %s v" % ind_b)
 r = A.aspetta("CALLID", 60)
 cid2 = r.split()[2] if r else ""
-B.aspetta("CALLIN", 30)
+r = B.aspetta("CALLIN", 30)
+esito(r == "CALLIN %s %s v" % (ind_a, cid2), "invito a una videochiamata: B sa che è video")
 B.manda("CALLNO %s %s" % (ind_a, cid2))
 r = A.aspetta("CALLNO " + ind_b, 30)
 esito(bool(cid2) and r == "CALLNO %s %s" % (ind_b, cid2) and cid2 != cid, "invito rifiutato: A lo sa (id nuovo per ogni chiamata)")
