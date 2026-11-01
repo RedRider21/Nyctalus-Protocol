@@ -2,6 +2,11 @@
 
 > Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
 
+## DA FARE AL PROSSIMO COLLEGAMENTO (segnalati dall'utente il 01/11/2026, APK 0.36)
+1. **Impostazioni dalla chat → all'uscita torna alla home dell'APK invece che alla chat.** Devono avere rientri diversi: dalla home → home; dalla chat (☰) → chat. Causa probabile già individuata: `$("btn-menu").onclick = impostazioni` passa l'evento del clic come argomento `solo` (vero) → si apre la versione «a schermo intero dell'app», che all'uscita chiama `HOST.avvio()`. Correzione: `onclick = () => impostazioni()`; aggiungere una prova in 03.
+2. **Browser dell'app (anche quello aperto per i manuali online):** manca un pulsante per tornare alla home dell'APK; ora bisogna premere indietro tante volte o chiudere dalle miniature delle app. Aggiungere un pulsante «🏠 Home» (e far sì che indietro all'inizio della cronologia torni alla home).
+3. **GitHub: l'utente non vede le «releases» ma solo i tag.** Intende quelle create da https://github.com/RedRider21/Nyctalus-Protocol/releases/new. La v0.2.0 è stata creata via API (è una release vera, «Latest», 11 file: https://github.com/RedRider21/Nyctalus-Protocol/releases/tag/v0.2.0). Verificare con l'utente cosa vede: forse nelle impostazioni del repository (⚙ «About» della pagina principale) è spenta la voce «Releases», quindi la sezione non compare nella colonna di destra; oppure guarda la scheda «Tags». Controllare e sistemare insieme.
+
 ## Fatto ✅
 
 | Cosa | Dove |
