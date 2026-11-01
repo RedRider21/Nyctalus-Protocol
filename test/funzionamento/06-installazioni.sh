@@ -20,6 +20,9 @@ done
 mkdir -p "$TMP/pc" && unzip -q "$I/PC-Linux/Nyctalus-PC-Linux.zip" -d "$TMP/pc"
 N="$TMP/pc/Nyctalus"
 [ -x "$N/bin/nyctalus" ] && "$N/bin/nyctalus" help >/dev/null 2>&1 && pass "PC: il motore parte" || fail "PC: motore assente o non parte"
+# i moduli comuni del PC: traduzioni e tema globale (mini menu, chat, browser)
+( cd "$N/browser" && python3 -c "import nxs_i18n, nxs_tema; assert 'notte' in nxs_tema.TEMI" ) 2>/dev/null \
+  && pass "PC: moduli comuni presenti (traduzioni, tema globale)" || fail "PC: manca nxs_i18n o nxs_tema nel pacchetto"
 for s in avvia-launcher.sh avvia-browser.sh avvia-chat.sh installa.sh disinstalla.sh gestore-rete/nyctalus-rete server/installa.sh server/nyctalus-server; do [ -x "$N/$s" ] && pass "PC: $s eseguibile" || fail "PC: $s"; done
 # il pacchetto server: motore + installatore dei nodi
 mkdir -p "$TMP/srv" && python3 -c "import os,zipfile,sys;z=zipfile.ZipFile(sys.argv[1]);[os.chmod(z.extract(i,sys.argv[2]),i.external_attr>>16) for i in z.infolist()]" "$I/Server-Linux/Nyctalus-Server-Linux.zip" "$TMP/srv"
