@@ -64,7 +64,7 @@ cat > "$TMP/passi.json" <<EOF
  ["foto","${NYCT_FOTO:-$TMP}/chat-dopo-galleria.png"],
  ["js","(()=>{apriEmoji(); const b=document.querySelectorAll('.griglia-emoji button'); const n=b.length; b[0].click(); const ok=document.getElementById('testo').value.length>0; chiudiFoglio(); document.getElementById('testo').value=''; return 'EMOJI '+n+' '+ok})()"],
  ["js","(()=>{evento('ST '+S.attivo+' 0'); return 'VISTO '+document.getElementById('testa-stato').textContent})()"],
- ["js","(()=>{window._inviate=[]; const v=S.ws.send.bind(S.ws); S.ws.send=(r)=>{ if(/^(CALL|AUD)/.test(r)) window._inviate.push(r); else v(r); }; evento('CALLIN $BOB abc123'); const s=Chiamate._stato(); return 'SQUILLA '+Chiamate.disponibile()+','+(s.c&&s.c.stato)+','+!document.querySelector('.ch-arrivo').classList.contains('nascosto')})()"],
+ ["js","(()=>{window._inviate=[]; const v=S.ws.send.bind(S.ws); S.ws.send=(r)=>{ if(/^(CALL|AUD|VID)/.test(r)) window._inviate.push(r); else v(r); }; evento('CALLIN $BOB abc123'); const s=Chiamate._stato(); return 'SQUILLA '+Chiamate.disponibile()+','+(s.c&&s.c.stato)+','+!document.querySelector('.ch-arrivo').classList.contains('nascosto')})()"],
  ["foto","${NYCT_FOTO:-$TMP}/chiamata-arrivo.png"],
  ["js","document.querySelector('.ch-arrivo .verde').click(); 'risposto'"],["attendi",3],
  ["js","(()=>{const s=Chiamate._stato(); const aud=window._inviate.filter(r=>r.startsWith('AUD $BOB ')); window._aud=aud; return 'RISPOSTA '+window._inviate.includes('CALLOK $BOB abc123')+','+(s.c&&s.c.stato)+','+(aud.length>50)})()"],
@@ -72,10 +72,30 @@ cat > "$TMP/passi.json" <<EOF
  ["js","'SUONATI ' + ((Chiamate._stato().a||{}).suonati||0)"],
  ["js","'USCITA ' + (Chiamate._stato().a||{}).uscita"],
  ["foto","${NYCT_FOTO:-$TMP}/chiamata-attiva.png"],
- ["js","(()=>{document.querySelectorAll('.ch-tasti .ch-tasto')[0].click(); const m=Chiamate._stato().muto; const n=window._inviate.length; window._n=n; return 'MUTO '+m})()"],["attendi",1],
+ ["js","(()=>{document.querySelector('.ch-tasti .ch-muto').click(); const m=Chiamate._stato().muto; const n=window._inviate.length; window._n=n; return 'MUTO '+m})()"],["attendi",1],
  ["js","'MUTI ' + (window._inviate.length - window._n <= 3)"],
  ["js","(()=>{document.querySelector('.ch-riduci').click(); const r=!document.querySelector('.ch-mini').classList.contains('nascosto') && document.querySelector('.chiamata').classList.contains('nascosto'); document.querySelector('.ch-mini').click(); return 'RIDUCI '+r})()"],
+ ["js","(()=>{window._v0=window._inviate.length; document.querySelector('.ch-tasti .ch-video').click(); return 'video acceso'})()"],["attendi",3],
+ ["js","(()=>{const n=window._inviate.slice(window._v0); const vid=n.filter(r=>r.startsWith('VID $BOB ')); window._vid=vid; const s=Chiamate._stato(); const loc=document.querySelector('.ch-vid.locale'); return 'VIDEO '+n.includes('VIDSTATO $BOB 1')+','+(vid.length>=20)+','+(vid.length&&vid[0].split(' ')[3]==='1')+','+document.querySelector('.chiamata').classList.contains('video')+','+loc.classList.contains('pieno')+','+document.querySelector('.ch-video .et').textContent+','+!document.querySelector('.ch-gira').classList.contains('nascosto')})()"],
+ ["js","(()=>{const m=Math.max(...window._vid.map(r=>r.length)); return 'PESO '+(m<120000)+' '+window._vid.length})()"],
+ ["js","(()=>{evento('VIDSTATO $BOB 1'); window._vid.forEach(r=>evento(r)); return 'eco'})()"],["attendi",1.5],
+ ["js","(()=>{const s=Chiamate._stato(); const t=document.querySelector('.ch-vid.remoto canvas:last-child'); return 'REMOTO '+s.remCam+','+document.querySelector('.ch-vid.remoto').classList.contains('pieno')+','+document.querySelector('.ch-vid.locale').classList.contains('pip')+','+(t.width>0&&t.height>0)+','+(s.v.ricevute>=10)})()"],
+ ["foto","${NYCT_FOTO:-$TMP}/videochiamata.png"],
+ ["js","(()=>{Chiamate._scambia(); return 'SCAMBIO '+document.querySelector('.ch-vid.locale').classList.contains('pieno')+','+document.querySelector('.ch-vid.remoto').classList.contains('pip')})()"],["attendi",0.5],
+ ["js","(()=>{const b=document.querySelector('.ch-vid.pip'); const r=b.getBoundingClientRect(); const x=r.left+r.width/2, y=r.top+r.height/2; const ev=(t,X,Y)=>b.dispatchEvent(new PointerEvent(t,{bubbles:true,pointerId:7,clientX:X,clientY:Y,isPrimary:true})); ev('pointerdown',x,y); ev('pointermove',x-60,y+80); ev('pointermove',40,innerHeight-200); ev('pointerup',40,innerHeight-200); b.dispatchEvent(new WheelEvent('wheel',{deltaY:-100,bubbles:true,cancelable:true})); const s=Chiamate._stato(); return 'TRASCINA '+s.pip.angolo+','+(s.pip.scala>1)})()"],["attendi",0.6],
+ ["foto","${NYCT_FOTO:-$TMP}/videochiamata-scambio.png"],
+ ["js","(()=>{document.querySelector('.ch-scena').click(); const q=document.querySelector('.chiamata').classList.contains('quieto'); document.querySelector('.ch-scena').click(); return 'QUIETO '+q+','+!document.querySelector('.chiamata').classList.contains('quieto')})()"],
+ ["js","(()=>{window._k0=window._inviate.length; setTimeout(()=>evento('VIDKEY $BOB'),400); return 'k'})()"],["attendi",1.2],
+ ["js","(()=>{const n=window._inviate.slice(window._k0).filter(r=>r.startsWith('VID $BOB ')); const i=n.findIndex((r,j)=>j>=3&&r.split(' ')[3]==='1'); return 'CHIAVE '+(i>=0)})()"],
+ ["js","(()=>{window._s0=window._inviate.length; document.querySelector('.ch-tasti .ch-video').click(); return 'video spento'})()"],["attendi",1],
+ ["js","(()=>{const n=window._inviate.slice(window._s0); const dopo=n.slice(n.indexOf('VIDSTATO $BOB 0')+1).filter(r=>r.startsWith('VID $BOB ')); return 'SPENTO '+n.includes('VIDSTATO $BOB 0')+','+(dopo.length===0)+','+document.querySelector('.ch-video .et').textContent+','+document.querySelector('.ch-vid.locale').classList.contains('nascosto')+','+(Chiamate._stato().v.flusso===null)})()"],
+ ["js","(()=>{evento('VIDSTATO $BOB 0'); return 'VOCE '+!document.querySelector('.chiamata').classList.contains('video')})()"],
  ["js","(()=>{document.querySelector('.ch-tasti .rosso').click(); return 'FINE '+window._inviate.includes('CALLEND $BOB abc123')+','+(Chiamate._stato().c===null)+','+document.querySelector('.chiamata').classList.contains('nascosto')})()"],
+ ["js","(()=>{evento('CALLIN $BOB vid777 v'); const s=Chiamate._stato(); return 'VARRIVO '+(s.c&&s.c.video)+','+document.querySelector('.ch-stato').textContent+','+!document.querySelector('.ch-solovoce').classList.contains('nascosto')})()"],
+ ["foto","${NYCT_FOTO:-$TMP}/videochiamata-arrivo.png"],
+ ["js","document.querySelector('.ch-arrivo .ch-si').click(); 'risposto video'"],["attendi",3],
+ ["js","(()=>{const s=Chiamate._stato(); return 'VRISPOSTA '+window._inviate.includes('CALLOK $BOB vid777')+','+!!(s.v&&s.v.flusso)+','+window._inviate.includes('VIDSTATO $BOB 1')})()"],
+ ["js","(()=>{document.querySelector('.ch-tasti .ch-fine').click(); const s=Chiamate._stato(); return 'VFINE '+(s.c===null)+','+(s.v===null)+','+document.querySelector('.ch-vid.locale').classList.contains('nascosto')})()"],
  ["js","(()=>{const ts=9999999999; bollaTesto('out','prova spunte',ts); const r=[...document.querySelectorAll('#messaggi .msg.out')].pop(); if(!r) return 'SPUNTE nessuna'; const sp=()=>r.querySelector('.spunta'); const v=[]; evento('SP '+S.attivo+' '+ts+' 1'); v.push(sp().textContent); evento('CAS '+S.attivo+' '+ts); v.push(sp().textContent); evento('SP '+S.attivo+' '+ts+' 2'); v.push(sp().textContent); evento('SP '+S.attivo+' '+ts+' 3'); v.push(sp().textContent+(sp().classList.contains('letto')?'blu':'')); return 'SPUNTE '+v.join(',')})()"],
  ["js","(()=>{const n0=document.querySelectorAll('#messaggi .avviso').length; for(let i=0;i<5;i++) evento('ERR motore non raggiungibile'); const n1=document.querySelectorAll('#messaggi .avviso').length; for(let i=0;i<3;i++) evento('ERR SOCKS: connessione rifiutata'); const n2=document.querySelectorAll('#messaggi .avviso').length; const bar=!document.getElementById('stato-rete').classList.contains('nascosto'); S.motoreGiu=false; return 'SFILZA '+(n1-n0)+','+(n2-n1)+','+bar})()"],
  ["js","impostazioni(); 'impostazioni'"],["finche","document.querySelector('.stato-rete-imp') && document.querySelector('.stato-rete-imp').dataset.fase !== 'avvio'",10],
@@ -115,6 +135,18 @@ E=$(r EMOJI); [ "${E%% *}" -ge 50 ] 2>/dev/null && [ "${E##* }" = true ] && pass
 [ "$(r USCITA)" = "telefonata" ] && pass "la voce esce come telefonata (WebRTC interno): eco cancellata, auricolare/vivavoce veri" || fail "uscita della voce: $(r USCITA)"
 [ "$(r MUTO)" = "true" ] && [ "$(r MUTI)" = "true" ] && pass "🎤 muto: non parte più voce" || fail "muto: $(r MUTO) $(r MUTI)"
 [ "$(r RIDUCI)" = "true" ] && pass "⌄ riduci: barretta in cima, la chiamata continua" || fail "riduci: $(r RIDUCI)"
+[ "$(r VIDEO)" = "true,true,true,true,true,Solo voce,true" ] && pass "📹 durante la chiamata: VIDSTATO 1, immagini VP8 (la prima completa), ti vedi a tutto schermo, il tasto diventa 📞 «Solo voce», compare «Gira»" || fail "video acceso: $(r VIDEO)"
+r PESO | grep -q "^true" && pass "immagini sotto il limite del motore ($(r PESO | cut -d' ' -f2) inviate in 3 s, telecamera FINTA)" || fail "immagini troppo grandi: $(r PESO)"
+[ "$(r REMOTO)" = "true,true,true,true,true" ] && pass "video dell'altro decodificato a tutto schermo, il tuo nel riquadro" || fail "video ricevuto: $(r REMOTO)"
+[ "$(r SCAMBIO)" = "true,true" ] && pass "tocco sul riquadro: scambio fra te e l'altro" || fail "scambio: $(r SCAMBIO)"
+[ "$(r TRASCINA)" = "bs,true" ] && pass "riquadro trascinato si aggancia all'angolo (in basso a sinistra) e si ingrandisce" || fail "trascina/ridimensiona: $(r TRASCINA)"
+[ "$(r QUIETO)" = "true,true" ] && pass "tocco sul video: comandi nascosti e di nuovo visibili" || fail "comandi nascosti: $(r QUIETO)"
+[ "$(r CHIAVE)" = "true" ] && pass "VIDKEY: l'altro chiede e riceve subito un'immagine completa" || fail "immagine completa su richiesta"
+[ "$(r SPENTO)" = "true,true,Video,true,true" ] && pass "📞 «Solo voce»: VIDSTATO 0, niente più immagini, telecamera spenta" || fail "video spento: $(r SPENTO)"
+[ "$(r VOCE)" = "true" ] && pass "l'altro spegne la telecamera: si torna alla schermata della voce" || fail "ritorno alla voce: $(r VOCE)"
+[ "$(r VARRIVO)" = "true,videochiamata in arrivo,true" ] && pass "videochiamata in arrivo: Rifiuta / Solo voce / Rispondi" || fail "videochiamata in arrivo: $(r VARRIVO)"
+[ "$(r VRISPOSTA)" = "true,true,true" ] && pass "Rispondi alla videochiamata: CALLOK, telecamera accesa, VIDSTATO 1" || fail "risposta video: $(r VRISPOSTA)"
+[ "$(r VFINE)" = "true,true,true" ] && pass "fine videochiamata: telecamera rilasciata" || fail "fine video: $(r VFINE)"
 [ "$(r FINE)" = "true,true,true" ] && pass "✆ riaggancia: CALLEND e schermata chiusa" || fail "fine: $(r FINE)"
 [ "$(r SPUNTE)" = "✓,📮✓,✓✓,✓✓blu" ] && pass "spunte come Telegram: ✓ spedito, 📮✓ casella, ✓✓ consegnato, ✓✓ blu letto" || fail "spunte: $(r SPUNTE)"
 [ "$(r SFILZA)" = "0,1,true" ] && pass "errori ripetuti: un solo avviso (motore giù → barra in alto, non 30 righe in chat)" || fail "sfilza di errori: $(r SFILZA)"

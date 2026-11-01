@@ -133,7 +133,7 @@ public class ServizioNotifiche extends Service {
     private void notifica(org.json.JSONObject o) {
         String tipo = o.optString("tipo"), da = o.optString("da");
         if (("chiamata".equals(tipo) || "fine_chiamata".equals(tipo)) && da.matches("[a-z2-7]{56}\\.nyct")) {
-            chiamata(tipo, da, o.optString("nome", da.substring(0, 10)));
+            chiamata(tipo, da, o.optString("nome", da.substring(0, 10)), o.optBoolean("video"));
             return;
         }
         if (!("msg".equals(tipo) || "file".equals(tipo)) || !da.matches("[a-z2-7]{56}\\.nyct")) return;
@@ -166,7 +166,7 @@ public class ServizioNotifiche extends Service {
     }
 
     /** Chiamata in arrivo: notifica che squilla (anche con l'app aperta in un'altra schermata). */
-    private void chiamata(String tipo, String da, String nome) {
+    private void chiamata(String tipo, String da, String nome, boolean video) {
         NotificationManager nm = getSystemService(NotificationManager.class);
         int id = 500000 + (da.hashCode() & 0x7ffff);
         if ("fine_chiamata".equals(tipo)) {
@@ -182,8 +182,8 @@ public class ServizioNotifiche extends Service {
         Notification.Builder b = Build.VERSION.SDK_INT >= 26
                 ? new Notification.Builder(this, CANALE_CHIAMATE) : new Notification.Builder(this);
         b.setSmallIcon(R.drawable.ic_notifica)
-                .setContentTitle("📞 " + nome)
-                .setContentText("ti sta chiamando — tocca per rispondere")
+                .setContentTitle((video ? "📹 " : "📞 ") + nome)
+                .setContentText((video ? "videochiamata in arrivo" : "ti sta chiamando") + " — tocca per rispondere")
                 .setCategory(Notification.CATEGORY_CALL)
                 .setAutoCancel(true)
                 .setTimeoutAfter(45000)

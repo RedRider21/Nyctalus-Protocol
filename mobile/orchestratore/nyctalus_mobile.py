@@ -106,6 +106,7 @@ BACKEND = "127.0.0.1:%d" % int(PORTE["backend"])
 MAX_CARICAMENTO = 200 * 1024 * 1024
 MAX_INTESTAZIONE = 16 * 1024
 MAX_FRAME_WS = 1024 * 1024
+RIGA_MOTORE_MAX = 1024 * 1024    # righe del motore: le immagini delle videochiamate (VID) superano i 64 KB
 WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 
@@ -643,7 +644,7 @@ async def ponte_chat(lettore, scrittore, req):
                      "Sec-WebSocket-Accept: %s\r\n\r\n" % accetta).encode())
     await scrittore.drain()
     try:
-        m_lettore, m_scrittore = await asyncio.open_connection(*CONTROLLO)
+        m_lettore, m_scrittore = await asyncio.open_connection(*CONTROLLO, limit=RIGA_MOTORE_MAX)
     except Exception:            # noqa: BLE001
         await ws_invia(scrittore, "ERR motore non raggiungibile")
         return
@@ -700,7 +701,7 @@ async def flusso_notifiche(scrittore):
         await scrittore.drain()
 
     try:
-        m_lettore, m_scrittore = await asyncio.open_connection(*CONTROLLO)
+        m_lettore, m_scrittore = await asyncio.open_connection(*CONTROLLO, limit=RIGA_MOTORE_MAX)
     except Exception:            # noqa: BLE001
         return await riga({"tipo": "motore", "ok": False})
     try:
@@ -726,7 +727,8 @@ async def flusso_notifiche(scrittore):
                 await riga({"tipo": "msg", "da": p[1], "nome": nomi.get(p[1], p[1][:10]),
                             "testo": _da_hex(p[3])[:200]})
             elif p[0] == "CALLIN" and len(p) >= 3:
-                await riga({"tipo": "chiamata", "da": p[1], "nome": nomi.get(p[1], p[1][:10]), "id": p[2]})
+                await riga({"tipo": "chiamata", "da": p[1], "nome": nomi.get(p[1], p[1][:10]), "id": p[2],
+                            "video": len(p) >= 4 and p[3] == "v"})
             elif p[0] in ("CALLEND", "CALLOK", "CALLNO") and len(p) >= 3:
                 await riga({"tipo": "fine_chiamata", "da": p[1], "id": p[2]})
             elif p[0] == "FILE" and len(p) >= 9 and p[2] == "in":

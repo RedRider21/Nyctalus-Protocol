@@ -13,6 +13,9 @@
     <!-- Chiamate: il microfono (chiesto solo alla prima chiamata) e l'audio «da telefonata». -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Videochiamate: la telecamera, data SOLO alla pagina della chat (127.0.0.1). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- vibrazione della chiamata in arrivo -->
     <uses-permission android:name="android.permission.VIBRATE" />

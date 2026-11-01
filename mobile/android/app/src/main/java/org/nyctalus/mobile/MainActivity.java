@@ -65,9 +65,11 @@ public class MainActivity extends Activity {
     private static final String TERMUX = "com.termux";
     private static final String PERMESSO_TERMUX = "com.termux.permission.RUN_COMMAND";
     static final String PREFS = "nyctalus";
-    private static final int RICHIESTA_PERMESSO = 1, RICHIESTA_FILE = 2, RICHIESTA_NOTIFICHE = 3, RICHIESTA_MICROFONO = 4;
+    private static final int RICHIESTA_PERMESSO = 1, RICHIESTA_FILE = 2, RICHIESTA_NOTIFICHE = 3, RICHIESTA_MICROFONO = 4, RICHIESTA_SCATTO = 6;
     /** La pagina della chat chiede il microfono (chiamata): si concede dopo il permesso di Android. */
     private android.webkit.PermissionRequest attesaMicrofono;
+    /** Scatto con la fotocamera di sistema in attesa del permesso CAMERA (dichiarato per le videochiamate). */
+    private Intent scattoInAttesa;
     private android.media.Ringtone squillo;   // suoneria della chiamata in arrivo
     private static final long ATTESA_MAX_MS = 40000;
 
@@ -188,10 +190,19 @@ public class MainActivity extends Activity {
         if (richiesta == RICHIESTA_PERMESSO) new Thread(this::avvia).start();
         if (richiesta == RICHIESTA_NOTIFICHE) ServizioNotifiche.avvia(this);
         if (richiesta == RICHIESTA_MICROFONO && attesaMicrofono != null) {
-            boolean ok = esiti.length > 0 && esiti[0] == PackageManager.PERMISSION_GRANTED;
-            if (ok) attesaMicrofono.grant(new String[]{android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+            boolean ok = esiti.length > 0;
+            for (int e : esiti) ok &= e == PackageManager.PERMISSION_GRANTED;
+            if (ok) attesaMicrofono.grant(attesaMicrofono.getResources());
             else attesaMicrofono.deny();
             attesaMicrofono = null;
+        }
+        if (richiesta == RICHIESTA_SCATTO && scattoInAttesa != null) {
+            Intent i = scattoInAttesa;
+            scattoInAttesa = null;
+            if (esiti.length > 0 && esiti[0] == PackageManager.PERMISSION_GRANTED) {
+                try { startActivityForResult(i, RICHIESTA_FILE); return; } catch (Exception ignorata) { /* sotto */ }
+            }
+            if (attesaFile != null) { attesaFile.onReceiveValue(null); attesaFile = null; }
         }
     }
 
@@ -1081,19 +1092,32 @@ public class MainActivity extends Activity {
 
     /** Collega gli <input type="file"> della web-app a galleria, file e fotocamera. */
     private class Sceglitore extends WebChromeClient {
-        /** Microfono per le chiamate: solo alla NOSTRA pagina (127.0.0.1) e solo l'audio. */
+        /**
+         * Microfono e telecamera per chiamate e videochiamate: SOLO alla NOSTRA pagina
+         * (127.0.0.1) e solo audio/video (niente altro). Android chiede il permesso la prima volta.
+         */
         @Override
         public void onPermissionRequest(android.webkit.PermissionRequest req) {
             runOnUiThread(() -> {
                 boolean nostra = req.getOrigin() != null && URL_BASE.startsWith(req.getOrigin().toString().replaceAll("/$", ""));
-                boolean soloAudio = req.getResources().length == 1
-                        && android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(req.getResources()[0]);
-                if (!nostra || !soloAudio) { req.deny(); return; }
-                if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                    req.grant(new String[]{android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE});
+                boolean ammesse = req.getResources().length > 0;
+                java.util.List<String> servono = new java.util.ArrayList<>();
+                for (String r : req.getResources()) {
+                    if (android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) {
+                        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
+                            servono.add(android.Manifest.permission.RECORD_AUDIO);
+                    } else if (android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(r)) {
+                        if (checkSelfPermission(android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)
+                            servono.add(android.Manifest.permission.CAMERA);
+                    } else ammesse = false;
+                }
+                if (!nostra || !ammesse) { req.deny(); return; }
+                if (servono.isEmpty()) {
+                    req.grant(req.getResources());
                 } else {
+                    if (attesaMicrofono != null) attesaMicrofono.deny();
                     attesaMicrofono = req;
-                    requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, RICHIESTA_MICROFONO);
+                    requestPermissions(servono.toArray(new String[0]), RICHIESTA_MICROFONO);
                 }
             });
         }
@@ -1116,6 +1140,13 @@ public class MainActivity extends Activity {
             } else {
                 i = p.createIntent();
                 if (p.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE) i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+            }
+            // con CAMERA dichiarato nel manifest (videochiamate) Android vuole il permesso anche
+            // per aprire l'app fotocamera di sistema: lo si chiede, poi si scatta
+            if (scattoInCorso != null && checkSelfPermission(android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                scattoInAttesa = i;
+                requestPermissions(new String[]{android.Manifest.permission.CAMERA}, RICHIESTA_SCATTO);
+                return true;
             }
             try {
                 startActivityForResult(i, RICHIESTA_FILE);

@@ -14,13 +14,17 @@ J="$ROOT/mobile/android/app/src/main/java/org/nyctalus/mobile"; B="$J/BrowserAct
 grep -q 'WebView.setDataDirectorySuffix("browser")' "$B" && pass "processo del browser con cartella WebView propria (senza, Android 9+ lo chiude all'avvio)" || fail "manca setDataDirectorySuffix: il browser si chiude appena parte"
 grep -A3 'android:name=".BrowserActivity"' "$M" | grep -q 'android:process=":browser"' \
   && pass "browser in un processo separato (il proxy non tocca la chat)" || fail "browser nello stesso processo"
-! grep -qE 'permission\.(CAMERA|ACCESS_FINE_LOCATION)' "$M" && pass "nessun permesso di fotocamera o posizione" || fail "permessi sensibili nel manifest"
+! grep -qE 'permission\.ACCESS_FINE_LOCATION' "$M" && pass "nessun permesso di posizione nel manifest" || fail "permessi sensibili nel manifest"
+# la telecamera serve alle videochiamate: va SOLO alla nostra pagina; ai siti solo con «Consenti»
+grep -q 'permission.CAMERA' "$M" && grep -q 'RESOURCE_VIDEO_CAPTURE.equals(r)' "$J/MainActivity.java" && grep -q '} else ammesse = false;' "$J/MainActivity.java" \
+  && pass "telecamera: alla chat solo dalla nostra pagina, nessun'altra risorsa" || fail "telecamera della chat non ristretta"
+grep -q '(v && !"allow".equals(decisione(sito, "camera")))' "$B" && pass "telecamera: ai siti del browser solo dopo «Consenti»" || fail "il browser potrebbe dare la fotocamera in silenzio"
 # il microfono serve alle chiamate della chat: va SOLO alla nostra pagina, e ai siti del browser
 # solo se l'utente lo consente sito per sito (mai in silenzio, mai in modalità 🦇)
 J2="$ROOT/mobile/android/app/src/main/java/org/nyctalus/mobile"
-grep -q 'boolean nostra = req.getOrigin()' "$J2/MainActivity.java" && grep -q 'boolean soloAudio' "$J2/MainActivity.java" \
-  && pass "microfono: alla chat solo dalla nostra pagina (127.0.0.1) e solo l'audio" || fail "microfono della chat non ristretto"
-grep -q 'if (nyctalus) { richiesta.deny(); return; }' "$J2/BrowserActivity.java" && grep -q '"allow".equals(decisione(sito, "microfono"))' "$J2/BrowserActivity.java" \
+grep -q 'boolean nostra = req.getOrigin()' "$J2/MainActivity.java" && grep -q 'if (!nostra || !ammesse) { req.deny(); return; }' "$J2/MainActivity.java" \
+  && pass "microfono: alla chat solo dalla nostra pagina (127.0.0.1) e solo audio/video" || fail "microfono della chat non ristretto"
+grep -q 'if (nyctalus) { richiesta.deny(); return; }' "$J2/BrowserActivity.java" && grep -q '(a && !"allow".equals(decisione(sito, "microfono")))' "$J2/BrowserActivity.java" \
   && pass "microfono: nel browser mai in modalità 🦇, e ai siti solo dopo «Consenti»" || fail "il browser potrebbe dare il microfono in silenzio"
 grep -q 'nyctalus-ok /" + gettone' "$B" && grep -q 'chiudi.accept(false), 20000' "$B" \
   && pass "verifica col gettone casuale prima di aprire pagine (e scadenza)" || fail "verifica della modalità Nyctalus"

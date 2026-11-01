@@ -1584,7 +1584,6 @@ public class BrowserActivity extends Activity {
                     if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(r)) vuoleVideo = true;
                     if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) vuoleAudio = true;
                 }
-                ArrayList<String> concesse = new ArrayList<>();
                 // Bloccate nelle impostazioni del sito: la pagina non le riceve e non si
                 // chiede niente ad Android. È l'unica cosa che possiamo promettere su questi
                 // permessi — «consentire in anticipo» no, perché la fotocamera senza il
@@ -1593,28 +1592,38 @@ public class BrowserActivity extends Activity {
                 if ("block".equals(decisione(sito, "camera"))) vuoleVideo = false;
                 if ("block".equals(decisione(sito, "microfono"))) vuoleAudio = false;
                 if (!vuoleVideo && !vuoleAudio) { richiesta.deny(); return; }
+                // Fotocamera e microfono: l'app li ha per le (video)chiamate della chat, ma un SITO
+                // li riceve solo se l'utente lo consente per quel sito (mai in silenzio, mai in 🦇).
+                final boolean v = vuoleVideo, a = vuoleAudio;
+                boolean chiedere = (v && !"allow".equals(decisione(sito, "camera")))
+                        || (a && !"allow".equals(decisione(sito, "microfono")));
+                if (!chiedere) { concediMedia(richiesta, v, a); return; }
+                final String chi = sito;
+                String cosa = v && a ? "la fotocamera e il microfono" : v ? "la fotocamera" : "il microfono";
+                new AlertDialog.Builder(BrowserActivity.this, AlertDialog.THEME_DEVICE_DEFAULT_DARK)
+                        .setTitle(v ? "Fotocamera" : "Microfono")
+                        .setMessage("«" + chi + "» vuole usare " + cosa + ".")
+                        .setPositiveButton("Consenti", (d, k) -> {
+                            if (v) decidi(chi, "camera", "allow");
+                            if (a) decidi(chi, "microfono", "allow");
+                            concediMedia(richiesta, v, a);
+                        })
+                        .setNegativeButton("Blocca", (d, k) -> {
+                            if (v) decidi(chi, "camera", "block");
+                            if (a) decidi(chi, "microfono", "block");
+                            richiesta.deny();
+                        })
+                        .setOnCancelListener(d -> richiesta.deny())
+                        .show();
+            }
+
+            /** Consenso dato: si concede ciò che Android già permette, il resto lo si chiede ad Android. */
+            private void concediMedia(final PermissionRequest richiesta, boolean vuoleVideo, boolean vuoleAudio) {
+                ArrayList<String> concesse = new ArrayList<>();
                 if (vuoleVideo && checkSelfPermission(android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
                     concesse.add(PermissionRequest.RESOURCE_VIDEO_CAPTURE);
-                // Microfono: l'app lo ha per le chiamate della chat, ma un SITO lo riceve solo se
-                // l'utente lo consente per quel sito (mai in silenzio, mai in modalità 🦇).
-                if (vuoleAudio && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                    if ("allow".equals(decisione(sito, "microfono"))) {
-                        concesse.add(PermissionRequest.RESOURCE_AUDIO_CAPTURE);
-                    } else if (!vuoleVideo) {
-                        final String chi = sito;
-                        new AlertDialog.Builder(BrowserActivity.this, AlertDialog.THEME_DEVICE_DEFAULT_DARK)
-                                .setTitle("Microfono")
-                                .setMessage("«" + chi + "» vuole usare il microfono.")
-                                .setPositiveButton("Consenti", (d, k) -> {
-                                    decidi(chi, "microfono", "allow");
-                                    richiesta.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
-                                })
-                                .setNegativeButton("Blocca", (d, k) -> { decidi(chi, "microfono", "block"); richiesta.deny(); })
-                                .setOnCancelListener(d -> richiesta.deny())
-                                .show();
-                        return;
-                    }
-                }
+                if (vuoleAudio && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
+                    concesse.add(PermissionRequest.RESOURCE_AUDIO_CAPTURE);
                 if (!concesse.isEmpty()) { richiesta.grant(concesse.toArray(new String[0])); return; }
 
                 final ArrayList<String> mancanti = new ArrayList<>();
