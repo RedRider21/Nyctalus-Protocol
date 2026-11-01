@@ -89,7 +89,7 @@ Il binario `nyctalus` fa tutto, con sotto-comandi (`nyctalus help` per l'elenco)
 > **Modo semplice (consigliato):** pacchetto `installazioni/Server-Linux` sui server
 > (`MANUALE-SERVER.md`) e strumento `nyctalus-rete` sul PC del gestore
 > (`MANUALE-GESTORE-RETE.md`): fanno da soli i passi qui sotto, con nodi come servizi
-> systemd e un **codice di rete** da dare ai client. Quadro: `SCELTE-OPERATIVE.md`.
+> systemd e un **codice di rete** da dare ai client. Quadro: `manuali/LEGGIMI.md` (Inizia qui).
 > Qui sotto restano i comandi a mano, per chi vuole capire o personalizzare.
 
 Perché **più persone** provino la **stessa** rete, servono nodi su **server

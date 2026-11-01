@@ -15,8 +15,13 @@ import markdown
 RADICE = Path(__file__).resolve().parents[1]
 SORGENTI = sorted((RADICE / "documenti" / "manuali").glob("*.md")) + \
     [RADICE / "documenti" / "DEPLOY.md", RADICE / "documenti" / "SICUREZZA.md"]
-ORDINE = ["LEGGIMI", "GUIDA-RETE-DI-CASA", "SCELTE-OPERATIVE", "MANUALE-INSTALLAZIONE", "MANUALE-PC", "MANUALE-WINDOWS", "MANUALE-TELEFONO",
-          "MANUALE-CHAT", "MANUALE-SITI", "MANUALE-SERVER", "MANUALE-GESTORE-RETE", "MANUALE-PROVE", "DEPLOY", "SICUREZZA"]
+# l'indice laterale, a gruppi: dall'inizio, alle guide, all'uso, alla gestione, agli approfondimenti
+GRUPPI = [("", ["LEGGIMI"]),
+          ("Guide passo passo", ["MANUALE-INSTALLAZIONE", "GUIDA-RETE-DI-CASA", "GUIDA-INTERNET"]),
+          ("Usare Nyctalus", ["MANUALE-CHAT", "MANUALE-TELEFONO", "MANUALE-PC", "MANUALE-WINDOWS", "MANUALE-SITI"]),
+          ("Gestire una rete", ["MANUALE-SERVER", "MANUALE-GESTORE-RETE"]),
+          ("Approfondire", ["SICUREZZA", "MANUALE-PROVE", "DEPLOY"])]
+ORDINE = [n for _g, nomi in GRUPPI for n in nomi]
 
 PAGINA = """<!doctype html>
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later
@@ -80,8 +85,28 @@ CSS = """/* SPDX-License-Identifier: AGPL-3.0-or-later
 .manuale-doc pre { overflow-x: auto; padding: 12px 14px; border-radius: 10px; background: rgba(127,127,127,.12); }
 .manuale-doc code { font-size: .92em; }
 .manuale-doc blockquote { margin: 1em 0; padding: 8px 14px; border-left: 4px solid #e0a63a; background: rgba(224,166,58,.08); border-radius: 0 8px 8px 0; }
+.indice-manuali .gruppo { margin: 14px 10px 4px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .55; }
+.sommario { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin: 4px 0 24px; padding: 12px 14px; border-radius: 12px; background: rgba(127,127,127,.08); font-size: 14px; }
+.sommario b { margin-right: 6px; opacity: .7; font-weight: 600; }
+.sommario a { padding: 3px 10px; border-radius: 999px; background: rgba(127,127,127,.12); text-decoration: none; color: inherit; }
+.sommario a:hover { background: color-mix(in srgb, var(--acc2) 22%, transparent); }
 @media (max-width: 760px) { .manuale-doc { grid-template-columns: 1fr; } .indice-manuali { position: static; flex-direction: row; flex-wrap: wrap; } }
 """
+
+
+def stacca_elenchi(testo):
+    """Un elenco subito sotto una riga di testo, in Markdown «classico», finirebbe sulla stessa
+    riga del paragrafo: si aggiunge la riga vuota che manca (fuori dai blocchi di codice)."""
+    righe, out, codice = testo.split("\n"), [], False
+    elenco = re.compile(r"(- |\* |\d+\. )")
+    for i, r in enumerate(righe):
+        if r.startswith("```"):
+            codice = not codice
+        if (not codice and elenco.match(r) and out and out[-1].strip() and not elenco.match(out[-1])
+                and not out[-1].startswith((" ", "|", ">", "#"))):
+            out.append("")
+        out.append(r)
+    return "\n".join(out)
 
 
 def titolo_di(testo, nome):
@@ -101,14 +126,28 @@ def main():
         # collegamenti fra manuali: X.md → X.html (anche ../DEPLOY.md, documenti/…)
         testo = re.sub(r"\]\((?:\.\./|documenti/(?:manuali/)?)?([A-Z][A-Z0-9-]+)\.md(#[^)]*)?\)",
                        lambda m: "](%s.html%s)" % (("index" if m.group(1) == "LEGGIMI" else m.group(1)), m.group(2) or ""), testo)
+        testo = stacca_elenchi(testo)
         corpo = markdown.markdown(testo, extensions=["tables", "fenced_code", "sane_lists", "toc"])
         # i nomi dei manuali citati nel testo come `MANUALE-X.md` diventano collegamenti
         corpo = re.sub(r"<code>([A-Z][A-Z0-9-]+)\.md</code>",
                        lambda m: ('<a href="%s.html"><code>%s.md</code></a>' % ("index" if m.group(1) == "LEGGIMI" else m.group(1), m.group(1))
                                   if m.group(1) in pagine else m.group(0)), corpo)
-        indice = "".join('<a href="%s.html"%s>%s</a>' % ("index" if k == "LEGGIMI" else k,
-                                                         ' class="qui"' if k == n else "", html.escape(titoli[k]))
-                         for k in nomi)
+        indice = ""
+        for gruppo, membri in GRUPPI + [("Altro", [k for k in nomi if k not in ORDINE])]:
+            membri = [k for k in membri if k in pagine]
+            if not membri:
+                continue
+            if gruppo:
+                indice += '<div class="gruppo">%s</div>' % html.escape(gruppo)
+            indice += "".join('<a href="%s.html"%s>%s</a>' % ("index" if k == "LEGGIMI" else k,
+                                                              ' class="qui"' if k == n else "", html.escape(titoli[k]))
+                              for k in membri)
+        # «in questa pagina»: i capitoli, per saltare subito dove serve
+        capitoli = re.findall(r'<h2 id="([^"]+)">(.*?)</h2>', corpo)
+        if len(capitoli) >= 3:
+            sommario = '<nav class="sommario"><b>In questa pagina</b>' + "".join(
+                '<a href="#%s">%s</a>' % (i, re.sub(r"<[^>]+>", "", t)) for i, t in capitoli) + "</nav>"
+            corpo = corpo.replace("</h1>", "</h1>" + sommario, 1)
         dest = out / ("index.html" if n == "LEGGIMI" else n + ".html")
         dest.write_text(PAGINA.format(titolo=html.escape(titoli[n]), indice=indice, corpo=corpo), encoding="utf-8")
     (out / "manuali.css").write_text(CSS, encoding="utf-8")

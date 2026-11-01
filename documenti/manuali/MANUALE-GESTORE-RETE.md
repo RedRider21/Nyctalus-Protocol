@@ -7,7 +7,7 @@ Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 
 Il **gestore** decide quali nodi fanno parte della rete. Firma il loro elenco con una
 chiave che solo lui possiede e dà ai client il **codice di rete**. Basta un PC, anche
-quello che usi tutti i giorni. Quadro generale: `SCELTE-OPERATIVE.md`.
+quello che usi tutti i giorni. Quadro generale: `LEGGIMI.md` (Inizia qui).
 
 Strumento: **`nyctalus-rete`**. Lo installa `./installa.sh` del pacchetto PC (scelte 1 e 2).
 
@@ -90,6 +90,11 @@ aggiornamento riaccendi `casa` e ricollega i client** (📲 sul telefono, `impor
 codice nuovo contiene la casella.
 
 Lascia la finestra aperta; `Ctrl-C` ferma tutto.
+
+**La stessa rete, raggiungibile da Internet** (per provare con un amico in un'altra città):
+`nyctalus-rete casa --internet NOME` con il tuo nome No-IP/DuckDNS o l'IP pubblico. È una rete a
+sé («Rete Internet di prova»); i nodi si presentano col nome, il comando dice quali porte
+inoltrare sul router e prova i nodi. Passo passo: `GUIDA-INTERNET.md`.
 
 **Se il telefono resta a caricare la pagina, è il firewall del PC.** Su Ubuntu ufw scarta in
 silenzio ciò che arriva dalla rete locale. `casa` se ne accorge e stampa i comandi; con la

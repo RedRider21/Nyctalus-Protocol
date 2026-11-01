@@ -75,7 +75,7 @@ nyctalus-sito rete mio-sito --codice NYCT1:…       # spostarlo su un'altra ret
 ```
 Il sito lo vede **solo chi è sulla stessa rete**. Con la rete di casa sono i dispositivi a cui
 hai dato il codice. Per un sito pubblico serve una rete condivisa con nodi su server diversi
-(scenario D in `SCELTE-OPERATIVE.md`). L'elenco dei nodi si riscarica ogni 6 ore: se cambia, il
+(nodi su macchine diverse: `LEGGIMI.md`). L'elenco dei nodi si riscarica ogni 6 ore: se cambia, il
 sito riparte da solo.
 
 ## 5. Sempre acceso

@@ -7,7 +7,7 @@
 titolo "Funzionamento · pacchetti di installazione"
 bash "$ROOT/strumenti/crea-installazioni.sh" > "$TMP/crea.log" 2>&1 && pass "installazioni generate" || { fail "generazione fallita"; exit 1; }
 I="$ROOT/installazioni"
-for f in LEGGIMI.txt Nyctalus-completo.zip PC-Linux/LEGGIMI.txt PC-Linux/Nyctalus-PC-Linux.zip Server-Linux/LEGGIMI.txt Server-Linux/Nyctalus-Server-Linux.zip Manuali/SCELTE-OPERATIVE.md Manuali/MANUALE-SERVER.md Manuali/MANUALE-GESTORE-RETE.md Android/LEGGIMI.txt Android/nyctalus-termux.tar.gz Android/nyctalus-termux.zip Manuali/MANUALE-INSTALLAZIONE.md Manuali/MANUALE-TELEFONO.md Manuali/MANUALE-PC.md; do
+for f in LEGGIMI.txt Nyctalus-completo.zip PC-Linux/LEGGIMI.txt PC-Linux/Nyctalus-PC-Linux.zip Server-Linux/LEGGIMI.txt Server-Linux/Nyctalus-Server-Linux.zip Manuali/LEGGIMI.md Manuali/GUIDA-INTERNET.md Manuali/MANUALE-SERVER.md Manuali/MANUALE-GESTORE-RETE.md Android/LEGGIMI.txt Android/nyctalus-termux.tar.gz Android/nyctalus-termux.zip Manuali/MANUALE-INSTALLAZIONE.md Manuali/MANUALE-TELEFONO.md Manuali/MANUALE-PC.md; do
   [ -s "$I/$f" ] && pass "presente: $f" || fail "manca: $f"
 done
 # nessun dato personale nei pacchetti

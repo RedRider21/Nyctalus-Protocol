@@ -19,7 +19,7 @@ dispositivo (la crea `strumenti/crea-installazioni.sh` partendo dai sorgenti):
 | Manuali | `installazioni/Manuali/` | questi manuali |
 
 Prima di iniziare: **cosa installare e dove** dipende da cosa vuoi fare. Lo spiega
-`SCELTE-OPERATIVE.md` (client, nodo server, gestore della rete).
+`LEGGIMI.md` (Inizia qui: client, nodo server, gestore della rete).
 
 ---
 
@@ -168,7 +168,7 @@ python o rust, che potrebbero servire ad altri progetti.
 Appena installati, PC e telefono usano una **rete di prova locale** (solo su quel dispositivo).
 Per parlare con altri ci si collega a una rete con il suo **codice** (`NYCT1:…`): PC
 `MANUALE-PC.md` §3, telefono `MANUALE-TELEFONO.md` §1. Provare telefono ↔ PC senza server:
-`GUIDA-RETE-DI-CASA.md`. Creare una rete: `SCELTE-OPERATIVE.md`.
+`GUIDA-RETE-DI-CASA.md`. Con un amico via Internet: `GUIDA-INTERNET.md`. Creare una rete: `LEGGIMI.md`.
 
 ## 4. Problemi frequenti
 

@@ -6,7 +6,7 @@ Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 # Manuale del server (nodi della rete)
 
 Un **nodo** inoltra il traffico cifrato della rete. Non vede cosa passa né chi parla con
-chi. Su un server ne puoi far girare da 1 a 8. Quadro generale: `SCELTE-OPERATIVE.md`.
+chi. Su un server ne puoi far girare da 1 a 8. Quadro generale: `LEGGIMI.md` (Inizia qui).
 
 ## 1. Cosa serve
 - Un server **Linux** sempre acceso e raggiungibile da Internet: un VPS (1 CPU, 512 MB-1 GB

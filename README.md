@@ -11,7 +11,7 @@
 > protocollo non è ancora completo né verificato da revisori indipendenti.
 > **Non usarlo ancora per proteggere dati reali.**
 
-Sito e manuale: **https://redrider21.github.io/Nyctalus-Protocol/**
+Sito e manuale: **https://redrider21.github.io/Nyctalus-Protocol/** · manuali: **[Inizia qui](documenti/manuali/LEGGIMI.md)**
 
 **Scarica:** [anteprima per tester (pre-release)](https://github.com/RedRider21/Nyctalus-Protocol/releases) — `Nyctalus-PC-Linux.zip`, `Nyctalus-Android.zip` (app + pacchetto Termux), `Nyctalus-Server-Linux.zip` (`-arm64` per Raspberry Pi), `Nyctalus-Windows.zip` (anteprima) e il solo motore `nyctalus` per Linux, Android/Termux, Windows e macOS.
 
@@ -52,7 +52,7 @@ Sito e manuale: **https://redrider21.github.io/Nyctalus-Protocol/**
 <td align="center"><img src="documenti/immagini/tel-impostazioni.png" width="200" alt="Impostazioni"><br><sub>Temi, rete, codice di rete</sub></td>
 </tr></table>
 
-<sub>L'app Android (APK) avvia Nyctalus in Termux e apre Chat, Rubrica della rete, Browser (con modalità 🦇 Nyctalus) e manuali. Come installare: <a href="documenti/manuali/SCELTE-OPERATIVE.md">Scelte operative</a>.</sub>
+<sub>L'app Android (APK) avvia Nyctalus in Termux e apre Chat, Rubrica della rete, Browser (con modalità 🦇 Nyctalus) e manuali. Da dove partire: <a href="documenti/manuali/LEGGIMI.md">Inizia qui</a>.</sub>
 
 ---
 
@@ -186,7 +186,7 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 - **Browser dedicato** (clone di Firefox): parte normale, lo **stealth** (rete Nyctalus) si accende col bottone e **avvia da solo i servizi** (rete pubblica configurata o rete di prova locale); i `.nyct` attivano lo stealth automaticamente.
 - **Chat `.nyct`** (senza server, senza metadati): ogni utente è un indirizzo `.nyct` (il suo Contact ID); motore in Rust (`nyctalus chat`) + finestra GTK. Oltre all'anonimato di rete e alla cifratura E2E, **chi scrive è autenticato crittograficamente** (un secondo handshake Noise NK dentro il tunnel: solo chi possiede la chiave privata dell'indirizzo dichiarato lo conclude), quindi nessuno può spacciarsi per un contatto. Grafica in **stile Telegram** con temi e sfondi, **menu del tasto destro** e **allegati di ogni tipo** come in Telegram (foto e video a tutta bolla, audio ascoltabile nella chat, documenti, **foto e video dalla webcam**; verifica d'integrità BLAKE3, foto inviate senza EXIF), **emoticon**, **in linea / ultimo accesso** e la **rubrica della rete** 👥 (ci si iscrive con un nome, si vede chi usa la rete e chi è in linea, si aggiunge con un clic), **notifiche** dei nuovi messaggi (sul telefono anche ad app chiusa, senza Google) le **chiamate vocali e videochiamate** 📞📹 (anonime, attraverso la rete: muto, vivavoce, volume, passaggio voce↔video, riquadro spostabile e scambiabile come in Telegram), le **spunte** come Telegram (✓ spedito, ✓✓ consegnato, ✓✓ blu letto) e la **casella cifrata** 📮 per scrivere a chi non è in linea (solo il destinatario può leggere, la casella non sa chi scrive). Guida: [MANUALE-CHAT.md](documenti/manuali/MANUALE-CHAT.md).
 - **Siti `.nyct` con un comando** (`nyctalus-sito`): pagine fisse o un sito dinamico dietro un server web locale, messi online sulla rete Nyctalus (anche sempre accesi come servizio), senza rivelare dove stanno. Guida: [MANUALE-SITI.md](documenti/manuali/MANUALE-SITI.md).
-- **Reti vere, anche fatte in casa**: nodi su server (pacchetto server, anche **Raspberry Pi**) o a casa con **IP dinamico** (nodi annunciati con un nome No-IP/DuckDNS, risolto a ogni collegamento); `nyctalus-rete` crea e firma la rete e accende **rubrica e casella** anche sul server. Guide: [SCELTE-OPERATIVE.md](documenti/manuali/SCELTE-OPERATIVE.md), [MANUALE-SERVER.md](documenti/manuali/MANUALE-SERVER.md).
+- **Reti vere, anche fatte in casa**: nodi su server (pacchetto server, anche **Raspberry Pi**) o a casa con **IP dinamico** (nodi annunciati con un nome No-IP/DuckDNS, risolto a ogni collegamento); `nyctalus-rete` crea e firma la rete e accende **rubrica e casella** anche sul server. **Prova con un amico via Internet** dal PC di casa con un comando (`nyctalus-rete casa --internet NOME`). Guide: [Inizia qui](documenti/manuali/LEGGIMI.md), [con un amico via Internet](documenti/manuali/GUIDA-INTERNET.md), [MANUALE-SERVER.md](documenti/manuali/MANUALE-SERVER.md).
 - **Windows (anteprima)**: `Nyctalus-Windows.zip`, doppio clic su `Nyctalus.cmd` (Python incluso): la finestra è come l'app del telefono, chat e rubrica nelle loro finestre, Firefox per navigare. Guida: [MANUALE-WINDOWS.md](documenti/manuali/MANUALE-WINDOWS.md).
 - **Mini-launcher da desktop**: pannello senza bordi, trascinabile, con bottoni quadrati (orizzontale/verticale), **dimensione regolabile** e **tasti rapidi configurabili**, per lanciare Browser, Chat e Rubrica. Client grafici (browser, launcher, chat) in **Python+GTK3**; il motore resta in **Rust**.
 

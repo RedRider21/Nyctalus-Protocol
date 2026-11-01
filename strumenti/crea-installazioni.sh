@@ -122,7 +122,7 @@ PUBBLICARE UN SITO .nyct
 DISINSTALLARE
    ~/.local/share/nyctalus/disinstalla.sh   (toglie solo Nyctalus; i dati solo se confermi)
 
-Manuali nella cartella Manuali/: inizia da SCELTE-OPERATIVE.md (cosa installare e dove).
+Manuali nella cartella Manuali/: inizia da LEGGIMI.md («Inizia qui»: cosa installare e dove).
 EOF
 crea_zip "$P" "$OUT/PC-Linux/Nyctalus-PC-Linux.zip"
 cp "$P/LEGGIMI.txt" "$OUT/PC-Linux/LEGGIMI.txt"
@@ -136,8 +136,8 @@ cp "$ROOT/server/installa-nodo.sh" "$V/installa.sh"; cp "$ROOT/server/nyctalus-s
 cp "$ROOT/pc/gestore-rete/nyctalus-sito" "$V/"        # un sito .nyct sempre acceso sul server
 mkdir -p "$V/gestore-rete"                              # rubrica e casella della rete sul server
 cp "$ROOT/pc/gestore-rete/nyctalus-rete" "$ROOT/pc/gestore-rete/rubrica.py" "$V/gestore-rete/"
-cp "$ROOT/documenti/manuali/MANUALE-SERVER.md" "$ROOT/documenti/manuali/SCELTE-OPERATIVE.md" "$ROOT/documenti/manuali/MANUALE-SITI.md" "$ROOT/LICENSE" "$V/" 2>/dev/null || true
-mv "$V"/MANUALE-SERVER.md "$V"/SCELTE-OPERATIVE.md "$V"/MANUALE-SITI.md "$V/Manuali/" 2>/dev/null || true
+cp "$ROOT/documenti/manuali/MANUALE-SERVER.md" "$ROOT/documenti/manuali/LEGGIMI.md" "$ROOT/documenti/manuali/GUIDA-INTERNET.md" "$ROOT/documenti/manuali/MANUALE-SITI.md" "$ROOT/LICENSE" "$V/" 2>/dev/null || true
+mv "$V"/MANUALE-SERVER.md "$V"/LEGGIMI.md "$V"/GUIDA-INTERNET.md "$V"/MANUALE-SITI.md "$V/Manuali/" 2>/dev/null || true
 chmod +x "$V"/*.sh "$V/nyctalus-server" "$V/nyctalus-sito" "$V/gestore-rete/nyctalus-rete" "$V/bin/nyctalus"
 cat > "$V/LEGGIMI.txt" <<'EOF'
 Nyctalus per SERVER (nodi della rete)
@@ -168,7 +168,7 @@ UN SITO .nyct SEMPRE ACCESO (facoltativo, sullo stesso server)
 DISINSTALLARE
    sudo /opt/nyctalus/disinstalla.sh      (le identità dei nodi restano, per reinstallare uguali)
 
-Passi completi: Manuali/MANUALE-SERVER.md · quadro generale: Manuali/SCELTE-OPERATIVE.md
+Passi completi: Manuali/MANUALE-SERVER.md · inizia da: Manuali/LEGGIMI.md
 EOF
 mkdir -p "$OUT/Server-Linux"
 crea_zip "$V" "$OUT/Server-Linux/Nyctalus-Server-Linux.zip"
@@ -263,7 +263,7 @@ if [ -f "$M_WIN" ] && [ -n "$PY_WIN" ]; then
   cp -r "$ROOT/mobile/orchestratore" "$ROOT/mobile/webapp" "$W/"
   cp "$ROOT/pc/windows/nyctalus-windows.py" "$W/windows/"
   cp "$ROOT/pc/windows/Nyctalus.cmd" "$W/"
-  cp "$ROOT"/documenti/manuali/{MANUALE-WINDOWS,MANUALE-CHAT,GUIDA-RETE-DI-CASA,SCELTE-OPERATIVE}.md "$W/Manuali/"
+  cp "$ROOT"/documenti/manuali/{LEGGIMI,MANUALE-WINDOWS,MANUALE-CHAT,GUIDA-RETE-DI-CASA,GUIDA-INTERNET}.md "$W/Manuali/"
   cp "$ROOT/LICENSE" "$W/"
   find "$W" -name __pycache__ -type d -prune -exec rm -rf {} +
   cat > "$W/LEGGIMI.txt" <<'EOF'
@@ -304,7 +304,7 @@ Nyctalus — cosa installare e dove
   PC Windows (64 bit)   Windows/     Nyctalus-Windows.zip           scompatta → doppio clic su Nyctalus.cmd
   Tutto in un colpo     —            Nyctalus-completo.zip          contiene tutte le cartelle
 
-COSA INSTALLARE E DOVE, per ogni situazione: Manuali/SCELTE-OPERATIVE.md
+INIZIA QUI (cosa installare e dove, per ogni situazione): Manuali/LEGGIMI.md
 Istruzioni passo-passo: il LEGGIMI.txt di ogni cartella e i manuali in Manuali/.
 Windows e macOS: per ora solo il motore a riga di comando; le interfacce arriveranno.
 
