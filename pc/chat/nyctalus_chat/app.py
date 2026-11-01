@@ -315,20 +315,29 @@ menu check, menu radio { color: @ACCENT@; }
 .puntini { background: transparent; border: none; box-shadow: none; color: @MUTED@;
            font-size: 20px; padding: 2px 10px; }
 .puntini:hover { color: @TEXT@; background: rgba(@RGB@,0.12); }
-.barra-chiamata { background: rgba(61,220,132,0.14); border-bottom: 1px solid rgba(61,220,132,0.35); }
+.barra-chiamata { background: rgba(@RGB@,0.14); border-bottom: 1px solid rgba(@RGB@,0.35); }
 /* finestra della chiamata, come Telegram Web */
-.finestra-chiamata { background-image: radial-gradient(circle at 50% 30%, #1f3b6e 0%, #0b1020 72%); background-color: #0b1020; }
+/* colori dal tema: CHBASE (fondo profondo) + aloni dell'accento */
+.finestra-chiamata { background-color: @CHBASE@;
+  background-image: radial-gradient(circle at 28% 22%, rgba(@RGB@,0.42), rgba(@RGB@,0) 48%),
+                    radial-gradient(circle at 78% 72%, alpha(@OUT1@,0.45), alpha(@OUT1@,0) 50%),
+                    radial-gradient(circle at 50% 50%, rgba(@RGB@,0.10), rgba(@RGB@,0) 80%); }
 .finestra-chiamata label { color: #ffffff; }
+.finestra-chiamata image, .tondo { color: #ffffff; }
+.tondo.attivo image { color: @CHBASE@; }
 .chiamata-nome { font-size: 22px; font-weight: 700; }
 .chiamata-stato { font-size: 13px; color: rgba(255,255,255,0.75); }
 .finestra-chiamata label.avatar-chiamata { min-width: 124px; min-height: 124px; border-radius: 62px; font-size: 48px; }
 .tondo-btn { background: none; background-image: none; border: none; box-shadow: none; padding: 0; }
-.tondo { min-width: 58px; min-height: 58px; border-radius: 29px; background-color: rgba(255,255,255,0.16); font-size: 23px; }
+.tondo { min-width: 58px; min-height: 58px; border-radius: 29px; background-color: rgba(255,255,255,0.14);
+         border: 1px solid rgba(255,255,255,0.10); font-size: 23px; transition: background-color 150ms ease; }
 .tondo-btn:hover .tondo { background-color: rgba(255,255,255,0.28); }
-.tondo.attivo { background-color: #ffffff; color: #0b1020; }
-.tondo.rosso { background-color: #e53935; }
+.tondo.attivo { background-color: #ffffff; color: @CHBASE@; }
+.tondo.rosso { background-color: #e5484d; border-color: transparent; }
+.tondo.verde { background-color: #30a46c; border-color: transparent; }
 .tondo-testo { font-size: 11px; color: rgba(255,255,255,0.85); }
-.anteprima-video { border: 2px solid rgba(255,255,255,0.7); border-radius: 12px; background-color: #000000; }
+.anteprima-video { border: 1px solid rgba(255,255,255,0.25); border-radius: 14px; background-color: #000000;
+                   box-shadow: 0 8px 24px rgba(0,0,0,0.45); }
 .barra-chiamata label { color: @TEXT@; font-weight: 600; }
 .barra-chiamata button { background-color: rgba(@RGB@,0.14); background-image: none; color: @TEXT@; border: none;
                          border-radius: 9px; padding: 4px 12px; box-shadow: none; }
@@ -419,25 +428,25 @@ TEMI = {
         "BG": "#0a0e1a", "SIDEBAR": "#0c1120", "PANEL": "#0e1424", "TEXT": "#e6ecff",
         "MUTED": "#6b7797", "ACCENT": "#5aa9ff", "RGB": "90,169,255", "PILLTXT": "#cfe0ff",
         "SEND": "#2f6fe0", "SENDH": "#3b7cf0", "BUBIN": "#1b2740", "BUBINTXT": "#e6ecff",
-        "OUT1": "#2f6fe0", "OUT2": "#3f82f2", "SHADOW": "0.30", "TRAMA": "0.05",
+        "OUT1": "#2f6fe0", "OUT2": "#3f82f2", "SHADOW": "0.30", "TRAMA": "0.05", "CHBASE": "#070b16",
     },
     "ardesia": {   # nero-ardesia, alla Telegram
         "BG": "#0e1621", "SIDEBAR": "#17212b", "PANEL": "#17212b", "TEXT": "#f5f5f5",
         "MUTED": "#7f91a4", "ACCENT": "#6ab3f3", "RGB": "106,179,243", "PILLTXT": "#d6e9fb",
         "SEND": "#3390ec", "SENDH": "#4aa0f0", "BUBIN": "#182533", "BUBINTXT": "#f5f5f5",
-        "OUT1": "#2b5278", "OUT2": "#33618d", "SHADOW": "0.35", "TRAMA": "0.05",
+        "OUT1": "#2b5278", "OUT2": "#33618d", "SHADOW": "0.35", "TRAMA": "0.05", "CHBASE": "#0b131d",
     },
     "viola": {   # viola notturno (come il Telegram degli screenshot)
         "BG": "#120f1c", "SIDEBAR": "#1a1626", "PANEL": "#1a1626", "TEXT": "#f1edff",
         "MUTED": "#8a82a6", "ACCENT": "#9d85ff", "RGB": "157,133,255", "PILLTXT": "#e2dbff",
         "SEND": "#7a5cf0", "SENDH": "#8b70f5", "BUBIN": "#241f35", "BUBINTXT": "#f1edff",
-        "OUT1": "#6b4fe0", "OUT2": "#8a6cf2", "SHADOW": "0.35", "TRAMA": "0.05",
+        "OUT1": "#6b4fe0", "OUT2": "#8a6cf2", "SHADOW": "0.35", "TRAMA": "0.05", "CHBASE": "#0e0b18",
     },
     "chiaro": {   # chiaro, per il giorno
         "BG": "#eef1f6", "SIDEBAR": "#ffffff", "PANEL": "#ffffff", "TEXT": "#1a2233",
         "MUTED": "#7d889c", "ACCENT": "#2f6fe0", "RGB": "47,111,224", "PILLTXT": "#1f4fae",
         "SEND": "#2f6fe0", "SENDH": "#3b7cf0", "BUBIN": "#ffffff", "BUBINTXT": "#1a2233",
-        "OUT1": "#2f6fe0", "OUT2": "#4a86f0", "SHADOW": "0.10", "TRAMA": "0.07",
+        "OUT1": "#2f6fe0", "OUT2": "#4a86f0", "SHADOW": "0.10", "TRAMA": "0.07", "CHBASE": "#16294f",
     },
 }
 TEMA_DEF = "notte"

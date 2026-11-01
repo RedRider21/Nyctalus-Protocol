@@ -90,10 +90,15 @@ Nyctalus: ritento da sola…». I tentativi si fanno sempre più radi, fino a un
 
 ## 3. La conversazione
 
-**📞** in alto chiama il contatto (schermata a tutto schermo: Muto, Vivavoce, Riaggancia,
-⌄ per ridurla e continuare a usare la chat). Le chiamate in arrivo squillano anche con l'app
-chiusa, come notifica. Alla prima chiamata Android chiede il permesso del microfono. Dettagli:
-`MANUALE-CHAT.md` §3-quater.
+Dal menu **⋮** in alto a destra: **Chiamata vocale** o **Videochiamata**. La schermata è come
+in Telegram: avatar e tasti tondi in basso (Vivavoce, 📹 Video, Muto, Termina, ⌄ per ridurla e
+continuare a usare la chat); col video chi parla è a tutto schermo e tu sei in un **riquadro**
+che puoi **trascinare** in un angolo, **toccare** per scambiarlo con lo schermo intero e
+**allargare con due dita** (doppio tocco: misura normale). 📞 **Solo voce** spegne la telecamera,
+🔄 **Gira** passa alla telecamera posteriore. Le chiamate in arrivo squillano anche con l'app
+chiusa, come notifica. Alla prima chiamata Android chiede il permesso del microfono, alla prima
+videochiamata quello della telecamera (dati solo alla chat, mai ai siti senza il tuo «Consenti»).
+Dettagli: `MANUALE-CHAT.md` §3-quater.
 
 Accanto all'ora dei tuoi messaggi ci sono le **spunte** come in Telegram: ✓ spedito, 📮✓ nella
 casella cifrata (il contatto non era in linea), ✓✓ consegnato, ✓✓ blu letto (vedi

@@ -134,30 +134,54 @@ con l'ora in cui l'hai scritto.
 - Quello che la casella vede comunque: che qualcuno ha lasciato posta per quell'indirizzo, quando
   e quanto è grande, e quando il destinatario la ritira.
 
-## 3-quater. Chiamate vocali (📞)
+## 3-quater. Chiamate e videochiamate (📞 📹)
 
-Nella conversazione tocca **📞**: l'altro vede la chiamata in arrivo (sul telefono anche come
-notifica, con l'app chiusa) e tocca **Rispondi** o **Rifiuta**. Durante la chiamata:
+Nella conversazione apri il menu **⋮** in alto a destra (come in Telegram) e scegli
+**Chiamata vocale** o **Videochiamata**. L'altro vede la chiamata in arrivo (sul telefono anche
+come notifica, con l'app chiusa: «📹 videochiamata in arrivo») e tocca **Rispondi** o
+**Rifiuta**; a una videochiamata può anche rispondere **Solo voce** (la sua telecamera resta
+spenta). Durante la chiamata:
 
 | Comando | Cosa fa |
 |---|---|
 | 🎤 **Muto** | il tuo microfono smette di trasmettere |
-| 🔊 **Vivavoce** (telefono) | altoparlante invece dell'auricolare |
+| 🔊 **Vivavoce** (telefono) | altoparlante invece dell'auricolare (con il video si accende da solo) |
 | 🔊 **Audio** (PC) | volume di chi parla e uscita: altoparlante o cuffie |
-| ⌄ **Riduci** (telefono) | torni alla chat, la chiamata continua (barretta verde in cima) |
-| ✆ **Riaggancia** | chiude la chiamata |
+| 📹 **Video** | passi da voce a videochiamata: la tua telecamera si accende |
+| 📞 **Solo voce** | (al posto di 📹 col video acceso) spegni la telecamera e torni alla voce |
+| 🔄 **Gira** (telefono) | telecamera frontale ↔ posteriore |
+| ⌄ **Riduci** (telefono) / ⤢ **Apri** (PC) | torni alla chat, la chiamata continua (barretta in cima) |
+| ✆ **Termina** | chiude la chiamata |
 | 📶 | qualità della linea: buona, discreta, scarsa |
-| 🎥 **Video** | in arrivo (fase 2) |
+
+**Le immagini, come in Telegram:** chi parla occupa lo schermo intero, tu sei nel **riquadro**
+piccolo. Il riquadro:
+- si **trascina** dove vuoi e si aggancia all'angolo più vicino;
+- con un **tocco** si **scambia** con lo schermo intero (ti vedi in grande, l'altro nel riquadro);
+- si **ingrandisce o rimpicciolisce** con due dita (sul PC/Windows con la rotella del mouse);
+  il **doppio tocco** lo riporta alla misura normale.
+
+Un tocco sul video grande nasconde i comandi per vedere meglio; un altro li fa ricomparire. Se
+l'altro spegne la telecamera torni alla schermata della voce, con il suo avatar.
+La schermata della chiamata prende i **colori del tema** scelto.
 
 - **Anonime come i messaggi:** la voce passa attraverso la rete Nyctalus, cifrata nella stessa
   sessione dei messaggi; nessuno dei due vede l'IP dell'altro. Il prezzo è un piccolo ritardo
   (qualche decimo di secondo su una rete vera).
 - La voce è **Opus** a 24 kbit/s in pacchetti da 20 ms; un pacchetto arrivato tardi si salta
   invece di aspettarlo, così la conversazione non accumula ritardo.
+- Il video è **VP8** leggero e fluido: 320×240 (240×320 col telefono in verticale), 15 immagini
+  al secondo, circa 200 kbit/s; ogni 2 secondi parte un'immagine completa, così dopo un buco
+  della rete si riparte subito.
 - Se l'altro è già in chiamata risulta **occupato**; senza risposta entro 45 secondi la
   chiamata si chiude da sola; se la linea cade (l'altro sparisce) la chiamata si chiude.
-- Il **telefono** chiede il permesso del microfono alla prima chiamata, prima di farla partire.
-  Il PC usa microfono e altoparlanti del sistema (serve GStreamer con Opus, di solito già presente).
+- Il **telefono** chiede il permesso del microfono alla prima chiamata e quello della telecamera
+  alla prima videochiamata, prima di farla partire. Microfono e telecamera vanno **solo** alla
+  chat: i siti aperti nel browser dell'app li ricevono solo se tocchi «Consenti» per quel sito,
+  e mai in modalità 🦇. La telecamera si accende solo quando chiami in video o tocchi 📹, e si
+  spegne appena tocchi 📞 o chiudi.
+- Il PC usa microfono, altoparlanti e webcam del sistema (serve GStreamer con Opus e VP8, di
+  solito già presente). Senza webcam si riceve comunque il video dell'altro.
 - **Eco e rumore:** su entrambi i lati c'è la cancellazione dell'eco e del rumore di fondo (sul
   telefono la voce esce come una telefonata vera; sul PC con `webrtcdsp` di GStreamer). Con le
   cuffie la qualità è comunque migliore.

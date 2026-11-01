@@ -382,14 +382,41 @@ class Chiamate:
         self._aggiorna_video()
 
     # --- finestra della chiamata (come Telegram Web) -----------------------------------
+    # icone vettoriali di sistema (prendono il colore del testo); l'emoji solo se mancano
+    ICONE = {"video": ("camera-video-symbolic", "📹"), "voce": ("call-start-symbolic", "📞"),
+             "audio": ("audio-volume-high-symbolic", "🔊"), "mic": ("microphone-sensitivity-high-symbolic", "🎤"),
+             "muto": ("microphone-sensitivity-muted-symbolic", "🎤"), "fine": ("call-stop-symbolic", "✆")}
+
+    def _icona_tonda(self, nome, classe=""):
+        """Cerchio con l'icona; .imposta(nome) la cambia."""
+        box = Gtk.Box()
+        box.get_style_context().add_class("tondo")
+        for c in classe.split():
+            box.get_style_context().add_class(c)
+        img, lab = Gtk.Image(), Gtk.Label()
+        img.set_pixel_size(24)
+        for x in (img, lab):
+            x.set_halign(Gtk.Align.CENTER); x.set_valign(Gtk.Align.CENTER)
+            box.pack_start(x, True, True, 0)
+        tema = Gtk.IconTheme.get_default()
+
+        def imposta(n):
+            icona, emoji = self.ICONE[n]
+            if tema.has_icon(icona):
+                img.set_from_icon_name(icona, Gtk.IconSize.LARGE_TOOLBAR); img.set_pixel_size(24)
+                img.show(); lab.hide()
+            else:
+                lab.set_text(emoji); lab.show(); img.hide()
+        box.imposta = imposta
+        img.set_no_show_all(True); lab.set_no_show_all(True)
+        imposta(nome)
+        return box
+
     def _tasto_tondo(self, icona, testo, cb, classe=""):
         b = Gtk.Button()
         b.get_style_context().add_class("tondo-btn")
-        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        ic = Gtk.Label(label=icona)
-        ic.get_style_context().add_class("tondo")
-        if classe:
-            ic.get_style_context().add_class(classe)
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7)
+        ic = self._icona_tonda(icona, classe)
         lab = Gtk.Label(label=testo)
         lab.get_style_context().add_class("tondo-testo")
         col.pack_start(ic, False, False, 0)
@@ -451,18 +478,18 @@ class Chiamate:
         tasti.set_halign(Gtk.Align.CENTER)
         tasti.set_valign(Gtk.Align.END)
         tasti.set_margin_bottom(26)
-        self._t_video = self._tasto_tondo("📹", self._t("chat.ch.video"), lambda: self.c and self.c["stato"] == "attiva"
+        self._t_video = self._tasto_tondo("video", self._t("chat.ch.video"), lambda: self.c and self.c["stato"] == "attiva"
                                           and self.video(not self.c.get("video_mio")))
         audio = Gtk.MenuButton()
         audio.get_style_context().add_class("tondo-btn")
         col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        ic = Gtk.Label(label="🔊"); ic.get_style_context().add_class("tondo")
+        ic = self._icona_tonda("audio")
         lab = Gtk.Label(label=self._t("chat.ch.audio")); lab.get_style_context().add_class("tondo-testo")
         col.pack_start(ic, False, False, 0); col.pack_start(lab, False, False, 0)
         audio.add(col)
         audio.set_popover(self._popover_audio(audio))
-        self._t_muto = self._tasto_tondo("🎤", self._t("chat.ch.muto"), lambda: self.muto.set_active(not self.muto.get_active()))
-        fine = self._tasto_tondo("✆", self._t("chat.ch.termina"), lambda: self.riaggancia(), "rosso")
+        self._t_muto = self._tasto_tondo("mic", self._t("chat.ch.muto"), lambda: self.muto.set_active(not self.muto.get_active()))
+        fine = self._tasto_tondo("fine", self._t("chat.ch.termina"), lambda: self.riaggancia(), "rosso")
         for b in (self._t_video, audio, self._t_muto, fine):
             tasti.pack_start(b, False, False, 0)
         sovr.add_overlay(tasti)
@@ -491,6 +518,7 @@ class Chiamate:
         self._w_qualita.set_text(self.qualita.get_text())
         muto = self.muto.get_active()
         (self._t_muto.icona.get_style_context().add_class if muto else self._t_muto.icona.get_style_context().remove_class)("attivo")
+        self._t_muto.icona.imposta("muto" if muto else "mic")
 
     def _aggiorna_video(self):
         c = self.c
@@ -504,7 +532,7 @@ class Chiamate:
             return
         v = c.get("video")
         # in voce: «📹 Video»; in video: «📞 Solo voce» (come chiesto: si passa nei due sensi)
-        self._t_video.icona.set_text("📞" if mio else "📹")
+        self._t_video.icona.imposta("voce" if mio else "video")
         self._t_video.testo.set_text(self._t("chat.ch.solo_voce" if mio else "chat.ch.video"))
         if v and self._schermo.get_child_by_name("video") is None:
             self._schermo.add_named(v.schermo, "video")
