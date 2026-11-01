@@ -32,6 +32,10 @@ Installato, è nel menu delle applicazioni come **«Nyctalus»** (o col comando 
 - **Disposizione verticale / orizzontale** dei bottoni;
 - **Più grande / Più piccola / Normale**: dimensione dei bottoni;
 - **Sempre in primo piano**;
+- **Tema** (Notte, Ardesia, Viola, Chiaro): **uno solo per tutto Nyctalus** sul PC — mini
+  menu, chat, finestre delle chiamate e browser (che passa a chiaro/scuro con l'accento del
+  tema). Cambia **al volo** nei programmi già aperti; sceglierlo nella chat (⚙) è lo stesso.
+  Sta in `~/.config/nyctalus/tema`.
 - **Tasti rapidi…**: scegli tu le combinazioni per Browser, Chat, File e
   Mostra/Nascondi il pannello. Premi il bottone accanto all'azione, poi la combinazione
   (Esc annulla, ✕ la toglie). **Sono vuote all'inizio**, per non scontrarsi con le

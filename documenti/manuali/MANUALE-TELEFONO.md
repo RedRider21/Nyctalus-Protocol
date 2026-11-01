@@ -34,9 +34,16 @@ una sola per tutta l'app (chat, browser 🦇). Toccala per:
 Ancora più comodo: dalla pagina della rete (per la rete di casa `http://IP-DEL-PC:18800/`, in
 Chrome) tocca **📲 Collega l'app Nyctalus** e conferma nome e impronta.
 
+**⚙️ Impostazioni** (fra le caselle delle funzioni): le impostazioni generali dell'app.
+- **Tema**: Notte, Ardesia, Viola, Chiaro. Vale per **tutta l'app**: schermata iniziale, chat,
+  chiamate e videochiamate; anche con la chat già aperta cambia al volo. Scegliere il tema
+  dentro la chat (☰) è lo stesso: le due scelte sono sempre allineate.
+- 🔔 **Notifiche dei messaggi** con l'app chiusa (§5-bis);
+- ⏻ **Avvio all'accensione** del telefono.
+
 **Strumenti ▾**: Termux (installa/aggiorna), **🦇 Installa/aggiorna Nyctalus in Termux** (da
 ritoccare **dopo ogni APK nuova**: aggiorna chat, motore e servizio in pochi secondi),
-🔔 notifiche (§5-bis), ⏻ avvio all'accensione, comando di avvio.
+comando di avvio.
 
 Il **tasto indietro** riporta sempre indietro di un passo fino a questa schermata; la chat resta
 aperta dietro. Se Android ferma Nyctalus mentre sei in un'altra app, l'app lo riaccende da sola
@@ -149,7 +156,7 @@ Note:
 ## 5. Impostazioni (☰)
 
 - il tuo **Contact ID** con **Copia** e **Condividi**;
-- **Tema**: Notte, Ardesia (stile Telegram), Viola, Chiaro;
+- **Tema**: Notte, Ardesia (stile Telegram), Viola, Chiaro (lo stesso delle ⚙️ Impostazioni della schermata iniziale: vale per tutta l'app);
 - **Sfondo della chat**: pipistrelli, velo di colore, tinta unita;
 - **Foto senza metadati**;
 - **Rete condivisa** (la stessa della riga 🔗 Rete della schermata iniziale: vale per tutta
@@ -179,13 +186,13 @@ notifiche (i messaggi si vedono già) e aprendola si azzerano.
 - Se Android ferma Termux, l'app lo riaccende da sola (al massimo una volta ogni 5 minuti).
 - **Batteria:** il servizio consuma poco ma qualcosa. Per non farlo fermare, in Impostazioni →
   App → Nyctalus (e Termux) → Batteria scegli **Senza restrizioni**.
-- Per spegnerle: **Strumenti ▾ → 🔔 Notifiche dei messaggi: attive** (toccalo per passare a spente).
+- Per spegnerle: **⚙️ Impostazioni → 🔔 Notifiche dei messaggi: attive** (toccalo per passare a spente).
 - Dopo aver riacceso il telefono apri l'app una volta, oppure attiva l'avvio all'accensione (sotto).
 
 Se il telefono è spento o senza rete, i messaggi restano nella **casella cifrata** della rete e
 ti arrivano, con la notifica, appena torni in rete (`MANUALE-CHAT.md` §3-ter).
 
-**Avvio all'accensione (a scelta):** in **Strumenti ▾ → ⏻ Avvio all'accensione del telefono** decidi
+**Avvio all'accensione (a scelta):** in **⚙️ Impostazioni → ⏻ Avvio all'accensione del telefono** decidi
 tu se, dopo aver riacceso il telefono, Nyctalus deve ripartire da solo (servizio in Termux e
 notifiche) oppure aspettare che tu apra l'app. All'inizio è su **no**.
 

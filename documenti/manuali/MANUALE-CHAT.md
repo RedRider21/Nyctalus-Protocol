@@ -252,7 +252,9 @@ La schermata della chiamata prende i **colori del tema** scelto.
 
 - Menu **⚙** in alto: scegli il **tema** (Notte, Ardesia stile Telegram, Viola
   notturno, Chiaro) e lo **sfondo** della chat (trama a pipistrelli, velo di
-  colore, tinta unita).
+  colore, tinta unita). Il tema è **globale**: sul PC vale anche per il mini menu e il
+  browser (si sceglie pure da ⚙ → Tema del mini menu), sul telefono per tutta l'app
+  (⚙️ Impostazioni della schermata iniziale); cambia al volo ovunque.
 - La finestra si ricorda **dimensione, posizione** e se era **massimizzata**:
   la ritrovi come l'hai lasciata.
 - Finché non apri una conversazione vedi solo il benvenuto col pipistrello; il
