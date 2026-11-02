@@ -230,7 +230,8 @@ public class MainActivity extends Activity {
 
     // ------------------------------------------------------------ impostazioni generali
     static final String[][] TEMI = {{"notte", "Notte", "#5AA9FF", "#0A0E1A"}, {"ardesia", "Ardesia", "#6AB3F3", "#0E1621"},
-            {"viola", "Viola", "#9D85FF", "#120F1C"}, {"chiaro", "Chiaro", "#2F6FE0", "#EEF1F6"}};
+            {"viola", "Viola", "#9D85FF", "#120F1C"}, {"chiaro", "Chiaro", "#2F6FE0", "#EEF1F6"},
+            {"menta", "Menta", "#64D8AE", "#091813"}, {"cielo", "Cielo", "#1E89C8", "#EFF3F5"}};
 
     /**
      * ⚙️ Impostazioni generali (valgono per tutta l'app: schermata d'avvio, chat, chiamate):
@@ -370,7 +371,18 @@ public class MainActivity extends Activity {
 
     /** Stessi colori dei temi della web-app (Notte, Ardesia, Viola, Chiaro). */
     private void caricaTema() {
-        switch (getSharedPreferences(PREFS, MODE_PRIVATE).getString("tema", "notte")) {
+        SharedPreferences pr = getSharedPreferences(PREFS, MODE_PRIVATE);
+        String scelto = pr.getString("tema", "notte");
+        // temi ricavati da un colore: Menta, Cielo e il Personalizzato (stesso calcolo del PC e della chat)
+        String[] da = scelto.equals("menta") ? new String[]{"#3ecf9a", "scuro"}
+                : scelto.equals("cielo") ? new String[]{"#2f9fe0", "chiaro"}
+                : scelto.equals("personalizzato") ? pr.getString("tema_colore", "#3ecf9a scuro").split(" ") : null;
+        if (da != null && da.length >= 2 && da[0].matches("#[0-9a-fA-F]{6}")) {
+            int[] t = deriva(da[0], !"chiaro".equals(da[1]));
+            C_SFONDO = t[0]; C_SCHEDA = t[1]; C_TESTO = t[2]; C_TENUE = t[3]; C_ACCENTO = t[4]; C_BORDO = t[5];
+            return;
+        }
+        switch (scelto) {
             case "ardesia":
                 C_SFONDO = 0xFF0E1621; C_ACCENTO = 0xFF6AB3F3; C_TENUE = 0xFF7F91A4;
                 C_SCHEDA = 0xFF17212B; C_BORDO = 0xFF22303D; C_TESTO = 0xFFF5F5F5; break;
@@ -384,6 +396,45 @@ public class MainActivity extends Activity {
                 C_SFONDO = 0xFF0A0E1A; C_ACCENTO = 0xFF5AA9FF; C_TENUE = 0xFF6B7797;
                 C_SCHEDA = 0xFF0E1424; C_BORDO = 0xFF1B2740; C_TESTO = 0xFFE6ECFF; break;
         }
+    }
+
+    /**
+     * Tavolozza da un colore + chiaro/scuro: STESSO calcolo di nxs_tema.deriva (PC) e di
+     * derivaTema (web-app). Restituisce {sfondo, scheda, testo, tenue, accento, bordo}.
+     */
+    static int[] deriva(String hex, boolean scuro) {
+        int c = android.graphics.Color.parseColor(hex);
+        double r = ((c >> 16) & 255) / 255.0, g = ((c >> 8) & 255) / 255.0, b = (c & 255) / 255.0;
+        double mx = Math.max(r, Math.max(g, b)), mn = Math.min(r, Math.min(g, b)), l = (mx + mn) / 2, h = 0, s = 0;
+        if (mx != mn) {
+            double d = mx - mn;
+            s = l <= .5 ? d / (mx + mn) : d / (2 - mx - mn);
+            double rc = (mx - r) / d, gc = (mx - g) / d, bc = (mx - b) / d;
+            h = (r == mx ? bc - gc : g == mx ? 2 + rc - bc : 4 + gc - rc) / 6;
+            h = ((h % 1) + 1) % 1;
+        }
+        if (scuro) return new int[]{hls(h, .065, Math.min(s, .45)), hls(h, .10, Math.min(s, .40)), hls(h, .93, .35),
+                hls(h, .52, .14), hls(h, Math.max(l, .62), Math.max(s, .55)), hls(h, .17, .30)};
+        return new int[]{hls(h, .95, .25), 0xFFFFFFFF, hls(h, .14, .30), hls(h, .50, .12), hls(h, .45, Math.max(s, .6)),
+                hls(h, .88, .20)};
+    }
+
+    private static int hls(double h, double l, double s) {
+        double r, g, b;
+        if (s == 0) { r = g = b = l; }
+        else {
+            double m2 = l <= .5 ? l * (1 + s) : l + s - l * s, m1 = 2 * l - m2;
+            r = v(m1, m2, h + 1.0 / 3); g = v(m1, m2, h); b = v(m1, m2, h - 1.0 / 3);
+        }
+        return 0xFF000000 | ((int) Math.round(r * 255) << 16) | ((int) Math.round(g * 255) << 8) | (int) Math.round(b * 255);
+    }
+
+    private static double v(double m1, double m2, double x) {
+        x = ((x % 1) + 1) % 1;
+        if (x < 1.0 / 6) return m1 + (m2 - m1) * x * 6;
+        if (x < .5) return m2;
+        if (x < 2.0 / 3) return m1 + (m2 - m1) * (2.0 / 3 - x) * 6;
+        return m1;
     }
 
     /** Segreto d'accesso dell'app: creato una volta, conservato nelle preferenze private. */
@@ -1343,6 +1394,20 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void impostaAccensione(boolean attivo) {
             runOnUiThread(() -> MainActivity.this.impostaAccensione(attivo));
+        }
+
+        /** Tema personalizzato scelto nella chat: un colore + chiaro/scuro (vale per tutta l'app). */
+        @JavascriptInterface
+        public void temaColore(String hex, boolean scuro) {
+            if (hex == null || !hex.matches("#[0-9a-fA-F]{6}")) return;
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                    .putString("tema_colore", hex.toLowerCase() + (scuro ? " scuro" : " chiaro")).apply();
+            runOnUiThread(MainActivity.this::caricaTema);
+        }
+
+        @JavascriptInterface
+        public String temaColoreApp() {
+            return getSharedPreferences(PREFS, MODE_PRIVATE).getString("tema_colore", "#3ecf9a scuro");
         }
 
         /** Il tema scelto nelle impostazioni generali (la web-app lo usa all'avvio). */

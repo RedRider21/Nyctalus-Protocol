@@ -28,6 +28,20 @@
   --trama: url("sfondo-chiaro.svg");
 }
 
+/* temi ricavati da un colore (stesso calcolo di nxs_tema.deriva sul PC) */
+[data-tema="menta"] {
+  --bg: #091813; --sidebar: #0d1f18; --panel: #0f241c; --testo: #e7f3ef; --tenue: #739689;
+  --accento: #64d8ae; --rgb: 100,216,174; --invia: #2fbc88; --invia2: #3bce98;
+  --bolla-in: #1d392f; --bolla-in-testo: #e7f3ef; --out1: #2fbc88; --out2: #3bce98;
+  --trama: url("sfondo-scuro.svg"); --ch-base: #06110d;
+}
+[data-tema="cielo"] {
+  --bg: #eff3f5; --sidebar: #ffffff; --panel: #ffffff; --testo: #19272e; --tenue: #70848f;
+  --accento: #1e89c8; --rgb: 30,137,200; --invia: #1e89c8; --invia2: #269bdf;
+  --bolla-in: #ffffff; --bolla-in-testo: #19272e; --out1: #1e89c8; --out2: #37a3e1;
+  --trama: url("sfondo-chiaro.svg"); --ch-base: #193343;
+}
+
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--testo);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif; font-size: 15px;
@@ -184,6 +198,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .miniature img, .miniature video { width: 100%; height: 110px; object-fit: cover; border-radius: 10px; display: block; }
 .miniature.una { grid-template-columns: 1fr; }
 .miniature.una img, .miniature.una video { height: auto; max-height: 300px; object-fit: contain; }
+.tema-personalizzato { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: -4px 0 14px; }
+.tema-personalizzato input[type=color] { width: 52px; height: 40px; padding: 0; border: 1px solid rgba(var(--rgb), .3);
+  border-radius: 10px; background: none; cursor: pointer; }
+.tema-personalizzato input[type=text] { width: 110px; padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(var(--rgb), .25);
+  background: var(--bg); color: var(--testo); font-family: ui-monospace, monospace; font-size: 15px; }
+.tema-personalizzato .modo { display: flex; gap: 6px; }
+.tema-personalizzato .modo button { border: 2px solid transparent; border-radius: 10px; padding: 8px 14px; background: rgba(var(--rgb), .1); color: var(--testo); }
+.tema-personalizzato .modo button.sel { border-color: var(--accento); }
 .scelta-tema { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
 .scelta-tema button { border: 2px solid transparent; border-radius: 12px; padding: 12px 8px; background: rgba(var(--rgb), .1); }
 .scelta-tema button.sel { border-color: var(--accento); }

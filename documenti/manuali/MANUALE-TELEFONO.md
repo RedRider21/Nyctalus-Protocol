@@ -162,7 +162,7 @@ Note:
 ## 5. Impostazioni (☰)
 
 - il tuo **Contact ID** con **Copia** e **Condividi**;
-- **Tema**: Notte, Ardesia (stile Telegram), Viola, Chiaro (vale per tutta l'app);
+- **Tema**: Notte, Ardesia (stile Telegram), Viola, Chiaro, Menta, Cielo, oppure **🎨 Personalizzato** (selettore di colore o codice `#rrggbb`, più Scuro/Chiaro). Vale per tutta l'app;
 - **Sfondo della chat**: pipistrelli, velo di colore, tinta unita;
 - **Foto senza metadati**;
 - **Rete condivisa** (la stessa della riga 🔗 Rete della schermata iniziale: vale per tutta

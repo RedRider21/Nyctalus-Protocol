@@ -10,7 +10,7 @@ chrome = subprocess.Popen(["google-chrome", "--headless=new", "--disable-gpu", "
                            "--force-device-scale-factor=2", "--hide-scrollbars",
                            # microfono/fotocamera FINTI (segnale di prova): mai quelli veri
                            "--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream",
-                           "--autoplay-policy=no-user-gesture-required", "about:blank"],
+                           "--autoplay-policy=no-user-gesture-required", "--mute-audio", "about:blank"],
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 try:
     for _ in range(50):

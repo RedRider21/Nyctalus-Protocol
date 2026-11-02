@@ -111,9 +111,15 @@ cat > "$TMP/passi.json" <<EOF
  ["vai","$U/?avvio=1#impostazioni"],["attendi",2.5],
  ["js","(()=>{const f=document.getElementById('foglio'), r=f.getBoundingClientRect(), p=f.querySelector('.impostazioni-pagina'); return 'SOLOIMP ' + document.body.classList.contains('solo-rubrica') + ',' + (r.top===0 && r.height>=innerHeight-1) + ',' + !!f.querySelector('.indietro-rubrica') + ',' + (p?p.querySelectorAll('.scelta-tema').length:0) + ',' + (p&&p.querySelector('.codice-id').textContent.endsWith('.nyct')) + ',' + !!(p&&p.querySelector('.stato-rete-imp'))})()"],
  ["foto","${NYCT_FOTO:-$TMP}/impostazioni-schermo.png"],
+ ["js","(()=>{const b=[...document.querySelectorAll('#foglio .scelta-tema > button')].find(x=>x.textContent.includes('Menta')); b.click(); const v=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(); return 'MENTA '+document.documentElement.dataset.tema+','+v})()"],
+ ["foto","${NYCT_FOTO:-$TMP}/impostazioni-menta.png"],
+ ["js","(()=>{const b=[...document.querySelectorAll('#foglio .scelta-tema > button')].find(x=>x.textContent.includes('Personalizzato')); b.click(); const p=document.querySelector('#foglio .tema-personalizzato'); const c=p.querySelector('input[type=text]'); c.value='#ff8800'; c.dispatchEvent(new Event('input')); [...p.querySelectorAll('.modo button')].find(x=>x.textContent==='Chiaro').click(); const st=getComputedStyle(document.documentElement); const atteso=derivaTema('#ff8800',false); return 'PERS '+document.documentElement.dataset.tema+','+!p.classList.contains('nascosto')+','+(st.getPropertyValue('--bg').trim()===atteso.bg)+','+(st.getPropertyValue('--accento').trim()===atteso.accento)+','+(p.querySelector('input[type=color]').value==='#ff8800')})()"],
+ ["foto","${NYCT_FOTO:-$TMP}/impostazioni-personalizzato.png"],
+ ["js","(()=>{const b=[...document.querySelectorAll('#foglio .scelta-tema > button')].find(x=>x.textContent.includes('Notte')); b.click(); return 'NOTTE '+document.documentElement.style.getPropertyValue('--bg')+'|'+document.querySelector('#foglio .tema-personalizzato').classList.contains('nascosto')})()"],
  ["js","(()=>{document.querySelector('#foglio .indietro-rubrica').click(); return 'ESCIIMP ' + document.body.classList.contains('solo-rubrica') + ',' + document.getElementById('foglio').classList.contains('nascosto')})()"]]
 EOF
-timeout 120 python3 "$STRUMENTI/cdp.py" "$TMP/chrome" "$TMP/passi.json" > "$TMP/r.txt" 2>&1
+timeout 300 python3 "$STRUMENTI/cdp.py" "$TMP/chrome" "$TMP/passi.json" > "$TMP/r.txt" 2>&1
+[ -n "${NYCT_DIAG:-}" ] && cp "$TMP/r.txt" "$NYCT_DIAG" 2>/dev/null
 r() { grep -oE "^js → $1 .*" "$TMP/r.txt" | head -1 | cut -d' ' -f4-; }
 [ "$(r RIGHE)" = "1" ] && pass "elenco delle chat visualizzato" || fail "elenco: $(r RIGHE)"
 [ "$(r ID)" = "ok" ] && pass "Contact ID ricevuto dal motore" || fail "Contact ID mancante"
@@ -162,5 +168,8 @@ r PESO | grep -q "^true" && pass "immagini sotto il limite del motore ($(r PESO 
 [ "$(r SCRIVI)" = "false,true,true" ] && pass "dalla rubrica, scegliendo qualcuno si esce dalla rubrica e si apre la conversazione" || fail "scrivi dalla rubrica: $(r SCRIVI)"
 [ "$(r DALLACHAT)" = "true,false,false" ] && pass "☰ della chat: impostazioni in finestra, chiudendole si resta nella chat (non si torna alla home dell'app)" || fail "impostazioni dalla chat: $(r DALLACHAT)"
 [ "$(r SOLOIMP)" = "true,true,true,2,true,true" ] && pass "⚙️ dell'app (#impostazioni): le impostazioni COMPLETE a tutto schermo (Contact ID, tema, sfondo, rete), con «←»" || fail "impostazioni a schermo intero: $(r SOLOIMP)"
+[ "$(r MENTA)" = "menta,#091813" ] && pass "tema nuovo «Menta» (verde): stessi colori calcolati sul PC" || fail "tema Menta: $(r MENTA)"
+[ "$(r PERS)" = "personalizzato,true,true,true,true" ] && pass "tema Personalizzato: codice #ff8800 + Chiaro → tavolozza ricavata (selettore di colore allineato)" || fail "tema personalizzato: $(r PERS)"
+[ "$(r NOTTE)" = "|true" ] && pass "tornando a un tema pronto, i colori personalizzati si tolgono" || fail "ritorno a Notte: $(r NOTTE)"
 [ "$(r ESCIIMP)" = "false,true" ] && pass "«←» chiude le impostazioni (nell'app si torna alla schermata iniziale)" || fail "uscita dalle impostazioni: $(r ESCIIMP)"
 [ "$KO" -eq 0 ]

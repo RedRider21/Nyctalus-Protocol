@@ -114,7 +114,7 @@ const salva = (k, v) => { try { localStorage.setItem("nyct." + k, JSON.stringify
 const S = {
   me: "", contatti: new Map(), online: new Set(), ultimo: new Map(), visti: new Map(), attivo: null,
   nonLetti: salvato("nonLetti", {}), fissati: salvato("fissati", []),
-  tema: salvato("tema", "notte"), sfondo: salvato("sfondo", "pipistrelli"), exif: salvato("exif", true),
+  tema: salvato("tema", "notte"), temaColore: salvato("temaColore", { c: "#3ecf9a", scuro: true }), sfondo: salvato("sfondo", "pipistrelli"), exif: salvato("exif", true),
   trasferimenti: new Map(), ultimoGiorno: null, ws: null, filtro: "",
   storia: null, cacheChat: null, inFondo: true,
 };
@@ -983,9 +983,31 @@ function impostazioni(solo) {
   if (HOST) { const bs = el("button", "", "📤 Condividi"); bs.onclick = () => HOST.condividi(S.me); bott.appendChild(bs); }
   else if (navigator.share) { const bs = el("button", "", "📤 Condividi"); bs.onclick = () => navigator.share({ text: S.me }).catch(() => {}); bott.appendChild(bs); }
   const temi = el("div", "scelta-tema");
-  [["notte", "🌙 Notte"], ["ardesia", "🪨 Ardesia"], ["viola", "🔮 Viola"], ["chiaro", "☀️ Chiaro"]].forEach(([k, nome]) => {
+  // tema personalizzato: un colore (selettore o codice #rrggbb) + chiaro/scuro; il resto si ricava
+  const pers = el("div", "tema-personalizzato" + (S.tema === "personalizzato" ? "" : " nascosto"));
+  const selettore = el("input"); selettore.type = "color"; selettore.value = S.temaColore.c;
+  const codice = el("input"); codice.type = "text"; codice.value = S.temaColore.c; codice.maxLength = 7; codice.spellcheck = false;
+  const bScuro = el("button", S.temaColore.scuro ? "sel" : "", "Scuro"), bChiaro = el("button", S.temaColore.scuro ? "" : "sel", "Chiaro");
+  const modo = el("div", "modo"); modo.append(bScuro, bChiaro);
+  pers.append(selettore, codice, modo);
+  const usaColore = (c, scuro) => {
+    S.temaColore = { c: c.toLowerCase(), scuro }; salva("temaColore", S.temaColore);
+    S.tema = "personalizzato"; salva("tema", "personalizzato"); applicaAspetto();
+    bScuro.classList.toggle("sel", scuro); bChiaro.classList.toggle("sel", !scuro);
+  };
+  selettore.oninput = () => { codice.value = selettore.value; usaColore(selettore.value, S.temaColore.scuro); };
+  codice.oninput = () => { if (/^#[0-9a-fA-F]{6}$/.test(codice.value)) { selettore.value = codice.value.toLowerCase(); usaColore(codice.value, S.temaColore.scuro); } };
+  bScuro.onclick = () => usaColore(S.temaColore.c, true);
+  bChiaro.onclick = () => usaColore(S.temaColore.c, false);
+  [["notte", "🌙 Notte"], ["ardesia", "🪨 Ardesia"], ["viola", "🔮 Viola"], ["chiaro", "☀️ Chiaro"],
+   ["menta", "🌿 Menta"], ["cielo", "🩵 Cielo"], ["personalizzato", "🎨 Personalizzato"]].forEach(([k, nome]) => {
     const b = el("button", k === S.tema ? "sel" : "", nome);
-    b.onclick = () => { S.tema = k; salva("tema", k); applicaAspetto(); temi.querySelectorAll("button").forEach((x) => x.classList.toggle("sel", x === b)); };
+    b.onclick = () => {
+      if (k === "personalizzato") usaColore(S.temaColore.c, S.temaColore.scuro);
+      else { S.tema = k; salva("tema", k); applicaAspetto(); }
+      pers.classList.toggle("nascosto", k !== "personalizzato");
+      temi.querySelectorAll(":scope > button").forEach((x) => x.classList.toggle("sel", x === b));
+    };
     temi.appendChild(b);
   });
   const sfondi = el("div", "scelta-tema");
@@ -1061,7 +1083,7 @@ function impostazioni(solo) {
       interr("⏻ Riparti da solo all'accensione del telefono", HOST.accensioneAttiva(), (v) => HOST.impostaAccensione(v)));
   }
   const contenuto = [el("p", "", "Il tuo Contact ID — dallo agli amici perché ti scrivano (non è segreto):"), id, bott,
-    el("p", "", "Tema"), temi, el("p", "", "Sfondo della chat"), sfondi, l, ...app, el("p", "", "Rete Nyctalus"), statoRete, servizi,
+    el("p", "", "Tema"), temi, pers, el("p", "", "Sfondo della chat"), sfondi, l, ...app, el("p", "", "Rete Nyctalus"), statoRete, servizi,
     el("p", "", "Rete condivisa"), quale, condivisa];
   if (solo) {
     S.soloRubrica = true; document.body.classList.add("solo-rubrica"); if (HOST && HOST.rubrica) HOST.rubrica(true);
@@ -1076,15 +1098,59 @@ function impostazioni(solo) {
 }
 
 // tema scelto nelle ⚙️ Impostazioni generali dell'app (Android): vale anche qui, e cambia al volo
-try { if (HOST && HOST.temaApp) { const t = HOST.temaApp(); if (/^[a-z]{1,20}$/.test(t)) { S.tema = t; salva("tema", t); } } } catch (e) { /* niente */ }
-window.nyctTema = (t) => { if (!/^[a-z]{1,20}$/.test(t)) return; S.tema = t; salva("tema", t); applicaAspetto(); };
+const leggiColoreApp = () => {     // «#rrggbb scuro|chiaro» dall'app Android (tema personalizzato)
+  try {
+    const p = (HOST && HOST.temaColoreApp ? HOST.temaColoreApp() : "").split(" ");
+    if (/^#[0-9a-fA-F]{6}$/.test(p[0])) { S.temaColore = { c: p[0].toLowerCase(), scuro: p[1] !== "chiaro" }; salva("temaColore", S.temaColore); }
+  } catch (e) { /* niente */ }
+};
+try { if (HOST && HOST.temaApp) { const t = HOST.temaApp(); if (/^[a-z]{1,20}$/.test(t)) { S.tema = t; salva("tema", t); if (t === "personalizzato") leggiColoreApp(); } } } catch (e) { /* niente */ }
+window.nyctTema = (t) => { if (!/^[a-z]{1,20}$/.test(t)) return; if (t === "personalizzato") leggiColoreApp(); S.tema = t; salva("tema", t); applicaAspetto(); };
 
+// Tutta la tavolozza da un colore + chiaro/scuro: STESSO calcolo di nxs_tema.deriva (PC) e di
+// MainActivity.deriva (app Android). Tenerli uguali.
+function hls2hex(h, l, s) {
+  const v = (m1, m2, x) => { x = ((x % 1) + 1) % 1; return x < 1 / 6 ? m1 + (m2 - m1) * x * 6 : x < .5 ? m2 : x < 2 / 3 ? m1 + (m2 - m1) * (2 / 3 - x) * 6 : m1; };
+  let r, g, b;
+  if (s === 0) r = g = b = l;
+  else { const m2 = l <= .5 ? l * (1 + s) : l + s - l * s, m1 = 2 * l - m2; r = v(m1, m2, h + 1 / 3); g = v(m1, m2, h); b = v(m1, m2, h - 1 / 3); }
+  return "#" + [r, g, b].map((x) => Math.round(x * 255).toString(16).padStart(2, "0")).join("");
+}
+function derivaTema(hex, scuro) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex || "")) hex = "#5aa9ff";
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.substr(i, 2), 16) / 255);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  let h = 0, s = 0;
+  if (mx !== mn) {
+    const d = mx - mn; s = l <= .5 ? d / (mx + mn) : d / (2 - mx - mn);
+    const rc = (mx - r) / d, gc = (mx - g) / d, bc = (mx - b) / d;
+    h = (r === mx ? bc - gc : g === mx ? 2 + rc - bc : 4 + gc - rc) / 6; h = ((h % 1) + 1) % 1;
+  }
+  const c = (ss, ll) => hls2hex(h, ll, ss), M = Math.max, m = Math.min;
+  const t = scuro
+    ? { bg: c(m(s, .45), .065), sidebar: c(m(s, .42), .085), panel: c(m(s, .40), .10), testo: c(.35, .93), tenue: c(.14, .52),
+        accento: c(M(s, .55), M(l, .62)), invia: c(M(s, .6), .46), invia2: c(M(s, .6), .52), "bolla-in": c(.32, .17), "ch-base": c(.45, .045) }
+    : { bg: c(.25, .95), sidebar: "#ffffff", panel: "#ffffff", testo: c(.30, .14), tenue: c(.12, .50),
+        accento: c(M(s, .6), .45), invia: c(M(s, .6), .45), invia2: c(M(s, .6), .51), "bolla-in": "#ffffff", "ch-base": c(.45, .18) };
+  t["bolla-in-testo"] = t.testo; t.out1 = t.invia; t.out2 = scuro ? t.invia2 : c(M(s, .6), .55);
+  t.rgb = [1, 3, 5].map((i) => parseInt(t.accento.substr(i, 2), 16)).join(",");
+  t.trama = scuro ? 'url("sfondo-scuro.svg")' : 'url("sfondo-chiaro.svg")';
+  return t;
+}
+const VAR_TEMA = ["bg", "sidebar", "panel", "testo", "tenue", "accento", "invia", "invia2", "bolla-in", "ch-base",
+  "bolla-in-testo", "out1", "out2", "rgb", "trama"];
 function applicaAspetto() {
+  const radice = document.documentElement;
+  if (S.tema === "personalizzato") {
+    const t = derivaTema(S.temaColore.c, S.temaColore.scuro);
+    VAR_TEMA.forEach((k) => radice.style.setProperty("--" + k, t[k]));
+  } else VAR_TEMA.forEach((k) => radice.style.removeProperty("--" + k));
   document.documentElement.dataset.tema = S.tema;
   document.documentElement.dataset.sfondo = S.sfondo;
   const pannello = getComputedStyle(document.documentElement).getPropertyValue("--panel").trim();
   document.querySelector('meta[name="theme-color"]').content = pannello || "#0e1424";
   if (HOST && HOST.tema) HOST.tema(S.tema);      // la schermata d'avvio dell'app usa gli stessi colori
+  if (HOST && HOST.temaColore && S.tema === "personalizzato") HOST.temaColore(S.temaColore.c, S.temaColore.scuro);
 }
 
 // ---------- pulsanti fissi e avvio ----------------------------------------------------------
