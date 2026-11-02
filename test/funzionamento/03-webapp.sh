@@ -115,6 +115,7 @@ cat > "$TMP/passi.json" <<EOF
  ["foto","${NYCT_FOTO:-$TMP}/impostazioni-menta.png"],
  ["js","(()=>{const b=[...document.querySelectorAll('#foglio .scelta-tema > button')].find(x=>x.textContent.includes('Personalizzato')); b.click(); const p=document.querySelector('#foglio .tema-personalizzato'); const c=p.querySelector('input[type=text]'); c.value='#ff8800'; c.dispatchEvent(new Event('input')); [...p.querySelectorAll('.modo button')].find(x=>x.textContent==='Chiaro').click(); const st=getComputedStyle(document.documentElement); const atteso=derivaTema('#ff8800',false); return 'PERS '+document.documentElement.dataset.tema+','+!p.classList.contains('nascosto')+','+(st.getPropertyValue('--bg').trim()===atteso.bg)+','+(st.getPropertyValue('--accento').trim()===atteso.accento)+','+(p.querySelector('input[type=color]').value==='#ff8800')})()"],
  ["foto","${NYCT_FOTO:-$TMP}/impostazioni-personalizzato.png"],
+ ["js","(()=>{document.querySelector('#foglio .tema-personalizzato .ripristina').click(); const sel=[...document.querySelector('#foglio .scelta-tema').querySelectorAll(':scope > button.sel')].map(x=>x.textContent.trim()).join('/'); return 'RIPR '+S.tema+','+S.temaColore.c+','+S.temaColore.scuro+','+document.querySelector('#foglio .tema-personalizzato').classList.contains('nascosto')+','+sel+','+(document.documentElement.style.getPropertyValue('--bg')==='')})()"],
  ["js","(()=>{const b=[...document.querySelectorAll('#foglio .scelta-tema > button')].find(x=>x.textContent.includes('Notte')); b.click(); return 'NOTTE '+document.documentElement.style.getPropertyValue('--bg')+'|'+document.querySelector('#foglio .tema-personalizzato').classList.contains('nascosto')})()"],
  ["js","(()=>{document.querySelector('#foglio .indietro-rubrica').click(); return 'ESCIIMP ' + document.body.classList.contains('solo-rubrica') + ',' + document.getElementById('foglio').classList.contains('nascosto')})()"]]
 EOF
@@ -170,6 +171,7 @@ r PESO | grep -q "^true" && pass "immagini sotto il limite del motore ($(r PESO 
 [ "$(r SOLOIMP)" = "true,true,true,2,true,true" ] && pass "⚙️ dell'app (#impostazioni): le impostazioni COMPLETE a tutto schermo (Contact ID, tema, sfondo, rete), con «←»" || fail "impostazioni a schermo intero: $(r SOLOIMP)"
 [ "$(r MENTA)" = "menta,#091813" ] && pass "tema nuovo «Menta» (verde): stessi colori calcolati sul PC" || fail "tema Menta: $(r MENTA)"
 [ "$(r PERS)" = "personalizzato,true,true,true,true" ] && pass "tema Personalizzato: codice #ff8800 + Chiaro → tavolozza ricavata (selettore di colore allineato)" || fail "tema personalizzato: $(r PERS)"
+[ "$(r RIPR)" = "notte,#3ecf9a,true,true,🌙 Notte,true" ] && pass "↺ Ripristina: personalizzato come mai toccato (colore iniziale) e tema Notte" || fail "ripristino del personalizzato: $(r RIPR)"
 [ "$(r NOTTE)" = "|true" ] && pass "tornando a un tema pronto, i colori personalizzati si tolgono" || fail "ritorno a Notte: $(r NOTTE)"
 [ "$(r ESCIIMP)" = "false,true" ] && pass "«←» chiude le impostazioni (nell'app si torna alla schermata iniziale)" || fail "uscita dalle impostazioni: $(r ESCIIMP)"
 [ "$KO" -eq 0 ]

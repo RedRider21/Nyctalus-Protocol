@@ -989,7 +989,9 @@ function impostazioni(solo) {
   const codice = el("input"); codice.type = "text"; codice.value = S.temaColore.c; codice.maxLength = 7; codice.spellcheck = false;
   const bScuro = el("button", S.temaColore.scuro ? "sel" : "", "Scuro"), bChiaro = el("button", S.temaColore.scuro ? "" : "sel", "Chiaro");
   const modo = el("div", "modo"); modo.append(bScuro, bChiaro);
-  pers.append(selettore, codice, modo);
+  const bRipr = el("button", "ripristina", "↺ Ripristina");
+  bRipr.title = "Torna ai colori iniziali del personalizzato e al tema Notte";
+  pers.append(selettore, codice, modo, bRipr);
   const usaColore = (c, scuro) => {
     S.temaColore = { c: c.toLowerCase(), scuro }; salva("temaColore", S.temaColore);
     S.tema = "personalizzato"; salva("tema", "personalizzato"); applicaAspetto();
@@ -997,6 +999,16 @@ function impostazioni(solo) {
   };
   selettore.oninput = () => { codice.value = selettore.value; usaColore(selettore.value, S.temaColore.scuro); };
   codice.oninput = () => { if (/^#[0-9a-fA-F]{6}$/.test(codice.value)) { selettore.value = codice.value.toLowerCase(); usaColore(codice.value, S.temaColore.scuro); } };
+  // come se il personalizzato non fosse mai stato toccato: colore iniziale e tema predefinito
+  bRipr.onclick = () => {
+    S.temaColore = { c: "#3ecf9a", scuro: true }; salva("temaColore", S.temaColore);
+    selettore.value = codice.value = S.temaColore.c; bScuro.classList.add("sel"); bChiaro.classList.remove("sel");
+    if (HOST && HOST.temaColore) HOST.temaColore(S.temaColore.c, true);
+    S.tema = "notte"; salva("tema", "notte"); applicaAspetto();
+    pers.classList.add("nascosto");
+    temi.querySelectorAll(":scope > button").forEach((x) => x.classList.toggle("sel", x.textContent.includes("Notte")));
+    toast("Personalizzato ripristinato · tema Notte");
+  };
   bScuro.onclick = () => usaColore(S.temaColore.c, true);
   bChiaro.onclick = () => usaColore(S.temaColore.c, false);
   [["notte", "🌙 Notte"], ["ardesia", "🪨 Ardesia"], ["viola", "🔮 Viola"], ["chiaro", "☀️ Chiaro"],

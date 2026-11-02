@@ -2077,6 +2077,12 @@ class Chat(Gtk.Window):
     def _tema_personalizzato(self):
         """Personalizzato…: un colore (tavolozza o codice) e chiaro/scuro; vale per tutto il PC."""
         scelta = nxs_tema.scegli_colore(self, _t("chat.tema.personalizzato"))
+        if scelta == nxs_tema.RIPRISTINA:
+            nxs_tema.ripristina_personalizzato()
+            self.ui["tema"] = nxs_tema.PREDEFINITO
+            self._salva_ui()
+            self._applica_aspetto()
+            return False
         if scelta and nxs_tema.scrivi_personalizzato(*scelta):
             self.ui["tema"] = "personalizzato"
             self._salva_ui()

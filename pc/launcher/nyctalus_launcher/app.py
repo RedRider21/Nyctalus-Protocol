@@ -518,6 +518,10 @@ class Launcher(Gtk.Window):
 
     def _tema_personalizzato(self):
         scelta = nxs_tema.scegli_colore(self, _t("chat.tema.personalizzato"))
+        if scelta == nxs_tema.RIPRISTINA:
+            nxs_tema.ripristina_personalizzato()
+            self.prov.load_from_data(_css(nxs_tema.PREDEFINITO))
+            return False
         if scelta and nxs_tema.scrivi_personalizzato(*scelta):
             self.prov.load_from_data(_css(nxs_tema.PERSONALIZZATO))
         return False

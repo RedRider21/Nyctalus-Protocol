@@ -106,6 +106,16 @@ def passo5():
 def passo6():
     p = nxs_tema.deriva("#2266ff", True)
     esito(rgb(p["BG"]) in css(chat.prov), "cambiando solo il colore personalizzato, i programmi aperti si aggiornano")
+    nxs_tema.ripristina_personalizzato()                # «↺ Ripristina»
+    GLib.timeout_add(800, passo7)
+    return False
+
+
+def passo7():
+    n = nxs_tema.TEMI["notte"]
+    esito(nxs_tema.leggi() == "notte" and nxs_tema.personalizzato() == nxs_tema.COLORE_INIZIALE
+          and chat.ui["tema"] == "notte" and rgb(n["BG"]) in css(chat.prov) and rgb(n["PANEL"]) in css(lau.prov),
+          "↺ Ripristina: personalizzato come mai toccato, tutti i programmi tornano a Notte")
     return fine()
 
 

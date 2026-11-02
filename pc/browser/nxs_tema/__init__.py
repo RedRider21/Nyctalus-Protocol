@@ -117,7 +117,7 @@ def personalizzato():
         pass
     if len(p) >= 3 and p[0] == PERSONALIZZATO:
         return p[1], p[2] != "chiaro"
-    return "#3ecf9a", True
+    return COLORE_INIZIALE
 
 
 def scrivi_personalizzato(colore, scuro=True):
@@ -189,15 +189,31 @@ def osserva(richiamo):
     return mon
 
 
+COLORE_INIZIALE = ("#3ecf9a", True)
+
+
+def ripristina_personalizzato():
+    """Come se il personalizzato non fosse mai stato toccato: si dimentica il colore scelto e si
+    torna al tema predefinito (per tutti i programmi)."""
+    try:
+        file_tema().with_name("tema-personalizzato").unlink()
+    except OSError:
+        pass
+    return scrivi(PREDEFINITO)
+
+
+RIPRISTINA = "ripristina"
+
+
 def scegli_colore(madre=None, titolo="Tema personalizzato"):
     """Finestra GTK per il tema personalizzato: colore (tavolozza o codice #rrggbb) e chiaro/
-    scuro, con l'anteprima. Restituisce (colore, scuro) oppure None se si annulla."""
+    scuro, con l'anteprima. Restituisce (colore, scuro), RIPRISTINA, oppure None se si annulla."""
     import gi
     gi.require_version("Gtk", "3.0")
     from gi.repository import Gdk, Gtk
     colore, scuro_ora = personalizzato()
     d = Gtk.Dialog(title=titolo, transient_for=madre, modal=True)
-    d.add_buttons("Annulla", Gtk.ResponseType.CANCEL, "Usa questo tema", Gtk.ResponseType.OK)
+    d.add_buttons("↺ Ripristina", 1, "Annulla", Gtk.ResponseType.CANCEL, "Usa questo tema", Gtk.ResponseType.OK)
     d.set_default_response(Gtk.ResponseType.OK)
     box = d.get_content_area()
     box.set_spacing(10)
@@ -253,5 +269,7 @@ def scegli_colore(madre=None, titolo="Tema personalizzato"):
     esito = d.run()
     scelta = (stato["colore"], b_scuro.get_active())
     d.destroy()
+    if esito == 1:
+        return RIPRISTINA          # chi chiama usa ripristina_personalizzato()
     return scelta if esito == Gtk.ResponseType.OK else None
 

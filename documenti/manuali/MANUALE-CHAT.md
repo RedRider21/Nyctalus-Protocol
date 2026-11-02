@@ -253,7 +253,8 @@ La schermata della chiamata prende i **colori del tema** scelto.
 - Menu **⚙** in alto: scegli il **tema** (Notte, Ardesia stile Telegram, Viola
   notturno, Chiaro, **Menta** verde, **Cielo** celeste chiaro, oppure **Personalizzato**: scegli tu un
   colore — dalla tavolozza o scrivendo il codice, es. `#3ecf9a` — e se lo vuoi chiaro o scuro; fondo,
-  pannelli, bolle e schermate delle chiamate si ricavano da soli, sempre leggibili) e lo **sfondo** della chat (trama a pipistrelli, velo di
+  pannelli, bolle e schermate delle chiamate si ricavano da soli, sempre leggibili; **↺ Ripristina**
+  riporta il personalizzato ai colori iniziali e il tema a Notte, come se non fosse mai stato toccato) e lo **sfondo** della chat (trama a pipistrelli, velo di
   colore, tinta unita). Il tema è **globale**: sul PC vale anche per il mini menu e il
   browser (si sceglie pure da ⚙ → Tema del mini menu), sul telefono per tutta l'app
   (pulsante Impostazioni della schermata iniziale); cambia al volo ovunque.
