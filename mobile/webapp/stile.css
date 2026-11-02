@@ -415,3 +415,50 @@ body.solo-rubrica #velo { background: var(--panel); }
 #dialogo .info-riga .cosa { color: var(--testo); }
 #dialogo .info-riga .quando { color: var(--tenue); font-size: 13.5px; text-align: right; }
 #dialogo .info-riga.no .cosa, #dialogo .info-riga.no .quando { opacity: .5; }
+
+/* --- programma File (file grandi ai contatti) ------------------------------------------- */
+.file-pagina { padding: 0 12px max(20px, env(safe-area-inset-bottom)); }
+.xf-barra-alta { display: flex; gap: 8px; align-items: center; margin: 2px 2px 10px; }
+.xf-nuovo { flex: 1; border: 0; border-radius: 12px; padding: 12px; background: var(--invia); color: #fff; font-weight: 600; font-size: 15px; }
+.xf-ing { border: 0; border-radius: 12px; padding: 10px 14px; background: rgba(var(--rgb), .12); color: var(--testo); font-size: 18px; }
+.xf-schede { display: flex; border-bottom: 1px solid rgba(var(--rgb), .14); margin-bottom: 8px; }
+.xf-schede button { flex: 1; border: 0; background: none; color: var(--tenue); padding: 10px 6px; font-weight: 600;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.xf-schede button.sel { color: var(--testo); border-bottom-color: var(--accento); }
+.xf-vuoto { color: var(--tenue); text-align: center; white-space: pre-line; line-height: 1.5; padding: 40px 10px; }
+.xf-riga { display: flex; gap: 12px; background: var(--panel); border: 1px solid rgba(var(--rgb), .10); border-radius: 14px;
+  padding: 12px; margin: 8px 0; }
+.xf-ic { font-size: 26px; width: 34px; text-align: center; flex: none; padding-top: 2px; }
+.xf-corpo { flex: 1; min-width: 0; }
+.xf-testa { display: flex; flex-wrap: wrap; gap: 2px 10px; justify-content: space-between; align-items: baseline; }
+.xf-nome { font-weight: 600; color: var(--testo); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.xf-sotto { color: var(--tenue); font-size: 12.5px; }
+.xf-barra { height: 6px; border-radius: 3px; background: rgba(var(--rgb), .14); margin: 8px 0 6px; overflow: hidden; }
+.xf-pieno { height: 100%; background: var(--accento); border-radius: 3px; transition: width .3s ease; }
+.xf-barra.ferma .xf-pieno { background: var(--tenue); }
+.xf-barra.fatto .xf-pieno { background: #3ec46d; }
+.xf-stato { color: var(--tenue); font-size: 13px; }
+.xf-stato.chiede { color: var(--accento); font-weight: 600; }
+.xf-stato.errore { color: #ef6b6b; }
+.xf-stato.fatto { color: #3ec46d; }
+.xf-azioni { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; flex-wrap: wrap; }
+.xf-azioni button { border: 0; border-radius: 10px; padding: 8px 16px; background: rgba(var(--rgb), .12); color: var(--testo); font-weight: 600; }
+.xf-azioni button.primario { background: var(--invia); color: #fff; }
+.xf-azioni button.pericolo { color: #ef6b6b; }
+.xf-griglia { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 0 12px; max-height: 60vh; overflow-y: auto; }
+.xf-tile { position: relative; aspect-ratio: 1; border: 0; padding: 0; background: rgba(var(--rgb), .1); border-radius: 8px; overflow: hidden; }
+.xf-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.xf-tile .xf-dim { position: absolute; left: 4px; bottom: 4px; font-size: 11px; color: #fff; background: rgba(0,0,0,.55); padding: 1px 6px; border-radius: 6px; }
+.xf-tile.scelta { outline: 3px solid var(--accento); outline-offset: -3px; }
+.xf-tile.scelta::after { content: "✓"; position: absolute; top: 4px; right: 6px; color: #fff; background: var(--accento);
+  border-radius: 50%; width: 22px; height: 22px; display: grid; place-items: center; font-size: 13px; }
+.xf-invia { display: block; width: calc(100% - 24px); margin: 12px; border: 0; border-radius: 12px; padding: 12px; background: var(--invia); color: #fff; font-weight: 600; }
+.xf-invia:disabled { opacity: .4; }
+.xf-sfoglia { max-height: 62vh; overflow-y: auto; }
+.xf-sfoglia .voce.scelta { background: rgba(var(--rgb), .18); }
+.xf-sfoglia .voce.scelta::after { content: "✓"; margin-left: auto; color: var(--accento); font-weight: 700; }
+.xf-spazio { display: flex; justify-content: space-between; gap: 10px; color: var(--tenue); font-size: 13px; padding: 4px 4px 2px; }
+.xf-spunta { width: 20px; height: 20px; margin: 4px 0 0; accent-color: var(--accento); flex: none; }
+.xf-riga.scelta { border-color: var(--accento); }
+.xf-selezione { justify-content: space-between; margin: 6px 0; }
+

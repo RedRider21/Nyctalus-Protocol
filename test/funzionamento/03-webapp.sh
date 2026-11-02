@@ -32,6 +32,11 @@ command -v ffmpeg >/dev/null && ffmpeg -v error -f lavfi -i testsrc2=size=320x24
 # tante foto più vecchie (come un telefono vero): la griglia non deve schiacciare le caselle
 V="$TMP/galleria/Vecchie"; mkdir -p "$V"
 for k in $(seq -w 1 60); do cp "$G/IMG_1e88e5.png" "$V/OLD_$k.png"; touch -d "2 days ago" "$V/OLD_$k.png"; done
+# programma File: l'archivio privato (file ricevuti) e le cartelle «del telefono» finte
+mkdir -p "$H/.nyctalus-chat/allegati/prova"
+head -c 2097152 /dev/urandom > "$H/.nyctalus-chat/allegati/prova/distro.iso"
+head -c 4096 /dev/urandom > "$H/.nyctalus-chat/allegati/prova/nota.pdf"
+NYCTALUS_SFOGLIA="$TMP/galleria" NYCTALUS_SFOGLIA_SOLO=1 \
 NYCTALUS_GALLERIA="$TMP/galleria" NYCTALUS_GALLERIA_SOLO=1 HOME="$H" NYCTALUS_BIN="$BIN" python3 "$ROOT/mobile/orchestratore/nyctalus_mobile.py" > "$TMP/o.log" 2>&1 & PIDS+=($!)
 [ -n "$(attendi_regex "$TMP/o.log" 'servizi pronti' 40)" ] || { fail "servizi non avviati"; exit 1; }
 U="http://127.0.0.1:19733"
@@ -119,7 +124,18 @@ cat > "$TMP/passi.json" <<EOF
  ["foto","${NYCT_FOTO:-$TMP}/impostazioni-personalizzato.png"],
  ["js","(()=>{document.querySelector('#foglio .tema-personalizzato .ripristina').click(); const sel=[...document.querySelector('#foglio .scelta-tema').querySelectorAll(':scope > button.sel')].map(x=>x.textContent.trim()).join('/'); return 'RIPR '+S.tema+','+S.temaColore.c+','+S.temaColore.scuro+','+document.querySelector('#foglio .tema-personalizzato').classList.contains('nascosto')+','+sel+','+(document.documentElement.style.getPropertyValue('--bg')==='')})()"],
  ["js","(()=>{const b=[...document.querySelectorAll('#foglio .scelta-tema > button')].find(x=>x.textContent.includes('Notte')); b.click(); return 'NOTTE '+document.documentElement.style.getPropertyValue('--bg')+'|'+document.querySelector('#foglio .tema-personalizzato').classList.contains('nascosto')})()"],
- ["js","(()=>{document.querySelector('#foglio .indietro-rubrica').click(); return 'ESCIIMP ' + document.body.classList.contains('solo-rubrica') + ',' + document.getElementById('foglio').classList.contains('nascosto')})()"]]
+ ["js","(()=>{document.querySelector('#foglio .indietro-rubrica').click(); return 'ESCIIMP ' + document.body.classList.contains('solo-rubrica') + ',' + document.getElementById('foglio').classList.contains('nascosto')})()"],
+ ["vai","$U/?avvio=1#file"],["attendi",3],
+ ["js","(()=>{window._xinv=[]; const v=S.ws.send.bind(S.ws); S.ws.send=(r)=>{ if(/^X(OK|NO|SEND|PAUSA|ANNULLA)/.test(r)) window._xinv.push(r); else v(r); }; const f=document.getElementById('foglio'), r=f.getBoundingClientRect(); return 'FILE1 '+document.body.classList.contains('solo-rubrica')+','+(r.top===0&&r.height>=innerHeight-1)+','+f.querySelectorAll('.xf-schede button').length+','+FileGrandi._stato().motoreOk+','+!!f.querySelector('.indietro-rubrica')})()"],
+ ["js","(()=>{evento('XNEW abcdef0123456789 in $BOB 3145728 video/mp4 '+inHex('vacanze.mp4')+' chiede 0'); const r=document.querySelector('.xf-riga[data-id=abcdef0123456789]'); const b=[...r.querySelectorAll('.xf-azioni button')].map(x=>x.textContent).join('/'); [...r.querySelectorAll('.xf-azioni button')].find(x=>x.textContent==='Accetta').click(); return 'FILE2 '+r.querySelector('.xf-stato').textContent+'|'+b+'|'+window._xinv.includes('XOK abcdef0123456789')})()"],
+ ["js","(()=>{evento('XNEW 0123456789abcdef out $BOB 26214400 application/zip '+inHex('archivio.zip')+' corre 5242880'); evento('XPROG 0123456789abcdef 7340032 26214400 1048576'); document.querySelector('.xf-schede [data-v=out]').click(); const r=[...document.querySelectorAll('.xf-riga')].find(x=>x.dataset.id==='0123456789abcdef'); return 'FILE3 '+r.querySelector('.xf-stato').textContent+'|'+r.querySelector('.xf-sotto').textContent})()"],
+ ["foto","${NYCT_FOTO:-$TMP}/file-telefono-uscita.png"],
+ ["js","(async()=>{await FileGrandi._sfoglia('$BOB',''); await new Promise(r=>setTimeout(r,500)); const radici=[...document.querySelectorAll('#foglio .xf-sfoglia .voce')].map(x=>x.textContent); [...document.querySelectorAll('#foglio .xf-sfoglia .voce')].find(x=>x.textContent.includes('galleria')).click(); await new Promise(r=>setTimeout(r,500)); [...document.querySelectorAll('#foglio .xf-sfoglia .voce')].find(x=>x.textContent.includes('Camera')).click(); await new Promise(r=>setTimeout(r,500)); const f=[...document.querySelectorAll('#foglio .xf-sfoglia .voce')].find(x=>x.textContent.includes('VID_prova')); f.click(); const bot=document.querySelector('#foglio .xf-invia').textContent; document.querySelector('#foglio .xf-invia').click(); const x=window._xinv.find(r=>r.startsWith('XSEND $BOB ')); const perc=x?new TextDecoder().decode(new Uint8Array(x.split(' ')[2].match(/../g).map(h=>parseInt(h,16)))):''; return 'SFOGLIA '+radici.join('/')+'|'+bot+'|'+perc.endsWith('/galleria/Camera/VID_prova.mp4')+'|'+(x||'').split(' ')[3]})()"],
+ ["js","(()=>{const f=document.getElementById('foglio'), r=f.getBoundingClientRect(); return 'DOPOINVIO '+document.body.classList.contains('solo-rubrica')+','+(r.top===0)+','+!!f.querySelector('.file-pagina')+','+!!f.querySelector('.indietro-rubrica')+','+FileGrandi._stato().scheda})()"],
+ ["js","(()=>{document.querySelector('.xf-schede [data-v=arch]').click(); return 'arch'})()"],["attendi",1.5],
+ ["js","(()=>{const r=[...document.querySelectorAll('.xf-lista .xf-riga')].map(x=>x.querySelector('.xf-nome').textContent+':'+x.querySelector('.xf-sotto').textContent); return 'ARCH '+r.join(',')+'|'+document.querySelector('.xf-spazio').textContent.includes('Occupati 2,0 MB')})()"],
+ ["foto","${NYCT_FOTO:-$TMP}/file-telefono-archivio.png"],
+ ["js","(async()=>{const r=[...document.querySelectorAll('.xf-lista .xf-riga')].find(x=>x.querySelector('.xf-nome').textContent==='distro.iso'); [...r.querySelectorAll('button')].find(b=>b.textContent==='Elimina').click(); [...document.querySelectorAll('#dialogo button')].find(b=>b.textContent==='Elimina').click(); await new Promise(r=>setTimeout(r,1200)); const a=await (await fetch('/api/archivio')).json(); const fuori=await post('/api/elimina?p='+inHex('/etc/passwd')); const fuori2=await post('/api/condividi?p='+inHex('/etc/passwd')); const fuori3=await (await fetch('/api/sfoglia?d='+inHex('/etc'))).json(); return 'ELIMINA '+a.voci.map(v=>v.nome).join('/')+'|'+fuori.ok+'|'+fuori2.ok+'|'+(fuori3.errore||'')})()"]]
 EOF
 timeout 300 python3 "$STRUMENTI/cdp.py" "$TMP/chrome" "$TMP/passi.json" > "$TMP/r.txt" 2>&1
 [ -n "${NYCT_DIAG:-}" ] && cp "$TMP/r.txt" "$NYCT_DIAG" 2>/dev/null
@@ -177,5 +193,12 @@ r INFOMOT | grep -q "Consegnato:14 nov 2023 alle .*Visualizzato:non ancora || tr
 [ "$(r PERS)" = "personalizzato,true,true,true,true" ] && pass "tema Personalizzato: codice #ff8800 + Chiaro → tavolozza ricavata (selettore di colore allineato)" || fail "tema personalizzato: $(r PERS)"
 [ "$(r RIPR)" = "notte,#3ecf9a,true,true,🌙 Notte,true" ] && pass "↺ Ripristina: personalizzato come mai toccato (colore iniziale) e tema Notte" || fail "ripristino del personalizzato: $(r RIPR)"
 [ "$(r NOTTE)" = "|true" ] && pass "tornando a un tema pronto, i colori personalizzati si tolgono" || fail "ritorno a Notte: $(r NOTTE)"
+[ "$(r FILE1)" = "true,true,3,true,true" ] && pass "📦 File dall'app (#file): schermata intera con In arrivo · In uscita · Archivio, motore che conosce i trasferimenti" || fail "schermata File: $(r FILE1)"
+[ "$(r FILE2)" = "Vuole mandarti questo file|Rifiuta/Accetta|true" ] && pass "proposta in arrivo: «Vuole mandarti questo file», Rifiuta/Accetta → XOK al motore" || fail "proposta in arrivo: $(r FILE2)"
+r FILE3 | grep -q "^7,0 MB · 1,0 MB/s · mancano 1[89] s|a .* · 25,0 MB$" && pass "in uscita: avanzamento, velocità e tempo che manca" || fail "in uscita: $(r FILE3)"
+r SFOGLIA | grep -q "galleria|Invia (1)|true|video/mp4$" && pass "sfoglia le cartelle del telefono → Invia: parte il percorso del file ORIGINALE (niente copie)" || fail "sfoglia: $(r SFOGLIA)"
+[ "$(r DOPOINVIO)" = "true,true,true,true,out" ] && pass "dopo «Invia» si torna alla schermata File a tutto schermo, su «In uscita» (non alla pagina iniziale)" || fail "dopo l'invio: $(r DOPOINVIO)"
+r ARCH | grep -q "^distro.iso:2,0 MB,nota.pdf:4,0 KB,.*|true$" && pass "Archivio privato: file ricevuti dal più grande, spazio occupato" || fail "archivio: $(r ARCH)"
+r ELIMINA | grep -q "^nota.pdf/.*|false|false|cartella non consentita$" && pass "Elimina toglie il file; Elimina/Condividi/Sfoglia rifiutano ciò che sta fuori (es. /etc)" || fail "elimina e confini: $(r ELIMINA)"
 [ "$(r ESCIIMP)" = "false,true" ] && pass "«←» chiude le impostazioni (nell'app si torna alla schermata iniziale)" || fail "uscita dalle impostazioni: $(r ESCIIMP)"
 [ "$KO" -eq 0 ]

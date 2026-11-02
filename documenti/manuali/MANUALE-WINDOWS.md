@@ -23,6 +23,9 @@ Tocca **🔗 Rete** e incolla il **codice di rete** (`NYCT1:…`) che ti dà chi
 sia uguale a quella del gestore. Senza codice usi una rete di prova solo su questo PC.
 
 ## 3. Usare
+
+**📦 File** apre il programma per mandare file grandi ai contatti e gestire quelli ricevuti (`MANUALE-FILE.md`).
+
 | Riquadro | Cosa fa |
 |---|---|
 | 💬 **Chat** | la chat in una finestra sua: contatti, allegati, spunte, casella (`MANUALE-CHAT.md`) |

@@ -366,6 +366,122 @@ def elenco_galleria(quanti=GALLERIA_MAX):
     return voci[:quanti]
 
 
+# --- programma File: cartelle del telefono (sola lettura) e archivio privato ------------
+def cartelle_condivise():
+    """Dove si possono SCEGLIERE i file da mandare (il motore li legge lì, senza copie).
+    Telefono: la memoria condivisa vista da Termux (`termux-setup-storage`); Windows: le
+    cartelle dell'utente. Prove: NYCTALUS_SFOGLIA (con _SOLO: mai le cartelle vere)."""
+    extra = [Path(x) for x in os.environ.get("NYCTALUS_SFOGLIA", "").split(os.pathsep) if x]
+    if os.environ.get("NYCTALUS_SFOGLIA_SOLO"):
+        return [(p.name or str(p), p) for p in extra]
+    voci = [(p.name or str(p), p) for p in extra]
+    condivisa = HOME / "storage" / "shared"
+    if condivisa.exists():
+        for nome, sotto in (("Download", "Download"), ("Documenti", "Documents"), ("Foto e video", "DCIM"),
+                            ("Immagini", "Pictures"), ("Film", "Movies"), ("Musica", "Music")):
+            if (condivisa / sotto).is_dir():
+                voci.append((nome, condivisa / sotto))
+        voci.append(("Tutta la memoria", condivisa))
+    elif hasattr(os, "startfile"):                       # Windows
+        for nome, sotto in (("Desktop", "Desktop"), ("Download", "Downloads"), ("Documenti", "Documents"),
+                            ("Immagini", "Pictures"), ("Video", "Videos"), ("Musica", "Music")):
+            if (HOME / sotto).is_dir():
+                voci.append((nome, HOME / sotto))
+    return voci
+
+
+def dentro(percorso, radici):
+    """Il percorso (risolto, niente ../ né collegamenti fuori) sta dentro una delle radici?"""
+    try:
+        reale = Path(percorso).resolve(strict=True)
+    except Exception:            # noqa: BLE001
+        return None
+    for r in radici:
+        try:
+            reale.relative_to(Path(r).resolve())
+            return reale
+        except Exception:        # noqa: BLE001
+            continue
+    return None
+
+
+def sfoglia(d):
+    """Cartelle e file di una cartella condivisa (senza i nascosti), cartelle prima."""
+    radici = cartelle_condivise()
+    if not d:
+        return {"su": None, "voci": [{"nome": n, "p": str(p).encode().hex(), "dir": True} for n, p in radici if p.exists()]}
+    cart = dentro(d, [p for _n, p in radici])
+    if not cart or not cart.is_dir():
+        return {"errore": "cartella non consentita"}
+    voci = []
+    try:
+        for e in sorted(os.scandir(cart), key=lambda e: (not e.is_dir(), e.name.lower()))[:3000]:
+            if e.name.startswith("."):
+                continue
+            try:
+                st = e.stat()
+            except OSError:
+                continue
+            v = {"nome": e.name, "p": e.path.encode().hex(), "dir": e.is_dir()}
+            if not v["dir"]:
+                v.update(dim=st.st_size, ts=int(st.st_mtime), mime=mimetypes.guess_type(e.name)[0] or "application/octet-stream")
+            voci.append(v)
+    except OSError:
+        return {"errore": "cartella non leggibile"}
+    alla_radice = any(cart == Path(p).resolve() for _n, p in radici)
+    return {"su": None if alla_radice else str(cart.parent).encode().hex(), "titolo": cart.name, "voci": voci}
+
+
+def archivio():
+    """I file ricevuti (cartella PRIVATA di Nyctalus), dai più grandi; spazio usato e libero."""
+    base = DATI_CHAT / "allegati"
+    voci, totale = [], 0
+    if base.exists():
+        for f in base.rglob("*"):
+            if f.is_file() and not f.name.startswith(".") and not f.name.endswith(".part"):
+                st = f.stat()
+                totale += st.st_size
+                voci.append({"p": str(f).encode().hex(), "nome": f.name, "dim": st.st_size, "ts": int(st.st_mtime),
+                             "da": f.parent.name, "mime": mimetypes.guess_type(f.name)[0] or "application/octet-stream"})
+    voci.sort(key=lambda v: -v["dim"])
+    try:
+        libero = shutil.disk_usage(DATI_CHAT if DATI_CHAT.exists() else HOME).free
+    except OSError:
+        libero = 0
+    return {"voci": voci, "totale": totale, "libero": libero}
+
+
+def nell_archivio(p_hex):
+    """Un file dell'archivio privato (solo lì si può eliminare o condividere)."""
+    try:
+        p = bytes.fromhex(p_hex).decode("utf-8", "replace")
+    except ValueError:
+        return None
+    f = dentro(p, [DATI_CHAT / "allegati"])
+    return f if f and f.is_file() and not f.name.startswith(".") else None
+
+
+def condividi_con_app(f):
+    """Condivisione standard: telefono → foglio «Condividi» di Android; Windows → Esplora
+    risorse sul file; PC → la cartella. Il file esce dall'archivio privato SOLO verso l'app
+    che scegli tu."""
+    try:
+        if shutil.which("termux-open"):
+            subprocess.Popen(["termux-open", "--send", "--chooser", str(f)], stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL, start_new_session=True)
+            return True
+        if hasattr(os, "startfile"):
+            subprocess.Popen(["explorer", "/select,", str(f)])
+            return True
+        if shutil.which("xdg-open"):
+            subprocess.Popen(["xdg-open", str(f.parent)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             start_new_session=True)
+            return True
+    except OSError:
+        pass
+    return False
+
+
 def radici_lettura():
     return [DATI_CHAT / "allegati", INVIO, CACHE] + [g for g in cartelle_galleria() if g.exists()]
 
@@ -731,6 +847,10 @@ async def flusso_notifiche(scrittore):
                             "video": len(p) >= 4 and p[3] == "v"})
             elif p[0] in ("CALLEND", "CALLOK", "CALLNO") and len(p) >= 3:
                 await riga({"tipo": "fine_chiamata", "da": p[1], "id": p[2]})
+            elif p[0] == "XNEW" and len(p) >= 9 and p[2] == "in" and p[7] == "chiede":
+                # programma File: qualcuno vuole mandarti un file sopra la soglia
+                await riga({"tipo": "msg", "da": p[3], "nome": nomi.get(p[3], p[3][:10]),
+                            "testo": "📦 vuole mandarti «%s»: apri File per accettare" % _da_hex(p[6])[:70]})
             elif p[0] == "FILE" and len(p) >= 9 and p[2] == "in":
                 await riga({"tipo": "file", "da": p[1], "nome": nomi.get(p[1], p[1][:10]),
                             "mime": p[6], "file": _da_hex(p[7])[:80]})
@@ -839,6 +959,27 @@ async def instrada(req, lettore, scrittore):
         return await rispondi_json(scrittore, {"ok": bool(f and apri_con_app(f))})
     if p == "/api/carica" and req.metodo == "POST":
         return await carica(lettore, scrittore, req)
+    # programma File: sfoglia (sola lettura), archivio privato, elimina e condividi
+    if p == "/api/sfoglia":
+        try:
+            d = bytes.fromhex(req.query.get("d", "")).decode("utf-8", "replace")
+        except ValueError:
+            d = ""
+        return await rispondi_json(scrittore, await asyncio.get_running_loop().run_in_executor(None, sfoglia, d))
+    if p == "/api/archivio":
+        return await rispondi_json(scrittore, await asyncio.get_running_loop().run_in_executor(None, archivio))
+    if p == "/api/elimina" and req.metodo == "POST":
+        f = nell_archivio(req.query.get("p", ""))
+        if not f:
+            return await rispondi_json(scrittore, {"ok": False, "errore": "file non nell'archivio"})
+        try:
+            f.unlink()
+        except OSError as e:
+            return await rispondi_json(scrittore, {"ok": False, "errore": str(e)})
+        return await rispondi_json(scrittore, {"ok": True})
+    if p == "/api/condividi" and req.metodo == "POST":
+        f = nell_archivio(req.query.get("p", ""))
+        return await rispondi_json(scrittore, {"ok": bool(f and condividi_con_app(f))})
     return await servi_statico(scrittore, req)
 
 

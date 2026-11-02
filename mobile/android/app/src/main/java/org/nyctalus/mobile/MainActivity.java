@@ -84,6 +84,7 @@ public class MainActivity extends Activity {
     private boolean caricata = false, pronto = false, entraAppenaPronto = false, inPausa = false;
     private boolean apriRubrica = false;   // entrando, si apre la sola rubrica della rete
     private boolean apriImpostazioni = false;   // entrando, si aprono le impostazioni complete
+    private boolean apriProgrammaFile = false;  // entrando, si apre il programma File
     private volatile boolean inRubrica = false;   // la web-app mostra la sola rubrica
     private View pulsanteEntra;      // la casella «Chat»: si accende quando Nyctalus è pronto
     private int portaSocksBrowser = 18733;
@@ -540,10 +541,11 @@ public class MainActivity extends Activity {
         griglia.addView(pulsanteEntra);
         griglia.addView(casella(R.drawable.ic_avvio_rubrica, "Rubrica", v -> { apriRubrica = true; apriImpostazioni = false; entra(); }));
         griglia.addView(casella(R.drawable.ic_avvio_browser, "Browser", v -> sceltaBrowser()));
-        View file = casella(R.drawable.ic_avvio_file, "File (in preparazione)", v -> avviso(
-                "Il gestore dei file (invio e ricezione attraverso Nyctalus) è in preparazione."));
-        file.setAlpha(0.45f);
-        griglia.addView(file);
+        // File: file grandi ai contatti (schermata della chat, #file); serve Nyctalus pronto
+        griglia.addView(casella(R.drawable.ic_avvio_file, "File", v -> {
+            if (pronto) { apriProgrammaFile = true; apriImpostazioni = false; apriRubrica = false; entra(); }
+            else avviso("Nyctalus si sta avviando: il programma File si apre appena è pronto (● verde).");
+        }));
         griglia.addView(casella(R.drawable.ic_avvio_info, "Info e manuali", v -> apriBrowser(SITO, false)));
         // impostazioni COMPLETE (le stesse della chat + la sezione «App»); finché Nyctalus non è
         // pronto, quelle dell'app (tema, notifiche, accensione)
@@ -1199,13 +1201,15 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 setContentView(web);
                 // «Rubrica» → la sola rubrica; «Chat» → la chat (chiude la rubrica se era rimasta aperta)
-                web.evaluateJavascript(apriImpostazioni ? "window.nyctApriImpostazioni && nyctApriImpostazioni()"
+                web.evaluateJavascript(apriProgrammaFile ? "window.nyctApriFile && nyctApriFile()"
+                        : apriImpostazioni ? "window.nyctApriImpostazioni && nyctApriImpostazioni()"
                         : apriRubrica ? "window.nyctApriRubrica && nyctApriRubrica()"
                         : "window.nyctChiudiRubrica && nyctChiudiRubrica()", null);
                 if (chatDaAprire != null)                // notifica toccata: quella conversazione
                     web.evaluateJavascript("window.nyctApriChat && nyctApriChat('" + chatDaAprire + "')", null);
                 apriRubrica = false;
                 apriImpostazioni = false;
+                apriProgrammaFile = false;
                 chatDaAprire = null;
             });
             return;
@@ -1251,11 +1255,12 @@ public class MainActivity extends Activity {
                 }
             });
             setContentView(web);
-            web.loadUrl(URL_BASE + "/?t=" + segreto + (apriImpostazioni ? "#impostazioni" : apriRubrica ? "#rubrica"
+            web.loadUrl(URL_BASE + "/?t=" + segreto + (apriProgrammaFile ? "#file" : apriImpostazioni ? "#impostazioni" : apriRubrica ? "#rubrica"
                     : chatDaAprire != null ? "#chat=" + chatDaAprire : ""));
             chatDaAprire = null;
             apriRubrica = false;
             apriImpostazioni = false;
+            apriProgrammaFile = false;
         });
     }
 

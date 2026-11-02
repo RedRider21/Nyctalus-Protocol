@@ -15,7 +15,8 @@ controllato). Per le foto e i documenti di tutti i giorni bastano gli allegati d
 | Dove | Come |
 |---|---|
 | PC Linux | pulsante **File** (cartella con freccia) del mini menu, oppure il comando `nyctalus-file`, oppure **Nyctalus File** nel menu delle applicazioni |
-| Telefono | in arrivo |
+| Telefono | pulsante **File** della schermata iniziale dell'app, oppure nella chat: menu ⋮ di un contatto → **📦 Manda un file grande** |
+| Windows | pulsante **📦 File** della finestra di Nyctalus |
 
 Usa lo stesso motore della chat: se la chat è aperta ci si aggancia, altrimenti lo accende da
 solo. Il motore resta acceso finché è aperta **almeno una** fra chat e File: chiudere la chat
@@ -25,6 +26,14 @@ non interrompe un file in viaggio.
 > può agganciarsi al suo motore.
 
 ## 2. Mandare un file
+
+**Sul telefono e su Windows:** **＋ Invia** → il contatto → **🖼 Foto e video** (la galleria) oppure
+**📁 Sfoglia le cartelle del telefono** (Download, Documenti, Film…). Tocchi uno o più file e
+**Invia**. **Niente copie:** il motore legge il file **dove sta**. «↩ Torna a File» torna indietro
+senza uscire. (Sul telefono le cartelle si vedono dopo `termux-setup-storage` in Termux, che
+l'installazione di Nyctalus chiede.)
+
+**Sul PC:**
 
 1. **Invia file…** (in alto a sinistra), oppure **trascina** i file sulla finestra.
 2. Scegli il **contatto** (c'è la ricerca).
@@ -39,6 +48,19 @@ Se il contatto non è in linea, il file aspetta e **parte da solo** appena si co
   mandarti questo file» con **Accetta** / **Rifiuta**, e il desktop ti avvisa.
 - Finito: **Apri** o **Mostra nella cartella**. Il file sta in `~/.nyctalus-chat/allegati/<contatto>/`
   e compare anche nella **conversazione** della chat, come un allegato.
+
+## 3-bis. L'archivio (telefono e Windows)
+
+I file ricevuti restano nell'**archivio privato** di Nyctalus (sul telefono la cartella di Termux:
+**nessun'altra app la vede**). Scheda **Archivio**:
+- **spazio**: quanto occupano i file ricevuti e quanto resta libero sul telefono;
+- dal **più grande** al più piccolo, così una ISO o un film si trovano subito;
+- **Apri** (per i tipi sicuri), **Elimina** (anche più file insieme con le caselle), **Condividi**.
+
+**Condividi** usa il foglio di condivisione standard di Android: il file va all'app che scegli tu
+(WhatsApp, Drive, la galleria…). L'anonimato della rete Nyctalus **non cambia**, ma da lì in poi
+il file è in mano a quell'app, che può copiarlo, caricarlo online o leggerne i metadati (per
+esempio la posizione delle foto): per questo lo chiede sempre, con un avviso.
 
 ## 4. Durante il viaggio
 

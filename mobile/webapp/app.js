@@ -298,8 +298,10 @@ function chiediNome(attuale) {
 $("btn-rubrica").onclick = () => apriRubrica(false);
 if (location.hash === "#rubrica") apriRubrica(true);
 if (location.hash === "#impostazioni") setTimeout(() => impostazioni(true), 0);   // dopo la definizione completa
+if (location.hash === "#file") setTimeout(() => FileGrandi.apri(true), 0);
 window.addEventListener("hashchange", () => {     // anche senza ricaricare la pagina
-  if (location.hash === "#impostazioni") impostazioni(true);
+  if (location.hash === "#file") FileGrandi.apri(true);
+  else if (location.hash === "#impostazioni") impostazioni(true);
   else if (location.hash === "#rubrica") apriRubrica(true);
 });
 
@@ -309,8 +311,10 @@ function evento(riga) {
   // la rubrica della rete parla con noi in JSON: non è una conversazione, non va in cronologia
   if (S.rubrica && p[1] === S.rubrica) { if (t === "MSG") rispostaRubrica(daHex(p[3])); return; }
   if (typeof Chiamate !== "undefined" && Chiamate.evento(t, p)) return;   // chiamate e voce
+  if ((t[0] === "X" || t === "ENDX") && typeof FileGrandi !== "undefined" && FileGrandi.evento(t, p)) return;   // programma File
   if (t === "ME") {
     S.me = p[1]; $("mio-id-valore").textContent = S.me;
+    if (typeof FileGrandi !== "undefined") FileGrandi.collegato();   // trasferimenti in corso e proposte
     document.querySelectorAll(".codice-id").forEach((x) => { x.textContent = S.me; });   // impostazioni già aperte
     if (S.motoreGiu) { S.motoreGiu = false; controllaServizi(); }   // di nuovo collegati
     S.ritardoWs = 1500;
@@ -946,6 +950,7 @@ function menuContatto(addr) {
     voce("📞", "Chiamata vocale", () => { if (S.attivo !== addr) apriChat(addr); Chiamate.chiama(addr); }),
     voce("📹", "Videochiamata", () => { if (S.attivo !== addr) apriChat(addr); Chiamate.chiama(addr, true); }),
     voce("💬", "Apri la chat", () => apriChat(addr)),
+    voce("📦", "Manda un file grande", () => FileGrandi.inviaA(addr)),
     voce(nl ? "✉️" : "📩", nl ? "Segna come letto" : "Segna come non letto", () => {
       nl ? delete S.nonLetti[addr] : (S.nonLetti[addr] = 1); salva("nonLetti", S.nonLetti); disegnaElenco(); }),
     voce("📌", fiss ? "Togli dai fissati" : "Fissa in alto", () => {

@@ -23,7 +23,7 @@ Sotto il logo, una fila di sei pulsanti quadrati con la sola icona, come il mini
 | fumetto · **Chat** | la chat; si accende con «● Nyctalus è pronto» |
 | persone · **Rubrica** | la sola **rubrica della rete** a tutto schermo: chi c'è, chi è in linea, iscriversi (`MANUALE-CHAT.md` §3-bis) |
 | globo · **Browser** | il browser, con la **🦇 modalità Nyctalus** (§1-bis) |
-| cartella · **File** | in preparazione (attenuato) |
+| cartella · **File** | il programma **File**: file grandi ai contatti, archivio dei ricevuti con spazio, elimina e condividi (`MANUALE-FILE.md`) |
 | i · **Info e manuali** | il sito con i manuali online |
 | cursori · **Impostazioni** | tutte le impostazioni (sotto) |
 
