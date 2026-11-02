@@ -30,8 +30,9 @@ non interrompe un file in viaggio.
 **Sul telefono e su Windows:** **＋ Invia** → il contatto → **🖼 Foto e video** (la galleria) oppure
 **📁 Sfoglia le cartelle del telefono** (Download, Documenti, Film…). Tocchi uno o più file e
 **Invia**. **Niente copie:** il motore legge il file **dove sta**. «↩ Torna a File» torna indietro
-senza uscire. (Sul telefono le cartelle si vedono dopo `termux-setup-storage` in Termux, che
-l'installazione di Nyctalus chiede.)
+senza uscire. (Sul telefono, per vedere le cartelle Termux deve avere il permesso di leggere la memoria:
+**«Installa / aggiorna Nyctalus in Termux»** lo chiede una volta sola, tocca **Consenti**; a mano
+è `termux-setup-storage`.)
 
 **Sul PC:**
 

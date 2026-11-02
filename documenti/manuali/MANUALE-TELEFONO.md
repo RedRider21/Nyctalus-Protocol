@@ -140,7 +140,7 @@ Tocca **📎**: sale il **selettore**.
   selettore di sistema) · **Video** (registra un video).
 
 Note:
-- Per vedere le foto nella griglia, in Termux una volta sola: `termux-setup-storage`.
+- Per vedere le foto nella griglia (e le cartelle nel programma File) Termux deve poter leggere la memoria: «Installa / aggiorna Nyctalus in Termux» lo chiede una volta (tocca **Consenti**); a mano: `termux-setup-storage`.
 - La griglia mostra le foto **a pagine**: le prime 30, poi altre mentre scorri, fino alle
   300 più recenti. Per le altre usa **Altre foto**.
 - Le **miniature** si preparano poche alla volta, in sottofondo e solo per le caselle

@@ -116,6 +116,14 @@ if [ "$AVVIO_AUTO" = 1 ]; then
   ok "Avvio automatico: ~/.termux/boot/nyctalus-mobile (serve l'app Termux:Boot)"
 fi
 
+# --- 6-bis) cartelle del telefono (galleria, programma File): una volta sola -------------
+# termux-setup-storage chiede ad Android il permesso di LEGGERE la memoria condivisa
+# (Download, DCIM…): serve per mandare foto e file senza copiarli. Si chiede solo se manca.
+if [ ! -d "$HOME/storage/shared" ] && command -v termux-setup-storage >/dev/null 2>&1; then
+  say "Accesso alle cartelle del telefono: tocca «Consenti» nella finestra di Android"
+  termux-setup-storage || true
+fi
+
 # --- 7) aggiornamento: se il servizio era acceso, riparte con la versione nuova -----
 if [ "$ERA_ACCESO" = 1 ]; then
   bash "$DEST/nyctalus-mobile" --sfondo && ok "Servizio riavviato con la versione nuova"
