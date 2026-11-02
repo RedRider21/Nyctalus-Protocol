@@ -332,7 +332,7 @@ function evento(riga) {
   }
   else if (t === "P") { if (S.storia) S.storia.push(riga.slice(2)); else mostraRiga(riga.slice(2)); }
   else if (t === "ENDH") { fineStoria(); segnalaLetto(); }
-  else if (t === "SP" && p.length >= 4) aggiornaSpunta(p[1], +p[2], p[3]);
+  else if (t === "SP" && p.length >= 4) aggiornaSpunta(p[1], +p[2], p[3], +p[4] || 0);
   else if (t === "FILE" && p.length >= 9) {
     const grezza = [p[2] === "out" ? "fout" : "fin", ...p.slice(3, 9)].join(" ");
     anteprima(p[1], grezza, p[2] === "in"); cacheAggiungiRiga(p[1], grezza); cacheContatto(p[1]);
@@ -345,7 +345,7 @@ function evento(riga) {
     S.giroRubrica++;                               // la richiesta alla rubrica non è partita: lo si dice lì
     statoRubrica("La rubrica non è raggiungibile: " + erroreLeggibile(riga.slice(4)), true);
   }
-  else if (t === "CAS") aggiornaSpunta(p[1], +p[2], "c");
+  else if (t === "CAS") aggiornaSpunta(p[1], +p[2], "c", +p[3] || 0);
   else if (t === "ERR" && /motore non raggiungibile/.test(riga)) segnalaMotoreGiu();
   else if (t === "ERR") avviso(erroreLeggibile(riga.slice(4)));
   else if (t === "ENDC") {   // collegamento diretto: #chat=<indirizzo> apre quella conversazione
@@ -524,7 +524,57 @@ function disegnaSpunta(sp, addr, ts) {
   sp.className = "spunta" + (st === "3" ? " letto" : "");
   sp.title = { "1": "Spedito", c: "Nella casella cifrata: arriverà appena si collega", "2": "Consegnato", "3": "Letto" }[st] || "";
 }
-function aggiornaSpunta(addr, ts, st) {
+// ---------- «Info» del messaggio: QUANDO è stato messo in casella, consegnato, visualizzato -----
+// Il motore manda l'ora di ogni passaggio (motori recenti). Con un motore più vecchio si annota
+// l'ora in cui arriva la spunta mentre la chat è aperta (nella ripresa della cronologia no:
+// sarebbe l'ora di adesso, non quella vera → «ora non disponibile»).
+const ORE = new Map();     // addr → { c: {ts: q}, d: {ts: q}, letti: [[fino, q], …] }
+function oreDi(addr) {
+  if (!ORE.has(addr)) { let v = null; try { v = JSON.parse(localStorage.getItem("nyct.ore." + addr)); } catch (e) { /* niente */ }
+    ORE.set(addr, v && v.c ? v : { c: {}, d: {}, letti: [] }); }
+  return ORE.get(addr);
+}
+function annotaOra(addr, ts, st, quando) {
+  const inRipresa = S.storia !== null && S.attivo === addr;
+  const q = quando || (inRipresa ? 0 : Math.floor(Date.now() / 1000));
+  if (!q) return;
+  const o = oreDi(addr);
+  if (st === "c") { if (!o.c[ts]) o.c[ts] = q; }
+  else if (st === "2") { if (!o.d[ts]) o.d[ts] = q; }
+  else if (st === "3") { if (!o.letti.some(([f]) => f >= ts)) o.letti.push([ts, q]); }
+  else return;
+  // al massimo gli ultimi 500 per tipo (non serve conservare tutto per sempre)
+  for (const k of ["c", "d"]) { const ch = Object.keys(o[k]).map(Number).sort((a, b) => a - b); ch.slice(0, Math.max(0, ch.length - 500)).forEach((x) => delete o[k][x]); }
+  o.letti = o.letti.sort((a, b) => a[0] - b[0]).slice(-500);
+  try { localStorage.setItem("nyct.ore." + addr, JSON.stringify(o)); } catch (e) { /* niente */ }
+}
+function oraLeggibile(t) {
+  if (!t) return "";
+  const d = new Date(t * 1000), oggi = new Date(), ieri = new Date(Date.now() - 86400000);
+  const ora = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (d.toDateString() === oggi.toDateString()) return "oggi alle " + ora;
+  if (d.toDateString() === ieri.toDateString()) return "ieri alle " + ora;
+  return d.toLocaleDateString([], { day: "numeric", month: "short", year: d.getFullYear() === oggi.getFullYear() ? undefined : "numeric" }) + " alle " + ora;
+}
+function infoMessaggio(ts) {
+  const addr = S.attivo, o = oreDi(addr), st = statoSpunta(addr, ts);
+  const letto = o.letti.filter(([f]) => f >= ts).sort((a, b) => a[1] - b[1])[0];
+  const riga = (ic, cosa, quando, fatto) => {
+    const r = el("div", "info-riga" + (fatto ? "" : " no"));
+    r.append(el("span", "ic", ic), el("span", "cosa", cosa), el("span", "quando", fatto ? (quando || "ora non disponibile") : "non ancora"));
+    return r;
+  };
+  const righe = [riga("✓", "Inviato", oraLeggibile(ts), true)];
+  if (o.c[ts] || st === "c") righe.push(riga("📮", "Nella casella cifrata", oraLeggibile(o.c[ts]), true));
+  righe.push(riga("✓✓", "Consegnato", oraLeggibile(o.d[ts]), st === "2" || st === "3"));
+  const vis = riga("✓✓", "Visualizzato", oraLeggibile(letto && letto[1]), st === "3");
+  vis.querySelector(".ic").classList.add("letto");
+  righe.push(vis);
+  dialogo("Info messaggio", [el("div", "info-messaggio", ""), ...righe], [["Chiudi", null, "primario"]]);
+}
+
+function aggiornaSpunta(addr, ts, st, quando) {
+  annotaOra(addr, ts, st, quando);
   if (st === "3") S.lettoFino.set(addr, Math.max(S.lettoFino.get(addr) || 0, ts));
   else {
     if (!S.spunte.has(addr)) S.spunte.set(addr, new Map());
@@ -911,6 +961,8 @@ function menuContatto(addr) {
 
 function menuMessaggio(riga, grezza, dati) {
   const voci = [];
+  // i NOSTRI messaggi e allegati: quando sono stati consegnati e visualizzati
+  if (riga.classList.contains("out") && riga.dataset.ts) voci.push(voce("ℹ️", "Info", () => infoMessaggio(+riga.dataset.ts)));
   if (dati.file) {
     if (apribile(dati.mime)) voci.push(voce("📂", "Apri", () => apriFile(dati.file, dati.mime)));
     voci.push(voce("↪️", "Inoltra", () => inoltra(null, dati)));

@@ -1682,5 +1682,17 @@
   "br.attesa.body": "L'onglet 🦇 n'ouvre rien tant que le réseau Nyctalus n'est pas prêt : aucune page ne part en clair avec votre adresse. Il s'ouvre tout seul dès que le réseau répond (quelques secondes en général).",
   "chat.tema.menta": "Menthe (vert)",
   "chat.tema.cielo": "Ciel (bleu clair)",
-  "chat.tema.personalizzato": "Personnalisé"
+  "chat.tema.personalizzato": "Personnalisé",
+  "chat.menu.info": "Infos",
+  "chat.info.titolo": "Infos du message",
+  "chat.info.inviato": "Envoyé",
+  "chat.info.casella": "Dans la boîte chiffrée",
+  "chat.info.consegnato": "Distribué",
+  "chat.info.visualizzato": "Vu",
+  "chat.info.non_ancora": "pas encore",
+  "chat.info.ora_nd": "heure non disponible",
+  "chat.info.oggi": "aujourd'hui à {ora}",
+  "chat.info.ieri": "hier à {ora}",
+  "chat.info.giorno": "{giorno} à {ora}",
+  "chat.chiudi": "Fermer"
 }

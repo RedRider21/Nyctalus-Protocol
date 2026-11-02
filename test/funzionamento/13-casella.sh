@@ -109,4 +109,8 @@ for _ in $(seq 1 150); do [ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && brea
 [ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && [ "$(wc -l < "$TMP/bruno/cronologia/$ANNA.log")" = "$PRIMA" ] \
   && ! ls "$TMP/bruno/cronologia/" | grep -qv "$ANNA" \
   && pass "busta falsa: scartata da Bruno (nessun messaggio inventato) e tolta dalla casella" || fail "busta falsa: $(ls "$D/$BRUNO" "$TMP/bruno/cronologia/" 2>&1 | tr '\n' ' ') $(for f in "$TMP"/bruno/cronologia/*; do echo "== $f"; cut -c1-200 "$f"; done)"
+# l'«Info» del messaggio: ogni passaggio registrato con l'ora («ts stato quando»)
+S_ANNA="$TMP/anna/stati/$BRUNO.log"
+[ -s "$S_ANNA" ] && awk 'NF!=3 || $3!~/^[0-9]+$/ || $3<1700000000 {e=1} END {exit e}' "$S_ANNA" \
+  && pass "spunte registrate con l'ora (per «ℹ️ Info»: in casella, consegnato, visualizzato)" || fail "spunte senza ora: $(head -3 "$S_ANNA" 2>/dev/null | tr '\n' ' ')"
 [ "$KO" -eq 0 ]

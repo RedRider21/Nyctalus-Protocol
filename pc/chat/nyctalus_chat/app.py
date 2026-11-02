@@ -48,7 +48,11 @@ def _t(key, **kw):
         valore = _t_base(key, **kw)
         if valore != key:
             return valore
-    return _ITA.get(key, key)
+    testo = _ITA.get(key, key)
+    try:
+        return testo.format(**kw) if kw else testo
+    except (KeyError, IndexError, ValueError):
+        return testo
 
 
 # Testi italiani di riserva, se nxs_i18n non è nel percorso.
@@ -176,6 +180,17 @@ _ITA = {
     "chat.tema.notte": "Notte (blu)",
     "chat.tema.ardesia": "Ardesia (stile Telegram)",
     "chat.tema.viola": "Viola notturno",
+    "chat.menu.info": "Info",
+    "chat.info.titolo": "Info messaggio",
+    "chat.info.inviato": "Inviato",
+    "chat.info.casella": "Nella casella cifrata",
+    "chat.info.consegnato": "Consegnato",
+    "chat.info.visualizzato": "Visualizzato",
+    "chat.info.non_ancora": "non ancora",
+    "chat.info.ora_nd": "ora non disponibile",
+    "chat.info.oggi": "oggi alle {ora}",
+    "chat.info.ieri": "ieri alle {ora}",
+    "chat.info.giorno": "{giorno} alle {ora}",
     "chat.tema.menta": "Menta (verde)",
     "chat.tema.cielo": "Cielo (celeste, chiaro)",
     "chat.tema.personalizzato": "Personalizzato",
@@ -463,6 +478,23 @@ SFONDO_DEF = "pipistrelli"
 SFONDO = Path(__file__).resolve().parent / "assets" / "sfondo.svg"
 
 
+def quando_leggibile(t):
+    """«oggi alle 12:30», «ieri alle 9:05», «14 nov alle 23:13» (l'anno se non è quest'anno)."""
+    if not t:
+        return ""
+    import datetime
+    d = datetime.datetime.fromtimestamp(int(t))
+    oggi = datetime.date.today()
+    ora = d.strftime("%H:%M")
+    if d.date() == oggi:
+        return _t("chat.info.oggi", ora=ora)
+    if d.date() == oggi - datetime.timedelta(days=1):
+        return _t("chat.info.ieri", ora=ora)
+    mesi = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"]
+    giorno = "%d %s" % (d.day, mesi[d.month - 1]) + ("" if d.year == oggi.year else " %d" % d.year)
+    return _t("chat.info.giorno", giorno=giorno, ora=ora)
+
+
 def _nomi_temi():
     """I temi disponibili: quelli comuni a tutto il PC (nxs_tema), o quelli della chat."""
     return list(nxs_tema.TEMI) + ["personalizzato"] if nxs_tema is not None else list(TEMI)
@@ -699,6 +731,7 @@ class Chat(Gtk.Window):
         self.visti = {}          # ultimo accesso visto dal nostro motore (evento V)
         self.spunte = {}         # addr → {ts: "1"|"c"|"2"} stato dei nostri messaggi
         self.letto_fino = {}     # addr → ts: il contatto ha letto fino a lì (spunte blu)
+        self.ore = {}            # addr → {"c": {ts: quando}, "d": {ts: quando}, "letti": [(fino, quando)]} per l'«Info»
         self.letto_inviato = {}  # addr → ultimo «letto» mandato
         self.rubrica = leggi_rubrica_rete()   # indirizzo .nyct della rubrica della rete (se c'è)
         self.fin_rubrica = None
@@ -1072,10 +1105,10 @@ class Chat(Gtk.Window):
                 self._avanzamento(parti[2], parti[3], int(parti[4]), int(parti[5]), mime, nome)
         elif tipo == "CAS" and len(parti) >= 3:
             # CAS <addr> <ts>: il contatto non era in linea, il messaggio è nella casella cifrata
-            self._aggiorna_spunta(parti[1], parti[2], "c")
+            self._aggiorna_spunta(parti[1], parti[2], "c", parti[3] if len(parti) >= 4 else 0)
         elif tipo == "SP" and len(parti) >= 4:
-            # SP <addr> <ts> 1|2|3: spedito / consegnato / letto (fino a ts)
-            self._aggiorna_spunta(parti[1], parti[2], parti[3])
+            # SP <addr> <ts> 1|2|3 [quando]: spedito / consegnato / letto (fino a ts), e quando
+            self._aggiorna_spunta(parti[1], parti[2], parti[3], parti[4] if len(parti) >= 5 else 0)
         elif tipo == "ENDH":
             self._segnala_letto()
         elif tipo == "FERR" and len(parti) >= 4:
@@ -1271,6 +1304,8 @@ class Chat(Gtk.Window):
             testo = getattr(riga, "testo", "")
             self._voce(menu, _t("chat.menu.copia_testo"), lambda: self._copia_testo(testo), icona="edit-copy-symbolic")
             self._voce(menu, _t("chat.menu.inoltra"), lambda: self._inoltra(testo=testo), icona="mail-forward-symbolic")
+        if getattr(riga, "direzione", "") == "out" and getattr(riga, "ts", 0):   # i NOSTRI messaggi e allegati
+            self._voce(menu, _t("chat.menu.info"), lambda: self._info_messaggio(riga.ts), icona="dialog-information-symbolic")
         menu.append(Gtk.SeparatorMenuItem())
         self._voce(menu, _t("chat.menu.elimina_msg"), lambda: self._elimina_messaggio(riga), True, "user-trash-symbolic")
         menu.show_all()
@@ -1819,11 +1854,19 @@ class Chat(Gtk.Window):
         riga.ora_et.set_tooltip_text({"1": _t("chat.sp_spedito"), "c": _t("chat.in_casella"),
                                       "2": _t("chat.sp_consegnato"), "3": _t("chat.sp_letto")}.get(st))
 
-    def _aggiorna_spunta(self, addr, ts, st):
+    def _aggiorna_spunta(self, addr, ts, st, quando=0):
         try:
-            ts = int(ts)
+            ts, quando = int(ts), int(quando or 0)
         except ValueError:
             return
+        if quando:                                         # l'ora del passaggio, per l'«Info»
+            o = self.ore.setdefault(addr, {"c": {}, "d": {}, "letti": []})
+            if st == "c":
+                o["c"].setdefault(ts, quando)
+            elif st == "2":
+                o["d"].setdefault(ts, quando)
+            elif st == "3" and not any(f >= ts and q <= quando for f, q in o["letti"]):
+                o["letti"].append((ts, quando))
         if st == "3":
             self.letto_fino[addr] = max(self.letto_fino.get(addr, 0), ts)
         else:
@@ -1834,6 +1877,43 @@ class Chat(Gtk.Window):
             for riga in self.conv.get_children():
                 if getattr(riga, "ora_et", None) is not None:
                     self._disegna_spunta(riga)
+
+    def _righe_info(self, ts, addr=None):
+        """(icona, cosa, quando, fatto) per l'«Info» di un nostro messaggio."""
+        addr = addr or self.attivo
+        o = self.ore.get(addr, {"c": {}, "d": {}, "letti": []})
+        st = self._stato_spunta(addr, ts)
+        letti = sorted(q for f, q in o["letti"] if f >= ts)
+        righe = [("✓", _t("chat.info.inviato"), quando_leggibile(ts), True)]
+        if ts in o["c"] or st == "c":
+            righe.append(("📮", _t("chat.info.casella"), quando_leggibile(o["c"].get(ts, 0)), True))
+        righe.append(("✓✓", _t("chat.info.consegnato"), quando_leggibile(o["d"].get(ts, 0)), st in ("2", "3")))
+        righe.append(("✓✓", _t("chat.info.visualizzato"), quando_leggibile(letti[0] if letti else 0), st == "3"))
+        return righe, st
+
+    def _info_messaggio(self, ts):
+        """Quando il messaggio è stato messo nella casella, consegnato e visualizzato."""
+        righe, st = self._righe_info(ts)
+        d = Gtk.Dialog(title=_t("chat.info.titolo"), transient_for=self, modal=True)
+        d.add_button(_t("chat.chiudi"), Gtk.ResponseType.CLOSE)
+        griglia = Gtk.Grid(column_spacing=14, row_spacing=12)
+        griglia.set_border_width(18)
+        for i, (ic, cosa, quando, fatto) in enumerate(righe):
+            a = Gtk.Label(xalign=0.5)
+            a.set_markup('<span foreground="#4fc3f7"><b>%s</b></span>' % ic if (fatto and i == len(righe) - 1 and st == "3")
+                         else "<b>%s</b>" % GLib.markup_escape_text(ic))
+            b = Gtk.Label(label=cosa, xalign=0)
+            c = Gtk.Label(label=(quando or _t("chat.info.ora_nd")) if fatto else _t("chat.info.non_ancora"), xalign=1)
+            c.get_style_context().add_class("dim-label")
+            if not fatto:
+                b.get_style_context().add_class("dim-label")
+            c.set_hexpand(True)
+            for col, w in enumerate((a, b, c)):
+                griglia.attach(w, col, i, 1, 1)
+        d.get_content_area().add(griglia)
+        d.show_all()
+        d.run()
+        d.destroy()
 
     def _segnala_letto(self, *_a):
         """Conversazione aperta e finestra attiva: si dice al contatto fin dove abbiamo letto."""

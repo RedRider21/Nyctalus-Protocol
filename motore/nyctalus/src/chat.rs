@@ -828,21 +828,24 @@ impl Stato {
         std::fs::read_to_string(self.dati.join("stati").join(format!("{addr}.log")))
             .unwrap_or_default()
             .lines()
-            .any(|l| l.ends_with(" 2") || l.ends_with(" 3"))
+            // «ts stato [quando]»: conta il secondo campo (le righe nuove finiscono con l'ora)
+            .any(|l| matches!(l.split_whitespace().nth(1), Some("2") | Some("3")))
     }
 
     // --- spunte (spedito / consegnato / letto) ----------------------------------
     /// Stato di un nostro messaggio: «1» spedito, «c» nella casella, «2» consegnato, «3» letto
-    /// (fino a quell'ora). Resta in `stati/<addr>.log` e arriva alle interfacce come
-    /// `SP <addr> <ts> <stato>` (o `CAS <addr> <ts>` per la casella).
+    /// (fino a quell'ora). Resta in `stati/<addr>.log` («ts stato quando») e arriva alle
+    /// interfacce come `SP <addr> <ts> <stato> <quando>` (o `CAS <addr> <ts> <quando>` per la
+    /// casella): `quando` è l'ora in cui lo abbiamo saputo, per l'«Info» del messaggio.
     fn segna(&self, addr: &str, ts: u64, stato: &str) {
         use std::io::Write;
         let dir = self.dati.join("stati");
         let _ = std::fs::create_dir_all(&dir);
+        let quando = ora();
         if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(dir.join(format!("{addr}.log"))) {
-            let _ = writeln!(f, "{ts} {stato}");
+            let _ = writeln!(f, "{ts} {stato} {quando}");
         }
-        self.notifica(evento_spunta(addr, ts, stato));
+        self.notifica(evento_spunta(addr, ts, stato, quando));
     }
 
     /// Una conferma («K ts» / «R ts») al contatto: subito se c'è la sessione, altrimenti
@@ -865,8 +868,12 @@ impl Stato {
             .unwrap_or_default()
             .lines()
             .filter_map(|l| {
-                let (ts, st) = l.split_once(' ')?;
-                Some(evento_spunta(&con_suffisso(addr), ts.parse().ok()?, st.trim()))
+                // «ts stato [quando]»: le righe vecchie non hanno l'ora (0 = sconosciuta)
+                let mut p = l.split_whitespace();
+                let ts = p.next()?.parse().ok()?;
+                let st = p.next()?;
+                let quando = p.next().and_then(|q| q.parse().ok()).unwrap_or(0);
+                Some(evento_spunta(&con_suffisso(addr), ts, st, quando))
             })
             .collect()
     }
@@ -1394,12 +1401,14 @@ async fn consegna_busta(socks: SocketAddr, casella: &str, per: &str, busta: &[u8
     }
 }
 
-/// Riga d'evento di una spunta: `SP <addr> <ts> 1|2|3` oppure `CAS <addr> <ts>`.
-fn evento_spunta(addr: &str, ts: u64, stato: &str) -> String {
+/// Riga d'evento di una spunta: `SP <addr> <ts> 1|2|3 [quando]` oppure `CAS <addr> <ts> [quando]`.
+/// `quando` (secondi Unix) manca se sconosciuto (righe scritte da motori più vecchi).
+fn evento_spunta(addr: &str, ts: u64, stato: &str, quando: u64) -> String {
+    let q = if quando > 0 { format!(" {quando}") } else { String::new() };
     if stato == "c" {
-        format!("CAS {addr} {ts}")
+        format!("CAS {addr} {ts}{q}")
     } else {
-        format!("SP {addr} {ts} {stato}")
+        format!("SP {addr} {ts} {stato}{q}")
     }
 }
 

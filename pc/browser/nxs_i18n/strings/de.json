@@ -1682,5 +1682,17 @@
   "br.attesa.body": "Der 🦇-Tab öffnet nichts, bis das Nyctalus-Netz bereit ist: Keine Seite geht unverschlüsselt mit deiner Adresse hinaus. Er öffnet sich von selbst, sobald das Netz antwortet (meist wenige Sekunden).",
   "chat.tema.menta": "Minze (grün)",
   "chat.tema.cielo": "Himmel (hellblau)",
-  "chat.tema.personalizzato": "Eigenes"
+  "chat.tema.personalizzato": "Eigenes",
+  "chat.menu.info": "Info",
+  "chat.info.titolo": "Nachrichteninfo",
+  "chat.info.inviato": "Gesendet",
+  "chat.info.casella": "Im verschlüsselten Postfach",
+  "chat.info.consegnato": "Zugestellt",
+  "chat.info.visualizzato": "Gesehen",
+  "chat.info.non_ancora": "noch nicht",
+  "chat.info.ora_nd": "Zeit nicht verfügbar",
+  "chat.info.oggi": "heute um {ora}",
+  "chat.info.ieri": "gestern um {ora}",
+  "chat.info.giorno": "{giorno} um {ora}",
+  "chat.chiudi": "Schließen"
 }

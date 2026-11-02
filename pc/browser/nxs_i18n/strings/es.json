@@ -1682,5 +1682,17 @@
   "br.attesa.body": "La pestaña 🦇 no abre nada hasta que la red Nyctalus esté lista: ninguna página sale en claro con tu dirección. Se abre sola en cuanto la red responde (normalmente unos segundos).",
   "chat.tema.menta": "Menta (verde)",
   "chat.tema.cielo": "Cielo (celeste, claro)",
-  "chat.tema.personalizzato": "Personalizado"
+  "chat.tema.personalizzato": "Personalizado",
+  "chat.menu.info": "Info",
+  "chat.info.titolo": "Info del mensaje",
+  "chat.info.inviato": "Enviado",
+  "chat.info.casella": "En el buzón cifrado",
+  "chat.info.consegnato": "Entregado",
+  "chat.info.visualizzato": "Visto",
+  "chat.info.non_ancora": "todavía no",
+  "chat.info.ora_nd": "hora no disponible",
+  "chat.info.oggi": "hoy a las {ora}",
+  "chat.info.ieri": "ayer a las {ora}",
+  "chat.info.giorno": "{giorno} a las {ora}",
+  "chat.chiudi": "Cerrar"
 }

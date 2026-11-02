@@ -2,6 +2,15 @@
 
 > Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
 
+## Fatto in ufficio il 02/11/2026 (SOLO commit locali: niente su GitHub finché l'utente non lo dice)
+- ✅ Rientro dalle impostazioni aperte dal ☰ della chat (resta nella chat).
+- ✅ «↩ Torna a Nyctalus» nel menu del browser dell'app (APK 0.37).
+- ✅ Temi Menta, Cielo, 🎨 Personalizzato (selettore + codice, chiaro/scuro) e ↺ Ripristina, ovunque (APK 0.38-0.39).
+- ✅ **ℹ️ Info del messaggio** (inviato / casella / consegnato / visualizzato con l'ora): motore registra `ts stato quando`; chat PC e telefono. ⚠️ Il **motore Android** con l'ora va ricompilato dalla CI (a casa): fino ad allora sul telefono l'ora la annota la chat mentre è aperta.
+- ✅ Chrome muto nelle prove (i bip uscivano dalle casse); prova 03 con più tempo; prova 20 stabile (finto motore).
+- 📄 Documento PRIVATO `privato/MODALITA-DISCRETA.md` (proposte di offuscamento / non-osservabilità, da decidere dall'utente).
+- In ufficio NON far girare la rete Nyctalus sulla rete aziendale (SOC): solo prove isolate nel PC.
+
 ## DA FARE AL PROSSIMO COLLEGAMENTO (segnalati dall'utente il 01/11/2026, APK 0.36)
 1. ✅ FATTO (locale, da960f8): **Impostazioni dalla chat → all'uscita torna alla home dell'APK invece che alla chat.** Devono avere rientri diversi: dalla home → home; dalla chat (☰) → chat. Causa probabile già individuata: `$("btn-menu").onclick = impostazioni` passa l'evento del clic come argomento `solo` (vero) → si apre la versione «a schermo intero dell'app», che all'uscita chiama `HOST.avvio()`. Correzione: `onclick = () => impostazioni()`; aggiungere una prova in 03.
 2. ✅ FATTO (locale, APK 0.37): voce «↩ Torna a Nyctalus» in fondo al menu ⋮ del browser. **Browser dell'app (anche quello aperto per i manuali online):** manca un modo per tornare alla home dell'APK; ora bisogna premere indietro tante volte o chiudere dalle miniature delle app. ATTENZIONE: il pulsante 🏠 del browser ESISTE già e deve restare com'è (porta alla pagina iniziale scelta nel browser): serve un comando DIVERSO per uscire verso la schermata dell'app — es. voce «Torna a Nyctalus» / «Esci dal browser» nel menu ⋮ del browser, oppure il logo/pipistrello nella barra, e indietro all'inizio della cronologia che riporta all'app. **SCELTA DELL'UTENTE: una voce di menu «Torna a Nyctalus»** (nel menu ⋮ del browser).

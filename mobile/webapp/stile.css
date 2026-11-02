@@ -405,3 +405,13 @@ body.solo-rubrica #velo { background: var(--panel); }
 .ch-mini { position: fixed; top: 0; left: 0; right: 0; z-index: 35; border: 0; padding: 9px 14px;
   padding-top: max(9px, env(safe-area-inset-top)); background: linear-gradient(90deg, var(--invia), var(--invia2));
   color: #fff; font-weight: 600; font-size: 14px; letter-spacing: .2px; box-shadow: 0 2px 12px rgba(0,0,0,.25); }
+
+/* «Info» del messaggio: inviato, nella casella, consegnato, visualizzato (con l'ora) */
+#dialogo .info-riga { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 8px;
+  padding: 11px 2px; border-bottom: 1px solid rgba(var(--rgb), .12); }
+#dialogo .info-riga:last-of-type { border-bottom: 0; }
+#dialogo .info-riga .ic { color: var(--tenue); font-weight: 700; text-align: center; letter-spacing: -2px; }
+#dialogo .info-riga .ic.letto { color: var(--accento); }
+#dialogo .info-riga .cosa { color: var(--testo); }
+#dialogo .info-riga .quando { color: var(--tenue); font-size: 13.5px; text-align: right; }
+#dialogo .info-riga.no .cosa, #dialogo .info-riga.no .quando { opacity: .5; }

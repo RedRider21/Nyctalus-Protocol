@@ -1682,5 +1682,17 @@
   "br.attesa.body": "The 🦇 tab opens nothing until the Nyctalus network is ready, so no page ever leaves in the clear with your address. It opens by itself as soon as the network answers (usually a few seconds).",
   "chat.tema.menta": "Mint (green)",
   "chat.tema.cielo": "Sky (light blue)",
-  "chat.tema.personalizzato": "Custom"
+  "chat.tema.personalizzato": "Custom",
+  "chat.menu.info": "Info",
+  "chat.info.titolo": "Message info",
+  "chat.info.inviato": "Sent",
+  "chat.info.casella": "In the encrypted mailbox",
+  "chat.info.consegnato": "Delivered",
+  "chat.info.visualizzato": "Seen",
+  "chat.info.non_ancora": "not yet",
+  "chat.info.ora_nd": "time not available",
+  "chat.info.oggi": "today at {ora}",
+  "chat.info.ieri": "yesterday at {ora}",
+  "chat.info.giorno": "{giorno} at {ora}",
+  "chat.chiudi": "Close"
 }

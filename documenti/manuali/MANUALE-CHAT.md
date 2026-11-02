@@ -108,6 +108,12 @@ Accanto all'ora dei tuoi messaggi:
 | ✓✓ | **consegnato**: è arrivato sul dispositivo del contatto (anche ritirato dalla casella) |
 | ✓✓ blu | **letto**: il contatto ha aperto la conversazione |
 
+**ℹ️ Info del messaggio:** tieni premuto (telefono) o tasto destro (PC) su un **tuo** messaggio o
+allegato → **Info**: vedi **quando** è stato inviato, messo nella casella, **consegnato** e
+**visualizzato**, con giorno e ora. Le ore le annota il tuo motore quando arriva ogni conferma:
+per i messaggi di prima di questo aggiornamento compare «ora non disponibile». (Sul telefono,
+finché il motore in Termux non è aggiornato, l'ora la annota la chat mentre è aperta.)
+
 - Le conferme viaggiano cifrate dentro la stessa sessione dei messaggi; se il contatto non è
   raggiungibile partono appena lo diventa.
 - **Messaggi mai persi:** se il contatto sparisce di colpo (es. modalità aereo) e un messaggio non
