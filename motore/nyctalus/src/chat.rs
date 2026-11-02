@@ -35,6 +35,10 @@ use tokio::sync::mpsc;
 use crate::incontro::Record;
 use crate::{in_esadecimale, Risultato};
 
+/// Trasferimenti di file grandi (programma «File»): vedi il modulo.
+#[path = "trasferimenti.rs"]
+mod trasferimenti;
+
 /// Avvia il motore della chat: ascolta i contatti in entrata (backend), serve
 /// l'interfaccia grafica sulla porta di controllo e compone le connessioni in
 /// uscita tramite il proxy SOCKS.
@@ -76,6 +80,7 @@ pub async fn chat(
         letti_inviati: Mutex::new(HashMap::new()),
         battito_noto: Mutex::new(HashSet::new()),
         inviti: Mutex::new(HashMap::new()),
+        trasf: trasferimenti::Registro::carica(&dati),
     });
 
     println!("Nyctalus chat");
@@ -139,6 +144,7 @@ struct Stato {
     letti_inviati: Mutex<HashMap<String, u64>>,              // ultimo «letto» mandato a ciascun contatto
     battito_noto: Mutex<HashSet<String>>,                    // contatti che rispondono al battito (PING/PONG)
     inviti: Mutex<HashMap<String, (String, u64)>>,           // chiamate che squillano: contatto → (id, quando)
+    trasf: trasferimenti::Registro,                          // trasferimenti di file grandi (programma File)
 }
 
 /// Un invito a una chiamata vale per tanto (poi chi chiama riaggancia da sé).
@@ -222,6 +228,12 @@ impl Stato {
     async fn gestisci_entrante(self: Arc<Self>, mut flusso: TcpStream) -> Risultato<()> {
         // 1) il contatto dichiara il proprio indirizzo
         let saluto = leggi_frame(&mut flusso).await?.ok_or("nessun saluto")?;
+        // «T»: un canale DATI di un trasferimento (stessa prova d'identità della chat)
+        if let Some(d) = saluto.strip_prefix(b"T") {
+            let peer = std::str::from_utf8(d)?.trim().to_string();
+            let segreti = trasferimenti::sfida(&mut flusso, &peer).await?;
+            return self.x_servi(flusso, peer, segreti).await;
+        }
         let dichiarato = saluto.strip_prefix(b"H").ok_or("saluto malformato")?;
         let peer = std::str::from_utf8(dichiarato)?.trim().to_string();
         let chiave = indirizzo::in_chiave(&peer).map_err(|_| "indirizzo del contatto non valido")?;
@@ -287,6 +299,7 @@ impl Stato {
         self.irraggiungibili.lock().unwrap().remove(&peer);
         self.notifica(format!("ST {peer} 1"));
         self.segna_visto(&peer);
+        self.x_ricollega(&peer);   // trasferimenti di file rimasti in sospeso con lui
 
         // scrittore: sigilla ogni messaggio in chiaro e lo spedisce
         let scrittore = tokio::spawn(async move {
@@ -332,6 +345,8 @@ impl Stato {
                 ultimo.store(ora(), Ordering::Relaxed);
                 match frame {
                     Ok(Some(frame)) => match rx.apri(&frame) {
+                        // segnali dei trasferimenti di file: «X? <id> …»
+                        Ok(chiaro) if chiaro.len() > 3 && chiaro[0] == b'X' && chiaro[2] == b' ' => stato.x_ricevi(&peer, &chiaro),
                         Ok(chiaro) => stato.ricevi_messaggio(&peer, sid, &chiaro),
                         Err(_) => break, // frame corrotto: chiudiamo
                     },
@@ -1299,6 +1314,43 @@ impl Stato {
                     }
                 }
             }
+            // --- programma File: trasferimenti di file grandi ---------------------------------
+            "XSEND" => {
+                // XSEND <addr> <percorso hex> [mime]  →  OK <id>
+                let addr = it.next().unwrap_or("").to_string();
+                let resto = it.next().unwrap_or("");
+                let (hex, mime) = resto.split_once(' ').unwrap_or((resto, ""));
+                let percorso = match da_hex(hex) {
+                    Ok(b) => PathBuf::from(String::from_utf8_lossy(&b).to_string()),
+                    Err(_) => {
+                        let _ = tx.send("ERR percorso non valido\n".into());
+                        return;
+                    }
+                };
+                let risposta = match self.x_invia(&addr, percorso, mime).await {
+                    Ok(id) => format!("OK {id}\n"),
+                    Err(e) => format!("ERR {e}\n"),
+                };
+                let _ = tx.send(risposta);
+            }
+            cmd @ ("XOK" | "XNO" | "XPAUSA" | "XRIPRENDI" | "XANNULLA") => {
+                let id = it.next().unwrap_or("").trim().to_string();
+                let risposta = match self.x_comando(cmd, &id).await {
+                    Ok(()) => "OK\n".to_string(),
+                    Err(e) => format!("ERR {e}\n"),
+                };
+                let _ = tx.send(risposta);
+            }
+            "XLIST" => {
+                for riga in self.x_elenco() {
+                    let _ = tx.send(format!("{riga}\n"));
+                }
+                let _ = tx.send("ENDX\n".into());
+            }
+            "XCONF" => {
+                let resto = format!("{} {}", it.next().unwrap_or(""), it.next().unwrap_or(""));
+                let _ = tx.send(format!("{}\n", self.x_conf(&resto)));
+            }
             "SENDFILE" => {
                 // SENDFILE <addr> <percorso hex> [mime]
                 let addr = it.next().unwrap_or("").to_string();
@@ -1676,6 +1728,7 @@ mod prove {
             letti_inviati: Mutex::new(HashMap::new()),
             battito_noto: Mutex::new(HashSet::new()),
             inviti: Mutex::new(HashMap::new()),
+            trasf: trasferimenti::Registro::carica(&d),
         };
         st.registra_riga("x.nyct", "in 1 6161");
         st.registra_riga("x.nyct", "out 2 6262");
