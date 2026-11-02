@@ -59,8 +59,8 @@ D="$H/.nyctalus-rete/casa/rubrica"
 # le interfacce: riquadro «Rubrica» dell'app Android, apertura diretta nella web-app,
 # pulsante «Rubrica» nel menu del PC, finestra della rubrica nella chat del PC
 J="$ROOT/mobile/android/app/src/main/java/org/nyctalus/mobile/MainActivity.java"; W="$ROOT/mobile/webapp/app.js"
-grep -q 'casella("👥", "Rubrica"' "$J" && grep -q '#rubrica' "$J" && grep -q 'nyctApriRubrica' "$J" \
-  && pass "app Android: riquadro «👥 Rubrica» nella schermata d'avvio" || fail "riquadro Rubrica nell'APK"
+grep -q 'casella(R.drawable.ic_avvio_rubrica, "Rubrica"' "$J" && grep -q '#rubrica' "$J" && grep -q 'nyctApriRubrica' "$J" \
+  && pass "app Android: pulsante «Rubrica» (icona) nella schermata d'avvio" || fail "pulsante Rubrica nell'APK"
 grep -q 'location.hash === "#rubrica"' "$W" && grep -q 'window.nyctApriRubrica' "$W" && grep -q 'elencoInAttesa' "$W" \
   && pass "web-app: si apre direttamente sulla rubrica (anche prima che la chat sia collegata)" || fail "apertura diretta della rubrica"
 grep -q '_apri_rubrica' "$ROOT/pc/launcher/nyctalus_launcher/app.py" && grep -q 'apri-rubrica' "$ROOT/pc/chat/nyctalus_chat/app.py" \
