@@ -23,16 +23,42 @@ else BIN="$(command -v nyctalus || true)"; fi
 [ -n "$BIN" ] || { echo "✗ binario 'nyctalus' non trovato"; exit 1; }
 
 if [ -d "$QUI/chat" ]; then PYBASE="$QUI"; else PYBASE="$QUI/../pc"; fi   # pacchetto | progetto
-export PYTHONPATH="$PYBASE/chat:$PYBASE/browser${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$PYBASE/chat:$PYBASE/file:$PYBASE/browser${PYTHONPATH:+:$PYTHONPATH}"
+# quale finestra aprire sopra il motore: la chat (predefinita) o il programma File
+INTERFACCIA="${NYCTALUS_INTERFACCIA:-nyctalus_chat}"
+case "$INTERFACCIA" in nyctalus_chat|nyctalus_file) ;; *) INTERFACCIA=nyctalus_chat ;; esac
 
 python3 -c 'import gi; gi.require_version("Gtk","3.0")' 2>/dev/null || {
   echo "✗ PyGObject/GTK3 non disponibile — sudo apt install python3-gi gir1.2-gtk-3.0"; exit 1; }
 
 DATI="$HOME/.nyctalus-chat"; mkdir -p "$DATI"
+COLLEGAMENTO="$DATI/controllo"            # «porta segreto» del motore acceso (privato, 600)
+FINESTRE="$DATI/finestre"; mkdir -p "$FINESTRE"   # le finestre aperte sopra questo motore
+
+# Motore già acceso (es. la chat è aperta e ora si apre File, o viceversa): ci si aggancia,
+# senza accenderne un secondo. Il motore resta acceso finché c'è almeno una finestra.
+if ss -ltn 2>/dev/null | grep -q ":1091\b" && [ -s "$COLLEGAMENTO" ]; then
+  read -r PORTA SEGRETO < "$COLLEGAMENTO"
+  NYCTALUS_CHAT_PORT="$PORTA" NYCTALUS_CHAT_TOKEN="$SEGRETO" python3 -m "$INTERFACCIA" & UIPID=$!
+  echo "$UIPID" > "$FINESTRE/$UIPID"
+  wait "$UIPID"
+# chiusa la finestra che ha acceso il motore: si aspettano le altre ancora aperte (es. File
+# con un trasferimento in corso), poi si spegne tutto
+while :; do
+  vive=0
+  for f in "$FINESTRE"/*; do
+    [ -e "$f" ] || continue
+    if kill -0 "$(basename "$f")" 2>/dev/null; then vive=1; else rm -f "$f"; fi
+  done
+  [ "$vive" = 1 ] || break
+  sleep 2
+done; rm -f "$FINESTRE/$UIPID"
+  exit 0
+fi
 CFG="$HOME/.nyctalus-browser/config.json"
 BACKEND="127.0.0.1:1082"; CONTROL="127.0.0.1:1091"
 WORK="$(mktemp -d /tmp/nyctalus-chat.XXXXXX)"; MIEI=()
-cleanup() { for p in "${MIEI[@]:-}"; do kill "$p" 2>/dev/null; done; rm -rf "$WORK"; }
+cleanup() { for p in "${MIEI[@]:-}"; do kill "$p" 2>/dev/null; done; rm -rf "$WORK"; rm -f "$COLLEGAMENTO"; }
 trap cleanup EXIT INT TERM
 
 leggi_cfg() { python3 -c "import json,sys
@@ -47,6 +73,7 @@ if [ -n "$URL" ] && [ -n "$AUTH" ]; then SOCKS="127.0.0.1:1080"; else SOCKS="127
 # (passa per variabile d'ambiente, così non compare nell'elenco dei processi).
 NYCTALUS_CHAT_TOKEN="$(python3 -c 'import secrets;print(secrets.token_hex(16))')"
 export NYCTALUS_CHAT_TOKEN
+( umask 077; echo "1091 $NYCTALUS_CHAT_TOKEN" > "$COLLEGAMENTO" )   # per le altre finestre (File)
 
 # --- 1) motore (parte subito) e FINESTRA (subito) ----------------------------
 echo "» avvio il motore della chat"
@@ -62,7 +89,7 @@ ADDR=""; for _ in $(seq 1 40); do ADDR=$(grep -oE '[a-z2-7]{56}\.nyct' "$WORK/ch
 [ -n "$ADDR" ] && echo "  il tuo Contact ID:  $ADDR"
 
 echo "» apro la finestra (la rete finisce di salire in sottofondo)"
-NYCTALUS_CHAT_PORT=1091 python3 -m nyctalus_chat > "$WORK/ui.log" 2>&1 & UIPID=$!
+NYCTALUS_CHAT_PORT=1091 python3 -m "$INTERFACCIA" > "$WORK/ui.log" 2>&1 & UIPID=$!
 
 # --- 2) rete + servizio .nyct, IN SOTTOFONDO ---------------------------------
 avvia_rete() {

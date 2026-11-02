@@ -184,7 +184,7 @@ class Launcher(Gtk.Window):
         self._bottone("web-browser-symbolic", _t("lau.browser"), self._apri_browser)
         self._bottone("user-available-symbolic", _t("lau.chat"), self._apri_chat)
         self._bottone("system-users-symbolic", _t("lau.rubrica"), self._apri_rubrica)
-        self._bottone("folder-download-symbolic", _t("lau.file"), self._apri_file, attivo=False)
+        self._bottone("folder-download-symbolic", _t("lau.file"), self._apri_file)
         sep = Gtk.Separator(
             orientation=Gtk.Orientation.VERTICAL if not verticale else Gtk.Orientation.HORIZONTAL)
         self.box.pack_start(sep, False, False, 0)
@@ -399,6 +399,11 @@ class Launcher(Gtk.Window):
         self._avviso(_t("lau.rubrica"), _t("lau.in_arrivo_corpo"))
 
     def _apri_file(self):
+        """Il programma File (scambio di file grandi): stesso motore della chat."""
+        for candidato in (RADICE / "avvia-file.sh", RADICE.parent / "strumenti" / "avvia-file.sh"):
+            if candidato.exists():
+                self._lancia(["bash", str(candidato)])
+                return
         self._avviso(_t("lau.file"), _t("lau.in_arrivo_corpo"))
 
     def _menu_impostazioni(self):

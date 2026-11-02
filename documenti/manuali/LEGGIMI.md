@@ -24,6 +24,7 @@ Tutto passa cifrato attraverso **3 nodi**: nessuno vede chi parla con chi, nemme
 |---|---|
 | chat, contatti, rubrica, allegati, **chiamate e videochiamate**, temi | [Chat](MANUALE-CHAT.md) — vale per PC e telefono |
 | l'app sul telefono: avvio, impostazioni, browser 🦇, notifiche | [Telefono](MANUALE-TELEFONO.md) |
+| **mandare file grandi** ai contatti (pausa, ripresa, più veloce) | [File](MANUALE-FILE.md) |
 | il PC: mini menu, browser, dove stanno i dati | [PC Linux](MANUALE-PC.md) |
 | Windows (anteprima) | [Windows](MANUALE-WINDOWS.md) |
 

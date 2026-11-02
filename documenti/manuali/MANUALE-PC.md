@@ -25,7 +25,7 @@ Installato, è nel menu delle applicazioni come **«Nyctalus»** (o col comando 
 | Browser | apre il browser Nyctalus |
 | Chat | apre la chat (motore + servizio `.nyct` + finestra) |
 | Rubrica | apre la sola **rubrica della rete**, in una finestra a sé (la finestra della chat compare solo quando scegli qualcuno a cui scrivere; chiusa la rubrica, se la chat non era aperta si chiude tutto): iscriversi, chi è in linea, aggiungere e scrivere (`MANUALE-CHAT.md` §3-bis) |
-| File | gestore dei file: in arrivo |
+| File | il programma **File**: manda file grandi ai contatti, con pausa e ripresa (`MANUALE-FILE.md`) |
 | ☰ | impostazioni (anche con il **tasto destro** sul pannello) |
 
 **Impostazioni (☰ o tasto destro):**

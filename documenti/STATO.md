@@ -9,6 +9,7 @@
 - ✅ **ℹ️ Info del messaggio** (inviato / casella / consegnato / visualizzato con l'ora): motore registra `ts stato quando`; chat PC e telefono. ⚠️ Il **motore Android** con l'ora va ricompilato dalla CI (a casa): fino ad allora sul telefono l'ora la annota la chat mentre è aperta.
 - ✅ Chrome muto nelle prove (i bip uscivano dalle casse); prova 03 con più tempo; prova 20 stabile (finto motore).
 - 📄 Documento PRIVATO `privato/MODALITA-DISCRETA.md` (proposte di offuscamento / non-osservabilità, da decidere dall'utente).
+- ✅ **Programma File (PC)** — scelte dell'utente: file grandi a un contatto, più circuiti in parallelo, finestra a sé stante + traccia in chat, solo dai contatti con conferma sopra soglia. Motore `trasferimenti.rs` (prova 22: 15/15, anche ripresa dopo spegnimento), finestra `pc/file/nyctalus_file` (prova 23), comando `nyctalus-file`, pulsante File del mini menu, avvio condiviso (`~/.nyctalus-chat/controllo`, motore vivo finché c'è una finestra), manuale `MANUALE-FILE.md`. **Prossimo: schermata File del telefono/Windows** (web-app; il motore Android nuovo arriva con la CI a casa).
 - In ufficio NON far girare la rete Nyctalus sulla rete aziendale (SOC): solo prove isolate nel PC.
 
 ## DA FARE AL PROSSIMO COLLEGAMENTO (segnalati dall'utente il 01/11/2026, APK 0.36)
