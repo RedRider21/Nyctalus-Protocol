@@ -1679,5 +1679,8 @@
   "chat.ch.apri_nota": "Back to the call window",
   "lau.tema": "Theme",
   "br.attesa.title": "Nyctalus network starting",
-  "br.attesa.body": "The 🦇 tab opens nothing until the Nyctalus network is ready, so no page ever leaves in the clear with your address. It opens by itself as soon as the network answers (usually a few seconds)."
+  "br.attesa.body": "The 🦇 tab opens nothing until the Nyctalus network is ready, so no page ever leaves in the clear with your address. It opens by itself as soon as the network answers (usually a few seconds).",
+  "chat.tema.menta": "Mint (green)",
+  "chat.tema.cielo": "Sky (light blue)",
+  "chat.tema.personalizzato": "Custom"
 }

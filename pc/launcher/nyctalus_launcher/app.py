@@ -441,6 +441,10 @@ class Launcher(Gtk.Window):
                 r.set_active(nome == attuale)
                 r.connect("toggled", lambda w, n=nome: w.get_active() and self._scegli_tema(n))
                 sotto.append(r)
+            pers = Gtk.RadioMenuItem.new_with_label_from_widget(primo, _t("chat.tema.personalizzato") + "…")
+            pers.set_active(attuale == nxs_tema.PERSONALIZZATO)
+            pers.connect("activate", lambda _w: GLib.idle_add(self._tema_personalizzato))
+            sotto.append(pers)
             tema.set_submenu(sotto)
             menu.append(tema)
         menu.append(Gtk.SeparatorMenuItem())
@@ -511,6 +515,12 @@ class Launcher(Gtk.Window):
         d.format_secondary_text(corpo)
         d.run()
         d.destroy()
+
+    def _tema_personalizzato(self):
+        scelta = nxs_tema.scegli_colore(self, _t("chat.tema.personalizzato"))
+        if scelta and nxs_tema.scrivi_personalizzato(*scelta):
+            self.prov.load_from_data(_css(nxs_tema.PERSONALIZZATO))
+        return False
 
     def _scegli_tema(self, nome):
         if nxs_tema.scrivi(nome):

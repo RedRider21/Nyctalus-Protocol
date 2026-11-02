@@ -176,6 +176,9 @@ _ITA = {
     "chat.tema.notte": "Notte (blu)",
     "chat.tema.ardesia": "Ardesia (stile Telegram)",
     "chat.tema.viola": "Viola notturno",
+    "chat.tema.menta": "Menta (verde)",
+    "chat.tema.cielo": "Cielo (celeste, chiaro)",
+    "chat.tema.personalizzato": "Personalizzato",
     "chat.tema.chiaro": "Chiaro",
     "chat.sfondo.pipistrelli": "Trama a pipistrelli",
     "chat.sfondo.velo": "Velo di colore",
@@ -460,13 +463,18 @@ SFONDO_DEF = "pipistrelli"
 SFONDO = Path(__file__).resolve().parent / "assets" / "sfondo.svg"
 
 
+def _nomi_temi():
+    """I temi disponibili: quelli comuni a tutto il PC (nxs_tema), o quelli della chat."""
+    return list(nxs_tema.TEMI) + ["personalizzato"] if nxs_tema is not None else list(TEMI)
+
+
 def _url_trama(tema):
     """La trama a pipistrelli, ricolorata per il tema (scuro o chiaro)."""
     try:
         svg = SFONDO.read_text(encoding="utf-8")
     except Exception:            # noqa: BLE001
         return ""
-    chiaro = tema.get("BG", "").lower() in ("#eef1f6",)
+    chiaro = not tema.get("SCURO", tema.get("BG", "").lower() not in ("#eef1f6",))
     colore = "#3a4a6e" if chiaro else "#9fb4e6"
     svg = svg.replace("#9fb4e6", colore).replace('fill-opacity="0.05"', 'fill-opacity="%s"' % tema["TRAMA"])
     dest = Path(GLib.get_user_cache_dir()) / "nyctalus-chat"
@@ -481,7 +489,7 @@ def _url_trama(tema):
 
 def _css(nome_tema=TEMA_DEF, nome_sfondo=SFONDO_DEF):
     """CSS completo per il tema e lo sfondo scelti."""
-    tema = TEMI.get(nome_tema, TEMI[TEMA_DEF])
+    tema = nxs_tema.colori(nome_tema) if nxs_tema is not None else TEMI.get(nome_tema, TEMI[TEMA_DEF])
     rgb = tema["RGB"]
     velo = ("radial-gradient(circle at 20%% 0%%, rgba(%s,0.10), rgba(0,0,0,0) 45%%), "
             "radial-gradient(circle at 85%% 100%%, rgba(%s,0.08), rgba(0,0,0,0) 45%%)") % (rgb, rgb)
@@ -494,7 +502,7 @@ def _css(nome_tema=TEMA_DEF, nome_sfondo=SFONDO_DEF):
         img, rep = "none", "no-repeat"
     css = CSS_TMPL.replace("@CHATIMG@", img).replace("@CHATREP@", rep)
     for k, v in tema.items():
-        css = css.replace("@%s@" % k, v)
+        css = css.replace("@%s@" % k, str(v))
     return css
 
 
@@ -1972,7 +1980,7 @@ class Chat(Gtk.Window):
             d = {}
         if nxs_tema is not None:      # il tema è uno solo per tutti i programmi
             d["tema"] = nxs_tema.leggi(d.get("tema"))
-        if d.get("tema") not in TEMI:
+        if d.get("tema") not in _nomi_temi():
             d["tema"] = TEMA_DEF
         if d.get("sfondo") not in SFONDI:
             d["sfondo"] = SFONDO_DEF
@@ -2035,7 +2043,13 @@ class Chat(Gtk.Window):
                 menu.append(voce)
 
         sezione(_t("chat.tema"))
-        gruppo("tema", list(TEMI))
+        gruppo("tema", [n for n in _nomi_temi() if n != "personalizzato"])
+        if nxs_tema is not None:
+            pers = Gtk.RadioMenuItem.new_with_label_from_widget(
+                [m for m in menu.get_children() if isinstance(m, Gtk.RadioMenuItem)][0], _t("chat.tema.personalizzato") + "…")
+            pers.set_active(self.ui.get("tema") == "personalizzato")
+            pers.connect("activate", lambda _v: GLib.idle_add(self._tema_personalizzato))
+            menu.append(pers)
         menu.append(Gtk.SeparatorMenuItem())
         sezione(_t("chat.sfondo"))
         gruppo("sfondo", list(SFONDI))
@@ -2060,9 +2074,18 @@ class Chat(Gtk.Window):
         if chiave == "tema" and nxs_tema is not None:
             nxs_tema.scrivi(valore)       # vale anche per il mini menu e il browser
 
+    def _tema_personalizzato(self):
+        """Personalizzato…: un colore (tavolozza o codice) e chiaro/scuro; vale per tutto il PC."""
+        scelta = nxs_tema.scegli_colore(self, _t("chat.tema.personalizzato"))
+        if scelta and nxs_tema.scrivi_personalizzato(*scelta):
+            self.ui["tema"] = "personalizzato"
+            self._salva_ui()
+            self._applica_aspetto()
+        return False
+
     def _tema_globale(self, nome):
         """Il tema è stato cambiato altrove (mini menu ⚙): colori nuovi al volo."""
-        if nome in TEMI and self.ui.get("tema") != nome:
+        if nome == "personalizzato" or (nome in _nomi_temi() and self.ui.get("tema") != nome):
             self.ui["tema"] = nome
             self._salva_ui()
             self._applica_aspetto()

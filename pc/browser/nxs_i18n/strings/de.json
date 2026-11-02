@@ -1679,5 +1679,8 @@
   "chat.ch.apri_nota": "Zurück zum Anruffenster",
   "lau.tema": "Design",
   "br.attesa.title": "Nyctalus-Netz startet",
-  "br.attesa.body": "Der 🦇-Tab öffnet nichts, bis das Nyctalus-Netz bereit ist: Keine Seite geht unverschlüsselt mit deiner Adresse hinaus. Er öffnet sich von selbst, sobald das Netz antwortet (meist wenige Sekunden)."
+  "br.attesa.body": "Der 🦇-Tab öffnet nichts, bis das Nyctalus-Netz bereit ist: Keine Seite geht unverschlüsselt mit deiner Adresse hinaus. Er öffnet sich von selbst, sobald das Netz antwortet (meist wenige Sekunden).",
+  "chat.tema.menta": "Minze (grün)",
+  "chat.tema.cielo": "Himmel (hellblau)",
+  "chat.tema.personalizzato": "Eigenes"
 }

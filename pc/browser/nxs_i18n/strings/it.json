@@ -1679,5 +1679,8 @@
   "chat.ch.apri_nota": "Torna alla finestra della chiamata",
   "lau.tema": "Tema",
   "br.attesa.title": "Rete Nyctalus in avvio",
-  "br.attesa.body": "La scheda 🦇 non apre nulla finché la rete Nyctalus non è pronta: così nessuna pagina parte in chiaro col tuo indirizzo. Si apre da sola appena la rete risponde (di solito pochi secondi)."
+  "br.attesa.body": "La scheda 🦇 non apre nulla finché la rete Nyctalus non è pronta: così nessuna pagina parte in chiaro col tuo indirizzo. Si apre da sola appena la rete risponde (di solito pochi secondi).",
+  "chat.tema.menta": "Menta (verde)",
+  "chat.tema.cielo": "Cielo (celeste, chiaro)",
+  "chat.tema.personalizzato": "Personalizzato"
 }
