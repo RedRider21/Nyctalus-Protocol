@@ -9,6 +9,9 @@ titolo "Funzionamento · app Android (APK)"
 A="$ROOT/mobile/android/app/src/main"; M="$A/AndroidManifest.xml"; J="$A/java/org/nyctalus/mobile/MainActivity.java"
 
 J8="$(dirname "$M")/java/org/nyctalus/mobile/MainActivity.java"
+B8="$(dirname "$M")/java/org/nyctalus/mobile/BrowserActivity.java"
+grep -q '"Torna a Nyctalus", v -> tornaANyctalus()' "$B8" && grep -q 'getBooleanExtra("torna_avvio", false)' "$J8" \
+  && pass "browser: voce «Torna a Nyctalus» che riporta alla schermata iniziale dell'app (il 🏠 resta la pagina iniziale del browser)" || fail "manca «Torna a Nyctalus» nel browser"
 grep -q 'permission.CAMERA' "$M" && grep -q 'scattoInAttesa = i;' "$J8" \
   && pass "fotocamera: permesso solo per le videochiamate; le foto usano l'app del telefono (chiesto prima dello scatto)" || fail "permesso fotocamera"
 grep -q 'allowBackup="false"' "$M" && pass "backup dell'app disattivato (il segreto non finisce nei backup)" || fail "allowBackup"

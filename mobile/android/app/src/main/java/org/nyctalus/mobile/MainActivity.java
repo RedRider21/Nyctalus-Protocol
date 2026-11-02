@@ -119,6 +119,10 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        if (intent != null && intent.getBooleanExtra("torna_avvio", false)) {   // «Torna a Nyctalus» dal browser
+            intent.removeExtra("torna_avvio");
+            if (web != null && web.getParent() != null) tornaAllAvvio();
+        }
         gestisciCollegamento(intent);
         gestisciNotifica(intent);
     }

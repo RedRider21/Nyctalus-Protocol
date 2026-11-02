@@ -59,6 +59,10 @@ Senza l'app: in Termux `nyctalus-mobile` e apri in Chrome l'indirizzo che stampa
 pagina, traduzione, modalità lettura, sito desktop, download. In più ha la **modalità
 Nyctalus**: il pulsante **🦇** a sinistra della barra, oppure la voce in cima al menu ⋮.
 
+**Per tornare all'app:** menu ⋮ → **↩ Torna a Nyctalus** (in fondo). Riporta alla schermata
+iniziale dell'app e chiude il browser. Il pulsante **🏠** invece resta quello del browser: apre
+la pagina iniziale che hai scelto.
+
 - **🦇 ON (verde):** tutto il traffico del browser passa dalla rete Nyctalus e il sito non vede
   il tuo indirizzo. Si aprono anche i siti `.nyct`.
 - **Prima di aprire qualunque pagina il browser verifica** che il traffico passi davvero

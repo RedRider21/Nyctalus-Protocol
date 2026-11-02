@@ -976,6 +976,10 @@ public class BrowserActivity extends Activity {
         pannello.addView(separatore());
         pannello.addView(voceMenu(R.drawable.ic_home, "Pagina iniziale", v -> vaiAllaHome()));
         pannello.addView(voceMenu(R.drawable.ic_pin, "Imposta come pagina iniziale", v -> impostaPaginaIniziale()));
+        pannello.addView(separatore());
+        // «Torna a Nyctalus»: la schermata iniziale dell'app (diversa dal 🏠, che resta la
+        // pagina iniziale del browser). Il browser si chiude: niente schede appese fra le app.
+        pannello.addView(voceMenu("↩", "Torna a Nyctalus", v -> tornaANyctalus()));
 
         ScrollView contenitore = new ScrollView(this);
         contenitore.addView(pannello);
@@ -3994,6 +3998,16 @@ public class BrowserActivity extends Activity {
         // Tasto indietro fisico: stessa scala di precedenze di onBackPressed.
         if (codice == KeyEvent.KEYCODE_BACK) { onBackPressed(); return true; }
         return super.onKeyDown(codice, evento);
+    }
+
+    /** Riporta alla schermata iniziale dell'app Nyctalus e chiude il browser. */
+    private void tornaANyctalus() {
+        chiudiMenu();
+        Intent i = new Intent(this, MainActivity.class);
+        i.putExtra("torna_avvio", true);
+        i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(i);
+        finish();
     }
 
     @Override public void onBackPressed() {
