@@ -1089,7 +1089,7 @@ function applicaAspetto() {
 
 // ---------- pulsanti fissi e avvio ----------------------------------------------------------
 $("btn-nuovo").onclick = () => dialogoAggiungi();
-$("btn-menu").onclick = impostazioni;
+$("btn-menu").onclick = () => impostazioni();      // dalla chat: finestra, e si resta nella chat
 $("btn-cerca").onclick = () => { $("ricerca").classList.toggle("nascosto"); $("campo-cerca").focus(); };
 $("campo-cerca").oninput = (e) => { S.filtro = e.target.value.trim().toLowerCase(); disegnaElenco(); };
 $("indietro").onclick = () => history.back();
