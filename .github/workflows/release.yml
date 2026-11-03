@@ -89,6 +89,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          # le note le scrive chi crea la release (qui si aggiungono solo i binari)
-          prerelease: true
+          # le note le scrive chi crea la release (qui si aggiungono solo i binari).
+          # Pre-release SOLO per i tag con un trattino (es. v0.1.0-anteprima): una versione
+          # normale (v0.3.1) resta release vera e «Latest». Prima era sempre «true» e
+          # rimetteva come pre-release le release appena pubblicate.
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          make_latest: ${{ !contains(github.ref_name, '-') }}
           files: dist/*
