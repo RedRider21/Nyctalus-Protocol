@@ -1,0 +1,368 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+"""nyctalus-cli — Nyctalus dal terminale: chat e file con i contatti, senza finestre.
+
+Usa lo STESSO motore della chat (stesso anonimato, stesse chiavi): si collega alla sua porta di
+controllo con il segreto scritto dall'avvio in ~/.nyctalus-chat/controllo (o da NYCTALUS_CHAT_PORT
+/ NYCTALUS_CHAT_TOKEN). Il motore va acceso: chat, programma File, oppure `nyctalus-cli avvia`
+(senza finestre: per server, Raspberry, SSH).
+
+Solo libreria standard di Python.
+"""
+import os
+import re
+import socket
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+AIUTO = """nyctalus-cli — Nyctalus dal terminale
+
+  io                              il tuo Contact ID (da dare agli amici)
+  contatti                        i contatti, ● se in linea
+  aggiungi <indirizzo> <nome>     aggiunge un contatto
+  scrivi <contatto> <testo…>      manda un messaggio
+  leggi <contatto> [-n N]         la conversazione (ultimi N, 20 di solito)
+  ascolta                         messaggi, file e proposte in arrivo, in tempo reale (Ctrl-C esce)
+
+  invia <contatto> <file…>        file grandi (programma File): pezzi verificati, più percorsi
+  file                            i trasferimenti, con avanzamento
+  file -s                         …e li segue in tempo reale (Ctrl-C esce)
+  accetta|rifiuta <id>            un file in arrivo che chiede conferma
+  pausa|riprendi|annulla <id>     un trasferimento
+  togli <id> · pulisci            dall'elenco (i file restano)
+  impostazioni [soglia MB] [canali N] [inchat si|no]
+                                  vede o cambia le impostazioni dei file
+
+  avvia                           accende il motore senza finestre (Ctrl-C lo spegne)
+
+<contatto> = nome (anche solo l'inizio, senza maiuscole) o indirizzo .nyct.
+<id> = basta l'inizio, se non è ambiguo."""
+
+
+def errore(testo, codice=1):
+    print("✗ " + testo, file=sys.stderr)
+    sys.exit(codice)
+
+
+def collegamento():
+    porta, segreto = os.environ.get("NYCTALUS_CHAT_PORT"), os.environ.get("NYCTALUS_CHAT_TOKEN")
+    if not (porta and segreto):
+        try:
+            p, s = (Path.home() / ".nyctalus-chat" / "controllo").read_text().split()[:2]
+            porta, segreto = porta or p, segreto or s
+        except (OSError, ValueError):
+            pass
+    return int(porta or 1091), segreto or ""
+
+
+class Motore:
+    def __init__(self):
+        porta, segreto = collegamento()
+        try:
+            self.s = socket.create_connection(("127.0.0.1", porta), timeout=5)
+        except OSError:
+            errore("il motore di Nyctalus non è acceso: apri la chat o File, oppure «nyctalus-cli avvia»")
+        self.buf = b""
+        if segreto:
+            self.manda("AUTH " + segreto)
+            if self.riga(10) != "AUTHOK":
+                errore("il motore non accetta il segreto (si è riavviato? riprova)")
+
+    def manda(self, riga):
+        self.s.sendall((riga + "\n").encode())
+
+    def riga(self, attesa=None):
+        self.s.settimeout(attesa)
+        while b"\n" not in self.buf:
+            try:
+                d = self.s.recv(65536)
+            except socket.timeout:
+                return None
+            if not d:
+                errore("il motore ha chiuso il collegamento")
+            self.buf += d
+        r, self.buf = self.buf.split(b"\n", 1)
+        return r.decode(errors="replace")
+
+    def fino_a(self, fine, attesa=15):
+        """Le righe fino a quella che comincia con `fine` (esclusa)."""
+        righe, limite = [], time.time() + attesa
+        while time.time() < limite:
+            r = self.riga(max(0.1, limite - time.time()))
+            if r is None:
+                break
+            if r.startswith(fine):
+                return righe
+            if r.startswith("ERR"):
+                errore(r[4:])
+            righe.append(r)
+        return righe
+
+    def risposta(self, attesa=60):
+        """La prima risposta OK/ERR (gli eventi in mezzo si ignorano)."""
+        limite = time.time() + attesa
+        while time.time() < limite:
+            r = self.riga(max(0.1, limite - time.time()))
+            if r is None:
+                break
+            if r == "OK" or r.startswith("OK "):
+                return r
+            if r.startswith("ERR"):
+                errore(r[4:])
+        errore("il motore non ha risposto in tempo")
+
+
+hx = lambda t: t.encode().hex()
+
+
+def dahex(h):
+    try:
+        return bytes.fromhex(h).decode(errors="replace")
+    except ValueError:
+        return "?"
+
+
+def quando(ts):
+    d = datetime.fromtimestamp(int(ts))
+    return d.strftime("%H:%M") if d.date() == datetime.now().date() else d.strftime("%d/%m %H:%M")
+
+
+def misura(n):
+    n = float(n)
+    for u in ("B", "KB", "MB", "GB", "TB"):
+        if n < 1024 or u == "TB":
+            return ("%d %s" % (n, u)) if u == "B" else ("%.1f %s" % (n, u)).replace(".", ",")
+        n /= 1024
+
+
+def contatti(m):
+    m.manda("SUB")
+    online = {r.split()[1] for r in m.fino_a("SUBOK", 5) if r.startswith("ST ") and r.endswith(" 1")}
+    m.manda("LIST")
+    voci = {}
+    for r in m.fino_a("ENDC"):
+        p = r.split(" ")
+        if p[0] == "C" and len(p) >= 2:
+            voci[p[1]] = dahex(p[2]) if len(p) >= 3 and p[2] else p[1][:10]
+    return voci, online
+
+
+def risolvi(m, chi):
+    """Un contatto per nome (anche l'inizio) o per indirizzo."""
+    if re.fullmatch(r"[a-z2-7]{56}(\.nyct)?", chi):
+        return chi if chi.endswith(".nyct") else chi + ".nyct"
+    voci, _ = contatti(m)
+    esatti = [a for a, n in voci.items() if n.lower() == chi.lower()]
+    simili = esatti or [a for a, n in voci.items() if n.lower().startswith(chi.lower())]
+    if len(simili) == 1:
+        return simili[0]
+    if not simili:
+        errore("nessun contatto «%s» (vedi: nyctalus-cli contatti)" % chi)
+    errore("«%s» è ambiguo: %s" % (chi, ", ".join(voci[a] for a in simili)))
+
+
+def elenco_trasferimenti(m):
+    m.manda("XLIST")
+    t = {}
+    for r in m.fino_a("ENDX", 10):
+        p = r.split(" ")
+        if p[0] == "XNEW" and len(p) >= 9:
+            t[p[1]] = {"id": p[1], "verso": p[2], "peer": p[3], "dim": int(p[4]), "mime": p[5], "nome": dahex(p[6]),
+                       "stato": p[7], "fatti": int(p[8])}
+    return t
+
+
+def id_di(m, inizio):
+    tutti = elenco_trasferimenti(m)
+    scelti = [i for i in tutti if i.startswith(inizio)]
+    if len(scelti) == 1:
+        return scelti[0]
+    errore("nessun trasferimento «%s»" % inizio if not scelti else "«%s» è ambiguo" % inizio)
+
+
+STATI = {"prepara": "preparo", "attesa": "aspetta il contatto", "chiede": "chiede conferma", "corre": "in corsa",
+         "pausa": "in pausa", "fatto": "fatto", "errore": "errore", "rifiutato": "rifiutato", "annullato": "annullato",
+         "eliminato": "arrivato, poi eliminato"}
+
+
+def stampa_trasferimenti(t, nomi):
+    if not t:
+        print("Nessun trasferimento.")
+        return
+    for d in sorted(t.values(), key=lambda d: (d["verso"], d["id"])):
+        perc = 100 * d["fatti"] // d["dim"] if d["dim"] else (100 if d["stato"] == "fatto" else 0)
+        barra = "█" * (perc // 5) + "·" * (20 - perc // 5)
+        freccia = "⇣ da" if d["verso"] == "in" else "⇡ a "
+        print("%s  %s %-12s %-28s %s %3d%%  %s  %s" % (d["id"][:8], freccia, nomi.get(d["peer"], d["peer"][:10])[:12],
+                                                       d["nome"][:28], barra, perc, misura(d["dim"]),
+                                                       STATI.get(d["stato"], d["stato"]) + (d.get("extra") or "")))
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help", "aiuto"):
+        print(AIUTO)
+        return
+    cmd, arg = argv[0], argv[1:]
+
+    if cmd == "avvia":
+        # il motore senza finestre (lo stesso avvio della chat, interfaccia «nessuna»)
+        qui = Path(__file__).resolve().parent
+        for s in (qui.parent / "avvia-chat.sh", qui.parent.parent / "strumenti" / "avvia-chat.sh"):
+            if s.exists():
+                os.execvpe("bash", ["bash", str(s)], dict(os.environ, NYCTALUS_INTERFACCIA="nessuna"))
+        errore("avvia-chat.sh non trovato")
+
+    m = Motore()
+    if cmd == "io":
+        m.manda("WHOAMI")
+        r = m.riga(10) or ""
+        print(r.split()[1] if r.startswith("ME ") else errore("risposta inattesa"))
+    elif cmd == "contatti":
+        voci, online = contatti(m)
+        if not voci:
+            print("Nessun contatto. Aggiungine uno: nyctalus-cli aggiungi <indirizzo> <nome>")
+        for a, n in sorted(voci.items(), key=lambda x: x[1].lower()):
+            print("%s %-20s %s" % ("●" if a in online else "○", n, a))
+    elif cmd == "aggiungi" and len(arg) >= 2:
+        a = arg[0] if arg[0].endswith(".nyct") else arg[0] + ".nyct"
+        if not re.fullmatch(r"[a-z2-7]{56}\.nyct", a):
+            errore("indirizzo .nyct non valido")
+        m.manda("ADD %s %s" % (a, hx(" ".join(arg[1:]))))
+        m.risposta(10)
+        print("✓ aggiunto «%s»" % " ".join(arg[1:]))
+    elif cmd == "scrivi" and len(arg) >= 2:
+        a = risolvi(m, arg[0])
+        m.manda("SEND %s %s" % (a, hx(" ".join(arg[1:]))))
+        m.risposta(120)
+        print("✓ inviato")
+    elif cmd == "leggi" and arg:
+        n = 20
+        if "-n" in arg:
+            i = arg.index("-n")
+            n = int(arg[i + 1]) if i + 1 < len(arg) and arg[i + 1].isdigit() else n
+            arg = arg[:i] + arg[i + 2:]
+        a = risolvi(m, arg[0])
+        voci, _ = contatti(m)
+        m.manda("HIST " + a)
+        righe = [r[2:] for r in m.fino_a("ENDH") if r.startswith("P ")]
+        for r in righe[-n:]:
+            p = r.split(" ")
+            if p[0] in ("in", "out") and len(p) >= 3:
+                chi = "tu" if p[0] == "out" else voci.get(a, a[:10])
+                print("[%s] %s: %s" % (quando(p[1]), chi, dahex(p[2])))
+            elif p[0] in ("fin", "fout") and len(p) >= 6:
+                chi = "tu" if p[0] == "fout" else voci.get(a, a[:10])
+                print("[%s] %s: 📎 %s (%s)" % (quando(p[1]), chi, dahex(p[5]), misura(p[3])))
+        m.manda("LETTO %s %d" % (a, int(time.time())))
+    elif cmd == "ascolta":
+        voci, _ = contatti(m)
+        print("In ascolto (Ctrl-C per uscire)…")
+        try:
+            while True:
+                r = m.riga()
+                p = r.split(" ")
+                nome = lambda a: voci.get(a, a[:10])
+                if p[0] == "MSG" and len(p) >= 4:
+                    print("[%s] %s: %s" % (quando(p[2]), nome(p[1]), dahex(p[3])))
+                elif p[0] == "FILE" and len(p) >= 8 and p[2] == "in":
+                    print("[%s] %s: 📎 %s (%s)" % (quando(p[3]), nome(p[1]), dahex(p[7]), misura(p[5])))
+                elif p[0] == "XNEW" and len(p) >= 9 and p[2] == "in" and p[7] == "chiede":
+                    print("📦 %s vuole mandarti «%s» (%s) → nyctalus-cli accetta %s" % (nome(p[3]), dahex(p[6]), misura(p[4]), p[1][:8]))
+                elif p[0] == "ST" and len(p) >= 3:
+                    print("%s %s %s" % ("●" if p[2] == "1" else "○", nome(p[1]), "è in linea" if p[2] == "1" else "si è scollegato"))
+                elif p[0] == "C" and len(p) >= 3:
+                    voci[p[1]] = dahex(p[2])
+        except KeyboardInterrupt:
+            print()
+    elif cmd == "invia" and len(arg) >= 2:
+        a = risolvi(m, arg[0])
+        for f in arg[1:]:
+            pf = Path(f).expanduser().resolve()
+            if not pf.is_file():
+                print("✗ non è un file: %s" % f)
+                continue
+            m.manda("XSEND %s %s application/octet-stream" % (a, hx(str(pf))))
+            r = m.risposta(60)
+            print("✓ %s in partenza (id %s) — segui con: nyctalus-cli file -s" % (pf.name, r.split()[1][:8]))
+    elif cmd == "file":
+        voci, _ = contatti(m)
+        t = elenco_trasferimenti(m)
+        if "-s" not in arg:
+            stampa_trasferimenti(t, voci)
+            return
+        m.manda("SUB")
+        try:
+            ultimo = 0
+            while True:
+                r = m.riga(1)
+                if r:
+                    p = r.split(" ")
+                    if p[0] == "XNEW" and len(p) >= 9:
+                        t[p[1]] = {"id": p[1], "verso": p[2], "peer": p[3], "dim": int(p[4]), "mime": p[5],
+                                   "nome": dahex(p[6]), "stato": p[7], "fatti": int(p[8])}
+                    elif p[0] == "XSTATO" and p[1] in t:
+                        t[p[1]]["stato"] = p[2]
+                        if p[2] == "fatto":
+                            t[p[1]]["fatti"] = t[p[1]]["dim"]
+                    elif p[0] == "XPROG" and p[1] in t:
+                        t[p[1]]["fatti"] = int(p[2])
+                        t[p[1]]["extra"] = " · %s/s" % misura(int(p[4]))
+                    elif p[0] == "XVIA":
+                        t.pop(p[1], None)
+                if time.time() - ultimo > 1:
+                    ultimo = time.time()
+                    print("\033[2J\033[H" + datetime.now().strftime("%H:%M:%S") + "  trasferimenti (Ctrl-C esce)\n")
+                    stampa_trasferimenti(t, voci)
+        except KeyboardInterrupt:
+            print()
+    elif cmd in ("accetta", "rifiuta", "pausa", "riprendi", "annulla", "togli") and arg:
+        cmd_motore = {"accetta": "XOK", "rifiuta": "XNO", "pausa": "XPAUSA", "riprendi": "XRIPRENDI",
+                      "annulla": "XANNULLA", "togli": "XVIA"}[cmd]
+        i = id_di(m, arg[0])
+        m.manda("%s %s" % (cmd_motore, i))
+        m.risposta(30)
+        print("✓ fatto")
+    elif cmd == "impostazioni":
+        if len(arg) % 2:
+            errore("uso: impostazioni [soglia MB] [canali N] [inchat si|no]")
+        risposta = None
+        for k, v in zip(arg[::2], arg[1::2]):
+            if k == "soglia" and v.replace(",", ".").replace(".", "", 1).isdigit():
+                v = str(int(float(v.replace(",", ".")) * 1024 * 1024))
+            elif k == "canali" and v.isdigit() and 1 <= int(v) <= 8:
+                pass
+            elif k == "inchat" and v in ("si", "sì", "no", "1", "0"):
+                v = "0" if v in ("no", "0") else "1"
+            else:
+                errore("impostazione non valida: %s %s" % (k, v))
+            m.manda("XCONF %s %s" % (k, v))
+            risposta = m.riga(10)
+        if risposta is None:
+            m.manda("XCONF")
+            risposta = m.riga(10)
+        p = (risposta or "").split()
+        if len(p) < 7 or p[0] != "XCONF":
+            errore("risposta inattesa dal motore")
+        print("soglia di accettazione automatica: %s" % misura(int(p[2])))
+        print("collegamenti in parallelo:         %s" % p[4])
+        print("file anche nella chat:             %s" % ("sì" if p[6] == "1" else "no"))
+    elif cmd == "pulisci":
+        m.manda("XPULISCI")
+        r = m.risposta(30)
+        print("✓ tolti dall'elenco: %s" % (r.split()[1] if " " in r else "0"))
+    else:
+        print(AIUTO)
+        sys.exit(2)
+
+
+if __name__ == "__main__":
+    # riga per riga anche quando l'uscita va a un altro programma (l'app del telefono, una pipe)
+    sys.stdout.reconfigure(line_buffering=True)
+    try:
+        main(sys.argv[1:])
+    except BrokenPipeError:
+        pass

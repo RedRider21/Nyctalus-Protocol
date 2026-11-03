@@ -62,12 +62,13 @@ manuali_in "$OUT/Manuali"
 # ============================== PC Linux ==============================
 say "PC-Linux: assemblo il pacchetto"
 P="$LAVORO/Nyctalus"
-mkdir -p "$P/bin" "$P/browser" "$P/launcher" "$P/chat" "$P/file"
+mkdir -p "$P/bin" "$P/browser" "$P/launcher" "$P/chat" "$P/file" "$P/cli"
 cp "$ROOT/target/release/nyctalus" "$P/bin/nyctalus"
 cp -r "$ROOT/pc/browser/nyctalus_browser" "$ROOT/pc/browser/nxs_i18n" "$ROOT/pc/browser/nxs_tema" "$P/browser/"
 cp -r "$ROOT/pc/launcher/nyctalus_launcher" "$P/launcher/"
 cp -r "$ROOT/pc/chat/nyctalus_chat" "$P/chat/"
 cp -r "$ROOT/pc/file/nyctalus_file" "$P/file/"
+cp "$ROOT/pc/cli/nyctalus-cli" "$P/cli/"
 cp -r "$ROOT/pc/gestore-rete" "$P/"
 mkdir -p "$P/server"
 cp "$ROOT/server/installa-nodo.sh" "$P/server/installa.sh"; cp "$ROOT/server/nyctalus-server" "$ROOT/server/disinstalla.sh" "$P/server/"
@@ -111,7 +112,7 @@ INSTALLARE
 USARE
    Dal menu delle applicazioni: «Nyctalus», «Nyctalus Browser», «Nyctalus Chat»
    oppure:  nyctalus-launcher · nyctalus-browser · nyctalus-chat
-   Senza installare: ./avvia-launcher.sh · ./avvia-browser.sh · ./avvia-chat.sh · ./avvia-file.sh
+   Senza installare: ./avvia-launcher.sh · ./avvia-browser.sh · ./avvia-chat.sh · ./avvia-file.sh · cli/nyctalus-cli
 
 COLLEGARSI A UNA RETE CONDIVISA
    nyctalus-rete importa CODICE     (il codice te lo dà chi gestisce la rete)

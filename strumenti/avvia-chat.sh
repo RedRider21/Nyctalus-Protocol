@@ -26,9 +26,10 @@ if [ -d "$QUI/chat" ]; then PYBASE="$QUI"; else PYBASE="$QUI/../pc"; fi   # pacc
 export PYTHONPATH="$PYBASE/chat:$PYBASE/file:$PYBASE/browser${PYTHONPATH:+:$PYTHONPATH}"
 # quale finestra aprire sopra il motore: la chat (predefinita) o il programma File
 INTERFACCIA="${NYCTALUS_INTERFACCIA:-nyctalus_chat}"
-case "$INTERFACCIA" in nyctalus_chat|nyctalus_file) ;; *) INTERFACCIA=nyctalus_chat ;; esac
+# «nessuna»: solo il motore, senza finestre (nyctalus-cli avvia: server, SSH, Raspberry)
+case "$INTERFACCIA" in nyctalus_chat|nyctalus_file|nessuna) ;; *) INTERFACCIA=nyctalus_chat ;; esac
 
-python3 -c 'import gi; gi.require_version("Gtk","3.0")' 2>/dev/null || {
+[ "$INTERFACCIA" = nessuna ] || python3 -c 'import gi; gi.require_version("Gtk","3.0")' 2>/dev/null || {
   echo "✗ PyGObject/GTK3 non disponibile — sudo apt install python3-gi gir1.2-gtk-3.0"; exit 1; }
 
 DATI="$HOME/.nyctalus-chat"; mkdir -p "$DATI"
@@ -38,21 +39,13 @@ FINESTRE="$DATI/finestre"; mkdir -p "$FINESTRE"   # le finestre aperte sopra que
 # Motore già acceso (es. la chat è aperta e ora si apre File, o viceversa): ci si aggancia,
 # senza accenderne un secondo. Il motore resta acceso finché c'è almeno una finestra.
 if ss -ltn 2>/dev/null | grep -q ":1091\b" && [ -s "$COLLEGAMENTO" ]; then
+  if [ "$INTERFACCIA" = nessuna ]; then
+    echo "» il motore di Nyctalus è già acceso: usa pure nyctalus-cli"; exit 0
+  fi
   read -r PORTA SEGRETO < "$COLLEGAMENTO"
   NYCTALUS_CHAT_PORT="$PORTA" NYCTALUS_CHAT_TOKEN="$SEGRETO" python3 -m "$INTERFACCIA" & UIPID=$!
   echo "$UIPID" > "$FINESTRE/$UIPID"
-  wait "$UIPID"
-# chiusa la finestra che ha acceso il motore: si aspettano le altre ancora aperte (es. File
-# con un trasferimento in corso), poi si spegne tutto
-while :; do
-  vive=0
-  for f in "$FINESTRE"/*; do
-    [ -e "$f" ] || continue
-    if kill -0 "$(basename "$f")" 2>/dev/null; then vive=1; else rm -f "$f"; fi
-  done
-  [ "$vive" = 1 ] || break
-  sleep 2
-done; rm -f "$FINESTRE/$UIPID"
+  wait "$UIPID"; rm -f "$FINESTRE/$UIPID"
   exit 0
 fi
 CFG="$HOME/.nyctalus-browser/config.json"
@@ -88,8 +81,14 @@ fi
 ADDR=""; for _ in $(seq 1 40); do ADDR=$(grep -oE '[a-z2-7]{56}\.nyct' "$WORK/chat.log" | head -1); [ -n "$ADDR" ] && break; sleep 0.1; done
 [ -n "$ADDR" ] && echo "  il tuo Contact ID:  $ADDR"
 
-echo "» apro la finestra (la rete finisce di salire in sottofondo)"
-NYCTALUS_CHAT_PORT=1091 python3 -m "$INTERFACCIA" > "$WORK/ui.log" 2>&1 & UIPID=$!
+if [ "$INTERFACCIA" = nessuna ]; then
+  MOTORE="${MIEI[0]}"
+  echo "» motore acceso senza finestre: usa nyctalus-cli da un altro terminale (Ctrl-C qui lo spegne)"
+else
+  echo "» apro la finestra (la rete finisce di salire in sottofondo)"
+  NYCTALUS_CHAT_PORT=1091 python3 -m "$INTERFACCIA" > "$WORK/ui.log" 2>&1 & UIPID=$!
+  echo "$UIPID" > "$FINESTRE/$UIPID"
+fi
 
 # --- 2) rete + servizio .nyct, IN SOTTOFONDO ---------------------------------
 avvia_rete() {
@@ -125,4 +124,19 @@ avvia_rete() {
 avvia_rete
 
 # --- 3) resta vivo finché la finestra è aperta -------------------------------
-wait "$UIPID"
+if [ "$INTERFACCIA" = nessuna ]; then
+  echo "» pronto. Il tuo Contact ID: ${ADDR:-?}"
+  wait "$MOTORE"; exit 0
+fi
+wait "$UIPID"; rm -f "$FINESTRE/$UIPID"
+# chiusa la finestra che ha acceso il motore: si aspettano le altre ancora aperte (es. File
+# con un trasferimento in corso), poi si spegne tutto
+while :; do
+  vive=0
+  for f in "$FINESTRE"/*; do
+    [ -e "$f" ] || continue
+    if kill -0 "$(basename "$f")" 2>/dev/null; then vive=1; else rm -f "$f"; fi
+  done
+  [ "$vive" = 1 ] || break
+  sleep 2
+done

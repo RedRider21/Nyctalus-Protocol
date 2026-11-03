@@ -15,6 +15,7 @@ for c in launcher browser chat file; do
   L="$HOME/.local/bin/nyctalus-$c"
   [ "$(readlink "$L" 2>/dev/null)" = "$DEST/avvia-$c.sh" ] && rm -f "$L"
 done
+[ "$(readlink "$HOME/.local/bin/nyctalus-cli" 2>/dev/null)" = "$DEST/cli/nyctalus-cli" ] && rm -f "$HOME/.local/bin/nyctalus-cli"
 for c in rete sito; do
   [ "$(readlink "$HOME/.local/bin/nyctalus-$c" 2>/dev/null)" = "$DEST/gestore-rete/nyctalus-$c" ] && rm -f "$HOME/.local/bin/nyctalus-$c"
 done
