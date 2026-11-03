@@ -2,6 +2,12 @@
 
 > Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
 
+## Fatto il 04/11/2026 (a casa)
+- ✅ **APK 0.45**: motore Android (CI 41735131174) con l'elenco-cronologia di File; l'utente l'ha installata e provata: ok.
+- ✅ **nyctalus-cli** (`pc/cli/nyctalus-cli`, Python solo libreria standard): io, contatti, aggiungi, scrivi, leggi, ascolta, invia, file [-s], accetta/rifiuta/pausa/riprendi/annulla/togli/pulisci, impostazioni, avvia (motore senza finestre, `NYCTALUS_INTERFACCIA=nessuna`). Si adatta alla larghezza (COLUMNS). Prova 24.
+- ✅ Corretto `avvia-chat.sh`: il ciclo «aspetta le altre finestre» era finito nel ramo d'aggancio. Prima, chiudendo la chat che aveva acceso il motore, si spegneva anche File in trasferimento.
+- ✅ **⌨ Terminale** — scelta dell'utente: icona in una SECONDA FILA della schermata iniziale dell'APK; pannello nella web-app sul metodo di Termux-NexusSEC-OS (pipe, output in diretta, ⏹), modalità **SOLO nyctalus-cli** (mai shell; «poi vediamo se passare a qualcosa di più spinto»). Orchestratore: `/ws/terminale` (controllo dell'origine), collegamento `~/.nyctalus-chat/controllo` (600) anche per Termux a mano; comando `nyctalus-cli` in Termux. PC: pulsante ⌨ del mini menu → terminale del sistema (`avvia-terminale.sh`, accende/spegne il motore se serve). Windows: pulsante ⌨️ Terminale (stesso pannello). Manuale `MANUALE-TERMINALE.md`.
+
 ## Fatto in ufficio il 02/11/2026 (SOLO commit locali: niente su GitHub finché l'utente non lo dice)
 - ✅ Rientro dalle impostazioni aperte dal ☰ della chat (resta nella chat).
 - ✅ «↩ Torna a Nyctalus» nel menu del browser dell'app (APK 0.37).

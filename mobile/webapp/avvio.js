@@ -16,7 +16,7 @@ async function stato() {
   s.textContent = pronto ? "● Nyctalus è pronto" : info.stato === "avvio" ? "⏳ avvio della rete… " + (info.dettaglio || "")
     : info.stato === "errore" ? "⚠ " + (info.dettaglio || "errore") : "Nyctalus è fermo";
   s.classList.toggle("pronto", pronto);
-  ["t-chat", "t-rubrica", "t-file"].forEach((id) => { $(id).disabled = !pronto; });
+  ["t-chat", "t-rubrica", "t-file", "t-terminale"].forEach((id) => { $(id).disabled = !pronto; });
   setTimeout(stato, pronto ? 10000 : 1500);
 }
 
@@ -68,6 +68,7 @@ $("rete").onclick = async () => {
 $("t-chat").onclick = () => finestra("/", "nyctalus-chat");
 $("t-rubrica").onclick = () => finestra("/#rubrica", "nyctalus-rubrica");
 $("t-file").onclick = () => finestra("/#file", "nyctalus-file");
+$("t-terminale").onclick = () => finestra("/#terminale", "nyctalus-terminale");   // nyctalus-cli nella finestra
 $("t-info").onclick = () => window.open(SITO, "_blank");
 $("t-browser").onclick = () => {
   const porta = info.socks_browser || 18733;

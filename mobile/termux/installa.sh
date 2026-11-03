@@ -66,6 +66,7 @@ say "Copio Nyctalus in $DEST"
 mkdir -p "$DEST/bin"
 rm -rf "$DEST/orchestratore" "$DEST/webapp"
 cp -r "$QUI/orchestratore" "$QUI/webapp" "$DEST/"
+rm -rf "$DEST/cli"; [ -d "$QUI/cli" ] && cp -r "$QUI/cli" "$DEST/"
 cp "$QUI/disinstalla.sh" "$QUI/nyctalus-mobile" "$DEST/"
 chmod +x "$DEST/nyctalus-mobile" "$DEST/disinstalla.sh"
 
@@ -95,6 +96,16 @@ if [ -e "$LINK" ] && [ "$(readlink "$LINK" 2>/dev/null)" != "$DEST/nyctalus-mobi
 else
   ln -sf "$DEST/nyctalus-mobile" "$LINK"
   ok "Comando: nyctalus-mobile"
+fi
+
+# comando "nyctalus-cli": chat e file dal terminale (anche dal ⌨ Terminale dell'app)
+LINK="$PREFIX/bin/nyctalus-cli"
+if [ -e "$LINK" ] && ! grep -q "Nyctalus Protocol" "$LINK" 2>/dev/null; then
+  avv "$LINK esiste già e non è nostro: non lo tocco. Usa python3 $DEST/cli/nyctalus-cli"
+elif [ -f "$DEST/cli/nyctalus-cli" ]; then
+  printf '#!%s/bin/sh\n# Parte di Nyctalus Protocol: chat e file dal terminale\nexec python3 "%s/cli/nyctalus-cli" "$@"\n' "$PREFIX" "$DEST" > "$LINK"
+  chmod +x "$LINK"
+  ok "Comando: nyctalus-cli"
 fi
 
 # --- 5) permesso per l'app Nyctalus (intent RUN_COMMAND) ---------------------------

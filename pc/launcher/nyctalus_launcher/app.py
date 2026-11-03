@@ -185,6 +185,7 @@ class Launcher(Gtk.Window):
         self._bottone("user-available-symbolic", _t("lau.chat"), self._apri_chat)
         self._bottone("system-users-symbolic", _t("lau.rubrica"), self._apri_rubrica)
         self._bottone("folder-download-symbolic", _t("lau.file"), self._apri_file)
+        self._bottone("utilities-terminal-symbolic", _t("lau.terminale"), self._apri_terminale)
         sep = Gtk.Separator(
             orientation=Gtk.Orientation.VERTICAL if not verticale else Gtk.Orientation.HORIZONTAL)
         self.box.pack_start(sep, False, False, 0)
@@ -405,6 +406,14 @@ class Launcher(Gtk.Window):
                 self._lancia(["bash", str(candidato)])
                 return
         self._avviso(_t("lau.file"), _t("lau.in_arrivo_corpo"))
+
+    def _apri_terminale(self):
+        """⌨ Terminale: il terminale del sistema pronto per nyctalus-cli (chat e file da riga di comando)."""
+        for candidato in (RADICE / "avvia-terminale.sh", RADICE.parent / "strumenti" / "avvia-terminale.sh"):
+            if candidato.exists():
+                self._lancia(["bash", str(candidato)])
+                return
+        self._avviso(_t("lau.terminale"), _t("lau.in_arrivo_corpo"))
 
     def _menu_impostazioni(self):
         menu = Gtk.Menu()

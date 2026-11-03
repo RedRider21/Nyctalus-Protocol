@@ -85,6 +85,7 @@ public class MainActivity extends Activity {
     private boolean apriRubrica = false;   // entrando, si apre la sola rubrica della rete
     private boolean apriImpostazioni = false;   // entrando, si aprono le impostazioni complete
     private boolean apriProgrammaFile = false;  // entrando, si apre il programma File
+    private boolean apriTerminale = false;      // entrando, si apre il ⌨ Terminale (nyctalus-cli)
     private volatile boolean inRubrica = false;   // la web-app mostra la sola rubrica
     private View pulsanteEntra;      // la casella «Chat»: si accende quando Nyctalus è pronto
     private int portaSocksBrowser = 18733;
@@ -553,6 +554,15 @@ public class MainActivity extends Activity {
             if (pronto) { apriImpostazioni = true; apriRubrica = false; entra(); } else impostazioni();
         }));
         r.addView(griglia);
+        // seconda fila: stesse caselle (larghe 1/6), allineate a sinistra; posto per le prossime
+        LinearLayout griglia2 = riga();
+        griglia2.setWeightSum(6f);
+        ((LinearLayout.LayoutParams) griglia2.getLayoutParams()).topMargin = dp(10);
+        griglia2.addView(casella(R.drawable.ic_avvio_terminale, "Terminale", v -> {
+            if (pronto) { apriTerminale = true; apriProgrammaFile = false; apriImpostazioni = false; apriRubrica = false; entra(); }
+            else avviso("Nyctalus si sta avviando: il Terminale si apre appena è pronto (● verde).");
+        }));
+        r.addView(griglia2);
         r.addView(spazio());
 
         // strumenti (come il pannello di Termux-NexusSEC-OS), raccolti sotto «Strumenti ▾»
@@ -1201,7 +1211,8 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 setContentView(web);
                 // «Rubrica» → la sola rubrica; «Chat» → la chat (chiude la rubrica se era rimasta aperta)
-                web.evaluateJavascript(apriProgrammaFile ? "window.nyctApriFile && nyctApriFile()"
+                web.evaluateJavascript(apriTerminale ? "window.nyctApriTerminale && nyctApriTerminale()"
+                        : apriProgrammaFile ? "window.nyctApriFile && nyctApriFile()"
                         : apriImpostazioni ? "window.nyctApriImpostazioni && nyctApriImpostazioni()"
                         : apriRubrica ? "window.nyctApriRubrica && nyctApriRubrica()"
                         : "window.nyctChiudiRubrica && nyctChiudiRubrica()", null);
@@ -1210,6 +1221,7 @@ public class MainActivity extends Activity {
                 apriRubrica = false;
                 apriImpostazioni = false;
                 apriProgrammaFile = false;
+                apriTerminale = false;
                 chatDaAprire = null;
             });
             return;
@@ -1255,12 +1267,13 @@ public class MainActivity extends Activity {
                 }
             });
             setContentView(web);
-            web.loadUrl(URL_BASE + "/?t=" + segreto + (apriProgrammaFile ? "#file" : apriImpostazioni ? "#impostazioni" : apriRubrica ? "#rubrica"
+            web.loadUrl(URL_BASE + "/?t=" + segreto + (apriTerminale ? "#terminale" : apriProgrammaFile ? "#file" : apriImpostazioni ? "#impostazioni" : apriRubrica ? "#rubrica"
                     : chatDaAprire != null ? "#chat=" + chatDaAprire : ""));
             chatDaAprire = null;
             apriRubrica = false;
             apriImpostazioni = false;
             apriProgrammaFile = false;
+            apriTerminale = false;
         });
     }
 

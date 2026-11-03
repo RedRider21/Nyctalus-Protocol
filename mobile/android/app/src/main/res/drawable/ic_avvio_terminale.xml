@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Icona della schermata iniziale: il Terminale (nyctalus-cli). Tratto sottile, colore dal tema. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M4.5,5H19.5A1.5,1.5 0 0,1 21,6.5V17.5A1.5,1.5 0 0,1 19.5,19H4.5A1.5,1.5 0 0,1 3,17.5V6.5A1.5,1.5 0 0,1 4.5,5Z" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.7" android:strokeLineJoin="round" android:fillColor="#00000000"/>
+    <path android:pathData="M7,10L9.5,12.5L7,15" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.7" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"/>
+    <path android:pathData="M12,15H16.5" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.7" android:strokeLineCap="round" android:fillColor="#00000000"/>
+</vector>

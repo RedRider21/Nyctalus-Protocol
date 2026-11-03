@@ -186,6 +186,7 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 - **Browser dedicato** (clone di Firefox): parte normale, lo **stealth** (rete Nyctalus) si accende col bottone e **avvia da solo i servizi** (rete pubblica configurata o rete di prova locale); i `.nyct` attivano lo stealth automaticamente.
 - **Chat `.nyct`** (senza server, senza metadati): ogni utente è un indirizzo `.nyct` (il suo Contact ID); motore in Rust (`nyctalus chat`) + finestra GTK. Oltre all'anonimato di rete e alla cifratura E2E, **chi scrive è autenticato crittograficamente** (un secondo handshake Noise NK dentro il tunnel: solo chi possiede la chiave privata dell'indirizzo dichiarato lo conclude), quindi nessuno può spacciarsi per un contatto. Grafica in **stile Telegram** con temi e sfondi, **menu del tasto destro** e **allegati di ogni tipo** come in Telegram (foto e video a tutta bolla, audio ascoltabile nella chat, documenti, **foto e video dalla webcam**; verifica d'integrità BLAKE3, foto inviate senza EXIF), **emoticon**, **in linea / ultimo accesso** e la **rubrica della rete** 👥 (ci si iscrive con un nome, si vede chi usa la rete e chi è in linea, si aggiunge con un clic), **notifiche** dei nuovi messaggi (sul telefono anche ad app chiusa, senza Google) le **chiamate vocali e videochiamate** 📞📹 (anonime, attraverso la rete: muto, vivavoce, volume, passaggio voce↔video, riquadro spostabile e scambiabile come in Telegram), le **spunte** come Telegram (✓ spedito, ✓✓ consegnato, ✓✓ blu letto) e la **casella cifrata** 📮 per scrivere a chi non è in linea (solo il destinatario può leggere, la casella non sa chi scrive). Guida: [MANUALE-CHAT.md](documenti/manuali/MANUALE-CHAT.md).
 - **Programma File** (`nyctalus-file`, pulsante del mini menu): file grandi ai contatti attraverso la rete, divisi in pezzi verificati (BLAKE3), su più circuiti in parallelo, con pausa, ripresa dopo cadute o spegnimenti e accettazione sopra una soglia; solo dai contatti. Guida: [MANUALE-FILE.md](documenti/manuali/MANUALE-FILE.md).
+- **Terminale** (`nyctalus-cli`): chat e file scrivendo comandi — `contatti`, `scrivi mario ciao`, `ascolta`, `invia mario film.mkv`, `file -s`… Sul PC dal pulsante ⌨ del mini menu (terminale del sistema), sul telefono e su Windows da un pannello dentro l'app che esegue **solo** nyctalus-cli (mai una shell); `nyctalus-cli avvia` accende il motore senza finestre per server e SSH. Guida: [MANUALE-TERMINALE.md](documenti/manuali/MANUALE-TERMINALE.md).
 - **Siti `.nyct` con un comando** (`nyctalus-sito`): pagine fisse o un sito dinamico dietro un server web locale, messi online sulla rete Nyctalus (anche sempre accesi come servizio), senza rivelare dove stanno. Guida: [MANUALE-SITI.md](documenti/manuali/MANUALE-SITI.md).
 - **Reti vere, anche fatte in casa**: nodi su server (pacchetto server, anche **Raspberry Pi**) o a casa con **IP dinamico** (nodi annunciati con un nome No-IP/DuckDNS, risolto a ogni collegamento); `nyctalus-rete` crea e firma la rete e accende **rubrica e casella** anche sul server. **Prova con un amico via Internet** dal PC di casa con un comando (`nyctalus-rete casa --internet NOME`). Guide: [Inizia qui](documenti/manuali/LEGGIMI.md), [con un amico via Internet](documenti/manuali/GUIDA-INTERNET.md), [MANUALE-SERVER.md](documenti/manuali/MANUALE-SERVER.md).
 - **Windows (anteprima)**: `Nyctalus-Windows.zip`, doppio clic su `Nyctalus.cmd` (Python incluso): la finestra è come l'app del telefono, chat e rubrica nelle loro finestre, Firefox per navigare. Guida: [MANUALE-WINDOWS.md](documenti/manuali/MANUALE-WINDOWS.md).
@@ -198,7 +199,7 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 ```
 nyctalus protocol/
 ├── motore/          il motore in Rust: nyctalus-core (protocollo) + nyctalus (demone, nodi, chat)
-├── pc/              i programmi per il computer (Python+GTK3): browser/, chat/, launcher/,
+├── pc/              i programmi per il computer (Python+GTK3): browser/, chat/, launcher/, file/, cli/ (nyctalus-cli),
 │                    gestore-rete/ (nyctalus-rete: codice di rete, rete di casa, gestione)
 ├── server/          i nodi su un server: installatore (servizi systemd) e nyctalus-server
 ├── mobile/          il telefono: orchestratore/ (Python in Termux), webapp/ (PWA),
@@ -226,7 +227,8 @@ cargo build --release   # produce target/release/nyctalus
 ## Uso da terminale
 
 Nyctalus è, come Tor, un demone con interfaccia a riga di comando (in inglese);
-il browser è solo uno dei client. I comandi (`start`, `status`, `nodes`, `site`,
+il browser è solo uno dei client. Per **chattare e mandare file da terminale** c'è
+`nyctalus-cli` ([MANUALE-TERMINALE.md](documenti/manuali/MANUALE-TERMINALE.md)). I comandi (`start`, `status`, `nodes`, `site`,
 `browse`, `monitor`, `exec`, `node`, `authority`, `directory`, …) sono elencati
 da `nyctalus help`. Per **installare, configurare e mettere in piedi una rete**
 vedi **[DEPLOY.md](documenti/DEPLOY.md)**; per **verificare** sicurezza e anonimato

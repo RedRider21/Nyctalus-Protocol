@@ -15,7 +15,7 @@ gestisce gli allegati. Installazione: **`MANUALE-INSTALLAZIONE.md`**, capitolo 2
 ## 1. Avvio
 
 Tocca l'icona **Nyctalus**: compare la schermata di benvenuto e l'app avvia Nyctalus in Termux.
-Sotto il logo, una fila di sei pulsanti quadrati con la sola icona, come il mini menu del PC
+Sotto il logo, due file di pulsanti quadrati con la sola icona, come il mini menu del PC
 (tenendo premuto un pulsante compare il suo nome):
 
 | Icona | Cosa apre |
@@ -26,6 +26,7 @@ Sotto il logo, una fila di sei pulsanti quadrati con la sola icona, come il mini
 | cartella · **File** | il programma **File**: file grandi ai contatti, archivio dei ricevuti con spazio, elimina e condividi (`MANUALE-FILE.md`) |
 | i · **Info e manuali** | il sito con i manuali online |
 | cursori · **Impostazioni** | tutte le impostazioni (sotto) |
+| *(seconda fila)* riquadro con `>_` · **Terminale** | **nyctalus-cli** in un pannello: chat e file scrivendo comandi (`contatti`, `scrivi mario ciao`, `file -s`…), output in diretta, ⏹ per fermare (`MANUALE-TERMINALE.md`) |
 
 **🔗 Rete** (sotto la scritta di stato): a quale rete sei collegato, con l'**impronta**. La rete è
 una sola per tutta l'app (chat, browser 🦇). Toccala per:

@@ -72,7 +72,7 @@ cp "$ROOT/pc/cli/nyctalus-cli" "$P/cli/"
 cp -r "$ROOT/pc/gestore-rete" "$P/"
 mkdir -p "$P/server"
 cp "$ROOT/server/installa-nodo.sh" "$P/server/installa.sh"; cp "$ROOT/server/nyctalus-server" "$ROOT/server/disinstalla.sh" "$P/server/"
-cp "$ROOT/strumenti/avvia-chat.sh" "$ROOT/strumenti/avvia-file.sh" "$ROOT/pc/installa.sh" "$ROOT/pc/disinstalla.sh" "$P/"
+cp "$ROOT/strumenti/avvia-chat.sh" "$ROOT/strumenti/avvia-file.sh" "$ROOT/strumenti/avvia-terminale.sh" "$ROOT/pc/installa.sh" "$ROOT/pc/disinstalla.sh" "$P/"
 cp "$ROOT/logo.svg" "$ROOT/LICENSE" "$P/"
 manuali_in "$P/Manuali"
 find "$P" -name __pycache__ -type d -prune -exec rm -rf {} +
@@ -263,6 +263,7 @@ if [ -f "$M_WIN" ] && [ -n "$PY_WIN" ]; then
   cp "$M_WIN" "$W/bin/nyctalus.exe"
   ( cd "$W/python" && unzip -q "$PY_WIN" )
   cp -r "$ROOT/mobile/orchestratore" "$ROOT/mobile/webapp" "$W/"
+  mkdir -p "$W/cli"; cp "$ROOT/pc/cli/nyctalus-cli" "$W/cli/"
   cp "$ROOT/pc/windows/nyctalus-windows.py" "$W/windows/"
   cp "$ROOT/pc/windows/Nyctalus.cmd" "$W/"
   cp "$ROOT"/documenti/manuali/{LEGGIMI,MANUALE-WINDOWS,MANUALE-CHAT,GUIDA-RETE-DI-CASA,GUIDA-INTERNET}.md "$W/Manuali/"

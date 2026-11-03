@@ -43,6 +43,29 @@ AIUTO = """nyctalus-cli — Nyctalus dal terminale
 <id> = basta l'inizio, se non è ambiguo."""
 
 
+def colonne():
+    try:
+        return int(os.environ.get("COLUMNS") or 0) or __import__("shutil").get_terminal_size((100, 24)).columns
+    except (ValueError, OSError):
+        return 100
+
+
+def aiuto():
+    """L'aiuto; su schermi stretti (il pannello del telefono) ogni comando va su due righe."""
+    if colonne() >= 72:
+        return AIUTO
+    righe = []
+    for r in AIUTO.splitlines():
+        m = re.match(r"^  (\S.*?)\s{2,}(\S.*)$", r)
+        if m:
+            righe += ["  " + m.group(1), "      " + m.group(2)]
+        elif r.startswith("    ") and r.strip():
+            righe.append("      " + r.strip())
+        else:
+            righe.append(r)
+    return "\n".join(righe)
+
+
 def errore(testo, codice=1):
     print("✗ " + testo, file=sys.stderr)
     sys.exit(codice)
@@ -197,6 +220,11 @@ def stampa_trasferimenti(t, nomi):
         perc = 100 * d["fatti"] // d["dim"] if d["dim"] else (100 if d["stato"] == "fatto" else 0)
         barra = "█" * (perc // 5) + "·" * (20 - perc // 5)
         freccia = "⇣ da" if d["verso"] == "in" else "⇡ a "
+        if colonne() < 72:              # schermo stretto: due righe per trasferimento
+            print("%s %s · %s %s\n   %s %3d%% · %s · %s" % (
+                freccia[0], d["nome"], freccia[2:].strip(), nomi.get(d["peer"], d["peer"][:10]), barra[::2], perc,
+                misura(d["dim"]), STATI.get(d["stato"], d["stato"]) + (d.get("extra") or "")) + "  [%s]" % d["id"][:8])
+            continue
         print("%s  %s %-12s %-28s %s %3d%%  %s  %s" % (d["id"][:8], freccia, nomi.get(d["peer"], d["peer"][:10])[:12],
                                                        d["nome"][:28], barra, perc, misura(d["dim"]),
                                                        STATI.get(d["stato"], d["stato"]) + (d.get("extra") or "")))
@@ -204,7 +232,7 @@ def stampa_trasferimenti(t, nomi):
 
 def main(argv):
     if not argv or argv[0] in ("-h", "--help", "aiuto"):
-        print(AIUTO)
+        print(aiuto())
         return
     cmd, arg = argv[0], argv[1:]
 
@@ -355,7 +383,7 @@ def main(argv):
         r = m.risposta(30)
         print("✓ tolti dall'elenco: %s" % (r.split()[1] if " " in r else "0"))
     else:
-        print(AIUTO)
+        print(aiuto())
         sys.exit(2)
 
 

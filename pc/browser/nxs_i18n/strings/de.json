@@ -604,6 +604,7 @@
   "lau.chat": "Chat",
   "lau.esci": "Launcher schließen",
   "lau.file": "Dateien",
+  "lau.terminale": "Terminal (Chat und Dateien über die Kommandozeile)",
   "lau.in_arrivo": "Demnächst",
   "lau.in_arrivo_corpo": "Diese Nyctalus-Komponente ist noch nicht fertig. Nutze vorerst den Browser.",
   "lau.info": "Nyctalus-Website & Anleitung (GitHub Pages)",

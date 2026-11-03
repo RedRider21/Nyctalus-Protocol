@@ -140,9 +140,27 @@ cat > "$TMP/passi.json" <<EOF
  ["vai","$U/?avvio=3#file"],["attendi",3],
  ["js","(()=>{const f=document.getElementById('foglio'); return 'DAZERO '+!f.classList.contains('nascosto')+','+!!f.querySelector('.file-pagina')+','+document.body.classList.contains('solo-rubrica')})()"],
  ["js","(()=>{window._xinv=[]; const v=S.ws.send.bind(S.ws); S.ws.send=(r)=>{ if(/^X(VIA|PULISCI|CONF)/.test(r)) window._xinv.push(r); else v(r); }; evento('XNEW 1111222233334444 in $BOB 1048576 image/jpeg '+inHex('mare.jpg')+' fatto 1048576 '+inHex('/x/mare.jpg')); document.querySelector('.xf-schede [data-v=in]').click(); let r=[...document.querySelectorAll('.xf-riga')].find(x=>x.dataset.id==='1111222233334444'); const prima=[...r.querySelectorAll('.xf-azioni button')].map(b=>b.textContent).join('/'); evento('XNEW 1111222233334444 in $BOB 1048576 image/jpeg '+inHex('mare.jpg')+' eliminato 1048576 -'); r=[...document.querySelectorAll('.xf-riga')].find(x=>x.dataset.id==='1111222233334444'); const dopo=[...r.querySelectorAll('.xf-azioni button')].map(b=>b.textContent).join('/'); const st=r.querySelector('.xf-stato').textContent; [...r.querySelectorAll('.xf-azioni button')].find(b=>b.textContent==='✕').click(); const via=window._xinv.includes('XVIA 1111222233334444'); evento('XVIA 1111222233334444'); const sparita=![...document.querySelectorAll('.xf-riga')].some(x=>x.dataset.id==='1111222233334444'); return 'ELIM '+prima+'|'+st+'|'+dopo+'|'+via+','+sparita})()"],
- ["js","(()=>{[...document.querySelectorAll('.xf-barra-alta button')].find(b=>b.textContent==='🧹').click(); [...document.querySelectorAll('#dialogo button')].find(b=>b.textContent==='Pulisci').click(); [...document.querySelectorAll('.xf-barra-alta button')].find(b=>b.textContent==='⚙').click(); const c=document.querySelector('#dialogo input[type=checkbox]'); const testo=c.parentElement.textContent; c.checked=false; [...document.querySelectorAll('#dialogo button')].find(b=>b.textContent==='Salva').click(); const conf=window._xinv.find(r=>r.startsWith('XCONF soglia'))||''; return 'PULCONF '+window._xinv.includes('XPULISCI')+'|'+testo+'|'+conf.endsWith(' inchat 0')})()"]]
+ ["js","(()=>{[...document.querySelectorAll('.xf-barra-alta button')].find(b=>b.textContent==='🧹').click(); [...document.querySelectorAll('#dialogo button')].find(b=>b.textContent==='Pulisci').click(); [...document.querySelectorAll('.xf-barra-alta button')].find(b=>b.textContent==='⚙').click(); const c=document.querySelector('#dialogo input[type=checkbox]'); const testo=c.parentElement.textContent; c.checked=false; [...document.querySelectorAll('#dialogo button')].find(b=>b.textContent==='Salva').click(); const conf=window._xinv.find(r=>r.startsWith('XCONF soglia'))||''; return 'PULCONF '+window._xinv.includes('XPULISCI')+'|'+testo+'|'+conf.endsWith(' inchat 0')})()"],
+ ["vai","$U/?avvio=4#terminale"],["attendi",3],
+ ["js","(()=>{const f=document.getElementById('foglio'), r=f.getBoundingClientRect(); return 'TERM1 '+document.body.classList.contains('solo-rubrica')+','+(r.top===0)+','+!!f.querySelector('.term-uscita')+','+!!f.querySelector('.indietro-rubrica')+','+f.querySelectorAll('.term-rapido').length+','+(f.querySelector('.term-campo').getAttribute('autocapitalize')==='off')})()"],
+ ["js","Terminale.esegui('io'); 'io'"],
+ ["finche","document.querySelector('.term-uscita').textContent.includes(S.me) && document.querySelector('.term-ferma').disabled",20],
+ ["js","'TERMIO '+document.querySelector('.term-uscita').textContent.split(String.fromCharCode(10)).includes(S.me)"],
+ ["js","Terminale.esegui('aiuto'); 'aiuto'"],
+ ["finche","document.querySelector('.term-uscita').textContent.includes('avvia ') && document.querySelector('.term-ferma').disabled",20],
+ ["js","'TERMAIUTO '+document.querySelector('.term-uscita').textContent.includes('nyctalus-cli — Nyctalus dal terminale')"],
+ ["js","Terminale.esegui('io \$(touch $H/iniezione) ; touch $H/iniezione2'); 'iniezione'"],["attendi",3],
+ ["js","Terminale.esegui('nyctalus-cli avvia'); 'avvia'"],["attendi",1.5],
+ ["js","'TERMAVVIA '+document.querySelector('.term-uscita').textContent.includes('sul telefono il motore lo accende')"],
+ ["js","Terminale.esegui('ascolta'); 'ascolta'"],
+ ["finche","document.querySelector('.term-uscita').textContent.includes('In ascolto')",20],
+ ["js","'TERMCORSO '+!document.querySelector('.term-ferma').disabled"],
+ ["foto","${NYCT_FOTO:-$TMP}/terminale-telefono.png"],
+ ["js","document.querySelector('.term-ferma').click(); 'stop'"],
+ ["finche","document.querySelector('.term-ferma').disabled",15],
+ ["js","'TERMSTOP '+document.querySelector('.term-ferma').disabled"]]
 EOF
-timeout 300 python3 "$STRUMENTI/cdp.py" "$TMP/chrome" "$TMP/passi.json" > "$TMP/r.txt" 2>&1
+timeout 420 python3 "$STRUMENTI/cdp.py" "$TMP/chrome" "$TMP/passi.json" > "$TMP/r.txt" 2>&1
 [ -n "${NYCT_DIAG:-}" ] && cp "$TMP/r.txt" "$NYCT_DIAG" 2>/dev/null
 r() { grep -oE "^js → $1 .*" "$TMP/r.txt" | head -1 | cut -d' ' -f4-; }
 [ "$(r RIGHE)" = "1" ] && pass "elenco delle chat visualizzato" || fail "elenco: $(r RIGHE)"
@@ -210,4 +228,14 @@ r SFOGLIA | grep -q "galleria|Invia (1)|true|video/mp4$" && pass "sfoglia le car
 r ARCH | grep -q "^distro.iso:2,0 MB,nota.pdf:4,0 KB,.*|true$" && pass "Archivio privato: file ricevuti dal più grande, spazio occupato" || fail "archivio: $(r ARCH)"
 r ELIMINA | grep -q "^nota.pdf/.*|false|false|cartella non consentita$" && pass "Elimina toglie il file; Elimina/Condividi/Sfoglia rifiutano ciò che sta fuori (es. /etc)" || fail "elimina e confini: $(r ELIMINA)"
 [ "$(r ESCIIMP)" = "false,true" ] && pass "«←» chiude le impostazioni (nell'app si torna alla schermata iniziale)" || fail "uscita dalle impostazioni: $(r ESCIIMP)"
+[ "$(r TERM1)" = "true,true,true,true,6,true" ] && pass "⌨ Terminale dall'app (#terminale): schermata intera, pulsanti rapidi, campo senza maiuscola automatica, «←»" || fail "schermata Terminale: $(r TERM1)"
+[ "$(r TERMIO)" = "true" ] && pass "Terminale: «io» eseguito da nyctalus-cli in Termux, l'output torna nella schermata" || fail "Terminale io: $(r TERMIO)"
+[ "$(r TERMAIUTO)" = "true" ] && pass "Terminale: «aiuto» elenca i comandi" || fail "Terminale aiuto: $(r TERMAIUTO)"
+[ ! -e "$H/iniezione" ] && [ ! -e "$H/iniezione2" ] && pass "Terminale: \$(…) e ; NON vengono eseguiti (solo nyctalus-cli, argomenti senza shell)" || fail "Terminale: comando iniettato eseguito!"
+[ "$(r TERMAVVIA)" = "true" ] && pass "Terminale: «avvia» rifiutato (il motore lo accende l'app)" || fail "Terminale avvia: $(r TERMAVVIA)"
+[ "$(r TERMCORSO)" = "true" ] && [ "$(r TERMSTOP)" = "true" ] && pass "Terminale: «ascolta» resta in diretta, ⏹ lo ferma" || fail "Terminale ascolta/stop: $(r TERMCORSO) $(r TERMSTOP)"
+COD=$(curl -s -o /dev/null --max-time 3 -w '%{http_code}' -b "nyct=$TOK" -H "Origin: http://altro.sito" -H "Upgrade: websocket" -H "Connection: Upgrade" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" -H "Sec-WebSocket-Version: 13" "$U/ws/terminale")
+[ "$COD" = "403" ] && pass "Terminale: un'origine estranea viene rifiutata (403)" || fail "origine estranea: $COD"
+[ "$(stat -c %a "$H/.nyctalus-chat/controllo" 2>/dev/null)" = "600" ] && [ "$(HOME="$H" python3 "$ROOT/pc/cli/nyctalus-cli" io 2>&1)" = "$(HOME="$H" python3 "$ROOT/pc/cli/nyctalus-cli" io 2>&1 | grep -oE '^[a-z2-7]{56}\.nyct$')" ] && HOME="$H" python3 "$ROOT/pc/cli/nyctalus-cli" io | grep -qE '\.nyct$' \
+  && pass "nyctalus-cli anche da Termux a mano: collegamento in ~/.nyctalus-chat/controllo (privato, 600)" || fail "collegamento per nyctalus-cli: $(ls -l "$H/.nyctalus-chat/controllo" 2>&1)"
 [ "$KO" -eq 0 ]

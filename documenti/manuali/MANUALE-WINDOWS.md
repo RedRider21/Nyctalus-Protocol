@@ -25,6 +25,7 @@ sia uguale a quella del gestore. Senza codice usi una rete di prova solo su ques
 ## 3. Usare
 
 **📦 File** apre il programma per mandare file grandi ai contatti e gestire quelli ricevuti (`MANUALE-FILE.md`).
+**⌨️ Terminale** apre nyctalus-cli in un pannello: chat e file scrivendo comandi (`MANUALE-TERMINALE.md`).
 
 | Riquadro | Cosa fa |
 |---|---|

@@ -12,6 +12,7 @@ PREFIX="${PREFIX:-/data/data/com.termux/files/usr}"
 [ -x "$DEST/nyctalus-mobile" ] && "$DEST/nyctalus-mobile" --ferma >/dev/null 2>&1
 LINK="$PREFIX/bin/nyctalus-mobile"
 [ "$(readlink "$LINK" 2>/dev/null)" = "$DEST/nyctalus-mobile" ] && rm -f "$LINK"
+grep -q "Nyctalus Protocol" "$PREFIX/bin/nyctalus-cli" 2>/dev/null && rm -f "$PREFIX/bin/nyctalus-cli"
 grep -q "Nyctalus" "$HOME/.termux/boot/nyctalus-mobile" 2>/dev/null && rm -f "$HOME/.termux/boot/nyctalus-mobile"
 rm -rf "$DEST"
 echo "Programma Nyctalus rimosso."

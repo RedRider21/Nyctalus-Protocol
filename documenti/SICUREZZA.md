@@ -75,6 +75,19 @@ riposo. Non vede *cosa* passa né *con chi*. La maggior parte dei pacchetti ha l
 dimensione (~1420 byte, celle a lunghezza fissa). Per nascondere anche il ritmo esiste il
 **rumore di fondo** (`--cover`, §2.5), a costo di banda.
 
+### 1.2 Porta di controllo e ⌨ Terminale
+
+- La porta di controllo del motore ascolta solo su `127.0.0.1` e risponde solo a chi presenta il
+  **segreto** (confronto a tempo costante). Il segreto sta in `~/.nyctalus-chat/controllo` con
+  permessi **600** (solo il tuo utente), e viene cancellato quando il motore si spegne.
+  `nyctalus-cli` lo legge da lì.
+- Il **⌨ Terminale** dell'app (telefono e Windows) esegue **solo** `nyctalus-cli`: gli argomenti
+  sono una lista passata direttamente al programma, **mai a una shell**. `$(…)`, `;` e `|` restano
+  testo. Il canale accetta solo la pagina dell'app (cookie del segreto + controllo dell'origine:
+  un sito estraneo riceve 403). Al peggio, una pagina ingannata fa quello che fa già la chat:
+  niente chiavi, niente resto di Termux.
+- Verificato da `03-webapp` (passi del Terminale, compresa l'iniezione) e `24-cli`.
+
 ---
 
 ## 2. Verifiche manuali su **rete reale** (con un'uscita remota)

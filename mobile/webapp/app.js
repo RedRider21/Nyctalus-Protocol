@@ -302,6 +302,7 @@ window.addEventListener("hashchange", () => {     // anche senza ricaricare la p
   if (location.hash === "#file") FileGrandi.apri(true);
   else if (location.hash === "#impostazioni") impostazioni(true);
   else if (location.hash === "#rubrica") apriRubrica(true);
+  else if (location.hash === "#terminale" && typeof Terminale !== "undefined") Terminale.apri(true);
 });
 
 // ---------- eventi dal motore ----------------------------------------------------------
@@ -926,7 +927,7 @@ async function carica(dest, file, togliExif) {
 
 // ---------- menu della pressione lunga (come il tasto destro sul PC) --------------------
 function apriFoglio(titolo, contenuto) {
-  const f = $("foglio"); f.textContent = ""; f.classList.remove("galleria");
+  const f = $("foglio"); f.textContent = ""; f.classList.remove("galleria"); f.classList.remove("terminale");
   f.append(el("div", "maniglia"), ...(titolo ? [el("div", "titolo", titolo)] : []), ...contenuto);
   $("velo").classList.remove("nascosto"); f.classList.remove("nascosto");
 }

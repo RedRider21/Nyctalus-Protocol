@@ -13,6 +13,7 @@ OUT="$(mkdir -p "$1" && cd "$1" && pwd)"
 A="$OUT/nyctalus-termux"
 rm -rf "$A"; mkdir -p "$A/sorgenti"
 cp -r "$ROOT/mobile/orchestratore" "$ROOT/mobile/webapp" "$A/"
+mkdir -p "$A/cli"; cp "$ROOT/pc/cli/nyctalus-cli" "$A/cli/"        # chat e file dal terminale
 cp "$ROOT/mobile/termux/installa.sh" "$ROOT/mobile/termux/disinstalla.sh" "$ROOT/mobile/termux/nyctalus-mobile" "$A/"
 cp "$ROOT/Cargo.toml" "$ROOT/Cargo.lock" "$A/sorgenti/"
 cp -r "$ROOT/motore" "$A/sorgenti/"

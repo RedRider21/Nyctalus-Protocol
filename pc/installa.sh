@@ -88,7 +88,7 @@ fi
 # --- 2) il programma -------------------------------------------------------------
 say "Copio Nyctalus in $DEST"
 mkdir -p "$DEST"
-for x in bin browser chat file cli launcher gestore-rete logo.svg avvia-launcher.sh avvia-browser.sh avvia-chat.sh avvia-file.sh LICENSE disinstalla.sh Manuali; do
+for x in bin browser chat file cli launcher gestore-rete logo.svg avvia-launcher.sh avvia-browser.sh avvia-chat.sh avvia-file.sh avvia-terminale.sh LICENSE disinstalla.sh Manuali; do
   [ -e "$QUI/$x" ] || continue
   rm -rf "${DEST:?}/$x"; cp -r "$QUI/$x" "$DEST/"
 done

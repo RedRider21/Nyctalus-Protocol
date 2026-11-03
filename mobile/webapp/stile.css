@@ -462,3 +462,28 @@ body.solo-rubrica #velo { background: var(--panel); }
 .xf-riga.scelta { border-color: var(--accento); }
 .xf-selezione { justify-content: space-between; margin: 6px 0; }
 .xf-azioni button.togli { padding: 8px 12px; color: var(--tenue); }
+
+/* --- ⌨ Terminale (nyctalus-cli dentro l'app) ------------------------------------ */
+#foglio.terminale { top: 0; max-height: none; overflow: hidden; display: flex; flex-direction: column; }
+.term-pagina { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px;
+  padding: 0 12px max(12px, env(safe-area-inset-bottom)); }
+.term-uscita { flex: 1; min-height: 160px; margin: 0; overflow: auto; padding: 12px; border-radius: 12px;
+  background: var(--bg); color: var(--testo); border: 1px solid rgba(var(--rgb), .22);
+  font: 13px/1.45 ui-monospace, "JetBrains Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  white-space: pre-wrap; word-break: break-word; -webkit-user-select: text; user-select: text; }
+.term-comando { color: var(--accento); font-weight: 600; }
+.term-errore { color: #ff7b7b; }
+.term-tenue { color: var(--tenue); }
+.term-rapidi { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.term-rapidi::-webkit-scrollbar { display: none; }
+.term-rapido { flex: none; border: 1px solid rgba(var(--rgb), .3); background: rgba(var(--rgb), .08); color: var(--testo);
+  border-radius: 999px; padding: 6px 12px; font-size: 13px; }
+.term-riga { display: flex; gap: 6px; align-items: center; background: var(--panel); border-radius: 14px;
+  padding: 4px 4px 4px 12px; border: 1px solid rgba(var(--rgb), .25); }
+.term-prompt { color: var(--accento); font: 600 16px ui-monospace, monospace; }
+.term-campo { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--testo);
+  font: 15px ui-monospace, "DejaVu Sans Mono", monospace; padding: 9px 2px; }
+.term-tasto { flex: none; border: 0; border-radius: 10px; width: 40px; height: 40px; font-size: 17px;
+  background: rgba(var(--rgb), .12); color: var(--testo); }
+.term-vai { background: var(--invia); color: #fff; }
+.term-ferma:disabled { opacity: .35; }

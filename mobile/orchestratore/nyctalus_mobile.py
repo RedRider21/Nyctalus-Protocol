@@ -240,6 +240,7 @@ class Servizi:
             if not addr:
                 raise RuntimeError("il motore della chat non è partito")
             self.indirizzo = addr
+            scrivi_collegamento(self.segreto_motore)    # per nyctalus-cli (anche da Termux a mano)
 
             # 2) la rete
             if pubblica:
@@ -306,10 +307,32 @@ class Servizi:
     def ferma(self):
         with self.lock:
             self._termina()
+            togli_collegamento()
             self.stato, self.dettaglio, self.indirizzo, self.modalita = "fermo", "", "", ""
 
 
 SERVIZI = Servizi()
+
+# «porta segreto» del motore acceso, come sul PC: lo legge nyctalus-cli (privato, 600)
+COLLEGAMENTO = DATI_CHAT / "controllo"
+
+
+def scrivi_collegamento(segreto):
+    try:
+        DATI_CHAT.mkdir(parents=True, exist_ok=True)
+        fd = os.open(str(COLLEGAMENTO), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write("%d %s\n" % (CONTROLLO[1], segreto))
+        os.chmod(str(COLLEGAMENTO), 0o600)
+    except OSError as e:
+        log("collegamento per nyctalus-cli non scritto:", e)
+
+
+def togli_collegamento():
+    try:
+        COLLEGAMENTO.unlink()
+    except OSError:
+        pass
 
 
 # --- file: dove si può leggere, nomi sicuri ------------------------------------------
@@ -797,6 +820,104 @@ async def ponte_chat(lettore, scrittore, req):
     m_scrittore.close()
 
 
+# --- ⌨ Terminale dell'app: SOLO nyctalus-cli ------------------------------------------
+# Come la shell nel pannello di Termux-NexusSEC-OS (pipe, niente PTY, output in diretta,
+# input sullo stdin, ⏹ che ferma), ma ristretto: si esegue soltanto nyctalus-cli, con gli
+# argomenti come lista (mai una shell). Se la pagina venisse ingannata, potrebbe fare al
+# massimo quello che fa già la chat: niente chiavi, niente resto di Termux.
+def trova_cli():
+    for c in (os.environ.get("NYCTALUS_CLI", ""),
+              Path(__file__).resolve().parent.parent / "cli" / "nyctalus-cli",          # Termux / Windows
+              Path(__file__).resolve().parent.parent.parent / "pc" / "cli" / "nyctalus-cli"):  # progetto
+        if c and Path(c).is_file():
+            return str(c)
+    return ""
+
+
+def argomenti_terminale(riga):
+    """La riga scritta nel pannello → argomenti per nyctalus-cli (o un messaggio d'errore)."""
+    import shlex
+    try:
+        arg = shlex.split(riga, posix=True)
+    except ValueError:
+        return None, "virgolette non chiuse"
+    if arg and arg[0] in ("nyctalus-cli", "nyctalus"):
+        arg = arg[1:]
+    if arg and arg[0] == "avvia":
+        return None, "sul telefono il motore lo accende l'app: qui non serve «avvia»"
+    return arg, ""
+
+
+async def terminale(lettore, scrittore, req):
+    chiave = req.h.get("sec-websocket-key", "")
+    accetta = base64.b64encode(hashlib.sha1((chiave + WS_GUID).encode()).digest()).decode()
+    scrittore.write(("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
+                     "Sec-WebSocket-Accept: %s\r\n\r\n" % accetta).encode())
+    await scrittore.drain()
+    invia = lambda **m: ws_invia(scrittore, json.dumps(m, ensure_ascii=False))
+    stato = {"proc": None, "flusso": None}
+
+    async def scorri(proc):
+        while True:
+            dati = await proc.stdout.read(4096)
+            if not dati:
+                break
+            await invia(t="out", d=dati.decode("utf-8", errors="replace"))
+        await invia(t="fine", codice=await proc.wait())
+        stato["proc"] = None
+
+    def ferma():
+        proc = stato["proc"]
+        if proc and proc.returncode is None:
+            try:
+                if hasattr(os, "killpg"):
+                    os.killpg(proc.pid, signal.SIGTERM)
+                else:
+                    proc.terminate()
+            except (OSError, ProcessLookupError):
+                pass
+
+    try:
+        while True:
+            testo = await ws_ricevi(lettore, scrittore)
+            if testo is None:
+                break
+            try:
+                m = json.loads(testo)
+            except ValueError:
+                continue
+            tipo = m.get("t")
+            if tipo == "stop":
+                ferma()
+            elif tipo == "in" and stato["proc"] and stato["proc"].returncode is None:
+                stato["proc"].stdin.write((str(m.get("d", "")) + "\n").encode())
+            elif tipo == "cmd":
+                if stato["proc"] and stato["proc"].returncode is None:
+                    await invia(t="err", d="c'è ancora un comando in corso: ⏹ per fermarlo")
+                    continue
+                arg, errore = argomenti_terminale(str(m.get("riga", ""))[:4000])
+                cli = trova_cli()
+                if errore or not cli:
+                    await invia(t="err", d=errore or "nyctalus-cli non trovato: tocca «Installa / aggiorna Nyctalus in Termux»")
+                    await invia(t="fine", codice=2)
+                    continue
+                if SERVIZI.stato != "pronto" and SERVIZI.stato != "avvio":
+                    await invia(t="err", d="il motore è spento: accendilo dalla schermata iniziale")
+                env = dict(os.environ, NYCTALUS_CHAT_PORT=str(CONTROLLO[1]),
+                           NYCTALUS_CHAT_TOKEN=SERVIZI.segreto_motore, PYTHONUNBUFFERED="1",
+                           COLUMNS=str(max(30, min(200, int(m.get("colonne") or 40)))),
+                           PYTHONIOENCODING="utf-8")
+                extra = {"start_new_session": True} if hasattr(os, "killpg") else {"creationflags": SENZA_FINESTRA}
+                stato["proc"] = await asyncio.create_subprocess_exec(
+                    sys.executable, cli, *arg, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.STDOUT, env=env, **extra)
+                stato["flusso"] = asyncio.ensure_future(scorri(stato["proc"]))
+    except (asyncio.IncompleteReadError, ConnectionError):
+        pass
+    finally:
+        ferma()
+
+
 def _da_hex(h):
     try:
         return bytes.fromhex(h).decode("utf-8", "replace")
@@ -901,6 +1022,10 @@ async def instrada(req, lettore, scrittore):
     p = req.percorso
     if p == "/ws" and req.h.get("upgrade", "").lower() == "websocket":
         return await ponte_chat(lettore, scrittore, req)
+    if p == "/ws/terminale" and req.h.get("upgrade", "").lower() == "websocket":
+        if req.h.get("origin") not in ("http://127.0.0.1:%d" % PORTA_HTTP, "http://localhost:%d" % PORTA_HTTP):
+            return await rispondi(scrittore, "403 Forbidden", "origine non ammessa")
+        return await terminale(lettore, scrittore, req)
     if p == "/api/notifiche":
         return await flusso_notifiche(scrittore)
     if p == "/api/stato":

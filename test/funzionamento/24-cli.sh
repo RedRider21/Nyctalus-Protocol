@@ -42,6 +42,20 @@ if unshare -rn true 2>/dev/null; then
   grep -q '^DUE .*già acceso' "$TMP/avvia.txt" && pass "un secondo «avvia» non accende un altro motore" || fail "secondo avvia: $(grep DUE "$TMP/avvia.txt")"
   grep -q '^DOPO .*non è acceso' "$TMP/avvia.txt" && grep -q '^FILE tolto' "$TMP/avvia.txt" \
     && pass "spegnendo «avvia» si spegne il motore e si cancella il segreto" || fail "spegnimento: $(grep -E 'DOPO|FILE' "$TMP/avvia.txt")"
+  # ⌨ Terminale del mini menu (dentro la finestra di terminale): accende il motore, aiuto,
+  # comandi, e chiudendo il terminale spegne il motore che ha acceso
+  mkdir -p "$TMP/casa-term"
+  HOME="$TMP/casa-term" timeout 120 unshare -rn bash -c '
+    ip link set lo up
+    printf "io\nexit\n" | bash "'"$ROOT"'/strumenti/avvia-terminale.sh" --dentro 2>/dev/null
+    sleep 1
+    echo "PORTA $(ss -ltn | grep -c ":1091\b")"
+  ' > "$TMP/term.txt" 2>&1
+  grep -q "nyctalus-cli — Nyctalus dal terminale" "$TMP/term.txt" && grep -qE "Il tuo Contact ID: [a-z2-7]{56}\.nyct" "$TMP/term.txt" \
+    && pass "⌨ Terminale del PC: accende il motore senza finestre, mostra i comandi e il tuo Contact ID" || fail "terminale PC: $(head -5 "$TMP/term.txt")"
+  [ "$(grep -oE '[a-z2-7]{56}\.nyct' "$TMP/term.txt" | wc -l)" -ge 2 ] \
+    && pass "⌨ Terminale del PC: i comandi si scrivono così come sono, senza «nyctalus-cli» («io» risponde)" || fail "terminale PC, comando: $(tail -4 "$TMP/term.txt")"
+  grep -q "^PORTA 0$" "$TMP/term.txt" && pass "⌨ Terminale del PC: chiudendolo si spegne il motore che aveva acceso" || fail "terminale PC, spegnimento: $(grep PORTA "$TMP/term.txt")"
 else
   salta "«avvia»: user namespace non disponibili"
 fi
