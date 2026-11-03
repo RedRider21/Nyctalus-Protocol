@@ -19,9 +19,9 @@
   <button class="btn-icona" id="tema" title="Tema">🌓</button>
 </div></div>
 <main class="wrap manuale-doc">
-<nav class="indice-manuali"><a href="index.html">Inizia qui</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html" class="qui">Manuale del programma File</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html" class="qui">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
-<h1 id="manuale-del-programma-file">Manuale del programma File</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-aprirlo">1. Aprirlo</a><a href="#2-mandare-un-file">2. Mandare un file</a><a href="#3-ricevere-un-file">3. Ricevere un file</a><a href="#3-bis-larchivio-telefono-e-windows">3-bis. L'archivio (telefono e Windows)</a><a href="#4-durante-il-viaggio">4. Durante il viaggio</a><a href="#5-come-funziona-in-breve">5. Come funziona (in breve)</a></nav>
+<h1 id="manuale-del-programma-file">Manuale del programma File</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-aprirlo">1. Aprirlo</a><a href="#2-mandare-un-file">2. Mandare un file</a><a href="#3-ricevere-un-file">3. Ricevere un file</a><a href="#3-bis-larchivio-telefono-e-windows">3-bis. L'archivio (telefono e Windows)</a><a href="#3-ter-lelenco-dei-trasferimenti">3-ter. L'elenco dei trasferimenti</a><a href="#4-durante-il-viaggio">4. Durante il viaggio</a><a href="#5-come-funziona-in-breve">5. Come funziona (in breve)</a></nav>
 <p><strong>File</strong> serve a mandare file <strong>grandi</strong> ai tuoi contatti, anche di molti GB, attraverso la rete
 Nyctalus: nessuno vede cosa mandi né a chi, e il file arriva <strong>identico</strong> (ogni pezzo è
 controllato). Per le foto e i documenti di tutti i giorni bastano gli allegati della chat; File
@@ -86,10 +86,23 @@ senza uscire. (Sul telefono, per vedere le cartelle Termux deve avere il permess
 <li>dal <strong>più grande</strong> al più piccolo, così una ISO o un film si trovano subito;</li>
 <li><strong>Apri</strong> (per i tipi sicuri), <strong>Elimina</strong> (anche più file insieme con le caselle), <strong>Condividi</strong>.</li>
 </ul>
+<p>Sul telefono <strong>Apri</strong> e <strong>Condividi</strong> li fa l'app Nyctalus (in primo piano): prende il file dall'archivio, ne fa una copia temporanea privata (cancellata dopo un giorno) e la passa, in sola lettura, all'app che scegli.</p>
 <p><strong>Condividi</strong> usa il foglio di condivisione standard di Android: il file va all'app che scegli tu
 (WhatsApp, Drive, la galleria…). L'anonimato della rete Nyctalus <strong>non cambia</strong>, ma da lì in poi
 il file è in mano a quell'app, che può copiarlo, caricarlo online o leggerne i metadati (per
 esempio la posizione delle foto): per questo lo chiede sempre, con un avviso.</p>
+<h2 id="3-ter-lelenco-dei-trasferimenti">3-ter. L'elenco dei trasferimenti</h2>
+<p>L'elenco di <strong>In arrivo</strong> e <strong>In uscita</strong> è la <strong>cronologia dei trasferimenti</strong> (come i download di
+un browser), non la cartella:</p>
+<ul>
+<li>se cancelli un file arrivato, la sua riga dice <strong>«Eliminato»</strong> e non ha più «Apri»;</li>
+<li><strong>✕</strong> su una riga conclusa la <strong>toglie dall'elenco</strong> (il file, se c'è ancora, resta);</li>
+<li><strong>Pulisci elenco</strong> (🧹 sul telefono, la scopa in alto sul PC) toglie tutti i trasferimenti conclusi.</li>
+</ul>
+<p><strong>⚙ → «Mostra i file anche nella conversazione della chat»</strong> (acceso di partenza): i file mandati e
+ricevuti compaiono anche nella chat con quel contatto, come allegati, <strong>all'ora in cui sono arrivati</strong>
+e con le spunte (✓✓ consegnato, blu quando il contatto apre la conversazione). Spento, si vedono solo
+in File. Vale per il tuo apparecchio.</p>
 <h2 id="4-durante-il-viaggio">4. Durante il viaggio</h2>
 <table>
 <thead>

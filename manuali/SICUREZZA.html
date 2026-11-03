@@ -19,7 +19,7 @@
   <button class="btn-icona" id="tema" title="Tema">🌓</button>
 </div></div>
 <main class="wrap manuale-doc">
-<nav class="indice-manuali"><a href="index.html">Inizia qui</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="SICUREZZA.html" class="qui">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="SICUREZZA.html" class="qui">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
 <h1 id="verificare-sicurezza-e-anonimato">Verificare sicurezza e anonimato</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-verifiche-automatiche-subito-in-locale">1. Verifiche automatiche (subito, in locale)</a><a href="#2-verifiche-manuali-su-rete-reale-con-unuscita-remota">2. Verifiche manuali su rete reale (con un'uscita remota)</a><a href="#3-cosa-serve-luno-e-cosa-non-basta-da-soli">3. Cosa serve l'uno (e cosa non basta da soli)</a><a href="#4-riferimenti-rapidi-agli-strumenti">4. Riferimenti rapidi agli strumenti</a></nav>
 <p>Questo documento spiega <strong>cosa si può verificare da soli</strong> (con gli strumenti
@@ -111,6 +111,19 @@ due contatti (Noise).</p>
 riposo. Non vede <em>cosa</em> passa né <em>con chi</em>. La maggior parte dei pacchetti ha la stessa
 dimensione (~1420 byte, celle a lunghezza fissa). Per nascondere anche il ritmo esiste il
 <strong>rumore di fondo</strong> (<code>--cover</code>, §2.5), a costo di banda.</p>
+<h3 id="12-porta-di-controllo-e-terminale">1.2 Porta di controllo e ⌨ Terminale</h3>
+<ul>
+<li>La porta di controllo del motore ascolta solo su <code>127.0.0.1</code> e risponde solo a chi presenta il
+  <strong>segreto</strong> (confronto a tempo costante). Il segreto sta in <code>~/.nyctalus-chat/controllo</code> con
+  permessi <strong>600</strong> (solo il tuo utente), e viene cancellato quando il motore si spegne.
+  <code>nyctalus-cli</code> lo legge da lì.</li>
+<li>Il <strong>⌨ Terminale</strong> dell'app (telefono e Windows) esegue <strong>solo</strong> <code>nyctalus-cli</code>: gli argomenti
+  sono una lista passata direttamente al programma, <strong>mai a una shell</strong>. <code>$(…)</code>, <code>;</code> e <code>|</code> restano
+  testo. Il canale accetta solo la pagina dell'app (cookie del segreto + controllo dell'origine:
+  un sito estraneo riceve 403). Al peggio, una pagina ingannata fa quello che fa già la chat:
+  niente chiavi, niente resto di Termux.</li>
+<li>Verificato da <code>03-webapp</code> (passi del Terminale, compresa l'iniezione) e <code>24-cli</code>.</li>
+</ul>
 <hr />
 <h2 id="2-verifiche-manuali-su-rete-reale-con-unuscita-remota">2. Verifiche manuali su <strong>rete reale</strong> (con un'uscita remota)</h2>
 <p>Alcune cose <strong>non</strong> si possono provare in locale (dove client, nodi e uscita sono

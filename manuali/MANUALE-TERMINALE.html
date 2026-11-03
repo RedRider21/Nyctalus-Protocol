@@ -1,0 +1,178 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuale del Terminale (nyctalus-cli) · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html" class="qui">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
+<article>
+<h1 id="manuale-del-terminale-nyctalus-cli">Manuale del Terminale (nyctalus-cli)</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-aprirlo">1. Aprirlo</a><a href="#2-i-comandi">2. I comandi</a><a href="#3-il-pannello-del-telefono-e-di-windows">3. Il pannello del telefono e di Windows</a><a href="#4-come-si-collega-al-motore">4. Come si collega al motore</a></nav>
+<p>Con <strong>nyctalus-cli</strong> si chatta e si mandano file ai contatti <strong>scrivendo comandi</strong>, senza
+finestre. Usa lo stesso motore della chat: stesso anonimato, stessi contatti, stessa
+conversazione (quello che scrivi dal terminale lo vedi anche nella chat, e viceversa).</p>
+<p>Serve quando vuoi fare in fretta, su un server o un Raspberry senza schermo, via SSH, o per
+automatizzare qualcosa con uno script.</p>
+<h2 id="1-aprirlo">1. Aprirlo</h2>
+<table>
+<thead>
+<tr>
+<th>Dove</th>
+<th>Come</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PC Linux</td>
+<td>pulsante <strong>⌨ Terminale</strong> del mini menu: si apre il terminale del sistema, già pronto. Oppure, in un terminale qualsiasi, il comando <code>nyctalus-cli</code></td>
+</tr>
+<tr>
+<td>Telefono</td>
+<td>icona <strong>⌨ Terminale</strong> nella <strong>seconda fila</strong> della schermata iniziale dell'app: un pannello dentro l'app. Oppure, aprendo Termux a mano, il comando <code>nyctalus-cli</code></td>
+</tr>
+<tr>
+<td>Windows</td>
+<td>pulsante <strong>⌨️ Terminale</strong> della finestra di Nyctalus: lo stesso pannello del telefono</td>
+</tr>
+<tr>
+<td>Server, SSH, Raspberry</td>
+<td><code>nyctalus-cli avvia</code> in un terminale (accende il motore senza finestre; Ctrl-C lo spegne), poi i comandi da un altro terminale</td>
+</tr>
+</tbody>
+</table>
+<p>Il motore deve essere acceso: sul PC lo accende da solo il pulsante del mini menu (e lo spegne
+quando chiudi il terminale, se l'aveva acceso lui); se chat o File sono aperti usa il loro.
+Sul telefono lo accende l'app, come sempre.</p>
+<h2 id="2-i-comandi">2. I comandi</h2>
+<p>Nel terminale aperto dal <strong>mini menu del PC</strong> e nel pannello del <strong>telefono</strong> e di <strong>Windows</strong> si
+scrivono così come sono: <code>contatti</code>, <code>scrivi mario ciao</code>. In un terminale qualsiasi (o in uno
+script, o via SSH) si scrive <code>nyctalus-cli</code> davanti: <code>nyctalus-cli contatti</code>.
+(Nel terminale del mini menu, <code>file</code> è quello di Nyctalus; il comando <code>file</code> del sistema resta
+raggiungibile con <code>command file</code>.)</p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>io</code></td>
+<td>il tuo Contact ID, da dare agli amici</td>
+</tr>
+<tr>
+<td><code>contatti</code></td>
+<td>i contatti; ● se sono in linea</td>
+</tr>
+<tr>
+<td><code>aggiungi &lt;indirizzo&gt; &lt;nome&gt;</code></td>
+<td>aggiunge un contatto</td>
+</tr>
+<tr>
+<td><code>scrivi &lt;contatto&gt; &lt;testo&gt;</code></td>
+<td>manda un messaggio</td>
+</tr>
+<tr>
+<td><code>leggi &lt;contatto&gt; [-n 50]</code></td>
+<td>la conversazione (gli ultimi 20 messaggi, o quanti dici)</td>
+</tr>
+<tr>
+<td><code>ascolta</code></td>
+<td>messaggi, file e richieste che arrivano, <strong>in diretta</strong> (Ctrl-C o ⏹ per smettere)</td>
+</tr>
+<tr>
+<td><code>invia &lt;contatto&gt; &lt;file…&gt;</code></td>
+<td>manda uno o più file con il programma File (grandi, pezzi verificati, più percorsi)</td>
+</tr>
+<tr>
+<td><code>file</code></td>
+<td>i trasferimenti con l'avanzamento; <code>file -s</code> li segue in diretta</td>
+</tr>
+<tr>
+<td><code>accetta &lt;id&gt;</code> · <code>rifiuta &lt;id&gt;</code></td>
+<td>un file in arrivo che chiede conferma</td>
+</tr>
+<tr>
+<td><code>pausa &lt;id&gt;</code> · <code>riprendi &lt;id&gt;</code> · <code>annulla &lt;id&gt;</code></td>
+<td>un trasferimento</td>
+</tr>
+<tr>
+<td><code>togli &lt;id&gt;</code> · <code>pulisci</code></td>
+<td>dall'elenco dei trasferimenti (i file restano)</td>
+</tr>
+<tr>
+<td><code>impostazioni [soglia 100] [canali 3] [inchat si\|no]</code></td>
+<td>soglia di accettazione automatica (MB), collegamenti in parallelo, file anche nella chat</td>
+</tr>
+<tr>
+<td><code>aiuto</code></td>
+<td>l'elenco dei comandi</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>&lt;contatto&gt;</code></strong>: il nome, anche solo l'inizio e senza maiuscole (<code>scrivi mar ciao</code> va a
+«Mario» se è l'unico che comincia così), oppure l'indirizzo <code>.nyct</code>.
+<strong><code>&lt;id&gt;</code></strong>: l'identificativo del trasferimento; bastano le prime lettere, quelle che mostra
+<code>file</code>.</p>
+<p>Esempi (in un terminale qualsiasi; in quello del mini menu senza <code>nyctalus-cli</code>):</p>
+<pre><code>nyctalus-cli scrivi mario &quot;ci vediamo alle 8&quot;
+nyctalus-cli invia mario ~/Video/vacanze.mp4
+nyctalus-cli file -s
+</code></pre>
+<p>Sul telefono, i file si indicano con il loro percorso: per esempio
+<code>invia mario ~/storage/shared/Download/film.mkv</code>.</p>
+<h2 id="3-il-pannello-del-telefono-e-di-windows">3. Il pannello del telefono e di Windows</h2>
+<ul>
+<li>In alto scorre quello che rispondono i comandi; in basso il campo dove scrivi (niente
+  maiuscola automatica né correttore) e <strong>⏎</strong> per eseguire.</li>
+<li><strong>↑</strong> richiama i comandi già dati (anche le frecce della tastiera).</li>
+<li>I <strong>pulsanti rapidi</strong> (contatti, il mio ID, file, file in diretta, ascolta, aiuto) eseguono
+  il comando con un tocco.</li>
+<li><strong>⏹</strong> ferma un comando che resta acceso (<code>ascolta</code>, <code>file -s</code>).</li>
+<li><code>pulisci schermo</code> svuota il pannello; <strong>←</strong> torna alla schermata iniziale.</li>
+</ul>
+<p><strong>Sicurezza:</strong> il pannello esegue <strong>solo</strong> nyctalus-cli. I comandi non passano mai da una shell
+(scrivere <code>$(…)</code> o <code>;</code> non esegue niente) e il canale accetta solo la pagina dell'app. Anche
+se qualcuno riuscisse a ingannare la pagina, potrebbe fare al massimo quello che fa già la
+chat: non arriva alle chiavi né al resto di Termux.</p>
+<h2 id="4-come-si-collega-al-motore">4. Come si collega al motore</h2>
+<p>All'accensione il motore scrive la sua porta di controllo e un segreto in
+<code>~/.nyctalus-chat/controllo</code>, leggibile <strong>solo da te</strong> (permessi 600), e lo cancella quando si
+spegne. nyctalus-cli lo legge da lì, oppure dalle variabili <code>NYCTALUS_CHAT_PORT</code> e
+<code>NYCTALUS_CHAT_TOKEN</code>. Senza il segreto il motore non risponde.</p>
+<p>Se il motore è spento, nyctalus-cli lo dice e suggerisce come accenderlo; se nel frattempo si è
+riavviato, basta ridare il comando.</p>
+<p>Dettagli: protocollo di controllo in <code>SPECIFICA.md</code>; prove <code>24-cli</code> e <code>03-webapp</code> (passi del
+Terminale) in <a href="MANUALE-PROVE.html"><code>MANUALE-PROVE.md</code></a>.</p>
+</article>
+</main>
+<button class="torna-su" id="torna-su" type="button" title="Torna su" aria-label="Torna su">↑</button>
+<script>
+(function(){var b=document.getElementById('torna-su');
+function aggiorna(){b.classList.toggle('visibile',window.scrollY>250);}
+window.addEventListener('scroll',aggiorna,{passive:true});aggiorna();
+b.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});})();
+</script>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>
