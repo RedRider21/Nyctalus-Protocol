@@ -58,6 +58,8 @@ I file ricevuti restano nell'**archivio privato** di Nyctalus (sul telefono la c
 - dal **più grande** al più piccolo, così una ISO o un film si trovano subito;
 - **Apri** (per i tipi sicuri), **Elimina** (anche più file insieme con le caselle), **Condividi**.
 
+Sul telefono **Apri** e **Condividi** li fa l'app Nyctalus (in primo piano): prende il file dall'archivio, ne fa una copia temporanea privata (cancellata dopo un giorno) e la passa, in sola lettura, all'app che scegli.
+
 **Condividi** usa il foglio di condivisione standard di Android: il file va all'app che scegli tu
 (WhatsApp, Drive, la galleria…). L'anonimato della rete Nyctalus **non cambia**, ma da lì in poi
 il file è in mano a quell'app, che può copiarlo, caricarlo online o leggerne i metadati (per

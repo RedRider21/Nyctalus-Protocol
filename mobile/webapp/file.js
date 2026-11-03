@@ -214,7 +214,11 @@ const FileGrandi = (() => {
   function condividi(v) {
     conferma("Condividere «" + v.nome + "»?", "Il file esce dall'archivio privato e va all'app che sceglierai (es. WhatsApp, Drive, la galleria). "
       + "L'anonimato della rete Nyctalus non cambia, ma da lì in poi il file è nelle mani di quell'app: può copiarlo, caricarlo online o leggerne i metadati (per esempio la posizione delle foto).",
-      "Condividi", async () => { const r = await post("/api/condividi?p=" + v.p); if (!r.ok) toast("Condivisione non disponibile su questo dispositivo"); });
+      "Condividi", async () => {
+        // nell'app Android condivide l'APP (in primo piano); Termux in sottofondo non può
+        if (HOST && HOST.apriFileArchivio) return HOST.apriFileArchivio(v.p, v.nome, v.mime, true);
+        const r = await post("/api/condividi?p=" + v.p); if (!r.ok) toast("Condivisione non disponibile su questo dispositivo");
+      });
   }
 
   // --- impostazioni: soglia e collegamenti in parallelo ------------------------------------

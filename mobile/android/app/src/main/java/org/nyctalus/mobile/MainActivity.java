@@ -1499,6 +1499,69 @@ public class MainActivity extends Activity {
             if (am != null) am.setSpeakerphoneOn(si);
         }
 
+        /**
+         * Apre (o condivide) un file dell'archivio di Nyctalus con l'app che sceglie l'utente.
+         * Termux in sottofondo non può aprire schermate (Android 10+ lo blocca in silenzio): lo
+         * fa l'app, che è in primo piano. Il file arriva dal servizio locale (127.0.0.1, col
+         * segreto dell'app) in una copia temporanea privata (cache/aperti), passata all'altra
+         * app con un permesso di sola lettura su quell'unico file.
+         */
+        @JavascriptInterface
+        public void apriFileArchivio(String pHex, String nome, String mime, boolean condividi) {
+            if (pHex == null || !pHex.matches("[0-9a-f]{2,8000}")) return;
+            final String tipo = mime != null && mime.matches("[a-z0-9.+-]{1,40}/[a-zA-Z0-9.+-]{1,80}") ? mime : "application/octet-stream";
+            String base = (nome == null ? "file" : nome).replaceAll("[^A-Za-z0-9_.-]", "_").replaceAll("^[._]+", "");
+            if (base.isEmpty()) base = "file";
+            if (base.length() > 100) base = base.substring(base.length() - 100);
+            final String sicuro = base;
+            runOnUiThread(() -> Toast.makeText(MainActivity.this, condividi ? "Preparo la condivisione…" : "Apro il file…", Toast.LENGTH_SHORT).show());
+            new Thread(() -> {
+                File dir = FotoProvider.cartellaAperti(MainActivity.this);
+                long ieri = System.currentTimeMillis() - 24L * 3600 * 1000;
+                File[] vecchi = dir.listFiles();
+                if (vecchi != null) for (File v : vecchi) if (v.lastModified() < ieri) v.delete();
+                File dest = new File(dir, sicuro);
+                java.net.HttpURLConnection c = null;
+                try {
+                    c = (java.net.HttpURLConnection) new java.net.URL(URL_BASE + "/api/file?p=" + pHex).openConnection();
+                    c.setRequestProperty("Cookie", "nyct=" + segreto);
+                    c.setConnectTimeout(5000);
+                    c.setReadTimeout(60000);
+                    if (c.getResponseCode() != 200) throw new java.io.IOException("risposta " + c.getResponseCode());
+                    try (java.io.InputStream in = c.getInputStream(); java.io.OutputStream out = new java.io.FileOutputStream(dest)) {
+                        byte[] buf = new byte[65536];
+                        int n;
+                        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                    }
+                } catch (Exception e) {
+                    dest.delete();
+                    runOnUiThread(() -> avviso("Non riesco a prendere il file dall'archivio: " + e.getMessage()));
+                    return;
+                } finally {
+                    if (c != null) c.disconnect();
+                }
+                Uri uri = FotoProvider.indirizzoAperto(sicuro);
+                runOnUiThread(() -> {
+                    Intent i;
+                    if (condividi) {
+                        i = new Intent(Intent.ACTION_SEND);
+                        i.setType(tipo);
+                        i.putExtra(Intent.EXTRA_STREAM, uri);
+                    } else {
+                        i = new Intent(Intent.ACTION_VIEW);
+                        i.setDataAndType(uri, tipo);
+                    }
+                    i.setClipData(ClipData.newRawUri("", uri));
+                    i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    try {
+                        startActivity(Intent.createChooser(i, condividi ? "Condividi con…" : "Apri con…"));
+                    } catch (Exception e) {
+                        avviso("Nessuna app sul telefono sa aprire questo tipo di file.");
+                    }
+                });
+            }, "nyctalus-apri-file").start();
+        }
+
         @JavascriptInterface
         public void condividi(String t) {
             if (t == null) return;

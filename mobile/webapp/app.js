@@ -681,6 +681,9 @@ function avviso(testo) {
 
 async function apriFile(percorso, mime) {
   if (!apribile(mime)) return toast("Per sicurezza questo tipo di file non si apre da qui");
+  // nell'app Android lo apre l'APP (in primo piano): Termux in sottofondo non può aprire
+  // schermate, e Android lo bloccava in silenzio («Apri» non faceva nulla)
+  if (HOST && HOST.apriFileArchivio) return HOST.apriFileArchivio(inHex(percorso), percorso.split("/").pop(), mime, false);
   const r = await post("/api/apri?p=" + inHex(percorso));
   if (!r.ok) window.open(urlFile(percorso), "_blank");
 }

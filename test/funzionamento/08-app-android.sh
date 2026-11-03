@@ -20,14 +20,19 @@ grep -q 'SecureRandom' "$J" && pass "segreto generato con SecureRandom" || fail 
 grep -q 'android:scheme="nyctalus"' "$M" && grep -q 'Collegarsi alla rete «' "$J" && grep -q 'Impronta della rete: " + impronta' "$J" \
   && pass "«Collega l'app» (nyctalus://rete): conferma con nome e impronta prima di cambiare rete" || fail "collegamento senza conferma"
 grep -q '"127.0.0.1".equals(u.getHost())' "$J" && pass "solo il servizio locale resta nell'app" || fail "navigazione non limitata"
-python3 - "$ROOT/mobile/android/app/src/main/java/org/nyctalus/mobile/FotoProvider.java" <<'PY' && pass "FotoProvider rifiuta nomi con percorsi (../)" || fail "FotoProvider: nomi non filtrati"
+python3 - "$ROOT/mobile/android/app/src/main/java/org/nyctalus/mobile/FotoProvider.java" <<'PY' && pass "FotoProvider rifiuta nomi con percorsi (../) e serve solo scatti/ e aperti/" || fail "FotoProvider: nomi non filtrati"
 import re, sys
 s = open(sys.argv[1]).read()
 rx = re.search(r'nome\.matches\("([^"]+)"\)', s).group(1).replace("\\\\", "\\")
 ok = lambda n: re.fullmatch(rx, n) and not n.startswith(".")
 assert ok("IMG_1.jpg") and ok("VID_2.mp4")
-assert not any(ok(n) for n in ["../token", "a/b.jpg", "..", ".x", "x" * 65])
+assert not any(ok(n) for n in ["../token", "a/b.jpg", "..", ".x", "x" * 121])
+# solo due posti: cache/scatti (un segmento) e cache/aperti (aperti/<nome>), nient'altro
+assert 'parti.size() == 2 && "aperti".equals(parti.get(0))' in s and 'if (parti.size() != 1) throw' in s
 PY
+
+grep -q 'public void apriFileArchivio(String pHex' "$J" && grep -q 'c.setRequestProperty("Cookie", "nyct=" + segreto)' "$J" && grep -q 'Intent.FLAG_GRANT_READ_URI_PERMISSION' "$J" \
+  && pass "Apri/Condividi dell'archivio li fa l'app (in primo piano), con permesso di sola lettura su quel file" || fail "apertura dei file dell'archivio"
 
 # --- il comando che l'app fa eseguire a Termux, ricostruito dal codice Java ---
 CMD=$(python3 - "$J" <<'PY'

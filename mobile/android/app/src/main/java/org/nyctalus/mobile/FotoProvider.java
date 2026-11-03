@@ -14,7 +14,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 
 /**
- * Fornitore minimo per le foto e i video scattati dalla chat.
+ * Fornitore minimo per le foto e i video scattati dalla chat, e per i file dell'archivio di
+ * Nyctalus da APRIRE o CONDIVIDERE con un'altra app (cache/aperti: copia temporanea fatta
+ * dall'app, che è in primo piano — Termux in sottofondo non può aprire schermate).
  *
  * La fotocamera del telefono scrive nel file che le passiamo (EXTRA_OUTPUT) e il
  * file resta nella cartella PRIVATA dell'app (cache/scatti): non finisce nella
@@ -36,11 +38,25 @@ public class FotoProvider extends ContentProvider {
         return Uri.parse("content://" + AUTORITA + "/" + nome);
     }
 
+    /** Copie temporanee dei file da aprire o condividere (si buttano dopo un giorno). */
+    static File cartellaAperti(android.content.Context c) {
+        File d = new File(c.getCacheDir(), "aperti");
+        d.mkdirs();
+        return d;
+    }
+
+    static Uri indirizzoAperto(String nome) {
+        return Uri.parse("content://" + AUTORITA + "/aperti/" + nome);
+    }
+
     private File file(Uri uri) throws FileNotFoundException {
+        java.util.List<String> parti = uri.getPathSegments();
         String nome = uri.getLastPathSegment();
-        if (nome == null || !nome.matches("[A-Za-z0-9_.-]{1,64}") || nome.startsWith(".")) {
+        if (nome == null || !nome.matches("[A-Za-z0-9_.-]{1,120}") || nome.startsWith(".")) {
             throw new FileNotFoundException("nome non valido");
         }
+        if (parti.size() == 2 && "aperti".equals(parti.get(0))) return new File(cartellaAperti(getContext()), nome);
+        if (parti.size() != 1) throw new FileNotFoundException("percorso non valido");
         return new File(cartella(getContext()), nome);
     }
 
@@ -58,9 +74,10 @@ public class FotoProvider extends ContentProvider {
     public String getType(Uri uri) {
         String n = uri.getLastPathSegment();
         if (n == null) return null;
-        if (n.endsWith(".jpg")) return "image/jpeg";
-        if (n.endsWith(".mp4")) return "video/mp4";
-        return "application/octet-stream";
+        int punto = n.lastIndexOf('.');
+        String t = punto < 0 ? null
+                : android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(n.substring(punto + 1).toLowerCase());
+        return t != null ? t : "application/octet-stream";
     }
 
     @Override
