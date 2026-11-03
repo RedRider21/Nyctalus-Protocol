@@ -1,0 +1,144 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuale del programma File · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html" class="qui">Manuale del programma File</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
+<article>
+<h1 id="manuale-del-programma-file">Manuale del programma File</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-aprirlo">1. Aprirlo</a><a href="#2-mandare-un-file">2. Mandare un file</a><a href="#3-ricevere-un-file">3. Ricevere un file</a><a href="#3-bis-larchivio-telefono-e-windows">3-bis. L'archivio (telefono e Windows)</a><a href="#4-durante-il-viaggio">4. Durante il viaggio</a><a href="#5-come-funziona-in-breve">5. Come funziona (in breve)</a></nav>
+<p><strong>File</strong> serve a mandare file <strong>grandi</strong> ai tuoi contatti, anche di molti GB, attraverso la rete
+Nyctalus: nessuno vede cosa mandi né a chi, e il file arriva <strong>identico</strong> (ogni pezzo è
+controllato). Per le foto e i documenti di tutti i giorni bastano gli allegati della chat; File
+è per quando serve di più: file grossi, pausa e ripresa, più velocità.</p>
+<h2 id="1-aprirlo">1. Aprirlo</h2>
+<table>
+<thead>
+<tr>
+<th>Dove</th>
+<th>Come</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PC Linux</td>
+<td>pulsante <strong>File</strong> (cartella con freccia) del mini menu, oppure il comando <code>nyctalus-file</code>, oppure <strong>Nyctalus File</strong> nel menu delle applicazioni</td>
+</tr>
+<tr>
+<td>Telefono</td>
+<td>pulsante <strong>File</strong> della schermata iniziale dell'app, oppure nella chat: menu ⋮ di un contatto → <strong>📦 Manda un file grande</strong></td>
+</tr>
+<tr>
+<td>Windows</td>
+<td>pulsante <strong>📦 File</strong> della finestra di Nyctalus</td>
+</tr>
+</tbody>
+</table>
+<p>Usa lo stesso motore della chat: se la chat è aperta ci si aggancia, altrimenti lo accende da
+solo. Il motore resta acceso finché è aperta <strong>almeno una</strong> fra chat e File: chiudere la chat
+non interrompe un file in viaggio.</p>
+<blockquote>
+<p>Dopo l'aggiornamento, se la chat era già aperta, <strong>chiudila e riaprila</strong> una volta: così File
+può agganciarsi al suo motore.</p>
+</blockquote>
+<h2 id="2-mandare-un-file">2. Mandare un file</h2>
+<p><strong>Sul telefono e su Windows:</strong> <strong>＋ Invia</strong> → il contatto → <strong>🖼 Foto e video</strong> (la galleria) oppure
+<strong>📁 Sfoglia le cartelle del telefono</strong> (Download, Documenti, Film…). Tocchi uno o più file e
+<strong>Invia</strong>. <strong>Niente copie:</strong> il motore legge il file <strong>dove sta</strong>. «↩ Torna a File» torna indietro
+senza uscire. (Sul telefono, per vedere le cartelle Termux deve avere il permesso di leggere la memoria:
+<strong>«Installa / aggiorna Nyctalus in Termux»</strong> lo chiede una volta sola, tocca <strong>Consenti</strong>; a mano
+è <code>termux-setup-storage</code>.)</p>
+<p><strong>Sul PC:</strong></p>
+<ol>
+<li><strong>Invia file…</strong> (in alto a sinistra), oppure <strong>trascina</strong> i file sulla finestra.</li>
+<li>Scegli il <strong>contatto</strong> (c'è la ricerca).</li>
+<li>Fatto: il file compare in <strong>In uscita</strong> con la barra, la velocità e il tempo che manca.</li>
+</ol>
+<p>Se il contatto non è in linea, il file aspetta e <strong>parte da solo</strong> appena si collega.</p>
+<h2 id="3-ricevere-un-file">3. Ricevere un file</h2>
+<ul>
+<li>Arriva solo dai tuoi <strong>contatti</strong>: da chi non è fra i contatti viene rifiutato senza disturbarti.</li>
+<li>Fino alla <strong>soglia</strong> (100 MB, si cambia in ⚙) parte da solo; sopra, la riga dice «Vuole
+  mandarti questo file» con <strong>Accetta</strong> / <strong>Rifiuta</strong>, e il desktop ti avvisa.</li>
+<li>Finito: <strong>Apri</strong> o <strong>Mostra nella cartella</strong>. Il file sta in <code>~/.nyctalus-chat/allegati/&lt;contatto&gt;/</code>
+  e compare anche nella <strong>conversazione</strong> della chat, come un allegato.</li>
+</ul>
+<h2 id="3-bis-larchivio-telefono-e-windows">3-bis. L'archivio (telefono e Windows)</h2>
+<p>I file ricevuti restano nell'<strong>archivio privato</strong> di Nyctalus (sul telefono la cartella di Termux:
+<strong>nessun'altra app la vede</strong>). Scheda <strong>Archivio</strong>:</p>
+<ul>
+<li><strong>spazio</strong>: quanto occupano i file ricevuti e quanto resta libero sul telefono;</li>
+<li>dal <strong>più grande</strong> al più piccolo, così una ISO o un film si trovano subito;</li>
+<li><strong>Apri</strong> (per i tipi sicuri), <strong>Elimina</strong> (anche più file insieme con le caselle), <strong>Condividi</strong>.</li>
+</ul>
+<p><strong>Condividi</strong> usa il foglio di condivisione standard di Android: il file va all'app che scegli tu
+(WhatsApp, Drive, la galleria…). L'anonimato della rete Nyctalus <strong>non cambia</strong>, ma da lì in poi
+il file è in mano a quell'app, che può copiarlo, caricarlo online o leggerne i metadati (per
+esempio la posizione delle foto): per questo lo chiede sempre, con un avviso.</p>
+<h2 id="4-durante-il-viaggio">4. Durante il viaggio</h2>
+<table>
+<thead>
+<tr>
+<th>Pulsante</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Pausa</strong></td>
+<td>ferma il trasferimento per tutti e due; <strong>Riprendi</strong> riparte da dove era</td>
+</tr>
+<tr>
+<td><strong>Annulla</strong></td>
+<td>lo ferma per sempre; quello che era arrivato viene buttato</td>
+</tr>
+</tbody>
+</table>
+<p>Se cade la rete, si spegne il PC o il contatto si scollega, <strong>non si ricomincia da capo</strong>: alla
+ripresa arrivano solo i pezzi che mancano.</p>
+<p><strong>⚙ Impostazioni:</strong> la soglia di accettazione automatica e quanti <strong>collegamenti in parallelo</strong>
+usare (3 di solito; di più = più veloce ma più carico sulla rete).</p>
+<h2 id="5-come-funziona-in-breve">5. Come funziona (in breve)</h2>
+<ul>
+<li>Il file è diviso in <strong>pezzi</strong> da 256 KB, ognuno con la sua <strong>impronta</strong> (BLAKE3): un pezzo
+  arrivato sbagliato o manomesso viene scartato e chiesto di nuovo; alla fine si ricontrolla
+  tutto il file.</li>
+<li>I pezzi viaggiano su <strong>più collegamenti contemporanei</strong>, ognuno su un percorso diverso della
+  rete: più veloce, e nessun nodo vede tutto il file passare.</li>
+<li>La proposta, l'accettazione e i comandi viaggiano nella stessa <strong>sessione cifrata e
+  autenticata</strong> della chat; anche i collegamenti dei dati provano chi sei, quindi un estraneo
+  non può chiedere pezzi dei tuoi file.</li>
+<li>Dettagli tecnici: <code>SPECIFICA.md</code> (trasferimenti), prova <code>22-trasferimenti</code> in <a href="MANUALE-PROVE.html"><code>MANUALE-PROVE.md</code></a>.</li>
+</ul>
+</article>
+</main>
+<button class="torna-su" id="torna-su" type="button" title="Torna su" aria-label="Torna su">↑</button>
+<script>
+(function(){var b=document.getElementById('torna-su');
+function aggiorna(){b.classList.toggle('visibile',window.scrollY>250);}
+window.addEventListener('scroll',aggiorna,{passive:true});aggiorna();
+b.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});})();
+</script>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>
