@@ -112,8 +112,48 @@ def passo5():
         return fine()
     esito(sha(video.d.get("percorso", "")) == sha(f2) if video.d.get("percorso") else False,
           "toccato «Accetta»: il video arriva identico e la riga diventa «Arrivato» con «Apri» e «Mostra nella cartella»")
-    esito([b.get_label() for b in video.azioni.get_children()] == ["Mostra nella cartella", "Apri"], "azioni a file arrivato")
-    GLib.timeout_add(300, lambda: (foto_finestra(""), fine(), False)[2])
+    bott = video.azioni.get_children()
+    esito([b.get_label() for b in bott if b.get_label()] == ["Mostra nella cartella", "Apri"]
+          and any(b.get_tooltip_text() and "Togli" in b.get_tooltip_text() for b in bott),
+          "azioni a file arrivato: «Mostra nella cartella», «Apri» e ✕ «Togli dall'elenco»")
+    GLib.timeout_add(300, lambda: (foto_finestra(""), False)[1])
+    GLib.timeout_add(900, passo6)
+    return False
+
+
+def passo6():
+    # il video arrivato viene cancellato dalla cartella: tornando sulla finestra la riga lo dice
+    rr = {r.d["nome"]: r for r in righe("in")}
+    stato["pdf"] = rr["relazione.pdf"].d["percorso"]          # la COPIA ricevuta da Bob
+    os.remove(rr["filmato.mp4"].d["percorso"])
+    app.cmd("XLIST")
+    GLib.timeout_add(1200, passo7)
+    return False
+
+
+def passo7():
+    rr = {r.d["nome"]: r for r in righe("in")}
+    v = rr["filmato.mp4"]
+    esito(v.d["stato"] == "eliminato" and v.stato.get_text() == "Eliminato dalla cartella"
+          and not any(b.get_label() == "Apri" for b in v.azioni.get_children()),
+          "file cancellato dalla cartella: la riga dice «Eliminato dalla cartella», niente più «Apri»")
+    x = [b for b in v.azioni.get_children() if b.get_tooltip_text() and "Togli" in b.get_tooltip_text()][0]
+    x.clicked()
+    GLib.timeout_add(1200, passo8)
+    return False
+
+
+def passo8():
+    esito("filmato.mp4" not in {r.d["nome"] for r in righe("in")}, "✕ «Togli dall'elenco»: la riga sparisce")
+    app.cmd("XPULISCI")
+    GLib.timeout_add(1200, passo9)
+    return False
+
+
+def passo9():
+    esito(not righe("in"), "«Pulisci elenco»: spariscono tutti i trasferimenti conclusi")
+    esito(os.path.exists(stato["pdf"]) and sha(stato["pdf"]) == sha(f1), "togliere dall'elenco non cancella i file ricevuti (il PDF arrivato a Bob c'è ancora)")
+    fine()
     return False
 
 

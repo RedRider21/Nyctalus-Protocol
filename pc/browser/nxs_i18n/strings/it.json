@@ -1739,5 +1739,9 @@
   "file.chiudi": "Chiudi",
   "file.secondi": "{n} s",
   "file.minuti": "{n} min",
-  "file.ore": "{n} h {m} min"
+  "file.ore": "{n} h {m} min",
+  "file.st.eliminato": "Eliminato dalla cartella",
+  "file.togli": "Togli dall'elenco (il file, se c'è ancora, resta)",
+  "file.pulisci": "Pulisci l'elenco dai trasferimenti conclusi",
+  "file.in_chat": "Mostra i file anche nella conversazione della chat"
 }

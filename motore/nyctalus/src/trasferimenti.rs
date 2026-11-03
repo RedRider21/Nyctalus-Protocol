@@ -110,6 +110,8 @@ impl Trasf {
 pub(super) struct Impostazioni {
     pub soglia: u64,
     pub canali: usize,
+    /// i file dei trasferimenti compaiono anche nella conversazione della chat (scelta dell'utente)
+    pub in_chat: bool,
 }
 
 /// Tutto lo stato dei trasferimenti del motore.
@@ -145,12 +147,13 @@ impl Registro {
                 }
             }
         }
-        let mut imp = Impostazioni { soglia: SOGLIA_PRED, canali: CANALI_PRED };
+        let mut imp = Impostazioni { soglia: SOGLIA_PRED, canali: CANALI_PRED, in_chat: true };
         if let Ok(s) = std::fs::read_to_string(dir.join("impostazioni")) {
             for riga in s.lines() {
                 match riga.split_once(' ') {
                     Some(("soglia", v)) => imp.soglia = v.trim().parse().unwrap_or(imp.soglia),
                     Some(("canali", v)) => imp.canali = v.trim().parse::<usize>().unwrap_or(imp.canali).clamp(1, CANALI_MAX),
+                    Some(("inchat", v)) => imp.in_chat = v.trim() != "0",
                     _ => {}
                 }
             }
@@ -280,18 +283,52 @@ impl Stato {
         }
     }
 
+    /// `XNEW <id> <in|out> <addr> <dim> <mime> <nome hex> <stato> <fatti> <percorso hex|->`.
+    /// Un file arrivato e poi cancellato dalla cartella risulta `eliminato` (lo stato vero su
+    /// disco resta `fatto`: è solo come lo si mostra).
     fn x_evento_nuovo(&self, t: &Trasf) -> String {
+        let stato = if t.verso == Verso::In && t.stato == "fatto" && !t.percorso.as_os_str().is_empty() && !t.percorso.exists() {
+            "eliminato"
+        } else {
+            t.stato.as_str()
+        };
+        let percorso = if t.percorso.as_os_str().is_empty() { "-".to_string() } else { in_esadecimale(t.percorso.to_string_lossy().as_bytes()) };
         format!(
-            "XNEW {} {} {} {} {} {} {} {}",
+            "XNEW {} {} {} {} {} {} {} {} {}",
             t.id,
             if t.verso == Verso::In { "in" } else { "out" },
             t.peer,
             t.dim,
             t.mime,
             in_esadecimale(t.nome.as_bytes()),
-            t.stato,
-            t.byte_fatti
+            stato,
+            t.byte_fatti,
+            percorso
         )
+    }
+
+    /// `XVIA <id>`: toglie dall'ELENCO un trasferimento concluso (non il file arrivato). Con un
+    /// trasferimento in errore si butta anche il pezzo già scaricato.
+    pub(super) fn x_togli(&self, id: &str) -> Risultato<()> {
+        let t = self.x_prendi(id).ok_or("trasferimento sconosciuto")?;
+        if !(t.chiuso() || t.stato == "errore") {
+            return Err("è ancora in corso: prima annullalo".into());
+        }
+        if t.verso == Verso::In && t.stato == "errore" {
+            let _ = std::fs::remove_file(&t.parziale);
+        }
+        self.trasf.elenco.lock().unwrap().remove(id);
+        for est in ["txt", "impronte", "mappa"] {
+            let _ = std::fs::remove_file(self.x_dir().join(format!("{id}.{est}")));
+        }
+        self.notifica(format!("XVIA {id}"));
+        Ok(())
+    }
+
+    /// `XPULISCI`: toglie dall'elenco tutti i trasferimenti conclusi. Restituisce quanti.
+    pub(super) fn x_pulisci(&self) -> usize {
+        let chiusi: Vec<String> = self.trasf.elenco.lock().unwrap().values().filter(|t| t.chiuso()).map(|t| t.id.clone()).collect();
+        chiusi.iter().filter(|id| self.x_togli(id).is_ok()).count()
     }
 
     /// Cambia lo stato (su disco e alle interfacce).
@@ -452,18 +489,27 @@ impl Stato {
                 }
             }
             "XF" => {
+                // «XF <id> [ts]»: ts = l'ora del file in chat scelta da chi riceve (ora d'arrivo);
+                // si accetta solo se plausibile (dopo la proposta, non nel futuro)
+                let ts_chat = p
+                    .next()
+                    .and_then(|x| x.parse::<u64>().ok())
+                    .filter(|x| nostro.as_ref().is_some_and(|t| *x >= t.ts) && *x <= ora() + 300);
                 if let Some(t) = nostro.filter(|t| t.verso == Verso::Out && !t.chiuso()) {
+                    let ts_chat = ts_chat.unwrap_or(t.ts);
                     if let Some(x) = self.trasf.elenco.lock().unwrap().get_mut(&t.id) {
                         x.byte_fatti = x.dim;
                     }
                     self.x_stato(&id, "fatto", "");
-                    // nella conversazione compare il file, come un allegato
+                    // nella conversazione compare il file, come un allegato (se l'utente lo vuole)
                     let nome_hex = in_esadecimale(t.nome.as_bytes());
                     let percorso_hex = in_esadecimale(t.percorso.to_string_lossy().as_bytes());
-                    self.registra_riga(peer, &format!("fout {} {} {} {} {nome_hex} {percorso_hex}", t.ts, t.id, t.dim, t.mime));
-                    self.notifica(format!("FILE {peer} out {} {} {} {} {nome_hex} {percorso_hex}", t.ts, t.id, t.dim, t.mime));
+                    if self.trasf.imp.lock().unwrap().in_chat {
+                        self.registra_riga(peer, &format!("fout {ts_chat} {} {} {} {nome_hex} {percorso_hex}", t.id, t.dim, t.mime));
+                        self.notifica(format!("FILE {peer} out {ts_chat} {} {} {} {nome_hex} {percorso_hex}", t.id, t.dim, t.mime));
+                        self.segna(peer, ts_chat, "2");
+                    }
                     self.notifica(format!("XFINE {} {percorso_hex}", t.id));
-                    self.segna(peer, t.ts, "2");
                 }
             }
             _ => {}
@@ -653,11 +699,15 @@ impl Stato {
             match k {
                 "soglia" => imp.soglia = v.parse().unwrap_or(imp.soglia),
                 "canali" => imp.canali = v.parse::<usize>().unwrap_or(imp.canali).clamp(1, CANALI_MAX),
+                "inchat" => imp.in_chat = v != "0",
                 _ => {}
             }
         }
-        let _ = std::fs::write(self.x_dir().join("impostazioni"), format!("soglia {}\ncanali {}\n", imp.soglia, imp.canali));
-        format!("XCONF soglia {} canali {}", imp.soglia, imp.canali)
+        let _ = std::fs::write(
+            self.x_dir().join("impostazioni"),
+            format!("soglia {}\ncanali {}\ninchat {}\n", imp.soglia, imp.canali, u8::from(imp.in_chat)),
+        );
+        format!("XCONF soglia {} canali {} inchat {}", imp.soglia, imp.canali, u8::from(imp.in_chat))
     }
 
     // --- canali dati ---------------------------------------------------------------------------
@@ -855,12 +905,19 @@ impl Stato {
             x.byte_fatti = x.dim;
         }
         self.x_stato(id, "fatto", "");
-        let _ = self.x_segnale(&t.peer, format!("XF {id}")).await;
-        // nella conversazione compare il file ricevuto, come un allegato
+        // nella chat il file sta all'ORA D'ARRIVO (uguale per tutti e due: va nell'XF), non a
+        // quella della proposta: un file lungo comparirebbe in alto fra i messaggi vecchi e la
+        // spunta risulterebbe già «letta» per letture di messaggi successivi
+        let ts_chat = ora().max(t.ts);
+        let _ = self.x_segnale(&t.peer, format!("XF {id} {ts_chat}")).await;
+        // nella conversazione compare il file ricevuto, come un allegato (se l'utente lo vuole)
         let nome_hex = in_esadecimale(t.nome.as_bytes());
         let percorso_hex = in_esadecimale(finale.to_string_lossy().as_bytes());
-        self.registra_riga(&t.peer, &format!("fin {} {id} {} {} {nome_hex} {percorso_hex}", t.ts, t.dim, t.mime));
-        self.notifica(format!("FILE {} in {} {id} {} {} {nome_hex} {percorso_hex}", t.peer, t.ts, t.dim, t.mime));
+        if self.trasf.imp.lock().unwrap().in_chat {
+            self.registra_riga(&t.peer, &format!("fin {ts_chat} {id} {} {} {nome_hex} {percorso_hex}", t.dim, t.mime));
+            self.notifica(format!("FILE {} in {ts_chat} {id} {} {} {nome_hex} {percorso_hex}", t.peer, t.dim, t.mime));
+            self.conferma(&t.peer, format!("K {ts_chat}").into_bytes());     // ✓✓ consegnato anche in chat
+        }
         self.notifica(format!("XFINE {id} {percorso_hex}"));
         Ok(())
     }

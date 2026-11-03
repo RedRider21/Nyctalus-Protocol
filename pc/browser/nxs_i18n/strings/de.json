@@ -1739,5 +1739,9 @@
   "file.chiudi": "Schließen",
   "file.secondi": "{n} s",
   "file.minuti": "{n} min",
-  "file.ore": "{n} Std. {m} min"
+  "file.ore": "{n} Std. {m} min",
+  "file.st.eliminato": "Aus dem Ordner gelöscht",
+  "file.togli": "Aus der Liste entfernen (die Datei, falls noch da, bleibt)",
+  "file.pulisci": "Abgeschlossene Übertragungen aus der Liste entfernen",
+  "file.in_chat": "Dateien auch im Chatverlauf anzeigen"
 }

@@ -39,7 +39,7 @@ const FileGrandi = (() => {
       prepara: "Preparo il file…",
       attesa: out ? "Aspetto che " + chi + " sia in linea" : "Riprende quando " + chi + " è in linea",
       chiede: out ? "Aspetto che " + chi + " accetti" : "Vuole mandarti questo file",
-      pausa: "In pausa", fatto: out ? "Consegnato" : "Arrivato",
+      pausa: "In pausa", fatto: out ? "Consegnato" : "Arrivato", eliminato: "Eliminato dall'archivio",
       errore: "Problema: " + (d.dettaglio || "?"), rifiutato: "Rifiutato", annullato: "Annullato",
     }[d.stato] || d.stato;
     if (d.stato === "corre") t = d.bps > 0 && d.dim ? misura(d.bps) + "/s · mancano " + durata((d.dim - d.fatti) / d.bps) : "In corso…";
@@ -64,6 +64,8 @@ const FileGrandi = (() => {
     else if (["corre", "attesa"].includes(d.stato)) { b("Pausa", () => comando("XPAUSA", d.id)); b("Annulla", () => annulla(d), "pericolo"); }
     else if (["pausa", "errore"].includes(d.stato)) { b("Riprendi", () => comando("XRIPRENDI", d.id), "primario"); b("Annulla", () => annulla(d), "pericolo"); }
     else if (d.stato === "fatto" && d.percorso && d.verso === "in") b("Apri", () => apriFile(d.percorso, d.mime), "primario");
+    // concluso: si toglie dall'elenco (solo la riga; il file, se c'è ancora, resta)
+    if (["fatto", "rifiutato", "annullato", "errore", "eliminato"].includes(d.stato)) b("✕", () => comando("XVIA", d.id), "togli");
     corpo.append(testa, barra, st, az);
     r.append(ic, corpo);
     return r;
@@ -226,10 +228,12 @@ const FileGrandi = (() => {
   function impostazioniFile() {
     const s = el("input"); s.type = "number"; s.min = 0; s.max = 100000; s.value = conf ? Math.round(conf.soglia / 1048576) : 100;
     const c = el("input"); c.type = "number"; c.min = 1; c.max = 8; c.value = conf ? conf.canali : 3;
+    const ic = el("label", "spunta"); const icc = el("input"); icc.type = "checkbox"; icc.checked = !conf || conf.inchat !== 0;
+    ic.append(icc, el("span", "", "Mostra i file anche nella conversazione della chat"));
     dialogo("Impostazioni di File", [
       el("p", "", "Accetta da solo i file dei contatti fino a (MB):"), s,
-      el("p", "", "Collegamenti in parallelo (più veloce, più carico sulla rete):"), c,
-    ], [["Annulla", null], ["Salva", () => manda("XCONF soglia " + Math.max(0, +s.value || 0) * 1048576 + " canali " + Math.min(8, Math.max(1, +c.value || 3))), "primario"]]);
+      el("p", "", "Collegamenti in parallelo (più veloce, più carico sulla rete):"), c, ic,
+    ], [["Annulla", null], ["Salva", () => manda("XCONF soglia " + Math.max(0, +s.value || 0) * 1048576 + " canali " + Math.min(8, Math.max(1, +c.value || 3)) + " inchat " + (icc.checked ? 1 : 0)), "primario"]]);
   }
 
   // --- la schermata ------------------------------------------------------------------------
@@ -244,7 +248,9 @@ const FileGrandi = (() => {
     const testa = el("div", "xf-barra-alta");
     const invia = el("button", "xf-nuovo", "＋ Invia"); invia.onclick = () => scegliContatto(scegliOrigine);
     const ing = el("button", "xf-ing", "⚙"); ing.title = "Impostazioni di File"; ing.onclick = impostazioniFile;
-    testa.append(invia, ing);
+    const pul = el("button", "xf-ing", "🧹"); pul.title = "Pulisci l'elenco dai trasferimenti conclusi";
+    pul.onclick = () => conferma("Pulire l'elenco?", "Tolgo dall'elenco i trasferimenti conclusi. I file arrivati restano nell'Archivio.", "Pulisci", () => manda("XPULISCI"));
+    testa.append(invia, pul, ing);
     const schede = el("div", "xf-schede");
     for (const [v, t] of [["in", "In arrivo"], ["out", "In uscita"], ["arch", "Archivio"]]) {
       const b = el("button", "", t); b.dataset.v = v; b.onclick = () => { scheda = v; if (v === "arch") arch = null; disegna(); }; schede.append(b);
@@ -256,6 +262,7 @@ const FileGrandi = (() => {
       document.querySelector("#foglio .titolo").prepend(ind);
     }
     chiediElenco();
+    if (motoreOk) manda("XLIST");
     disegna();
   }
   function chiediElenco() {
@@ -270,12 +277,14 @@ const FileGrandi = (() => {
   // --- eventi del motore -----------------------------------------------------------------
   function evento(t, p) {
     if (t === "ENDX") { motoreOk = true; disegna(); return true; }
-    if (t === "XCONF" && p.length >= 5) { conf = { soglia: +p[2], canali: +p[4] }; return true; }
+    if (t === "XCONF" && p.length >= 5) { conf = { soglia: +p[2], canali: +p[4], inchat: p.length >= 7 ? +p[6] : 1 }; return true; }
+    if (t === "XVIA") { T.delete(p[1]); disegna(); return true; }
     if (t === "XNEW" && p.length >= 9) {
       motoreOk = true;
       let nome = "?"; try { nome = new TextDecoder().decode(new Uint8Array(p[6].match(/../g).map((h) => parseInt(h, 16)))); } catch (e) { /* niente */ }
       const vecchio = T.get(p[1]);
       const d = Object.assign(vecchio || { ts: Date.now() / 1000 }, { id: p[1], verso: p[2], peer: p[3], dim: +p[4], mime: p[5], nome, stato: p[7], fatti: +p[8] });
+      if (p[9] && p[9] !== "-") { try { d.percorso = new TextDecoder().decode(new Uint8Array(p[9].match(/../g).map((h) => parseInt(h, 16)))); } catch (e) { /* niente */ } }
       T.set(d.id, d);
       if (!vecchio && d.verso === "in" && d.stato === "chiede") toast("📦 " + nomeDi(d.peer) + " vuole mandarti «" + nome + "» (" + misura(d.dim) + "): apri File");
       aggiornaRiga(d);

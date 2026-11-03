@@ -461,4 +461,4 @@ body.solo-rubrica #velo { background: var(--panel); }
 .xf-spunta { width: 20px; height: 20px; margin: 4px 0 0; accent-color: var(--accento); flex: none; }
 .xf-riga.scelta { border-color: var(--accento); }
 .xf-selezione { justify-content: space-between; margin: 6px 0; }
-
+.xf-azioni button.togli { padding: 8px 12px; color: var(--tenue); }

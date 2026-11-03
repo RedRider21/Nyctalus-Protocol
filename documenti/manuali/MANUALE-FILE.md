@@ -65,6 +65,19 @@ Sul telefono **Apri** e **Condividi** li fa l'app Nyctalus (in primo piano): pre
 il file è in mano a quell'app, che può copiarlo, caricarlo online o leggerne i metadati (per
 esempio la posizione delle foto): per questo lo chiede sempre, con un avviso.
 
+## 3-ter. L'elenco dei trasferimenti
+
+L'elenco di **In arrivo** e **In uscita** è la **cronologia dei trasferimenti** (come i download di
+un browser), non la cartella:
+- se cancelli un file arrivato, la sua riga dice **«Eliminato»** e non ha più «Apri»;
+- **✕** su una riga conclusa la **toglie dall'elenco** (il file, se c'è ancora, resta);
+- **Pulisci elenco** (🧹 sul telefono, la scopa in alto sul PC) toglie tutti i trasferimenti conclusi.
+
+**⚙ → «Mostra i file anche nella conversazione della chat»** (acceso di partenza): i file mandati e
+ricevuti compaiono anche nella chat con quel contatto, come allegati, **all'ora in cui sono arrivati**
+e con le spunte (✓✓ consegnato, blu quando il contatto apre la conversazione). Spento, si vedono solo
+in File. Vale per il tuo apparecchio.
+
 ## 4. Durante il viaggio
 
 | Pulsante | Cosa fa |

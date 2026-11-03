@@ -101,6 +101,16 @@ esito(bool(dest) and os.path.exists(dest) and impronta(dest) == impronta(f1),
       "file arrivato IDENTICO a Bob attraverso la rete (%.1f s, %.2f MB/s)" % (durata, 3 / max(durata, 0.01)))
 fa = A.aspetta(lambda r: r.startswith("XSTATO %s fatto" % id1), 30)
 esito(bool(fa), "Alice sa che è arrivato (stato «fatto»)")
+# nella chat di Alice il file compare con le spunte: ✓✓ consegnato, poi blu quando Bob legge
+fil = A.aspetta(lambda r: r.startswith("FILE %s out " % ind_b) and (" %s " % id1) in r, 30)
+ts1 = int(fil.split()[3]) if fil else 0
+sp2 = A.aspetta(lambda r: r.startswith("SP %s %d 2" % (ind_b, ts1)), 30) if ts1 else None
+esito(bool(fil) and bool(sp2), "nella chat di Alice il file compare (FILE) con ✓✓ «consegnato»")
+esito(ts1 >= t0 - 1, "in chat il file sta all'ora d'ARRIVO (in fondo alla conversazione), non a quella della proposta")
+filb = B.aspetta(lambda r: r.startswith("FILE %s in " % ind_a), 5)
+B.manda("LETTO %s %d" % (ind_a, ts1))                 # Bob apre la conversazione
+sp3 = A.aspetta(lambda r: r.startswith("SP %s %d 3" % (ind_b, ts1)), 60)
+esito(bool(sp3), "Bob apre la conversazione: per Alice la spunta del file diventa blu (visualizzato)")
 
 # 2) sopra soglia: chiede Accetta
 B.manda("XCONF soglia 1000000")
@@ -151,6 +161,24 @@ esito(bool(riga) and int(riga.split()[8]) >= gia,
 d3 = percorso_fine(B, id3, 300)
 esito(bool(d3) and impronta(d3) == impronta(f3), "ripreso da dove era e arrivato identico (24 MB)")
 esito(gia > 0, "ripartito da %d byte, non da zero" % gia)
+
+# 4-bis) interruttore: «mostra i file anche nella chat» spento → solo nel programma File
+B.manda("XCONF inchat 0")
+B.aspetta(lambda r: r.startswith("XCONF") and r.endswith("inchat 0"), 10)
+f5 = crea("solo-file.bin", 0.3)
+id5 = invia(A, ind_b, f5)
+d5 = percorso_fine(B, id5, 120)
+time.sleep(1)
+B.manda("HIST " + ind_a)
+storia = []
+while True:
+    r = B.aspetta(lambda r: True, 5)
+    if r is None or r.startswith("ENDH"):
+        break
+    storia.append(r)
+esito(bool(d5) and not any(id5 in r for r in storia), "interruttore spento: il file arriva ma NON compare nella chat di Bob")
+B.manda("XCONF inchat 1")
+B.aspetta(lambda r: r.startswith("XCONF"), 10)
 
 # 5) chi non è fra i contatti: rifiutato senza chiedere
 B.manda("DEL " + ind_a)

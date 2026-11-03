@@ -1341,6 +1341,17 @@ impl Stato {
                 };
                 let _ = tx.send(risposta);
             }
+            "XVIA" => {
+                // XVIA <id>: toglie dall'elenco un trasferimento concluso (il file resta)
+                let id = it.next().unwrap_or("").trim().to_string();
+                let _ = tx.send(match self.x_togli(&id) {
+                    Ok(()) => "OK\n".to_string(),
+                    Err(e) => format!("ERR {e}\n"),
+                });
+            }
+            "XPULISCI" => {
+                let _ = tx.send(format!("OK {}\n", self.x_pulisci()));
+            }
             "XLIST" => {
                 for riga in self.x_elenco() {
                     let _ = tx.send(format!("{riga}\n"));
@@ -1348,6 +1359,7 @@ impl Stato {
                 let _ = tx.send("ENDX\n".into());
             }
             "XCONF" => {
+                // XCONF [soglia N] [canali N] [inchat 0|1]
                 let resto = format!("{} {}", it.next().unwrap_or(""), it.next().unwrap_or(""));
                 let _ = tx.send(format!("{}\n", self.x_conf(&resto)));
             }

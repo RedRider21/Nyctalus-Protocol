@@ -57,6 +57,10 @@ _ITA = {
     "file.st.errore": "Problema: {dettaglio}",
     "file.st.rifiutato": "Rifiutato",
     "file.st.annullato": "Annullato",
+    "file.st.eliminato": "Eliminato dalla cartella",
+    "file.in_chat": "Mostra i file anche nella conversazione della chat",
+    "file.togli": "Togli dall'elenco (il file, se c'è ancora, resta)",
+    "file.pulisci": "Pulisci l'elenco dai trasferimenti conclusi",
     "file.accetta": "Accetta",
     "file.rifiuta": "Rifiuta",
     "file.pausa": "Pausa",
@@ -252,6 +256,7 @@ class Riga(Gtk.ListBoxRow):
             "errore": _t("file.st.errore", dettaglio=d.get("dettaglio") or "?"),
             "rifiutato": _t("file.st.rifiutato"),
             "annullato": _t("file.st.annullato"),
+            "eliminato": _t("file.st.eliminato"),
         }.get(st)
         if st == "corre":
             bps = d.get("bps", 0)
@@ -282,6 +287,14 @@ class Riga(Gtk.ListBoxRow):
             self._bottone(_t("file.cartella"), lambda: app.mostra_cartella(d["percorso"]))
             if not uscita:
                 self._bottone(_t("file.apri"), lambda: app.apri(d["percorso"]), "primaria")
+        # concluso: si può togliere dall'elenco (solo la riga; il file, se c'è, resta)
+        if st in ("fatto", "rifiutato", "annullato", "errore", "eliminato"):
+            x = Gtk.Button()
+            x.set_image(Gtk.Image.new_from_icon_name("window-close-symbolic", Gtk.IconSize.BUTTON))
+            x.set_tooltip_text(_t("file.togli"))
+            x.get_style_context().add_class("azione")
+            x.connect("clicked", lambda _b: app.comando("XVIA", i))
+            self.azioni.pack_start(x, False, False, 0)
         self.azioni.show_all()
 
 
@@ -313,6 +326,11 @@ class FileApp(Gtk.Window):
         imp.set_tooltip_text(_t("file.impostazioni"))
         imp.set_popover(self._popover_impostazioni(imp))
         hb.pack_end(imp)
+        pulisci = Gtk.Button()
+        pulisci.set_image(Gtk.Image.new_from_icon_name("edit-clear-all-symbolic", Gtk.IconSize.BUTTON))
+        pulisci.set_tooltip_text(_t("file.pulisci"))
+        pulisci.connect("clicked", lambda _b: self.cmd("XPULISCI"))
+        hb.pack_end(pulisci)
         self.set_titlebar(hb)
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -342,6 +360,8 @@ class FileApp(Gtk.Window):
         self.drag_dest_set(Gtk.DestDefaults.ALL, [Gtk.TargetEntry.new("text/uri-list", 0, 0)], Gdk.DragAction.COPY)
         self.connect("drag-data-received", self._trascinati)
         self.connect("destroy", Gtk.main_quit)
+        # tornando sulla finestra si rilegge l'elenco (es. un file cancellato dalla cartella)
+        self.connect("focus-in-event", lambda *_a: (self.cmd("XLIST"), False)[1])
         self.show_all()
         self._prova_collegamento()
 
@@ -417,11 +437,21 @@ class FileApp(Gtk.Window):
             nuovo = not d
             d.update({"id": p[1], "verso": p[2], "peer": p[3], "dim": int(p[4]), "mime": p[5], "nome": nome,
                       "stato": p[7], "fatti": int(p[8]), "ts": d.get("ts", time.time())})
+            if len(p) >= 10 and p[9] != "-":                      # dove sta il file (anche dopo riaperture)
+                try:
+                    d["percorso"] = bytes.fromhex(p[9]).decode()
+                except ValueError:
+                    pass
             self.trasf[p[1]] = d
             self._mostra(d)
             if nuovo and d["verso"] == "in" and d["stato"] == "chiede":
                 self._notifica(_t("file.notifica_chiede", nome=self.nome_di(d["peer"]), file=nome, dim=misura(d["dim"])))
                 self.pila.set_visible_child_name("in")
+        elif t == "XVIA" and len(p) >= 2:
+            self.trasf.pop(p[1], None)
+            r = self.righe.pop(p[1], None)
+            if r is not None:
+                r.get_parent().remove(r)
         elif t == "XSTATO" and len(p) >= 3 and p[1] in self.trasf:
             d = self.trasf[p[1]]
             d["stato"] = p[2]
@@ -448,7 +478,7 @@ class FileApp(Gtk.Window):
             if d["verso"] == "in":
                 self._notifica(_t("file.notifica_arrivato", nome=self.nome_di(d["peer"]), file=d["nome"]))
         elif t == "XCONF" and len(p) >= 5:
-            self._conf = {"soglia": int(p[2]), "canali": int(p[4])}
+            self._conf = {"soglia": int(p[2]), "canali": int(p[4]), "inchat": int(p[6]) if len(p) >= 7 else 1}
             self._applica_conf()
         return False
 
@@ -568,6 +598,10 @@ class FileApp(Gtk.Window):
         for i, (testo, w) in enumerate(((_t("file.soglia"), self.s_soglia), (_t("file.canali"), self.s_canali))):
             g.attach(Gtk.Label(label=testo, xalign=0, wrap=True, max_width_chars=34), 0, i, 1, 1)
             g.attach(w, 1, i, 1, 1)
+        self.s_inchat = Gtk.Switch(halign=Gtk.Align.END)
+        g.attach(Gtk.Label(label=_t("file.in_chat"), xalign=0, wrap=True, max_width_chars=34), 0, 2, 1, 1)
+        g.attach(self.s_inchat, 1, 2, 1, 1)
+        self.s_inchat.connect("notify::active", lambda w, _p: self._cambia_conf("inchat", 1 if w.get_active() else 0))
         self.s_soglia.connect("value-changed", lambda w: self._cambia_conf("soglia", int(w.get_value()) * 1024 * 1024))
         self.s_canali.connect("value-changed", lambda w: self._cambia_conf("canali", int(w.get_value())))
         g.show_all()
@@ -578,6 +612,7 @@ class FileApp(Gtk.Window):
         self._in_applica = True
         self.s_soglia.set_value(self._conf.get("soglia", 0) // (1024 * 1024))
         self.s_canali.set_value(self._conf.get("canali", 3))
+        self.s_inchat.set_active(bool(self._conf.get("inchat", 1)))
         self._in_applica = False
 
     def _cambia_conf(self, chiave, valore):

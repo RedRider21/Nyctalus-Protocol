@@ -1739,5 +1739,9 @@
   "file.chiudi": "Fermer",
   "file.secondi": "{n} s",
   "file.minuti": "{n} min",
-  "file.ore": "{n} h {m} min"
+  "file.ore": "{n} h {m} min",
+  "file.st.eliminato": "Supprimé du dossier",
+  "file.togli": "Retirer de la liste (le fichier, s'il existe encore, reste)",
+  "file.pulisci": "Retirer les transferts terminés de la liste",
+  "file.in_chat": "Afficher aussi les fichiers dans la conversation"
 }
