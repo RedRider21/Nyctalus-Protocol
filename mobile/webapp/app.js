@@ -298,7 +298,6 @@ function chiediNome(attuale) {
 $("btn-rubrica").onclick = () => apriRubrica(false);
 if (location.hash === "#rubrica") apriRubrica(true);
 if (location.hash === "#impostazioni") setTimeout(() => impostazioni(true), 0);   // dopo la definizione completa
-if (location.hash === "#file") setTimeout(() => FileGrandi.apri(true), 0);
 window.addEventListener("hashchange", () => {     // anche senza ricaricare la pagina
   if (location.hash === "#file") FileGrandi.apri(true);
   else if (location.hash === "#impostazioni") impostazioni(true);

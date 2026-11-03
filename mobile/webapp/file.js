@@ -231,7 +231,10 @@ const FileGrandi = (() => {
   // --- la schermata ------------------------------------------------------------------------
   function apri(solo, verso) {
     if (verso) scheda = verso;
-    if (pagina && pagina.isConnected) return disegna();
+    // già aperta E visibile: basta aggiornarla. Se era stata chiusa (foglio nascosto) la si
+    // rifà: prima la si «credeva» aperta e al rientro restava la chat.
+    const visibile = pagina && pagina.isConnected && !$("foglio").classList.contains("nascosto");
+    if (visibile && (!solo || S.soloRubrica)) return disegna();
     if (solo && !S.soloRubrica) { S.soloRubrica = true; document.body.classList.add("solo-rubrica"); if (HOST && HOST.rubrica) HOST.rubrica(true); }
     pagina = el("div", "file-pagina");
     const testa = el("div", "xf-barra-alta");
@@ -296,3 +299,6 @@ const FileGrandi = (() => {
   return { apri, inviaA, evento, collegato, _T: T, _sfoglia: sfogliaCartelle, _stato: () => ({ motoreOk, scheda, conf }) };
 })();
 window.nyctApriFile = () => FileGrandi.apri(true);
+// aperta direttamente sulla schermata File (pulsante File dell'app, finestra File di Windows):
+// qui, quando il modulo è caricato (prima, da app.js, il comando poteva perdersi → restava la chat)
+if (location.hash === "#file") FileGrandi.apri(true);
