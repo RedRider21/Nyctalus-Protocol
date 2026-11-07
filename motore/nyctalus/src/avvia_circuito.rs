@@ -10,7 +10,8 @@
 //! Il numero di sequenza viaggia dentro gli strati a cipolla: i relè non lo
 //! vedono. Così un singolo scaricamento sfrutta la banda di più strade.
 //!
-//! Prototipo: guard e uscita fissi per la sessione; nessuna gestione della
+//! Guardia persistente e uscita a caso con la regola di parentela ([`crate::percorsi`]);
+//! guard e uscita restano gli stessi per la sessione. Prototipo: nessuna gestione della
 //! morte di un circuito (un circuito perso blocca la ricomposizione).
 
 use std::collections::HashMap;
@@ -253,47 +254,44 @@ pub(crate) fn ritardo_poisson(hz: f64) -> std::time::Duration {
     std::time::Duration::from_secs_f64(secondi)
 }
 
-/// Sceglie `circuiti` percorsi con **guard e uscita condivisi** e nodi
-/// intermedi diversi.
+/// Sceglie `circuiti` percorsi con **guard e uscita condivisi** e nodi intermedi diversi
+/// (PIANO-ANONIMATO, Tappa 2): la guardia è quella persistente della rete, l'uscita e gli
+/// intermedi sono a caso, e in ogni percorso nessun nodo è «parente» di un altro (stessa
+/// famiglia dichiarata o stessa sottorete del fornitore). Gli intermedi cambiano, se
+/// possibile, da un circuito all'altro.
 fn seleziona_conflux(nodi: &[NodoRete], circuiti: usize, salti: usize) -> Risultato<Vec<Vec<NodoRete>>> {
-    let guard = nodi[0];
+    let guard = crate::percorsi::guardia(nodi);
     if salti == 1 {
         // Guard = uscita: nessun anonimato, ma valido.
         return Ok(vec![vec![guard]; circuiti]);
     }
-    let uscita = nodi[1];
+    let (uscita, _) = crate::percorsi::scegli(nodi, &[guard], 1)?;
+    let Some(&uscita) = uscita.first() else {
+        return Err("need at least 2 nodes in the directory".into());
+    };
     let interni = salti - 2;
-    let mut candidati: Vec<usize> = (2..nodi.len()).collect();
-    if interni > 0 && candidati.is_empty() {
+    if interni > 0 && nodi.len() < 3 {
         return Err("need middle nodes besides guard and exit".into());
     }
-    mescola(&mut candidati);
-
     let mut percorsi = Vec::with_capacity(circuiti);
-    let mut i = 0usize;
+    let mut usati: Vec<NodoRete> = Vec::new();
     for _ in 0..circuiti {
-        let mut percorso = vec![guard];
-        for _ in 0..interni {
-            if i >= candidati.len() {
-                mescola(&mut candidati);
-                i = 0;
-            }
-            percorso.push(nodi[candidati[i]]);
-            i += 1;
+        // prima si prova con intermedi non ancora usati, poi con tutti
+        let liberi: Vec<NodoRete> = nodi.iter().copied().filter(|n| usati.iter().all(|u| u.1 != n.1)).collect();
+        let intermedi = match crate::percorsi::scegli_non_parenti(&liberi, &[guard, uscita], interni) {
+            Some(v) => v,
+            None => crate::percorsi::scegli(nodi, &[guard, uscita], interni)?.0,
+        };
+        if intermedi.len() < interni {
+            return Err("need middle nodes besides guard and exit".into());
         }
+        usati.extend(intermedi.iter().copied());
+        let mut percorso = vec![guard];
+        percorso.extend(intermedi);
         percorso.push(uscita);
         percorsi.push(percorso);
     }
     Ok(percorsi)
-}
-
-fn mescola<T>(v: &mut [T]) {
-    for i in (1..v.len()).rev() {
-        let mut b = [0u8; 8];
-        getrandom::fill(&mut b).expect("generatore casuale di sistema");
-        let j = (u64::from_le_bytes(b) % (i as u64 + 1)) as usize;
-        v.swap(i, j);
-    }
 }
 
 async fn gestisci_flusso(

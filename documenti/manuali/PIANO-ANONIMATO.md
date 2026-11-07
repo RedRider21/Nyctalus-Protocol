@@ -16,7 +16,7 @@ cosa si ottiene e cosa manca ancora.
 |---|---|---|---|
 | 0 · oggi | nodi tutti sul PC di casa | funziona, tutto cifrato | anonimato: nessuno |
 | 1 | 3 piccoli server su 3 fornitori diversi | gli operatori non vedono più chi parla con chi | i nodi sono tutti tuoi |
-| 2 | entrata e uscita scelte a caso, mai due nodi «parenti» | nessun nodo è fisso per tutti | i nodi sono ancora di una sola persona |
+| 2 ✅ | entrata e uscita scelte a caso, mai due nodi «parenti» | nessun nodo è fisso per tutti | i nodi sono ancora di una sola persona |
 | 3 | nodi gestiti da persone diverse | nessuno controlla tutto il percorso | servono più utenti |
 | 4 | più utenti, rumore di fondo e camuffamento sempre accesi | ci si confonde fra tanti, i ritmi si vedono meno | misure e revisione |
 | 5 | misure con la simulazione, browser pubblico | numeri veri, navigazione con impronta uniforme | revisione esterna |
@@ -57,10 +57,10 @@ Mario». Il tuo IP non è più quello della rete.
 potresti mettere insieme entrata e uscita. Ogni fornitore vede il traffico del proprio
 server (cifrato), e l'abbonamento ai VPS è intestato a qualcuno.
 
-## Tappa 2 · Percorsi davvero casuali (lavoro sul motore)
+## Tappa 2 · Percorsi davvero casuali (lavoro sul motore) ✅ fatta (07/11/2026)
 
-Oggi ogni circuito usa **il primo nodo dell'elenco come entrata e il secondo come uscita**;
-cambiano a caso solo quelli in mezzo. È una semplificazione del prototipo, da togliere:
+Prima ogni circuito usava **il primo nodo dell'elenco come entrata e il secondo come
+uscita**, e verso i siti `.nyct` (chat, file) l'entrata cambiava a ogni collegamento. Ora:
 
 - **entrata scelta a caso** e poi tenuta a lungo (come le «guardie» di Tor), così non si
   ricomincia ogni volta il rischio di pescare un'entrata malevola;
@@ -71,6 +71,13 @@ cambiano a caso solo quelli in mezzo. È una semplificazione del prototipo, da t
 
 **Cosa si ottiene:** nessun nodo vede passare tutti, e un percorso non attraversa mai due
 volte lo stesso proprietario dichiarato.
+
+**Come si usa:** il gestore dichiara le famiglie con `nyctalus-rete aggiungi --famiglia NOME`
+o `nyctalus-rete famiglia IP:PORTA NOME` (`MANUALE-GESTORE-RETE.md`). Se la regola non si può
+rispettare (per esempio nodi tutti sul PC di casa) il motore funziona ma scrive un **avviso**
+«cifrato ma NON anonimo»; con `NYCTALUS_PARENTELA=rigida` si rifiuta. La guardia sta in
+`~/.nyctalus/guardie/` (un file privato per rete). Verificato dai test del motore e dalla prova
+`25-percorsi`.
 
 ## Tappa 3 · Nodi di persone diverse
 
@@ -129,5 +136,5 @@ da provare**, non uno strumento da cui far dipendere la propria sicurezza.
 1. **Prova con il tuo amico** così com'è (Tappa 0), per collegamento, velocità, chiamate e file.
 2. **Tappa 1:** scegliete 3 fornitori di VPS diversi e installate i nodi. Il tuo amico può
    ospitarne uno.
-3. **Tappa 2:** il lavoro sul motore (percorsi casuali e regola di parentela) si può fare in
-   parallelo, ed è la prossima cosa da sviluppare.
+3. **Tappa 2** ✅ fatta: quando avrete i server, dichiarate le famiglie (un nome per
+   persona o fornitore) con `nyctalus-rete famiglia`.

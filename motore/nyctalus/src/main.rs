@@ -31,6 +31,7 @@ mod metriche;
 mod monitor;
 mod nodi_online;
 mod nodo;
+mod percorsi;
 mod ponte;
 mod prova_circuito;
 mod ricevi;
@@ -345,15 +346,23 @@ fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_cir
     let voci = nyctalus_core::elenco::verifica_elenco(&testo, &autorita)?;
     // un nodo col nome che ora non si risolve (es. casa spenta) si salta: la rete funziona con gli altri
     let mut nodi = Vec::new();
+    let mut famiglie = Vec::new();
     for v in voci {
         match circuito_rete::risolvi_voce(&v.indirizzo, &v.x25519) {
-            Ok(a) => nodi.push((a, v.x25519, Some(v.impronta_tls))),
+            Ok(a) => {
+                nodi.push((a, v.x25519, Some(v.impronta_tls)));
+                if let Some(f) = v.famiglia {
+                    famiglie.push((v.x25519, f));
+                }
+            }
             Err(e) => eprintln!("nodo saltato: {e}"),
         }
     }
     if nodi.is_empty() {
         return Err("nessun nodo raggiungibile nell'elenco".into());
     }
+    // la rete (per ricordare la guardia di ciascuna) e le famiglie dichiarate dal gestore
+    percorsi::imposta_rete(&autorita, famiglie);
     Ok(nodi)
 }
 
@@ -528,20 +537,30 @@ fn carica_nodi(opzioni: &Opzioni) -> Risultato<Vec<avvia_circuito::NodoRete>> {
         .collect()
 }
 
-/// Voci per il comando `elenco`: `indirizzo,x25519hex,improntahex` separate da ';'.
+/// Voci per il comando `elenco`: `indirizzo,x25519hex,improntahex[,famiglia]` separate da ';'.
+/// La famiglia (facoltativa) raggruppa i nodi dello stesso gestore o fornitore.
 fn leggi_voci_elenco(testo: &str) -> Risultato<Vec<nyctalus_core::elenco::VoceElenco>> {
     testo
         .split(';')
         .filter(|v| !v.trim().is_empty())
         .map(|voce| {
             let campi: Vec<&str> = voce.split(',').map(str::trim).collect();
-            let [addr, x, fp] = campi.as_slice() else {
-                return Err("entry in the form address,x25519hex,fingerprinthex".into());
+            let (addr, x, fp, famiglia) = match campi.as_slice() {
+                [a, x, f] => (a, x, f, None),
+                [a, x, f, fam] if fam.is_empty() => (a, x, f, None),
+                [a, x, f, fam] => {
+                    if !nyctalus_core::elenco::famiglia_valida(fam) {
+                        return Err(format!("invalid family name: {fam} (letters, digits, _ . -, max 32)").into());
+                    }
+                    (a, x, f, Some((*fam).to_string()))
+                }
+                _ => return Err("entry in the form address,x25519hex,fingerprinthex[,family]".into()),
             };
             Ok(nyctalus_core::elenco::VoceElenco {
                 indirizzo: (*addr).to_string(),
                 x25519: da_esadecimale(x)?,
                 impronta_tls: da_esadecimale(fp)?,
+                famiglia,
             })
         })
         .collect()

@@ -4,7 +4,8 @@
 
 ## 07/11/2026 · Anonimato: dove siamo davvero
 - L'utente ha chiesto se nei test via Internet sarà anonimo e invisibile: risposta NO (nodi tutti sul PC di casa → chi ospita vede l'IP dell'altro, operatori vedono chi parla con chi; invisibile mai). Aggiunto riquadro ⚠️ in GUIDA-INTERNET e **PIANO-ANONIMATO.md** (tappe 0-6).
-- **Limite del motore trovato:** `seleziona_conflux` (avvia_circuito.rs) usa nodi[0] come entrata e nodi[1] come uscita per TUTTI; solo gli intermedi sono casuali. → **Tappa 2 = prossimo sviluppo**: entrata casuale e persistente (guardie), uscita/intermedi casuali, regola di parentela (stesso fornitore/sottorete/famiglia dichiarata dal gestore), prove sulla distribuzione.
+- **Limite del motore trovato:** `seleziona_conflux` (avvia_circuito.rs) usava nodi[0] come entrata e nodi[1] come uscita per TUTTI; verso i .nyct (incontro.rs) l'entrata cambiava a ogni collegamento.
+- ✅ **Tappa 2 FATTA** (`motore/nyctalus/src/percorsi.rs`): guardia casuale persistente 30-60 gg per rete (`~/.nyctalus/guardie/<blake3(autorità)[..8]>`, 600/700, `NYCTALUS_GUARDIE` per le prove — lib.sh la mette in $TMP), uscita/intermedi casuali, parentela = stesso nodo | stessa `famiglia=` (nuovo campo FACOLTATIVO e firmato nell'elenco; elenchi senza famiglie identici) | stessa /16 pubblica; impossibile → avviso stderr, `NYCTALUS_PARENTELA=rigida` → errore. Gestore: `aggiungi --famiglia`, `famiglia IP:PORTA NOME|-`. Test motore 107 (+9), prova 25. ⚠️ client < 0.3.3 non leggono elenchi CON famiglie. ⚠️ Un mio test iniziale aveva scritto ~/.nyctalus/guardie/manuale nella home reale (creata in quel momento, solo file di prova): rimossa, ora `cfg!(test)` scrive in temp.
 
 ## Fatto il 04/11/2026 (a casa)
 - ✅ **APK 0.45**: motore Android (CI 41735131174) con l'elenco-cronologia di File; l'utente l'ha installata e provata: ok.

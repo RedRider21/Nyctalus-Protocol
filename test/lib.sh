@@ -9,6 +9,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN="$ROOT/target/release/nyctalus"
 STRUMENTI="$ROOT/test/strumenti"
 TMP="$(mktemp -d /tmp/nyctalus-test.XXXXXX)"
+# la guardia scelta dal motore (percorsi.rs) va nella cartella della prova, mai in ~/.nyctalus
+export NYCTALUS_GUARDIE="$TMP/guardie"
 PRINCIPALE=$BASHPID          # la pulizia vale solo per il processo principale della prova
 PIDS=()
 OK=0; KO=0; SALTATI=0

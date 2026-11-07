@@ -5,7 +5,11 @@
 
 Per il GESTORE della rete (chi la tiene in piedi):
   nyctalus-rete crea [--nome NOME]       crea l'autorità (chiavi che firmano l'elenco)
-  nyctalus-rete aggiungi RIGA… | --file F aggiunge i nodi (righe «IP:PORTA,chiave,impronta»)
+  nyctalus-rete aggiungi RIGA… | --file F [--famiglia NOME]
+                                         aggiunge i nodi (righe «IP:PORTA,chiave,impronta»);
+                                         --famiglia = stesso gestore/fornitore (mai due nello
+                                         stesso percorso)
+  nyctalus-rete famiglia IP:PORTA NOME|-  mette (o toglie con -) un nodo in una famiglia
   nyctalus-rete togli IP:PORTA           toglie un nodo
   nyctalus-rete elenco                   mostra rete, nodi e stato dell'elenco
   nyctalus-rete firma                    firma l'elenco dei nodi → directory.txt
@@ -54,7 +58,8 @@ from pathlib import Path
 DATI = Path(os.environ.get("NYCTALUS_RETE_DATI", Path.home() / ".nyctalus-rete"))
 CONFIG_CLIENT = Path.home() / ".nyctalus-browser" / "config.json"     # lo leggono chat e browser del PC
 PREFISSO = "NYCT1:"
-RIGA = re.compile(r"^(\[?[0-9A-Za-z.:-]+\]?):(\d{1,5}),([0-9a-f]{64}),([0-9a-f]{64})$")
+RIGA = re.compile(r"^(\[?[0-9A-Za-z.:-]+\]?):(\d{1,5}),([0-9a-f]{64}),([0-9a-f]{64})(,[A-Za-z0-9_.-]{1,32})?$")
+FAMIGLIA = re.compile(r"^[A-Za-z0-9_.-]{1,32}$")
 
 
 def esci(msg, codice=1):
@@ -194,7 +199,9 @@ class Rete:
     def salva_nodi(self, righe):
         scrivi_privato(self.f_nodi, "".join(r + "\n" for r in righe))
 
-    def aggiungi(self, righe):
+    def aggiungi(self, righe, famiglia=None):
+        if famiglia is not None and not FAMIGLIA.match(famiglia):
+            esci("nome di famiglia non valido: lettere, cifre, _ . - (al massimo 32)")
         attuali = self.nodi()
         nuove = 0
         for r in righe:
@@ -204,11 +211,26 @@ class Rete:
             r = r.split()[-1] if " " in r else r          # accetta anche «directory entry:   …»
             if not RIGA.match(r):
                 esci("riga non valida: %r (atteso IP:PORTA,chiave,impronta)" % r)
+            if famiglia:
+                r = ",".join(r.split(",")[:3] + [famiglia])
             indirizzo = r.split(",")[0]
             attuali = [a for a in attuali if a.split(",")[0] != indirizzo] + [r]
             nuove += 1
         self.salva_nodi(attuali)
         return nuove, len(attuali)
+
+    def famiglia(self, indirizzo, nome):
+        """Mette (nome) o toglie (None) un nodo da una famiglia."""
+        if nome is not None and not FAMIGLIA.match(nome):
+            esci("nome di famiglia non valido: lettere, cifre, _ . - (al massimo 32)")
+        attuali, trovato = [], False
+        for a in self.nodi():
+            if a.split(",")[0] == indirizzo:
+                a, trovato = ",".join(a.split(",")[:3] + ([nome] if nome else [])), True
+            attuali.append(a)
+        if not trovato:
+            esci("nodo non trovato: " + indirizzo)
+        self.salva_nodi(attuali)
 
     def togli(self, indirizzo):
         attuali = self.nodi()
@@ -726,12 +748,18 @@ def principale(args):
         print("  La chiave segreta resta in %s (non darla a nessuno, fanne una copia di sicurezza)." % rete.f_aut)
         print("  Ora: aggiungi le righe dei nodi (nyctalus-rete aggiungi …), poi firma.")
     elif cmd == "aggiungi":
+        famiglia = opzione(args, "--famiglia")
         f = opzione(args, "--file")
         righe = (Path(f).read_text().splitlines() if f else []) + args
         if not righe:
             esci("indica le righe dei nodi o --file FILE")
-        n, tot = rete.aggiungi(righe)
+        n, tot = rete.aggiungi(righe, famiglia)
         ok("%d nodi aggiunti/aggiornati (%d in tutto). Ricordati di firmare: nyctalus-rete firma" % (n, tot))
+    elif cmd == "famiglia":
+        if len(args) != 2:
+            esci("uso: nyctalus-rete famiglia IP:PORTA NOME   (oppure - per toglierla)")
+        rete.famiglia(args[0], None if args[1] == "-" else args[1])
+        ok("fatto. Ricordati di firmare e ripubblicare: nyctalus-rete firma")
     elif cmd == "togli":
         if not args:
             esci("indica IP:PORTA del nodo")
@@ -743,7 +771,8 @@ def principale(args):
         nodi = rete.nodi()
         print("  nodi: %d" % len(nodi))
         for n in nodi:
-            print("    " + n.split(",")[0])
+            campi = n.split(",")
+            print("    " + campi[0] + ("   famiglia: " + campi[3] if len(campi) > 3 else ""))
         firmato = rete.f_elenco.exists() and rete.f_elenco.stat().st_mtime >= (rete.f_nodi.stat().st_mtime if rete.f_nodi.exists() else 0)
         print("  elenco firmato: %s" % (str(rete.f_elenco) if firmato else "DA FIRMARE (nyctalus-rete firma)"))
         if rete.f_codice.exists():

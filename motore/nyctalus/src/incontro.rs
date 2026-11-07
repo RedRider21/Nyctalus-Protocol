@@ -274,24 +274,14 @@ async fn canale_onion(percorso: &[NodoRete], offusca: Option<[u8; 32]>) -> Risul
     })
 }
 
-/// Percorso onion per raggiungere `elenco[rendezvous]` come uscita: fino a
-/// `salti-1` altri nodi (a caso) come guard/intermedi, poi il punto d'incontro.
-fn percorso_onion(elenco: &[NodoRete], rendezvous: usize, salti: usize) -> Vec<NodoRete> {
-    let mut altri: Vec<usize> = (0..elenco.len()).filter(|&i| i != rendezvous).collect();
-    mescola(&mut altri);
-    let n_intermedi = salti.saturating_sub(1).min(altri.len());
-    let mut percorso: Vec<NodoRete> = altri[..n_intermedi].iter().map(|&i| elenco[i]).collect();
-    percorso.push(elenco[rendezvous]);
-    percorso
-}
-
-fn mescola(v: &mut [usize]) {
-    for i in (1..v.len()).rev() {
-        let mut b = [0u8; 8];
-        getrandom::fill(&mut b).expect("generatore casuale di sistema");
-        let j = (u64::from_le_bytes(b) % (i as u64 + 1)) as usize;
-        v.swap(i, j);
-    }
+/// Percorso onion per raggiungere `elenco[rendezvous]` come uscita: si entra dalla
+/// **guardia** persistente della rete (o, se è parente del punto d'incontro, da un altro
+/// nodo), poi intermedi a caso, mai parenti fra loro ([`crate::percorsi`]). Fino a
+/// `salti-1` nodi prima del punto d'incontro.
+fn percorso_onion(elenco: &[NodoRete], rendezvous: usize, salti: usize) -> Risultato<Vec<NodoRete>> {
+    // in modalità rigida, se la regola è impossibile, errore: meglio non collegarsi che
+    // collegarsi con nodi parenti
+    crate::percorsi::percorso_verso(elenco, elenco[rendezvous], salti)
 }
 
 fn controllo(tipo: u8, chiave: &[u8; 32]) -> Vec<u8> {
@@ -327,7 +317,7 @@ async fn collega_al_servizio(
     let epoca = rendezvous::epoca_attuale();
     let mut ultimo = String::from("no rendezvous candidates");
     for idx in rendezvous::ordine_con_ricambio(chiave, elenco.len(), epoca) {
-        let percorso = percorso_onion(elenco, idx, salti);
+        let percorso = percorso_onion(elenco, idx, salti)?;
         let nodo = percorso.last().unwrap().0;
         let mut canale = match canale_onion(&percorso, offusca).await {
             Ok(c) => c,
@@ -709,7 +699,7 @@ async fn registra_onion_e_canale(
     let epoca = rendezvous::epoca_attuale();
     let mut ultimo = String::from("no candidates");
     for idx in rendezvous::ordine(chiave_pub, elenco.len(), epoca) {
-        let percorso = percorso_onion(elenco, idx, salti);
+        let percorso = percorso_onion(elenco, idx, salti)?;
         let nodo = percorso.last().unwrap().0;
         let mut canale = match canale_onion(&percorso, offusca).await {
             Ok(c) => c,
@@ -1181,7 +1171,7 @@ mod test {
             (format!("127.0.0.1:{p}").parse().unwrap(), [p as u8; 32], Some([0u8; 32]))
         };
         let elenco = vec![nodo(1), nodo(2), nodo(3), nodo(4)];
-        let p = percorso_onion(&elenco, 2, 3);
+        let p = percorso_onion(&elenco, 2, 3).unwrap();
         assert_eq!(p.last().unwrap().0, elenco[2].0); // ultimo = rendezvous
         assert_eq!(p.len(), 3);
     }

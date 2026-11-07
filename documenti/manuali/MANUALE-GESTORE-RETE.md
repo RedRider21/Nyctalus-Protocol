@@ -43,6 +43,21 @@ nyctalus-rete firma                              # SEMPRE dopo ogni cambio (mini
 Una riga con lo stesso indirizzo **sostituisce** la vecchia. Le righe sbagliate vengono
 rifiutate.
 
+### Famiglie: i nodi «parenti»
+Se più nodi sono **della stessa persona** o **dello stesso fornitore**, dichiaralo: un
+percorso non userà mai due nodi della stessa famiglia, così nessuno controlla da solo entrata
+e uscita.
+```sh
+nyctalus-rete aggiungi --famiglia mario 'RIGA1' 'RIGA2'   # i due nodi di Mario
+nyctalus-rete famiglia 203.0.113.5:4601 vps-ovh           # mette un nodo esistente in una famiglia
+nyctalus-rete famiglia 203.0.113.5:4601 -                 # gliela toglie
+nyctalus-rete firma
+```
+Il nome è libero (lettere, cifre, `_ . -`, al massimo 32) ed è protetto dalla firma. Anche
+senza famiglie, due nodi con indirizzo pubblico nella stessa sottorete (/16) sono considerati
+parenti. Le famiglie vanno usate quando **tutti** i client sono aggiornati (0.3.3 o successive):
+i client più vecchi non leggono un elenco con le famiglie.
+
 ## 4. Pubblicare l'elenco
 I client scaricano `~/.nyctalus-rete/directory.txt` da un indirizzo web. Il file è
 firmato: anche se qualcuno lo alterasse, i client lo rifiuterebbero. Scegli tu dove:
@@ -127,5 +142,6 @@ Ridai il codice nuovo ai client (sul telefono 📲 o «🔗 Rete», sul PC `nyct
 - La chiave **segreta** non esce mai da `~/.nyctalus-rete`: il codice e l'elenco
   contengono solo la pubblica.
 - Chi ha il codice può **usare** la rete, non modificarla.
-- Rete con tutti i nodi su un solo server: funziona, ma **non è anonima** verso quel
-  fornitore. Per l'anonimato servono nodi su server diversi (scenario D).
+- Rete con tutti i nodi su un solo server o PC: funziona, ma **non è anonima** (i client
+  stampano un avviso). Per l'anonimato servono nodi su server di soggetti diversi, con le
+  famiglie dichiarate (`PIANO-ANONIMATO.md`).

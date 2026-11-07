@@ -14,10 +14,14 @@
 //! ```text
 //! nyctalus-elenco v0
 //! v 127.0.0.1:4601 <x25519_hex> <impronta_tls_hex>
-//! v ...
+//! v 203.0.113.7:4601 <x25519_hex> <impronta_tls_hex> famiglia=mario
 //! firma <firma_hex>
 //! ```
 //! La firma copre le righe `v ...` (in ordine), con un contesto di versione.
+//!
+//! `famiglia=` (facoltativa) dichiara i nodi **dello stesso gestore o fornitore**: un percorso
+//! non ne usa mai due della stessa famiglia (regola di parentela). Senza famiglie la riga è
+//! quella di sempre, quindi gli elenchi vecchi restano validi e identici.
 
 use std::fmt;
 
@@ -32,6 +36,13 @@ pub struct VoceElenco {
     pub indirizzo: String,
     pub x25519: [u8; 32],
     pub impronta_tls: [u8; 32],
+    /// Famiglia dichiarata dal gestore (stesso proprietario/fornitore), se c'è.
+    pub famiglia: Option<String>,
+}
+
+/// Nome di famiglia valido: 1-32 caratteri fra lettere, cifre, `_`, `.` e `-`.
+pub fn famiglia_valida(nome: &str) -> bool {
+    !nome.is_empty() && nome.len() <= 32 && nome.bytes().all(|b| b.is_ascii_alphanumeric() || b"_.-".contains(&b))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -109,22 +120,34 @@ fn messaggio(righe: &str) -> Vec<u8> {
 fn righe_voci(voci: &[VoceElenco]) -> String {
     let mut s = String::new();
     for v in voci {
-        s.push_str(&format!("v {} {} {}\n", v.indirizzo, esadecimale(&v.x25519), esadecimale(&v.impronta_tls)));
+        s.push_str(&format!("v {} {} {}", v.indirizzo, esadecimale(&v.x25519), esadecimale(&v.impronta_tls)));
+        if let Some(f) = &v.famiglia {
+            s.push_str(&format!(" famiglia={f}"));
+        }
+        s.push('\n');
     }
     s
 }
 
 fn analizza_voce(resto: &str) -> Result<VoceElenco, ErroreElenco> {
     let campi: Vec<&str> = resto.split_whitespace().collect();
-    let [indirizzo, x25519, impronta] = campi.as_slice() else {
-        return Err(ErroreElenco::Malformato("attesi indirizzo, x25519, impronta".into()));
+    let (indirizzo, x25519, impronta, famiglia) = match campi.as_slice() {
+        [a, x, f] => (a, x, f, None),
+        [a, x, f, fam] => {
+            let nome = fam
+                .strip_prefix("famiglia=")
+                .filter(|n| famiglia_valida(n))
+                .ok_or_else(|| ErroreElenco::Malformato(format!("campo sconosciuto: {fam}")))?;
+            (a, x, f, Some(nome.to_string()))
+        }
+        _ => return Err(ErroreElenco::Malformato("attesi indirizzo, x25519, impronta [famiglia=…]".into())),
     };
     let a_32 = |h: &str| -> Result<[u8; 32], ErroreElenco> {
         da_esadecimale(h)
             .and_then(|b| b.try_into().ok())
             .ok_or_else(|| ErroreElenco::Malformato("chiave esadecimale non a 32 byte".into()))
     };
-    Ok(VoceElenco { indirizzo: (*indirizzo).to_string(), x25519: a_32(x25519)?, impronta_tls: a_32(impronta)? })
+    Ok(VoceElenco { indirizzo: (*indirizzo).to_string(), x25519: a_32(x25519)?, impronta_tls: a_32(impronta)?, famiglia })
 }
 
 fn esadecimale(byte: &[u8]) -> String {
@@ -144,8 +167,8 @@ mod test {
 
     fn voci() -> Vec<VoceElenco> {
         vec![
-            VoceElenco { indirizzo: "127.0.0.1:4601".into(), x25519: [1; 32], impronta_tls: [2; 32] },
-            VoceElenco { indirizzo: "127.0.0.1:4602".into(), x25519: [3; 32], impronta_tls: [4; 32] },
+            VoceElenco { indirizzo: "127.0.0.1:4601".into(), x25519: [1; 32], impronta_tls: [2; 32], famiglia: None },
+            VoceElenco { indirizzo: "127.0.0.1:4602".into(), x25519: [3; 32], impronta_tls: [4; 32], famiglia: None },
         ]
     }
 
@@ -177,5 +200,38 @@ mod test {
         let testo = "nyctalus-elenco v0\nv 127.0.0.1:4601 ".to_string()
             + &esadecimale(&[1; 32]) + " " + &esadecimale(&[2; 32]) + "\n";
         assert_eq!(verifica_elenco(&testo, &pubblica), Err(ErroreElenco::FirmaMancante));
+    }
+    #[test]
+    fn famiglia_firmata_e_protetta() {
+        let (segreto, pubblica) = genera_autorita();
+        let mut v = voci();
+        v[0].famiglia = Some("mario".into());
+        let testo = firma_elenco(&v, &segreto);
+        assert!(testo.contains(" famiglia=mario\n"));
+        assert_eq!(verifica_elenco(&testo, &pubblica).unwrap(), v);
+        // togliere o cambiare la famiglia rompe la firma
+        let tolta = testo.replace(" famiglia=mario", "");
+        assert_eq!(verifica_elenco(&tolta, &pubblica), Err(ErroreElenco::FirmaNonValida));
+        let cambiata = testo.replace("famiglia=mario", "famiglia=luca");
+        assert_eq!(verifica_elenco(&cambiata, &pubblica), Err(ErroreElenco::FirmaNonValida));
+    }
+
+    #[test]
+    fn senza_famiglie_la_riga_e_quella_di_sempre() {
+        let (segreto, _) = genera_autorita();
+        let testo = firma_elenco(&voci(), &segreto);
+        let riga = testo.lines().nth(1).unwrap();
+        assert_eq!(riga.split_whitespace().count(), 4); // "v", indirizzo, x25519, impronta
+    }
+
+    #[test]
+    fn famiglia_non_valida_rifiutata() {
+        assert!(!famiglia_valida(""));
+        assert!(!famiglia_valida("con spazio"));
+        assert!(!famiglia_valida(&"x".repeat(33)));
+        assert!(famiglia_valida("vps-mario_1.it"));
+        let (_, pubblica) = genera_autorita();
+        let testo = format!("nyctalus-elenco v0\nv 1.2.3.4:5 {} {} colore=blu\nfirma 00\n", esadecimale(&[1; 32]), esadecimale(&[2; 32]));
+        assert!(matches!(verifica_elenco(&testo, &pubblica), Err(ErroreElenco::Malformato(_))));
     }
 }
