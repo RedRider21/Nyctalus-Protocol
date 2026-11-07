@@ -152,9 +152,15 @@ collega, senza no. Resta da fare la parte «più utenti», che è organizzativa.
 - **Simulazione con Shadow:** una rete finta con centinaia di nodi e utenti, per misurare
   quanto è facile collegare entrata e uscita guardando i tempi, quanto è grande il «gruppo in
   cui ci si confonde», e confrontare tutto con Tor.
-- **Browser pubblico** basato su Firefox ESR, con impronta uniforme per tutti (finestre a
+- **Browser pubblico** basato su Firefox, con impronta uniforme per tutti (finestre a
   misure fisse, canvas e caratteri uniformati), per navigare sul web normale senza essere
   riconoscibili dal browser.
+  - ✅ **Fase 1 (07/11/2026): Nyctalus Firefox.** Il Firefox già installato, con un profilo
+    separato e blindato (proxy anche per i nomi, mai diretto, `resistFingerprinting` e finestre a
+    misure fisse, siti isolati, niente WebRTC/WebGL/telemetria, navigazione privata). Verificato
+    con Firefox vero dalla prova `29-firefox`.
+  - Fase 2: un **Firefox ESR incluso** nel pacchetto, uguale per tutti (stessa versione = impronta
+    ancora più uniforme), e poi Windows e telefono.
 
 ## Tappa 6 · Revisione indipendente
 

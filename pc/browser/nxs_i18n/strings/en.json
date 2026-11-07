@@ -605,6 +605,7 @@
   "lau.esci": "Quit the launcher",
   "lau.file": "Files",
   "lau.terminale": "Terminal (chat and files from the command line)",
+  "lau.firefox": "Nyctalus Firefox (anonymous browsing)",
   "lau.in_arrivo": "Coming soon",
   "lau.in_arrivo_corpo": "This Nyctalus component is not ready yet. For now you can use the Browser.",
   "lau.info": "Nyctalus website & guide (GitHub Pages)",

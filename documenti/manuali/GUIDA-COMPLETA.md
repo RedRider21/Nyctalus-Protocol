@@ -55,6 +55,8 @@ Per **provare** basta un PC: fa da gestore, da nodi e da client insieme (rete di
 3. Collegati alla rete: `nyctalus-rete importa NYCT1:…` (il codice te lo dà il gestore).
    Controlla che l'**impronta** mostrata sia uguale a quella del gestore.
 4. Apri il mini menu (**Nyctalus** nel menu delle applicazioni) → **Chat**.
+5. Per navigare: il **Browser** del mini menu (scheda 🦇). In più, per il web normale senza
+   farti riconoscere fra una visita e l'altra, **Nyctalus Firefox** ([§8](#8-browser-modalita-nyctalus)).
 
 **Telefono Android**
 1. Installa **Termux** e aprilo una volta.
@@ -138,7 +140,7 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi **gestisce
 | [Modalità riservata](#5-modalita-riservata) | non far capire **quando** né **a chi** scrivi | spenta |
 | [File: soglia, collegamenti, chat](#6-programma-file) | quanto accettare da solo, velocità, traccia in chat | 100 MB · 3 · sì |
 | [Rubrica della rete](#7-rubrica-della-rete) | farsi trovare dagli altri della rete | non iscritto |
-| [Browser 🦇](#8-browser-modalita-nyctalus) | navigare attraverso la rete | da scegliere |
+| [Browser 🦇 e Nyctalus Firefox](#8-browser-modalita-nyctalus) | navigare attraverso la rete; con Firefox anche con impronta uniforme | da scegliere |
 | [Terminale](#9-terminale) | chat e file scrivendo comandi | — |
 | **Per chi gestisce la rete** | | |
 | [Rete di casa / via Internet](#10-rete-di-casa-e-via-internet) | provare senza server | — |
@@ -220,11 +222,27 @@ Contact ID. Ti iscrivi con un nome; puoi cancellarti quando vuoi.
 ### 8. Browser — 🦇 modalità Nyctalus
 **A cosa serve:** navigare **attraverso la rete** (il sito non vede il tuo IP) e aprire i siti
 `.nyct`. Nelle schede 🦇 non esce nulla finché la protezione non è attiva.
-**Costo:** pagine un po' più lente. Per l'anonimato «serio» sul web normale arriverà un
-browser apposta (piano, punto J).
+**Costo:** pagine un po' più lente.
 
 - **PC:** mini menu → **Browser** → scheda 🦇.
 - **Telefono:** pulsante **Browser** → scegli **🦇 Nyctalus**.
+
+**In più, sul PC: Nyctalus Firefox.** Non sostituisce il nostro browser, che resta quello di
+tutti i giorni e dei siti `.nyct`. Serve quando sul **web normale** non vuoi essere
+**riconosciuto fra una visita e l'altra**. La modalità Stealth nasconde il tuo IP, ma il suo
+motore (WebKitGTK) è usato da pochi, quindi un sito può riconoscerne l'«impronta». Firefox con le
+protezioni di Tor Browser ti fa somigliare a milioni di altri. È il tuo Firefox, con un **profilo
+separato e blindato** (il Firefox di tutti i giorni non viene toccato):
+- tutto passa dalla rete, anche i nomi dei siti; se la rete è spenta **non esce niente**;
+- **impronta uguale per tutti** (finestra a misure fisse, ora UTC, lingua inglese, niente
+  WebGL): il browser non ti distingue dagli altri;
+- niente WebRTC, posizione e sensori; niente telemetria né contatti a Mozilla o Google;
+- navigazione privata: chiudendo non resta niente.
+
+Si apre da: menu delle applicazioni → **Nyctalus Firefox**, oppure mini menu → ⚙ → **🦊
+Nyctalus Firefox**, oppure il comando `nyctalus-firefox`. Se la rete non è accesa la accende
+(serve una rete importata con il codice, o la chat aperta). Non installare estensioni: rendono
+il browser riconoscibile.
 
 ### 9. Terminale
 **A cosa serve:** chat e file scrivendo comandi (`contatti`, `scrivi mario ciao`, `file -s`…).

@@ -88,7 +88,7 @@ fi
 # --- 2) il programma -------------------------------------------------------------
 say "Copio Nyctalus in $DEST"
 mkdir -p "$DEST"
-for x in bin browser chat file cli launcher gestore-rete logo.svg avvia-launcher.sh avvia-browser.sh avvia-chat.sh avvia-file.sh avvia-terminale.sh LICENSE disinstalla.sh Manuali; do
+for x in bin browser chat file cli firefox launcher gestore-rete logo.svg avvia-launcher.sh avvia-browser.sh avvia-chat.sh avvia-file.sh avvia-terminale.sh avvia-firefox.sh LICENSE disinstalla.sh Manuali; do
   [ -e "$QUI/$x" ] || continue
   rm -rf "${DEST:?}/$x"; cp -r "$QUI/$x" "$DEST/"
 done
@@ -98,7 +98,7 @@ ok "Programma installato"
 
 # --- 3) comandi (solo se il nome è libero o è già nostro) ------------------------
 mkdir -p "$BIN_DIR"
-for c in launcher browser chat file; do
+for c in launcher browser chat file firefox; do
   L="$BIN_DIR/nyctalus-$c"
   if [ -e "$L" ] && [ "$(readlink "$L" 2>/dev/null)" != "$DEST/avvia-$c.sh" ]; then
     avv "$L esiste già e non è di Nyctalus: non lo tocco"
@@ -120,7 +120,7 @@ for c in rete sito; do                       # nyctalus-rete (reti) e nyctalus-s
     chmod +x "$DEST/gestore-rete/nyctalus-$c"; ln -sf "$DEST/gestore-rete/nyctalus-$c" "$L"
   fi
 done
-ok "Comandi: nyctalus-launcher, nyctalus-browser, nyctalus-chat, nyctalus-file, nyctalus-cli, nyctalus-rete, nyctalus-sito"
+ok "Comandi: nyctalus-launcher, nyctalus-browser, nyctalus-chat, nyctalus-file, nyctalus-firefox, nyctalus-cli, nyctalus-rete, nyctalus-sito"
 case ":$PATH:" in *":$BIN_DIR:"*) ;; *) avv "$BIN_DIR non è nel PATH: i comandi funzioneranno dopo il prossimo accesso (o usa il menu)";; esac
 
 # --- 4) voci nel menu delle applicazioni -----------------------------------------
@@ -142,6 +142,7 @@ EOF
 voce nyctalus-launcher.desktop "Nyctalus" "Pannello di Nyctalus: browser e chat anonimi" avvia-launcher.sh
 voce nyctalus-browser.desktop "Nyctalus Browser" "Navigazione normale o anonima (Stealth) e siti .nyct" avvia-browser.sh
 voce nyctalus-chat.desktop "Nyctalus Chat" "Chat .nyct senza server e senza metadati" avvia-chat.sh
+voce nyctalus-firefox.desktop "Nyctalus Firefox" "Firefox con un profilo blindato: tutto attraverso Nyctalus, impronta uniforme come Tor Browser" avvia-firefox.sh
 voce nyctalus-file.desktop "Nyctalus File" "Scambio di file grandi con i contatti, attraverso la rete Nyctalus" avvia-file.sh
 command -v update-desktop-database >/dev/null && update-desktop-database "$APP_DIR" 2>/dev/null || true
 ok "Voci nel menu delle applicazioni"

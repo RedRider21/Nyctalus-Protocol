@@ -407,6 +407,14 @@ class Launcher(Gtk.Window):
                 return
         self._avviso(_t("lau.file"), _t("lau.in_arrivo_corpo"))
 
+    def _apri_firefox(self):
+        """Nyctalus Firefox: il Firefox installato con un profilo blindato (tutto attraverso la rete)."""
+        for candidato in (RADICE / "avvia-firefox.sh", RADICE.parent / "strumenti" / "avvia-firefox.sh"):
+            if candidato.exists():
+                self._lancia(["bash", str(candidato)])
+                return
+        self._avviso(_t("lau.firefox"), _t("lau.in_arrivo_corpo"))
+
     def _apri_terminale(self):
         """⌨ Terminale: il terminale del sistema pronto per nyctalus-cli (chat e file da riga di comando)."""
         for candidato in (RADICE / "avvia-terminale.sh", RADICE.parent / "strumenti" / "avvia-terminale.sh"):
@@ -424,6 +432,8 @@ class Launcher(Gtk.Window):
             mi.connect("activate", lambda _w: cb())
             menu.append(mi)
 
+        voce("🦊 " + _t("lau.firefox"), self._apri_firefox)    # navigazione anonima con Firefox
+        menu.append(Gtk.SeparatorMenuItem())
         voce(_t("lau.orizzontale") if verticale else _t("lau.verticale"), self._cambia_orientamento)
         menu.append(Gtk.SeparatorMenuItem())
         grande = Gtk.MenuItem(label=_t("lau.piu_grande"))

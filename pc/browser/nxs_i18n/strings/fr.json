@@ -605,6 +605,7 @@
   "lau.esci": "Quitter le lanceur",
   "lau.file": "Fichiers",
   "lau.terminale": "Terminal (chat et fichiers en ligne de commande)",
+  "lau.firefox": "Nyctalus Firefox (navigation anonyme)",
   "lau.in_arrivo": "Bientôt",
   "lau.in_arrivo_corpo": "Ce composant Nyctalus n'est pas encore prêt. Pour l'instant, utilisez le navigateur.",
   "lau.info": "Site et guide de Nyctalus (GitHub Pages)",

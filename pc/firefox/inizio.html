@@ -1,0 +1,40 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nyctalus · navigazione anonima</title>
+<style>
+  :root { --bg: #0a0e1a; --testo: #e6ecff; --tenue: #8b96b5; --acc: #5aa9ff; }
+  body { margin: 0; background: var(--bg); color: var(--testo); font: 16px/1.55 system-ui, sans-serif; }
+  main { max-width: 640px; margin: 8vh auto; padding: 0 20px; }
+  h1 { font-size: 1.6rem; margin: 0 0 .2em; }
+  .sotto { color: var(--tenue); margin-bottom: 1.6em; }
+  .scheda { background: rgba(90,169,255,.08); border: 1px solid rgba(90,169,255,.25); border-radius: 14px; padding: 14px 18px; margin: 14px 0; }
+  .scheda b { color: var(--acc); }
+  ul { padding-left: 1.2em; margin: .4em 0; }
+  code { background: rgba(255,255,255,.08); padding: 1px 6px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🦇 Navigazione attraverso Nyctalus</h1>
+  <div class="sotto">Firefox con un profilo separato e blindato: il tuo Firefox di tutti i giorni non è toccato.</div>
+  <div class="scheda"><b>Cosa è già fatto per te</b>
+    <ul>
+      <li>tutto passa da <b>3 nodi</b> della rete, anche i nomi dei siti: il sito non vede il tuo IP, chi ti fornisce Internet non vede dove vai;</li>
+      <li>impronta uguale per tutti (finestra a misure fisse, lingua inglese, ora UTC): il browser non ti distingue;</li>
+      <li>niente WebRTC, posizione, sensori; niente telemetria né contatti a Mozilla o Google;</li>
+      <li>navigazione privata: chiudendo, non resta niente.</li>
+    </ul></div>
+  <div class="scheda"><b>Da sapere</b>
+    <ul>
+      <li>apri anche i siti <code>.nyct</code> della rete (scrivi l'indirizzo nella barra);</li>
+      <li>se accedi con il tuo nome a un sito, quel sito sa chi sei: l'anonimato vale finché non ti presenti;</li>
+      <li>non installare estensioni e non ingrandire la finestra: rendono il browser riconoscibile.</li>
+    </ul></div>
+</main>
+</body>
+</html>

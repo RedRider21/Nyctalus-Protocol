@@ -52,6 +52,12 @@ Posizione, orientamento, dimensione e tasti rapidi vengono ricordati
 
 ## 2. Il browser
 
+> **In più: Nyctalus Firefox** (menu delle applicazioni, oppure ⚙ del mini menu → 🦊). Non
+> sostituisce questo browser: serve quando sul web normale non vuoi essere riconosciuto dalla
+> sua «impronta» (il motore di questo browser è usato da pochi; Firefox con le protezioni di Tor
+> Browser ti fa somigliare a milioni di altri). Tutto attraverso la rete; a rete spenta non esce niente. Il tuo Firefox
+> di tutti i giorni non viene toccato. Profilo in `~/.nyctalus-firefox/` (`GUIDA-COMPLETA.md` §8).
+
 Si avvia dal launcher o con `./avvia-browser.sh`. È un browser completo (schede,
 preferiti, cronologia, download, ricerca nella pagina, traduzione, 5 lingue).
 

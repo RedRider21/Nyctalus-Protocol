@@ -11,7 +11,7 @@ APP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 AUTO_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"
 SI=0; [ "${1:-}" = "--si" ] && SI=1
 
-for c in launcher browser chat file; do
+for c in launcher browser chat file firefox; do
   L="$HOME/.local/bin/nyctalus-$c"
   [ "$(readlink "$L" 2>/dev/null)" = "$DEST/avvia-$c.sh" ] && rm -f "$L"
 done
@@ -19,7 +19,7 @@ done
 for c in rete sito; do
   [ "$(readlink "$HOME/.local/bin/nyctalus-$c" 2>/dev/null)" = "$DEST/gestore-rete/nyctalus-$c" ] && rm -f "$HOME/.local/bin/nyctalus-$c"
 done
-for f in "$APP_DIR"/nyctalus-launcher.desktop "$APP_DIR"/nyctalus-browser.desktop "$APP_DIR"/nyctalus-chat.desktop "$APP_DIR"/nyctalus-file.desktop \
+for f in "$APP_DIR"/nyctalus-launcher.desktop "$APP_DIR"/nyctalus-browser.desktop "$APP_DIR"/nyctalus-chat.desktop "$APP_DIR"/nyctalus-file.desktop "$APP_DIR"/nyctalus-firefox.desktop \
          "$AUTO_DIR"/nyctalus-launcher.desktop; do
   grep -q '^X-Nyctalus=1' "$f" 2>/dev/null && rm -f "$f"
 done
