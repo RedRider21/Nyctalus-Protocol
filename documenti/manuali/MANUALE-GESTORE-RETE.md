@@ -127,6 +127,10 @@ sei sicuro che nessuno sulla Wi-Fi ti abbia passato un codice diverso. La pagina
 firmato, e l'impronta protegge il codice.
 
 ## 6-bis. Rubrica e casella per la tua rete
+
+> Dalla 0.3.3 la rubrica rispetta la **modalità riservata** dei client (posta consegnata solo
+> quando la chiedono). Se la rubrica gira su un server, **aggiornala** insieme ai client.
+
 La rete di casa le accende da sola. Per una rete vera vanno tenute accese su una macchina
 sempre in rete:
 - **su questo PC** (dove hai la rete): `nyctalus-rete rubrica` (sempre accese: `--servizio`), poi

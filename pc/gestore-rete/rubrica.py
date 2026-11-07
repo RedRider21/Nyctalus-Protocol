@@ -66,6 +66,7 @@ class Rubrica:
         except Exception:      # noqa: BLE001
             self.iscritti = {}
         self.online, self.visti = set(), {}
+        self.solo_ritiro = set()                 # chi è in modalità riservata: posta solo su richiesta
         self.s = None
         self.blocco = threading.Lock()           # il deposito arriva da un altro thread
         self.casella = Path(cartella) / "casella"
@@ -120,7 +121,9 @@ class Rubrica:
         tmp.write_bytes(busta)
         os.chmod(tmp, 0o600)
         tmp.replace(d / (nome + ".busta"))
-        if addr in self.online:                  # è in linea: gliela si porta subito
+        # è in linea: gliela si porta subito, tranne a chi è in modalità riservata (ritira lui a
+        # intervalli fissi: una consegna immediata legherebbe nei tempi deposito e destinatario)
+        if addr in self.online and addr not in self.solo_ritiro:
             self.consegna(addr)
         return None
 
@@ -139,6 +142,8 @@ class Rubrica:
     def casella_richiesta(self, addr, testo):
         parti = testo.split()
         if parti[:2] == ["CASELLA", "RITIRA"]:
+            # «CASELLA RITIRA RISERVATA»: d'ora in poi la posta solo quando la chiede
+            (self.solo_ritiro.add if parti[2:3] == ["RISERVATA"] else self.solo_ritiro.discard)(addr)
             self.consegna(addr)
         elif parti[:2] == ["CASELLA", "RICEVUTI"]:
             for i in parti[2:]:
@@ -212,7 +217,7 @@ class Rubrica:
         elif p[0] == "ST" and len(p) >= 3:
             (self.online.add if p[2] == "1" else self.online.discard)(p[1])
             self.visti[p[1]] = int(time.time())
-            if p[2] == "1":
+            if p[2] == "1" and p[1] not in self.solo_ritiro:
                 self.consegna(p[1])              # appena in linea: la sua posta
         elif p[0] == "V" and len(p) >= 3:
             self.visti[p[1]] = int(p[2])

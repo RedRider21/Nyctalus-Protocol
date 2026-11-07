@@ -131,6 +131,8 @@ public class MainActivity extends Activity {
 
     /** Conversazione da aprire (notifica toccata): indirizzo .nyct del contatto. */
     private String chatDaAprire;
+    /** «Rispondi» toccato nella notifica di una chiamata: il contatto a cui rispondere. */
+    private String rispondiA;
 
     /** Toccata una notifica di messaggio: si entra direttamente in quella conversazione. */
     private void gestisciNotifica(Intent intent) {
@@ -138,6 +140,12 @@ public class MainActivity extends Activity {
         if (a == null || !a.matches("[a-z2-7]{56}\\.nyct")) return;
         intent.removeExtra("chat");
         chatDaAprire = a;
+        String r = intent.getStringExtra("rispondi");
+        intent.removeExtra("rispondi");
+        if (a.equals(r)) {
+            rispondiA = a;
+            getSystemService(android.app.NotificationManager.class).cancel(ServizioNotifiche.idChiamata(a));
+        }
         apriRubrica = false;
         if (pronto) mostraWeb();
         else entraAppenaPronto = true;               // l'avvio è già in corso: si entra appena pronto
@@ -1218,6 +1226,9 @@ public class MainActivity extends Activity {
                         : "window.nyctChiudiRubrica && nyctChiudiRubrica()", null);
                 if (chatDaAprire != null)                // notifica toccata: quella conversazione
                     web.evaluateJavascript("window.nyctApriChat && nyctApriChat('" + chatDaAprire + "')", null);
+                if (rispondiA != null)                   // «Rispondi» nella notifica: risponde da sola
+                    web.evaluateJavascript("window.nyctRispondiChiamata && nyctRispondiChiamata('" + rispondiA + "')", null);
+                rispondiA = null;
                 apriRubrica = false;
                 apriImpostazioni = false;
                 apriProgrammaFile = false;
@@ -1268,8 +1279,10 @@ public class MainActivity extends Activity {
             });
             setContentView(web);
             web.loadUrl(URL_BASE + "/?t=" + segreto + (apriTerminale ? "#terminale" : apriProgrammaFile ? "#file" : apriImpostazioni ? "#impostazioni" : apriRubrica ? "#rubrica"
+                    : rispondiA != null ? "#rispondi=" + rispondiA
                     : chatDaAprire != null ? "#chat=" + chatDaAprire : ""));
             chatDaAprire = null;
+            rispondiA = null;
             apriRubrica = false;
             apriImpostazioni = false;
             apriProgrammaFile = false;

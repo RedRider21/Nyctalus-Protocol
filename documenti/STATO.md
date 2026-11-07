@@ -2,6 +2,14 @@
 
 > Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
 
+## 07/11/2026 · Rispondi/Rifiuta nella notifica delle chiamate ✅ (APK 0.48)
+- ServizioNotifiche: CallStyle.forIncomingCall (Android 12+, setIsVideo) o due azioni colorate; Rispondi → MainActivity extra `rispondi` (+ `#rispondi=` / `nyctRispondiChiamata`): la web-app risponde appena arriva il CALLIN (il motore lo rimanda dopo SUB); Rifiuta → `RifiutaChiamata` (receiver non esportato) → POST `/api/chiamata/rifiuta` → `CALLNO` al motore. Prova 03 (77/77). La prova 03 usa per «Bob» un indirizzo FINTO da 55 caratteri: per i controlli sull'indirizzo serve uno valido da 56.
+- L'utente: piano di sicurezza PER ULTIMO; prima i punti già previsti.
+
+## 07/11/2026 · Modalità riservata (Tappa 2-bis) ✅
+- Scelta dell'utente («sì aggiungi la tappa e poi continua»). Motore `chat.rs`: RISERVATA, coda persistente, `ritmo_riservato` (Poisson 30 s, una busta vera o finta `g-` a sé), carico fisso 4096 (`p-`), niente K/R, niente sonda, ritiro ogni 30 s con `CASELLA RITIRA RISERVATA` + `sveglia_ritiro` (Notify: al cambio di modalità il ritiro riparte subito — senza, le finte non tornavano nella prima prova). Rubrica: insieme `solo_ritiro` (niente consegna all'arrivo né all'entrata in linea). Interruttori: chat PC (menu Aspetto, 5 lingue), web-app (Impostazioni → Riservatezza), CLI `impostazioni riservata si|no`, scheda d'aiuto del Terminale. Prova 26.
+- Richieste in coda dell'utente: (1) pulsanti **Rispondi/Rifiuta nella notifica** delle chiamate (CallStyle Android 12+); (2) **piano di sicurezza** (firme dei rilasci + verifica, cargo audit/deny, forbid unsafe, fuzzing, dati locali cifrati, nodi systemd irrobustiti, controllo d'integrità all'avvio) — da scrivere in PIANO-SICUREZZA.md e partire da 1-2.
+
 ## 07/11/2026 · Anonimato: dove siamo davvero
 - L'utente ha chiesto se nei test via Internet sarà anonimo e invisibile: risposta NO (nodi tutti sul PC di casa → chi ospita vede l'IP dell'altro, operatori vedono chi parla con chi; invisibile mai). Aggiunto riquadro ⚠️ in GUIDA-INTERNET e **PIANO-ANONIMATO.md** (tappe 0-6).
 - **Limite del motore trovato:** `seleziona_conflux` (avvia_circuito.rs) usava nodi[0] come entrata e nodi[1] come uscita per TUTTI; verso i .nyct (incontro.rs) l'entrata cambiava a ogni collegamento.

@@ -179,6 +179,8 @@ predefinita.
 > **Scelta dei percorsi (Tappa 2, fatta):** guardia d'entrata casuale e persistente, uscita e
 > intermedi a caso, mai due nodi parenti (stessa famiglia o sottorete) nello stesso percorso;
 > avviso «NON anonimo» se la regola è impossibile, rifiuto con `NYCTALUS_PARENTELA=rigida`.
+> **Modalità riservata (Tappa 2-bis, fatta):** chat tramite casella a ritmo di Poisson con buste
+> finte e di misura fissa, niente ricevute né presenza; prova `26-riservata`.
 
 Le verifiche sopra mostrano che le difese **ci sono e funzionano**. Ma
 **l'anonimato forte** dipende da cose che richiedono altro:

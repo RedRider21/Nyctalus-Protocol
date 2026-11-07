@@ -140,6 +140,30 @@ con l'ora in cui l'hai scritto.
 - Quello che la casella vede comunque: che qualcuno ha lasciato posta per quell'indirizzo, quando
   e quanto è grande, e quando il destinatario la ritira.
 
+## 3-ter·1. Modalità riservata (🕶)
+
+Per non far capire **quando** e **a chi** scrivi, anche in una rete piccola.
+
+- **Dove si accende:**
+  - PC: menu **Aspetto** → «Modalità riservata»;
+  - telefono e Windows: **Impostazioni** → «Riservatezza» → 🕶 Modalità riservata;
+  - terminale: `impostazioni riservata si`.
+
+  Prima di accendersi mostra cosa cambia e chiede conferma.
+- **Cosa fa:**
+  - i tuoi messaggi non vanno più in diretta: passano dalla **casella cifrata**;
+  - il motore deposita una busta ogni ~30 secondi in media, a ritmo casuale, che tu scriva o no. Se non hai niente da mandare parte una **busta finta** indirizzata a te stesso. Tutte le buste hanno la stessa misura;
+  - la posta la ritiri a intervalli fissi, e la rubrica non te la porta più appena arriva.
+- **Cosa cambia per te:**
+  - i messaggi arrivano con **qualche decina di secondi** di ritardo e restano a 📮 (nella casella);
+  - non mandi le spunte di consegna e lettura e non risulti «in linea» ai contatti;
+  - testo fino a 3800 caratteri.
+- **Cosa non copre:** chiamate, videochiamate, allegati e File restano diretti. Il tuo servizio
+  resta acceso, per poter ricevere le chiamate.
+- **Serve:** una rete con la casella (`nyctalus-rete rubrica`) aggiornata, e contatti con
+  Nyctalus 0.3.3 o successivo.
+- Perché funziona: `PIANO-ANONIMATO.md`, Tappa 2-bis.
+
 ## 3-quater. Chiamate e videochiamate (📞 📹)
 
 Nella conversazione apri il menu **⋮** in alto a destra (come in Telegram) e scegli

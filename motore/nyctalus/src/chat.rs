@@ -81,6 +81,13 @@ pub async fn chat(
         battito_noto: Mutex::new(HashSet::new()),
         inviti: Mutex::new(HashMap::new()),
         trasf: trasferimenti::Registro::carica(&dati),
+        riservata: std::sync::atomic::AtomicBool::new(
+            std::fs::read_to_string(dati.join("riservata")).map(|t| t.trim() == "1").unwrap_or(false),
+        ),
+        coda_riservata: Mutex::new(carica_coda_riservata(&dati)),
+        giri: Mutex::new(HashSet::new()),
+        giri_conti: Mutex::new((0, 0)),
+        sveglia_ritiro: tokio::sync::Notify::new(),
     });
 
     println!("Nyctalus chat");
@@ -107,6 +114,10 @@ pub async fn chat(
     // la posta lasciata nella casella mentre eravamo spenti
     if stato.rubrica.is_some() {
         tokio::spawn(stato.clone().ritira_posta());
+    }
+    // modalità riservata: una busta a ritmo casuale, vera o finta (gira sempre, agisce solo se accesa)
+    if stato.casella.is_some() {
+        tokio::spawn(stato.clone().ritmo_riservato());
     }
 
     loop {
@@ -145,6 +156,11 @@ struct Stato {
     battito_noto: Mutex<HashSet<String>>,                    // contatti che rispondono al battito (PING/PONG)
     inviti: Mutex<HashMap<String, (String, u64)>>,           // chiamate che squillano: contatto → (id, quando)
     trasf: trasferimenti::Registro,                          // trasferimenti di file grandi (programma File)
+    riservata: std::sync::atomic::AtomicBool,                // modalità riservata (PIANO-ANONIMATO, Tappa 2-bis)
+    coda_riservata: Mutex<std::collections::VecDeque<(String, u64, Vec<u8>)>>, // (addr, ts, testo) in attesa del turno
+    giri: Mutex<HashSet<String>>,                            // id delle buste finte («giri a vuoto») in viaggio
+    giri_conti: Mutex<(u64, u64)>,                           // (finte spedite, finte tornate)
+    sveglia_ritiro: tokio::sync::Notify,                     // cambio di modalità: il ritiro riparte subito
 }
 
 /// Un invito a una chiamata vale per tanto (poi chi chiama riaggancia da sé).
@@ -174,6 +190,28 @@ struct InVolo {
 
 /// Testo massimo di un messaggio lasciato nella casella (gli allegati solo in linea).
 const TESTO_CASELLA_MAX: usize = 16 * 1024;
+/// Modalità riservata: carico di ogni busta, vera o finta, sempre di questa misura.
+const CARICO_RISERVATO: usize = 4096;
+/// Testo massimo di un messaggio in modalità riservata (deve stare nel carico fisso).
+const TESTO_RISERVATO_MAX: usize = 3800;
+/// Modalità riservata: in media una busta ogni tanti secondi (ritmo di Poisson).
+const RITMO_RISERVATO_SECONDI: f64 = 30.0;
+/// Modalità riservata: ritiro della posta a intervalli fissi.
+const RITIRO_RISERVATO: std::time::Duration = std::time::Duration::from_secs(30);
+
+/// Ritmo e ritiro della modalità riservata; le prove li accorciano con
+/// `NYCTALUS_RITMO_RISERVATO` / `NYCTALUS_RITIRO_RISERVATO` (secondi).
+fn ritmo_riservato_secondi() -> f64 {
+    std::env::var("NYCTALUS_RITMO_RISERVATO").ok().and_then(|v| v.parse().ok()).filter(|v: &f64| *v >= 0.5).unwrap_or(RITMO_RISERVATO_SECONDI)
+}
+fn ritiro_riservato() -> std::time::Duration {
+    std::env::var("NYCTALUS_RITIRO_RISERVATO")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .filter(|v| *v >= 1)
+        .map(std::time::Duration::from_secs)
+        .unwrap_or(RITIRO_RISERVATO)
+}
 /// Ritiro della posta: primo giro dopo questo ritardo, poi a ogni giro (la rubrica la
 /// consegna anche da sola appena risultiamo in linea).
 const RITIRO_INIZIO: std::time::Duration = std::time::Duration::from_secs(12);
@@ -505,6 +543,18 @@ impl Stato {
         let addr = con_suffisso(indirizzo_contatto);
         let ts = ora();
         let in_casella = self.casella.is_some() && self.rubrica.as_deref() != Some(addr.as_str()) && addr != self.indirizzo;
+        // modalità riservata: mai in diretta, in coda per il prossimo turno del ritmo casuale
+        if in_casella && self.riservata.load(std::sync::atomic::Ordering::Relaxed) {
+            if testo.len() > TESTO_RISERVATO_MAX {
+                return Err(format!("messaggio troppo lungo per la modalità riservata (massimo {} caratteri)", TESTO_RISERVATO_MAX).into());
+            }
+            self.coda_riservata.lock().unwrap().push_back((addr.clone(), ts, testo.to_vec()));
+            self.salva_coda_riservata();
+            self.registra(&addr, "out", ts, testo);
+            self.notifica(format!("OUT {addr} {ts} {}", in_esadecimale(testo)));
+            self.segna(&addr, ts, "1");
+            return Ok(());
+        }
         // già noto come non raggiungibile: dritto nella casella, senza far aspettare
         if in_casella
             && !self.sessioni.lock().unwrap().contains_key(&addr)
@@ -731,6 +781,11 @@ impl Stato {
         let mut prossimo: HashMap<String, (std::time::Instant, u64)> = HashMap::new();
         tokio::time::sleep(SONDA_INIZIO).await;
         loop {
+            // modalità riservata: non si bussa ai contatti (collegamenti che direbbero «sono qui, ora»)
+            if self.riservata.load(std::sync::atomic::Ordering::Relaxed) {
+                tokio::time::sleep(SONDA_GIRO).await;
+                continue;
+            }
             // i contatti, più chi aspetta una nostra conferma (es. ha scritto dalla casella)
             let mut contatti: Vec<String> = self.contatti.lock().unwrap().iter().map(|(a, _)| a.clone()).collect();
             for a in self.pendenti.lock().unwrap().keys() {
@@ -788,6 +843,88 @@ impl Stato {
             .await
             .map_err(|_| "la casella non risponde")??;
         Ok(())
+    }
+
+    // --- modalità riservata (PIANO-ANONIMATO, Tappa 2-bis) -----------------------
+    /// A ritmo di Poisson (in media una ogni `RITMO_RISERVATO_SECONDI`), che l'utente scriva o
+    /// no, si deposita UNA busta di misura fissa: il primo messaggio in coda, oppure una busta
+    /// finta indirizzata a noi stessi («giro a vuoto»). Chi osserva vede sempre lo stesso ritmo.
+    async fn ritmo_riservato(self: Arc<Self>) {
+        loop {
+            tokio::time::sleep(crate::avvia_circuito::ritardo_poisson(1.0 / ritmo_riservato_secondi())).await;
+            if !self.riservata.load(std::sync::atomic::Ordering::Relaxed) {
+                continue;
+            }
+            let prossimo = self.coda_riservata.lock().unwrap().front().cloned();
+            match prossimo {
+                Some((addr, ts, testo)) => {
+                    if self.deposita_riempita(&addr, &format!("p-{}", nuovo_id()), ts, &testo).await.is_ok() {
+                        let tolto = {
+                            let mut c = self.coda_riservata.lock().unwrap();
+                            if c.front().is_some_and(|f| f.0 == addr && f.1 == ts) { c.pop_front() } else { None }
+                        };
+                        if tolto.is_some() {
+                            self.salva_coda_riservata();
+                            self.segna(&addr, ts, "c");
+                        }
+                    }
+                }
+                None => {
+                    let id = format!("g-{}", nuovo_id());
+                    let me = self.indirizzo.clone();
+                    if self.deposita_riempita(&me, &id, ora(), b"").await.is_ok() {
+                        let mut g = self.giri.lock().unwrap();
+                        if g.len() > 1000 {
+                            g.clear();
+                        }
+                        g.insert(id);
+                        self.giri_conti.lock().unwrap().0 += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    /// Busta di misura fissa: carico «<id> <ts> <lunghezza> <testo>» riempito fino a
+    /// `CARICO_RISERVATO` byte, così vere e finte sono indistinguibili anche nella misura.
+    async fn deposita_riempita(self: &Arc<Self>, addr: &str, id: &str, ts: u64, testo: &[u8]) -> Risultato<()> {
+        let casella = self.casella.clone().ok_or("nessuna casella in questa rete")?;
+        let chiave = indirizzo::in_chiave(addr).map_err(|_| "indirizzo .nyct non valido")?;
+        let mut carico = format!("{id} {ts} {} ", testo.len()).into_bytes();
+        carico.extend_from_slice(testo);
+        if carico.len() > CARICO_RISERVATO {
+            return Err("messaggio troppo lungo per la modalità riservata".into());
+        }
+        let mut riempitivo = vec![0u8; CARICO_RISERVATO - carico.len()];
+        getrandom::fill(&mut riempitivo).expect("generatore casuale di sistema");
+        carico.extend_from_slice(&riempitivo);
+        let busta = casella::sigilla(&self.identita, &chiave, &carico)?;
+        tokio::time::timeout(DEPOSITO_TEMPO, consegna_busta(self.socks, &casella, addr, &busta))
+            .await
+            .map_err(|_| "la casella non risponde")??;
+        Ok(())
+    }
+
+    fn salva_coda_riservata(&self) {
+        let righe: String = self
+            .coda_riservata
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|(a, ts, t)| format!("{a} {ts} {}\n", in_esadecimale(t)))
+            .collect();
+        let _ = std::fs::write(self.dati.join("coda-riservata"), righe);
+    }
+
+    /// Riga per le interfacce: `RISERVATA <0|1> <casella 0|1> <in coda> <finte spedite> <finte tornate>`.
+    fn stato_riservata(&self) -> String {
+        let (spedite, tornate) = *self.giri_conti.lock().unwrap();
+        format!(
+            "RISERVATA {} {} {} {spedite} {tornate}",
+            u8::from(self.riservata.load(std::sync::atomic::Ordering::Relaxed)),
+            u8::from(self.casella.is_some() && self.rubrica.is_some()),
+            self.coda_riservata.lock().unwrap().len()
+        )
     }
 
     /// La sessione `sid` con `peer` è caduta: i testi spediti lì senza «ricevuto» (il contatto
@@ -866,6 +1003,11 @@ impl Stato {
     /// Una conferma («K ts» / «R ts») al contatto: subito se c'è la sessione, altrimenti
     /// appena si riapre.
     fn conferma(&self, peer: &str, frame: Vec<u8>) {
+        // modalità riservata: niente ricevute di consegna e lettura (collegamenti diretti che
+        // rivelerebbero i tempi)
+        if self.riservata.load(std::sync::atomic::Ordering::Relaxed) && (frame.starts_with(b"K ") || frame.starts_with(b"R ")) {
+            return;
+        }
         if let Some((_, s)) = self.sessioni.lock().unwrap().get(peer) {
             if s.try_send(frame.clone()).is_ok() {
                 return;
@@ -898,10 +1040,16 @@ impl Stato {
     async fn ritira_posta(self: Arc<Self>) {
         tokio::time::sleep(RITIRO_INIZIO).await;
         loop {
+            let riservata = self.riservata.load(std::sync::atomic::Ordering::Relaxed);
             if let Some(rub) = self.rubrica.clone() {
-                let _ = self.invia_grezzo(&rub, b"CASELLA RITIRA").await;
+                // riservata: la rubrica consegna SOLO su richiesta, a questi intervalli fissi
+                let richiesta: &[u8] = if riservata { b"CASELLA RITIRA RISERVATA" } else { b"CASELLA RITIRA" };
+                let _ = self.invia_grezzo(&rub, richiesta).await;
             }
-            tokio::time::sleep(RITIRO_GIRO).await;
+            tokio::select! {
+                _ = tokio::time::sleep(if riservata { ritiro_riservato() } else { RITIRO_GIRO }) => {}
+                _ = self.sveglia_ritiro.notified() => {}
+            }
         }
     }
 
@@ -941,6 +1089,25 @@ impl Stato {
             let mut campi = carico.splitn(3, |&b| b == b' ');
             let (Some(mid), Some(ts), Some(testo)) = (campi.next(), campi.next(), campi.next()) else { continue };
             let mid = String::from_utf8_lossy(mid).to_string();
+            // giro a vuoto: una nostra busta finta tornata indietro (si conta e basta)
+            if mid.starts_with("g-") {
+                if mittente == self.indirizzo && self.giri.lock().unwrap().remove(&mid) {
+                    self.giri_conti.lock().unwrap().1 += 1;
+                }
+                continue;
+            }
+            // busta della modalità riservata: «<lunghezza> <testo><riempitivo>»
+            let testo: &[u8] = if mid.starts_with("p-") {
+                let mut c = testo.splitn(2, |&b| b == b' ');
+                let (Some(n), Some(resto)) = (c.next(), c.next()) else { continue };
+                let Some(n) = std::str::from_utf8(n).ok().and_then(|n| n.parse::<usize>().ok()) else { continue };
+                if n > resto.len() {
+                    continue;
+                }
+                &resto[..n]
+            } else {
+                testo
+            };
             if !self.posta_vista.lock().unwrap().insert(mid.clone()) {
                 continue;                                   // già ricevuta (busta ripetuta)
             }
@@ -1358,6 +1525,27 @@ impl Stato {
                 }
                 let _ = tx.send("ENDX\n".into());
             }
+            "RISERVATA" => {
+                // RISERVATA [0|1]: legge o cambia la modalità riservata
+                match it.next().map(str::trim) {
+                    Some("1") if self.casella.is_none() || self.rubrica.is_none() => {
+                        let _ = tx.send("ERR questa rete non ha la casella: la modalità riservata non è disponibile\n".into());
+                    }
+                    Some(v @ ("0" | "1")) => {
+                        let accesa = v == "1";
+                        self.riservata.store(accesa, std::sync::atomic::Ordering::Relaxed);
+                        let _ = std::fs::write(self.dati.join("riservata"), if accesa { "1\n" } else { "0\n" });
+                        // il ritiro riparte subito con il nuovo intervallo, e la rubrica lo sa (posta
+                        // solo su richiesta, o di nuovo anche da sola)
+                        self.sveglia_ritiro.notify_one();
+                        self.notifica(self.stato_riservata());
+                        let _ = tx.send(format!("{}\n", self.stato_riservata()));
+                    }
+                    _ => {
+                        let _ = tx.send(format!("{}\n", self.stato_riservata()));
+                    }
+                }
+            }
             "XCONF" => {
                 // XCONF [soglia N] [canali N] [inchat 0|1]
                 let resto = format!("{} {}", it.next().unwrap_or(""), it.next().unwrap_or(""));
@@ -1543,6 +1731,21 @@ fn uguali_a_tempo_costante(a: &[u8], b: &[u8]) -> bool {
 
 fn id_valido(id: &str) -> bool {
     (1..=32).contains(&id.len()) && id.chars().all(|c| c.is_ascii_hexdigit())
+}
+
+/// Coda della modalità riservata salvata su disco: «addr ts testo-hex» per riga.
+fn carica_coda_riservata(dati: &std::path::Path) -> std::collections::VecDeque<(String, u64, Vec<u8>)> {
+    std::fs::read_to_string(dati.join("coda-riservata"))
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|l| {
+            let mut p = l.split_whitespace();
+            let a = p.next()?.to_string();
+            let ts = p.next()?.parse().ok()?;
+            let t = da_hex(p.next().unwrap_or("")).ok()?;
+            Some((a, ts, t))
+        })
+        .collect()
 }
 
 fn nuovo_id() -> String {

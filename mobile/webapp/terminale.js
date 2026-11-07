@@ -67,6 +67,9 @@ const Terminale = (() => {
       ["pausa", "<id>", "ferma un trasferimento (anche riprendi, annulla)"],
       ["togli", "<id>", "lo toglie dall'elenco; «pulisci» toglie tutti i conclusi"],
       ["impostazioni", "", "soglia, collegamenti, file in chat (es. impostazioni soglia 200)"]]],
+    ["Riservatezza", [
+      ["impostazioni riservata si", "", "modalità riservata: messaggi tramite casella, a ritmo casuale"],
+      ["impostazioni riservata no", "", "torna alla chat normale"]]],
     ["Il pannello", [
       ["pulisci schermo", "", "svuota questa schermata"]]],
   ];

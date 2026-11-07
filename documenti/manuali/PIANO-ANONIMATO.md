@@ -17,6 +17,7 @@ cosa si ottiene e cosa manca ancora.
 | 0 · oggi | nodi tutti sul PC di casa | funziona, tutto cifrato | anonimato: nessuno |
 | 1 | 3 piccoli server su 3 fornitori diversi | gli operatori non vedono più chi parla con chi | i nodi sono tutti tuoi |
 | 2 ✅ | entrata e uscita scelte a caso, mai due nodi «parenti» | nessun nodo è fisso per tutti | i nodi sono ancora di una sola persona |
+| 2-bis ✅ | **modalità riservata** per la chat: messaggi solo tramite casella, a ritmo casuale, con buste finte e tutte uguali | non si capisce **quando** né **a chi** scrivi, anche con pochi nodi | chiamate e file restano diretti |
 | 3 | nodi gestiti da persone diverse | nessuno controlla tutto il percorso | servono più utenti |
 | 4 | più utenti, rumore di fondo e camuffamento sempre accesi | ci si confonde fra tanti, i ritmi si vedono meno | misure e revisione |
 | 5 | misure con la simulazione, browser pubblico | numeri veri, navigazione con impronta uniforme | revisione esterna |
@@ -79,8 +80,43 @@ rispettare (per esempio nodi tutti sul PC di casa) il motore funziona ma scrive 
 `~/.nyctalus/guardie/` (un file privato per rete). Verificato dai test del motore e dalla prova
 `25-percorsi`.
 
+## Tappa 2-bis · Modalità riservata (chat) ✅ fatta (07/11/2026)
+
+Anche con pochi nodi e pochi utenti si può nascondere **quando** e **a chi** scrivi, con le
+tecniche delle «mixnet» (Loopix, Nym), al prezzo di qualche secondo di ritardo e di un po' di
+banda. È un interruttore nelle impostazioni della chat.
+
+- **Mai in diretta:** i messaggi non vanno al contatto, vanno nella **casella cifrata** della
+  rete; lui la ritira a intervalli fissi. Mittente e destinatario non sono mai collegati nello
+  stesso momento: guardare i tempi ai due capi non dice più niente.
+- **Ritmo casuale, sempre uguale:** il motore deposita una busta ogni ~30 secondi in media
+  (ritmo di Poisson), che tu scriva o no. Se c'è un tuo messaggio parte quello, altrimenti
+  una **busta finta** indirizzata a te stesso («giro a vuoto»). Chi osserva vede lo stesso
+  ritmo quando scrivi e quando non scrivi.
+- **Buste tutte uguali:** riempite alla stessa misura (4 KB), vere o finte.
+- **Niente ricevute né «in linea»:** in modalità riservata non mandi le spunte di consegna e
+  lettura e non sondi i contatti, perché sarebbero collegamenti diretti e rivelerebbero i
+  tempi. I tuoi messaggi arrivano a 📮 (nella casella).
+- **I giri a vuoto** servono anche da controllo: se le buste finte non tornano, la casella o
+  un nodo stanno perdendo posta.
+
+**Cosa NON copre:** chiamate e file grandi (in tempo reale o troppo pesanti per la casella:
+restano diretti, con un avviso), e il fatto che sei collegato (il tuo servizio `.nyct` resta
+acceso per ricevere chiamate). Serve una rete **con la casella** (`nyctalus-rete rubrica`).
+I contatti devono avere la versione 0.3.3 o successiva.
+
+**Come si usa:** `MANUALE-CHAT.md` §3-ter·1. Verificato dalla prova `26-riservata`: messaggio
+arrivato identico, nessuna ricevuta, buste finte spedite e tornate, **tutte le buste della
+stessa misura** nella casella, rubrica che non consegna subito.
+
+**Più avanti:** ritardi casuali anche **nei nodi** (mixing vero e proprio) e traffico di
+copertura a ritmo costante fra client e guardia, utile anche per le chiamate ma costoso in
+banda.
+
 ## Tappa 3 · Nodi di persone diverse
 
+- **I PC come nodi intermedi** (scelta iniziale del progetto: ogni PC anche nodo): in una rete
+  piccola moltiplica i nodi senza comprare server. I telefoni restano solo client.
 - Altri gestiscono **i propri nodi**: il tuo amico di Pavia (ha l'IP statico, è perfetto),
   altri amici, volontari. Ognuno con il suo server o il PC sempre acceso.
 - Il gestore li aggiunge all'elenco con la loro «famiglia» (Tappa 2).

@@ -133,7 +133,7 @@ public class ServizioNotifiche extends Service {
     private void notifica(org.json.JSONObject o) {
         String tipo = o.optString("tipo"), da = o.optString("da");
         if (("chiamata".equals(tipo) || "fine_chiamata".equals(tipo)) && da.matches("[a-z2-7]{56}\\.nyct")) {
-            chiamata(tipo, da, o.optString("nome", da.substring(0, 10)), o.optBoolean("video"));
+            chiamata(tipo, da, o.optString("nome", da.substring(0, 10)), o.optBoolean("video"), o.optString("id"));
             return;
         }
         if (!("msg".equals(tipo) || "file".equals(tipo)) || !da.matches("[a-z2-7]{56}\\.nyct")) return;
@@ -165,10 +165,15 @@ public class ServizioNotifiche extends Service {
         nm.notify(1000 + (da.hashCode() & 0x7fffff), b.build());
     }
 
-    /** Chiamata in arrivo: notifica che squilla (anche con l'app aperta in un'altra schermata). */
-    private void chiamata(String tipo, String da, String nome, boolean video) {
+    /** Numero della notifica di chiamata di un contatto (la toglie anche chi risponde o rifiuta). */
+    static int idChiamata(String da) {
+        return 500000 + (da.hashCode() & 0x7ffff);
+    }
+
+    /** Chiamata in arrivo: notifica che squilla, con Rispondi (verde) e Rifiuta (rosso). */
+    private void chiamata(String tipo, String da, String nome, boolean video, String idChiamata) {
         NotificationManager nm = getSystemService(NotificationManager.class);
-        int id = 500000 + (da.hashCode() & 0x7ffff);
+        int id = idChiamata(da);
         if ("fine_chiamata".equals(tipo)) {
             nm.cancel(id);
             return;
@@ -183,12 +188,23 @@ public class ServizioNotifiche extends Service {
                 ? new Notification.Builder(this, CANALE_CHIAMATE) : new Notification.Builder(this);
         b.setSmallIcon(R.drawable.ic_notifica)
                 .setContentTitle((video ? "📹 " : "📞 ") + nome)
-                .setContentText((video ? "videochiamata in arrivo" : "ti sta chiamando") + " — tocca per rispondere")
+                .setContentText(video ? "videochiamata in arrivo" : "ti sta chiamando")
                 .setCategory(Notification.CATEGORY_CALL)
                 .setAutoCancel(true)
                 .setTimeoutAfter(45000)
                 .setContentIntent(apri(da))
                 .setFullScreenIntent(apri(da), true);
+        if (idChiamata != null && idChiamata.matches("[A-Za-z0-9]{1,32}")) {
+            PendingIntent rispondi = rispondi(da, video), rifiuta = rifiuta(da, idChiamata);
+            if (Build.VERSION.SDK_INT >= 31) {
+                // lo stile ufficiale delle chiamate: pulsanti verde e rosso del sistema
+                android.app.Person chi = new android.app.Person.Builder().setName(nome).setImportant(true).build();
+                b.setStyle(Notification.CallStyle.forIncomingCall(chi, rifiuta, rispondi).setIsVideo(video));
+            } else {
+                b.addAction(new Notification.Action.Builder(null, colorato("Rifiuta", 0xFFE53935), rifiuta).build());
+                b.addAction(new Notification.Action.Builder(null, colorato("Rispondi", 0xFF2E9E5B), rispondi).build());
+            }
+        }
         if (Build.VERSION.SDK_INT < 26) b.setPriority(Notification.PRIORITY_MAX).setDefaults(Notification.DEFAULT_ALL);
         nm.notify(id, b.build());
     }
@@ -198,6 +214,32 @@ public class ServizioNotifiche extends Service {
         if (mime.startsWith("video/")) return "🎬 Video";
         if (mime.startsWith("audio/")) return "🎵 Audio";
         return "📎 " + (nome.isEmpty() ? "File" : nome);
+    }
+
+    /** «Rispondi»: apre l'app sulla chiamata, che risponde da sola (con il video se è una videochiamata). */
+    private PendingIntent rispondi(String da, boolean video) {
+        Intent i = new Intent(this, MainActivity.class);
+        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        i.putExtra("chat", da);
+        i.putExtra("rispondi", da);
+        i.putExtra("video", video);
+        return PendingIntent.getActivity(this, idChiamata(da) + 1, i,
+                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0));
+    }
+
+    /** «Rifiuta»: senza aprire l'app (ricevitore RifiutaChiamata). */
+    private PendingIntent rifiuta(String da, String idChiamata) {
+        Intent i = new Intent(this, RifiutaChiamata.class);
+        i.putExtra("da", da);
+        i.putExtra("id", idChiamata);
+        return PendingIntent.getBroadcast(this, idChiamata(da) + 2, i,
+                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0));
+    }
+
+    private static CharSequence colorato(String testo, int colore) {
+        android.text.SpannableString s = new android.text.SpannableString(testo);
+        s.setSpan(new android.text.style.ForegroundColorSpan(colore), 0, testo.length(), 0);
+        return s;
     }
 
     /** Apre l'app; con un indirizzo, direttamente su quella conversazione. */

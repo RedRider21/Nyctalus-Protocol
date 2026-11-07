@@ -925,6 +925,23 @@ def _da_hex(h):
         return ""
 
 
+async def comando_motore(riga, attesa=5):
+    """Un comando secco al motore (es. «CALLNO addr id» dal pulsante Rifiuta della notifica)."""
+    try:
+        lett, scritt = await asyncio.wait_for(asyncio.open_connection(*CONTROLLO), attesa)
+    except (OSError, asyncio.TimeoutError):
+        return False
+    try:
+        scritt.write(("AUTH %s\n%s\n" % (SERVIZI.segreto_motore, riga)).encode())
+        await scritt.drain()
+        await asyncio.wait_for(lett.readline(), attesa)            # AUTHOK
+        return True
+    except (OSError, asyncio.TimeoutError):
+        return False
+    finally:
+        scritt.close()
+
+
 async def flusso_notifiche(scrittore):
     """Per il servizio di notifica dell'app Android: una riga JSON per ogni messaggio o file
     in ARRIVO (mittente, nome del contatto, anteprima). Resta aperto; ogni 25 s una riga vuota
@@ -1093,6 +1110,12 @@ async def instrada(req, lettore, scrittore):
         return await rispondi_json(scrittore, await asyncio.get_running_loop().run_in_executor(None, sfoglia, d))
     if p == "/api/archivio":
         return await rispondi_json(scrittore, await asyncio.get_running_loop().run_in_executor(None, archivio))
+    if p == "/api/chiamata/rifiuta" and req.metodo == "POST":
+        # pulsante «Rifiuta» della notifica, ad app chiusa: si rifiuta senza aprire nulla
+        da, cid = req.query.get("da", ""), req.query.get("id", "")
+        if not re.fullmatch(r"[a-z2-7]{56}\.nyct", da) or not re.fullmatch(r"[A-Za-z0-9]{1,32}", cid):
+            return await rispondi_json(scrittore, {"ok": False, "errore": "parametri non validi"}, "400 Bad Request")
+        return await rispondi_json(scrittore, {"ok": await comando_motore("CALLNO %s %s" % (da, cid))})
     if p == "/api/elimina" and req.metodo == "POST":
         f = nell_archivio(req.query.get("p", ""))
         if not f:

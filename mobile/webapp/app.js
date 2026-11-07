@@ -124,7 +124,7 @@ function connetti() {
   const ws = new WebSocket("ws://" + location.host + "/ws");
   S.ws = ws;
   ws.onopen = () => {
-    manda("WHOAMI"); manda("LIST"); manda("SUB");
+    manda("WHOAMI"); manda("LIST"); manda("SUB"); manda("RISERVATA");
     if (S.elencoInAttesa) { S.elencoInAttesa = false; chiediRubrica({ op: "elenco" }); }
   };
   ws.onmessage = (ev) => ev.data.split("\n").forEach((r) => r && evento(r));
@@ -350,6 +350,11 @@ function evento(riga) {
     statoRubrica("La rubrica non è raggiungibile: " + erroreLeggibile(riga.slice(4)), true);
   }
   else if (t === "CAS") aggiornaSpunta(p[1], +p[2], "c", +p[3] || 0);
+  else if (t === "RISERVATA") {
+    // RISERVATA <0|1> <casella 0|1> <in coda> <finte spedite> <finte tornate>
+    S.riservata = { accesa: p[1] === "1", possibile: p[2] === "1", coda: +p[3] || 0 };
+    document.querySelectorAll(".interr-riservata").forEach((c) => { c.checked = S.riservata.accesa; c.disabled = !S.riservata.possibile; });
+  }
   else if (t === "ERR" && /motore non raggiungibile/.test(riga)) segnalaMotoreGiu();
   else if (t === "ERR") avviso(erroreLeggibile(riga.slice(4)));
   else if (t === "ENDC") {   // collegamento diretto: #chat=<indirizzo> apre quella conversazione
@@ -1035,6 +1040,7 @@ function dialogoRinomina(addr) {
 // dell'app (`solo`: una schermata intera, «indietro» torna all'avvio). Nell'app c'è in più la
 // sezione «App» (notifiche ad app chiusa, avvio all'accensione), che vive nell'app Android.
 window.nyctApriImpostazioni = () => impostazioni(true);
+const SPIEGA_RISERVATA = "I messaggi non vanno più in diretta: passano dalla casella cifrata a ritmo casuale, insieme a buste finte tutte uguali, così chi osserva non capisce quando né a chi scrivi. Arrivano con qualche decina di secondi di ritardo; non mandi le spunte di consegna e lettura e non risulti «in linea» ai contatti. Chiamate e file restano diretti. Anche i contatti devono avere Nyctalus 0.3.3 o successivo.";
 function impostazioni(solo) {
   const id = el("div", "codice-id", S.me || "…");
   const bott = el("div", "pulsanti"); bott.style.justifyContent = "flex-start"; bott.style.marginTop = "0";
@@ -1154,8 +1160,23 @@ function impostazioni(solo) {
       interr("🔔 Notifiche dei messaggi anche con l'app chiusa", HOST.notificheAttive(), (v) => HOST.impostaNotifiche(v)),
       interr("⏻ Riparti da solo all'accensione del telefono", HOST.accensioneAttiva(), (v) => HOST.impostaAccensione(v)));
   }
+  // modalità riservata (PIANO-ANONIMATO, Tappa 2-bis): vive nel motore
+  const ris = S.riservata || { accesa: false, possibile: false };
+  const lr = el("label", "spunta"), cr = el("input"); cr.type = "checkbox"; cr.className = "interr-riservata";
+  cr.checked = ris.accesa; cr.disabled = !ris.possibile;
+  cr.onchange = () => {
+    if (!cr.checked) return manda("RISERVATA 0");
+    cr.checked = false;      // si accende solo dopo la conferma
+    dialogo("🕶 Modalità riservata", [el("p", "", SPIEGA_RISERVATA)],
+      [["Annulla", null], ["Accendi", () => manda("RISERVATA 1"), "primario"]]);
+  };
+  lr.append(cr, el("span", "", "🕶 Modalità riservata"));
+  const notaRis = el("p", "nota-rete", ris.possibile
+    ? "Messaggi tramite la casella a ritmo casuale, con buste finte tutte uguali: chi osserva non capisce quando né a chi scrivi. Arrivano con qualche decina di secondi di ritardo."
+    : "Non disponibile: questa rete non ha la casella (chi gestisce la rete la accende con «nyctalus-rete rubrica»).");
   const contenuto = [el("p", "", "Il tuo Contact ID — dallo agli amici perché ti scrivano (non è segreto):"), id, bott,
-    el("p", "", "Tema"), temi, pers, el("p", "", "Sfondo della chat"), sfondi, l, ...app, el("p", "", "Rete Nyctalus"), statoRete, servizi,
+    el("p", "", "Tema"), temi, pers, el("p", "", "Sfondo della chat"), sfondi, l, ...app,
+    el("p", "", "Riservatezza"), lr, notaRis, el("p", "", "Rete Nyctalus"), statoRete, servizi,
     el("p", "", "Rete condivisa"), quale, condivisa];
   if (solo) {
     S.soloRubrica = true; document.body.classList.add("solo-rubrica"); if (HOST && HOST.rubrica) HOST.rubrica(true);

@@ -15,6 +15,8 @@
 const Chiamate = (() => {
   const SQUILLO = 45000;
   let c = null;                 // {addr, id, stato: "chiamo"|"squilla"|"attiva", inizio, video}
+  // «Rispondi» toccato nella notifica (app chiusa): si risponde appena la chiamata compare
+  let rispondiA = location.hash.startsWith("#rispondi=") ? location.hash.slice(10) : "";
   let a = null;                 // audio: {ctx, mic, nodo, enc, dec, gain, prossimo, seq, ultimo, ricevuti, persi}
   let v = null;                 // video: {flusso, enc, dec, giro, seq, ultimo, serveKey, ...}
   let muto = false, vivavoce = false, ridotta = false, timer = 0;
@@ -547,6 +549,7 @@ const Chiamate = (() => {
       c = { addr, id, stato: "squilla", inizio: Date.now(), video: p[3] === "v" && videoDisponibile() };
       ridotta = false; muto = false; vivavoce = false; remCam = false; principale = "remoto"; quieto = false;
       avviaTimer(); disegna();
+      if (rispondiA === addr) { rispondiA = ""; rispondi(c.video); return true; }   // dalla notifica
       squillo("arrivo");
     } else if (t === "CALLOK" && c && c.id === id && c.stato === "chiamo") {
       zitto();
@@ -558,11 +561,18 @@ const Chiamate = (() => {
     }
     return true;
   }
+  // dalla notifica: se sta già squillando si risponde subito, altrimenti appena arriva il CALLIN
+  function rispondiDaNotifica(addr) {
+    if (c && c.addr === addr && c.stato === "squilla") return rispondi(c.video);
+    rispondiA = addr;
+    setTimeout(() => { if (rispondiA === addr) rispondiA = ""; }, 60000);   // non oltre lo squillo
+  }
   function offline(addr) { if (c && c.addr === addr && c.stato === "attiva") { c.id = null; chiudi("Chiamata caduta: il contatto non è più in linea"); } }
 
   return {
-    chiama, evento, offline, disponibile, videoDisponibile,
+    chiama, evento, offline, disponibile, videoDisponibile, rispondiDaNotifica,
     _stato: () => ({ c, a, v, muto, vivavoce, ridotta, remCam, principale, quieto, pip: { angolo: pip.angolo, scala: pip.scala } }),
     _ricevi: ricevi, _scambia: scambia,
   };
 })();
+window.nyctRispondiChiamata = (addr) => { if (/^[a-z2-7]{56}\.nyct$/.test(addr)) Chiamate.rispondiDaNotifica(addr); };

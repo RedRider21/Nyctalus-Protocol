@@ -34,7 +34,7 @@ AIUTO = """nyctalus-cli — Nyctalus dal terminale
   accetta|rifiuta <id>            un file in arrivo che chiede conferma
   pausa|riprendi|annulla <id>     un trasferimento
   togli <id> · pulisci            dall'elenco (i file restano)
-  impostazioni [soglia MB] [canali N] [inchat si|no]
+  impostazioni [soglia MB] [canali N] [inchat si|no] [riservata si|no]
                                   vede o cambia le impostazioni dei file
 
   avvia                           accende il motore senza finestre (Ctrl-C lo spegne)
@@ -362,9 +362,15 @@ def main(argv):
         print("✓ fatto")
     elif cmd == "impostazioni":
         if len(arg) % 2:
-            errore("uso: impostazioni [soglia MB] [canali N] [inchat si|no]")
+            errore("uso: impostazioni [soglia MB] [canali N] [inchat si|no] [riservata si|no]")
         risposta = None
         for k, v in zip(arg[::2], arg[1::2]):
+            if k == "riservata" and v in ("si", "sì", "no", "1", "0"):
+                m.manda("RISERVATA %s" % ("0" if v in ("no", "0") else "1"))
+                r = m.riga(10) or ""
+                if r.startswith("ERR"):
+                    errore(r[4:])
+                continue
             if k == "soglia" and v.replace(",", ".").replace(".", "", 1).isdigit():
                 v = str(int(float(v.replace(",", ".")) * 1024 * 1024))
             elif k == "canali" and v.isdigit() and 1 <= int(v) <= 8:
@@ -384,6 +390,11 @@ def main(argv):
         print("soglia di accettazione automatica: %s" % misura(int(p[2])))
         print("collegamenti in parallelo:         %s" % p[4])
         print("file anche nella chat:             %s" % ("sì" if p[6] == "1" else "no"))
+        m.manda("RISERVATA")
+        r = (m.riga(10) or "").split()
+        if len(r) >= 4 and r[0] == "RISERVATA":
+            stato = "sì" if r[1] == "1" else ("no" if r[2] == "1" else "non disponibile (la rete non ha la casella)")
+            print("modalità riservata:                %s%s" % (stato, ", %s messaggi in coda" % r[3] if r[1] == "1" and r[3] != "0" else ""))
     elif cmd == "pulisci":
         m.manda("XPULISCI")
         r = m.risposta(30)

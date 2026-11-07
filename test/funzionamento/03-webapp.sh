@@ -124,6 +124,7 @@ cat > "$TMP/passi.json" <<EOF
  ["foto","${NYCT_FOTO:-$TMP}/impostazioni-personalizzato.png"],
  ["js","(()=>{document.querySelector('#foglio .tema-personalizzato .ripristina').click(); const sel=[...document.querySelector('#foglio .scelta-tema').querySelectorAll(':scope > button.sel')].map(x=>x.textContent.trim()).join('/'); return 'RIPR '+S.tema+','+S.temaColore.c+','+S.temaColore.scuro+','+document.querySelector('#foglio .tema-personalizzato').classList.contains('nascosto')+','+sel+','+(document.documentElement.style.getPropertyValue('--bg')==='')})()"],
  ["js","(()=>{const b=[...document.querySelectorAll('#foglio .scelta-tema > button')].find(x=>x.textContent.includes('Notte')); b.click(); return 'NOTTE '+document.documentElement.style.getPropertyValue('--bg')+'|'+document.querySelector('#foglio .tema-personalizzato').classList.contains('nascosto')})()"],
+ ["js","(()=>{const c=document.querySelector('#foglio .interr-riservata'); evento('RISERVATA 1 1 0 0 0'); const acc=c.checked&&!c.disabled; evento('RISERVATA 0 0 0 0 0'); return 'RISIMP '+!!c+','+acc+','+c.disabled})()"],
  ["js","(()=>{document.querySelector('#foglio .indietro-rubrica').click(); return 'ESCIIMP ' + document.body.classList.contains('solo-rubrica') + ',' + document.getElementById('foglio').classList.contains('nascosto')})()"],
  ["vai","$U/?avvio=1#file"],["attendi",3],
  ["js","(()=>{window._xinv=[]; const v=S.ws.send.bind(S.ws); S.ws.send=(r)=>{ if(/^X(OK|NO|SEND|PAUSA|ANNULLA|VIA|PULISCI|CONF)/.test(r)) window._xinv.push(r); else v(r); }; const f=document.getElementById('foglio'), r=f.getBoundingClientRect(); return 'FILE1 '+document.body.classList.contains('solo-rubrica')+','+(r.top===0&&r.height>=innerHeight-1)+','+f.querySelectorAll('.xf-schede button').length+','+FileGrandi._stato().motoreOk+','+!!f.querySelector('.indietro-rubrica')})()"],
@@ -161,7 +162,9 @@ cat > "$TMP/passi.json" <<EOF
  ["foto","${NYCT_FOTO:-$TMP}/terminale-telefono.png"],
  ["js","document.querySelector('.term-ferma').click(); 'stop'"],
  ["finche","document.querySelector('.term-ferma').disabled",15],
- ["js","'TERMSTOP '+document.querySelector('.term-ferma').disabled"]]
+ ["js","'TERMSTOP '+document.querySelector('.term-ferma').disabled"],
+ ["js","(()=>{window._inv2=[]; const v=S.ws.send.bind(S.ws); S.ws.send=(r)=>{ if(/^CALL/.test(r)) window._inv2.push(r); else v(r); }; window.nyctRispondiChiamata('cccccccccccccccccccccccccccccccccccccccccccccccccccccccc.nyct'); evento('CALLIN cccccccccccccccccccccccccccccccccccccccccccccccccccccccc.nyct notif123'); return 'notifica'})()"],["attendi",3],
+ ["js","(()=>{const s=Chiamate._stato(); const r='NOTIFRISP '+window._inv2.includes('CALLOK cccccccccccccccccccccccccccccccccccccccccccccccccccccccc.nyct notif123')+','+(s.c&&s.c.stato); evento('CALLEND cccccccccccccccccccccccccccccccccccccccccccccccccccccccc.nyct notif123'); return r})()"]]
 EOF
 timeout 420 python3 "$STRUMENTI/cdp.py" "$TMP/chrome" "$TMP/passi.json" > "$TMP/r.txt" 2>&1
 [ -n "${NYCT_DIAG:-}" ] && cp "$TMP/r.txt" "$NYCT_DIAG" 2>/dev/null
@@ -233,7 +236,7 @@ r ELIMINA | grep -q "^nota.pdf/.*|false|false|cartella non consentita$" && pass 
 [ "$(r ESCIIMP)" = "false,true" ] && pass "«←» chiude le impostazioni (nell'app si torna alla schermata iniziale)" || fail "uscita dalle impostazioni: $(r ESCIIMP)"
 [ "$(r TERM1)" = "true,true,true,true,6,true" ] && pass "⌨ Terminale dall'app (#terminale): schermata intera, pulsanti rapidi, campo senza maiuscola automatica, «←»" || fail "schermata Terminale: $(r TERM1)"
 [ "$(r TERMIO)" = "true" ] && pass "Terminale: «io» eseguito da nyctalus-cli in Termux, l'output torna nella schermata" || fail "Terminale io: $(r TERMIO)"
-[ "$(r TERMAIUTO)" = '14,4,0,true,"scrivi ",true' ] && pass "Terminale: «aiuto» è una scheda per il telefono (14 comandi in 4 gruppi, niente righe spezzate né scorrimento in orizzontale); toccando «scrivi» lo prepara nel campo" || fail "Terminale aiuto: $(r TERMAIUTO)"
+[ "$(r TERMAIUTO)" = '16,5,0,true,"scrivi ",true' ] && pass "Terminale: «aiuto» è una scheda per il telefono (16 comandi in 5 gruppi, niente righe spezzate né scorrimento in orizzontale); toccando «scrivi» lo prepara nel campo" || fail "Terminale aiuto: $(r TERMAIUTO)"
 [ "$(r TERMTOCCO)" = "ok" ] && pass "Terminale: toccando «io» nell'aiuto si esegue subito" || fail "Terminale tocco su io"
 [ ! -e "$H/iniezione" ] && [ ! -e "$H/iniezione2" ] && pass "Terminale: \$(…) e ; NON vengono eseguiti (solo nyctalus-cli, argomenti senza shell)" || fail "Terminale: comando iniettato eseguito!"
 [ "$(r TERMAVVIA)" = "true" ] && pass "Terminale: «avvia» rifiutato (il motore lo accende l'app)" || fail "Terminale avvia: $(r TERMAVVIA)"
@@ -242,4 +245,10 @@ COD=$(curl -s -o /dev/null --max-time 3 -w '%{http_code}' -b "nyct=$TOK" -H "Ori
 [ "$COD" = "403" ] && pass "Terminale: un'origine estranea viene rifiutata (403)" || fail "origine estranea: $COD"
 [ "$(stat -c %a "$H/.nyctalus-chat/controllo" 2>/dev/null)" = "600" ] && [ "$(HOME="$H" python3 "$ROOT/pc/cli/nyctalus-cli" io 2>&1)" = "$(HOME="$H" python3 "$ROOT/pc/cli/nyctalus-cli" io 2>&1 | grep -oE '^[a-z2-7]{56}\.nyct$')" ] && HOME="$H" python3 "$ROOT/pc/cli/nyctalus-cli" io | grep -qE '\.nyct$' \
   && pass "nyctalus-cli anche da Termux a mano: collegamento in ~/.nyctalus-chat/controllo (privato, 600)" || fail "collegamento per nyctalus-cli: $(ls -l "$H/.nyctalus-chat/controllo" 2>&1)"
+[ "$(r RISIMP)" = "true,true,true" ] && pass "impostazioni: interruttore «🕶 Modalità riservata» che segue il motore (spento e grigio se la rete non ha la casella)" || fail "modalità riservata nelle impostazioni: $(r RISIMP)"
+[ "$(r NOTIFRISP)" = "true,attiva" ] && pass "«Rispondi» nella notifica della chiamata: appena la chiamata compare, l'app risponde da sola (CALLOK)" || fail "risposta dalla notifica: $(r NOTIFRISP)"
+RIF=$(curl -s -X POST -b "nyct=$TOK" "$U/api/chiamata/rifiuta?da=cccccccccccccccccccccccccccccccccccccccccccccccccccccccc.nyct&id=abc123")
+BAD=$(curl -s -o /dev/null -w '%{http_code}' -X POST -b "nyct=$TOK" "$U/api/chiamata/rifiuta?da=x&id=abc;rm")
+NOC=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$U/api/chiamata/rifiuta?da=$BOB&id=abc123")
+[ "$RIF" = '{"ok": true}' ] && [ "$BAD" = 400 ] && [ "$NOC" = 403 ] && pass "«Rifiuta» nella notifica: il servizio manda CALLNO al motore; parametri strani → 400, senza il segreto dell'app → 403" || fail "rifiuto dalla notifica: $RIF $BAD $NOC"
 [ "$KO" -eq 0 ]

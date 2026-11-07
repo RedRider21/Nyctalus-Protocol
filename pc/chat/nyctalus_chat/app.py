@@ -126,6 +126,10 @@ _ITA = {
     "chat.ricezione": "Ricezione",
     "chat.senza_exif": "Foto senza metadati (posizione GPS, fotocamera)",
     "chat.notifiche": "Notifiche sul desktop dei nuovi messaggi",
+    "chat.riservata": "Modalità riservata (messaggi tramite casella, a ritmo casuale)",
+    "chat.riservata.no_casella": "Questa rete non ha la casella: la modalità riservata non è disponibile",
+    "chat.riservata.titolo": "Modalità riservata",
+    "chat.riservata.spiega": "I messaggi non vanno più in diretta: passano dalla casella cifrata a ritmo casuale, insieme a buste finte tutte uguali, così chi osserva non capisce quando né a chi scrivi. Arrivano con qualche decina di secondi di ritardo; non mandi ricevute di consegna e lettura e non risulti «in linea» ai contatti. Chiamate e file restano diretti. Serve che anche i contatti abbiano Nyctalus 0.3.3 o successivo.",
     "chat.ch.chiama": "Chiamata vocale",
     "chat.ch.video": "Video",
     "chat.ch.termina": "Termina",
@@ -991,6 +995,7 @@ class Chat(Gtk.Window):
         self._cmd("WHOAMI")
         self._cmd("LIST")
         self._cmd("SUB")
+        self._cmd("RISERVATA")            # stato della modalità riservata (per il menu)
         # rubrica: «ci sono» se iscritti (così risultiamo in linea), apertura chiesta dal mini menu
         GLib.timeout_add_seconds(4, lambda: self._ci_sono() and False)
         GLib.timeout_add_seconds(180, self._ci_sono)
@@ -1118,6 +1123,9 @@ class Chat(Gtk.Window):
                 self._avviso_inline("⚠ " + _da_hex(parti[3]))
         elif tipo == "NEW" and len(parti) >= 2:
             self._contatto_sconosciuto(parti[1])
+        elif tipo == "RISERVATA" and len(parti) >= 3:
+            # RISERVATA <0|1> <casella 0|1> <in coda> <finte spedite> <finte tornate>
+            self.riservata = (parti[1] == "1", parti[2] == "1")
         elif tipo == "ERR":
             # un invio non riuscito (prima veniva ignorato: «non succede niente»)
             self._avviso_inline("⚠ " + errore_leggibile(riga[4:]))
@@ -2142,8 +2150,28 @@ class Chat(Gtk.Window):
         notif.set_active(self.ui.get("notifiche", True))
         notif.connect("toggled", lambda v: (self.ui.__setitem__("notifiche", v.get_active()), self._salva_ui()))
         menu.append(notif)
+        menu.append(Gtk.SeparatorMenuItem())
+        accesa, possibile = getattr(self, "riservata", (False, False))
+        ris = Gtk.CheckMenuItem(label=_t("chat.riservata") if possibile else _t("chat.riservata.no_casella"))
+        ris.set_active(accesa)
+        ris.set_sensitive(possibile)
+        ris.set_tooltip_text(_t("chat.riservata.spiega"))
+        ris.connect("toggled", self._cambia_riservata)
+        menu.append(ris)
         menu.show_all()
         menu.popup_at_widget(bottone, Gdk.Gravity.SOUTH_WEST, Gdk.Gravity.NORTH_WEST, None)
+
+    def _cambia_riservata(self, voce):
+        """Accende (con spiegazione e conferma) o spegne la modalità riservata nel motore."""
+        if voce.get_active():
+            d = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.INFO,
+                                  buttons=Gtk.ButtonsType.OK_CANCEL, text=_t("chat.riservata.titolo"))
+            d.format_secondary_text(_t("chat.riservata.spiega"))
+            ok = d.run() == Gtk.ResponseType.OK
+            d.destroy()
+            if not ok:
+                return
+        self._cmd("RISERVATA %d" % (1 if voce.get_active() else 0))
 
     def _scelto_aspetto(self, voce, chiave, valore):
         if not voce.get_active() or self.ui.get(chiave) == valore:

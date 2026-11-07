@@ -110,7 +110,10 @@ continuare a usare la chat); col video chi parla è a tutto schermo e tu sei in 
 che puoi **trascinare** in un angolo, **toccare** per scambiarlo con lo schermo intero e
 **allargare con due dita** (doppio tocco: misura normale). 📞 **Solo voce** spegne la telecamera,
 🔄 **Gira** passa alla telecamera posteriore. Le chiamate in arrivo squillano anche con l'app
-chiusa, come notifica. Alla prima chiamata Android chiede il permesso del microfono, alla prima
+chiusa, come notifica, con i pulsanti **Rispondi** (verde) e **Rifiuta** (rosso), come nelle
+altre app di chiamate: Rispondi apre la chiamata già accettata (con il video, se è una
+videochiamata), Rifiuta la chiude senza aprire l'app. Da Android 12 è la notifica «chiamata in
+arrivo» del sistema; a schermo bloccato compare a tutto schermo. Alla prima chiamata Android chiede il permesso del microfono, alla prima
 videochiamata quello della telecamera (dati solo alla chat, mai ai siti senza il tuo «Consenti»).
 Dettagli: `MANUALE-CHAT.md` §3-quater.
 

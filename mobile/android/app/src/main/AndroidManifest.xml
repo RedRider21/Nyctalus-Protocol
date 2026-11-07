@@ -83,6 +83,11 @@
             android:exported="false"
             android:foregroundServiceType="remoteMessaging|dataSync" />
 
+        <!-- pulsante «Rifiuta» della notifica di chiamata: solo la nostra notifica lo usa -->
+        <receiver
+            android:name=".RifiutaChiamata"
+            android:exported="false" />
+
         <receiver
             android:name=".AvvioAccensione"
             android:exported="true">
