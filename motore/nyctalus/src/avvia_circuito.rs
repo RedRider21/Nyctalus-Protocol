@@ -235,8 +235,15 @@ async fn schedulatore(mut rx_out: mpsc::Receiver<Vec<u8>>, inbox: Vec<mpsc::Send
 /// Ricompone le unità di ritorno e consegna le celle al flusso giusto.
 async fn collettore_ritorno(mut rx_ret: mpsc::Receiver<(u64, Vec<u8>)>, flussi: MappaFlussi) {
     let mut riordina = Riordina::nuovo();
+    // ragnatela codificata: le unità con il bit di codifica vanno al decodificatore
+    let mut decodifica = crate::codifica::richiesta_configurata()
+        .map(|(k, _)| crate::codifica::Decodificatore::nuovo(k));
     while let Some((seq, cella_bytes)) = rx_ret.recv().await {
-        for cb in riordina.inserisci(seq, cella_bytes) {
+        let pronte = match decodifica.as_mut() {
+            Some(d) if seq & crate::codifica::CODIFICATA != 0 => d.inserisci(seq, cella_bytes),
+            _ => riordina.inserisci(seq, cella_bytes),
+        };
+        for cb in pronte {
             if let Some(cella) = Cella::da_byte(&cb) {
                 if cella.comando == cmd::RIEMPIMENTO {
                     continue; // cella fittizia (cover traffic): scartala

@@ -306,7 +306,7 @@ fn registro() -> &'static Mutex<HashMap<[u8; 16], Arc<ConfluxUscita>>> {
 
 /// Trova o crea lo stato del gruppo conflux con quel set_id, avviando (alla
 /// creazione) il collettore che ricompone l'andata e lo schedulatore del ritorno.
-fn ottieni_set(set_id: [u8; 16]) -> Arc<ConfluxUscita> {
+fn ottieni_set(set_id: [u8; 16], codifica: Option<(u8, u8)>) -> Arc<ConfluxUscita> {
     let mut reg = registro().lock().unwrap();
     if let Some(s) = reg.get(&set_id) {
         return s.clone();
@@ -322,7 +322,7 @@ fn ottieni_set(set_id: [u8; 16]) -> Arc<ConfluxUscita> {
     reg.insert(set_id, set.clone());
     drop(reg);
     tokio::spawn(collettore_uscita(rx_collect, tx_return.clone()));
-    tokio::spawn(schedulatore_ritorno(set_id, rx_return, circuiti_ritorno.clone()));
+    tokio::spawn(schedulatore_ritorno(set_id, rx_return, circuiti_ritorno.clone(), codifica));
 
     // Rumore di fondo in discesa: celle fittizie a ritmo di Poisson verso il
     // client, scartate dal suo lato. Si ferma quando il gruppo non ha più
@@ -335,7 +335,8 @@ fn ottieni_set(set_id: [u8; 16]) -> Arc<ConfluxUscita> {
                 if circuiti_ritorno.lock().unwrap().is_empty() {
                     break;
                 }
-                if tx_return.send(Cella::riempimento().in_byte()).await.is_err() {
+                // vuoto = «tocca al rumore»: con la ragnatela codificata diventa una riserva utile
+                if tx_return.send(Vec::new()).await.is_err() {
                     break;
                 }
             }
@@ -360,7 +361,7 @@ async fn uscita_conflux(
     }
     let mut set_id = [0u8; 16];
     set_id.copy_from_slice(&link[..16]);
-    let set = ottieni_set(set_id);
+    let set = ottieni_set(set_id, crate::codifica::leggi_richiesta(&link[16..]));
 
     // Scrittore di ritorno di QUESTO circuito. Si registra con un id e si toglie
     // dalla lista del gruppo quando il circuito cade (così lo schedulatore e il
@@ -465,9 +466,16 @@ async fn schedulatore_ritorno(
     set_id: [u8; 16],
     mut rx: mpsc::Receiver<Vec<u8>>,
     circuiti: Arc<Mutex<Vec<(u64, mpsc::Sender<Vec<u8>>)>>>,
+    codifica: Option<(u8, u8)>,
 ) {
+    if let Some((k, r)) = codifica {
+        return schedulatore_ritorno_codificato(set_id, rx, circuiti, k, r).await;
+    }
     let mut seq: u64 = 0;
-    while let Some(cella_bytes) = rx.recv().await {
+    while let Some(mut cella_bytes) = rx.recv().await {
+        if cella_bytes.is_empty() {
+            cella_bytes = Cella::riempimento().in_byte(); // rumore di fondo: cella finta
+        }
         let unita = conflux::impacchetta(seq, &cella_bytes);
         let destinatario = {
             let c = circuiti.lock().unwrap();
@@ -488,6 +496,58 @@ async fn schedulatore_ritorno(
         }
     }
     // Gruppo esaurito: togli lo stato dal registro.
+    registro().lock().unwrap().remove(&set_id);
+}
+
+/// La strada (circuito di ritorno) con la coda più libera, se il gruppo ne ha ancora.
+fn strada_libera(circuiti: &Mutex<Vec<(u64, mpsc::Sender<Vec<u8>>)>>, giro: usize) -> Option<mpsc::Sender<Vec<u8>>> {
+    let c = circuiti.lock().unwrap();
+    if c.is_empty() {
+        return None;
+    }
+    let liberi: Vec<usize> = c.iter().map(|(_, t)| t.capacity()).collect();
+    Some(c[conflux::scegli_strada(&liberi, giro)].1.clone())
+}
+
+/// Ritorno con la **ragnatela codificata** (crate::codifica): gruppi di k celle + r riserve sulle
+/// strade più libere; un gruppo rimasto incompleto si chiude dopo una pausa di 15 ms; il rumore di
+/// fondo manda riserve in più dell'ultimo gruppo invece di celle finte.
+async fn schedulatore_ritorno_codificato(
+    set_id: [u8; 16],
+    mut rx: mpsc::Receiver<Vec<u8>>,
+    circuiti: Arc<Mutex<Vec<(u64, mpsc::Sender<Vec<u8>>)>>>,
+    k: u8,
+    r: u8,
+) {
+    let mut cod = crate::codifica::Codificatore::nuovo(k, r);
+    let mut giro = 0usize;
+    loop {
+        let arrivo = if cod.in_corso() {
+            match tokio::time::timeout(std::time::Duration::from_millis(15), rx.recv()).await {
+                Ok(a) => a.map(Some),
+                Err(_) => Some(None), // pausa: si chiude il gruppo
+            }
+        } else {
+            rx.recv().await.map(Some)
+        };
+        let unita = match arrivo {
+            None => break,
+            Some(None) => cod.chiudi(),
+            Some(Some(c)) if c.is_empty() => match cod.riserva_in_piu() {
+                Some(u) => vec![u],
+                None => cod.cella(Cella::riempimento().in_byte()),
+            },
+            Some(Some(c)) => cod.cella(c),
+        };
+        for (h, cella) in unita {
+            let Some(tx) = strada_libera(&circuiti, giro) else {
+                registro().lock().unwrap().remove(&set_id);
+                return;
+            };
+            giro += 1;
+            let _ = tx.send(conflux::impacchetta(h, &cella)).await;
+        }
+    }
     registro().lock().unwrap().remove(&set_id);
 }
 

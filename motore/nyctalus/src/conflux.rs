@@ -32,6 +32,10 @@ pub const LUNGHEZZA_UNITA: usize = 8 + crate::cella::LUNGHEZZA;
 pub fn quadro_link(set_id: &[u8; 16]) -> Vec<u8> {
     let mut v = vec![0u8; LUNGHEZZA_UNITA];
     v[..16].copy_from_slice(set_id);
+    // ragnatela codificata: la richiesta (k, r) nel riempimento; le uscite vecchie la ignorano
+    if let Some((k, r)) = crate::codifica::richiesta_configurata() {
+        v[16..26].copy_from_slice(&crate::codifica::richiesta(k, r));
+    }
     v
 }
 

@@ -22,6 +22,7 @@
 mod avvia;
 mod avvia_circuito;
 mod cella;
+mod codifica;
 mod chat;
 mod conflux;
 mod circuito_rete;
