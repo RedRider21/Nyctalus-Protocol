@@ -21,7 +21,7 @@
 <main class="wrap manuale-doc">
 <nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html" class="qui">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
-<h1 id="piano-verso-una-rete-anonima">Piano verso una rete anonima</h1><nav class="sommario"><b>In questa pagina</b><a href="#in-breve">In breve</a><a href="#tappa-0-oggi-la-prova-di-funzionamento">Tappa 0 · Oggi: la prova di funzionamento</a><a href="#tappa-1-tre-piccoli-server-su-tre-fornitori-diversi">Tappa 1 · Tre piccoli server su tre fornitori diversi</a><a href="#tappa-2-percorsi-davvero-casuali-lavoro-sul-motore-fatta-07112026">Tappa 2 · Percorsi davvero casuali (lavoro sul motore) ✅ fatta (07/11/2026)</a><a href="#tappa-2-bis-modalita-riservata-chat-fatta-07112026">Tappa 2-bis · Modalità riservata (chat) ✅ fatta (07/11/2026)</a><a href="#tappa-3-nodi-di-persone-diverse-strumenti-pronti-07112026">Tappa 3 · Nodi di persone diverse 🔧 strumenti pronti (07/11/2026)</a><a href="#tappa-4-piu-utenti-meno-ritmi-riconoscibili-protezione-di-serie-fatta-07112026">Tappa 4 · Più utenti, meno ritmi riconoscibili 🔧 protezione di serie fatta (07/11/2026)</a><a href="#tappa-5-misure-e-browser-pubblico">Tappa 5 · Misure e browser pubblico</a><a href="#tappa-6-revisione-indipendente">Tappa 6 · Revisione indipendente</a><a href="#cosa-nessuna-tappa-puo-dare">Cosa nessuna tappa può dare</a><a href="#cosa-fare-adesso">Cosa fare adesso</a></nav>
+<h1 id="piano-verso-una-rete-anonima">Piano verso una rete anonima</h1><nav class="sommario"><b>In questa pagina</b><a href="#in-breve">In breve</a><a href="#tappa-0-oggi-la-prova-di-funzionamento">Tappa 0 · Oggi: la prova di funzionamento</a><a href="#tappa-1-tre-piccoli-server-su-tre-fornitori-diversi">Tappa 1 · Tre piccoli server su tre fornitori diversi</a><a href="#tappa-2-percorsi-davvero-casuali-lavoro-sul-motore-fatta-07112026">Tappa 2 · Percorsi davvero casuali (lavoro sul motore) ✅ fatta (07/11/2026)</a><a href="#tappa-2-bis-modalita-riservata-chat-fatta-07112026">Tappa 2-bis · Modalità riservata (chat) ✅ fatta (07/11/2026)</a><a href="#tappa-3-nodi-di-persone-diverse-strumenti-pronti-07112026">Tappa 3 · Nodi di persone diverse 🔧 strumenti pronti (07/11/2026)</a><a href="#tappa-4-piu-utenti-meno-ritmi-riconoscibili-protezione-di-serie-fatta-07112026">Tappa 4 · Più utenti, meno ritmi riconoscibili 🔧 protezione di serie fatta (07/11/2026)</a><a href="#tappa-5-misure-e-browser-pubblico">Tappa 5 · Misure e browser pubblico</a><a href="#oltre-lanonimato-invisibilita">Oltre l'anonimato: invisibilità</a><a href="#tappa-6-revisione-indipendente">Tappa 6 · Revisione indipendente</a><a href="#cosa-nessuna-tappa-puo-dare">Cosa nessuna tappa può dare</a><a href="#cosa-fare-adesso">Cosa fare adesso</a></nav>
 <p>Nyctalus <strong>cifra</strong> già tutto da un capo all'altro. L'<strong>anonimato</strong>, cioè che nessuno sappia
 <em>chi parla con chi</em>, non dipende però solo dal programma. Dipende da <strong>dove stanno i nodi</strong>,
 da <strong>chi li gestisce</strong> e da <strong>quanta gente usa la rete</strong>. Questo piano dice, tappa per tappa,
@@ -202,6 +202,17 @@ collega, senza no. Resta da fare la parte «più utenti», che è organizzativa.
 <li><strong>Simulazione con Shadow:</strong> una rete finta con centinaia di nodi e utenti, per misurare
   quanto è facile collegare entrata e uscita guardando i tempi, quanto è grande il «gruppo in
   cui ci si confonde», e confrontare tutto con Tor.</li>
+<li>✅ <strong>Prime misure (07/11/2026)</strong>, con il codice vero (<code>simulazione/LEGGIMI.md</code>):<ul>
+<li><strong>scelta dei percorsi</strong>: con la Tappa 2 un singolo gestore disonesto non collega mai
+  chi con chi (prima: 0% o 100% a seconda dell'ordine dell'elenco); due gestori d'accordo
+  o 4 nodi infiltrati collegano ancora il 5-8% dei circuiti → servono molti gestori;</li>
+<li><strong>Nyctalus vero in Shadow</strong>: 2 MB in ~2,1 s su 3 salti con 30 ms fra i computer;</li>
+<li><strong>attacco di correlazione dei tempi</strong>: chi vede le linee degli utenti e del sito
+  attribuisce giusti circa l'<strong>80%</strong> degli scaricamenti (a caso 17%), e il rumore di fondo a
+  celle sparse non cambia molto. È il limite di tutte le reti in tempo reale, Tor compreso.</li>
+</ul>
+</li>
+<li>Da fare: confronto con Tor nella stessa simulazione; misura della modalità riservata.</li>
 <li><strong>Browser pubblico</strong> basato su Firefox, con impronta uniforme per tutti (finestre a
   misure fisse, canvas e caratteri uniformati), per navigare sul web normale senza essere
   riconoscibili dal browser.</li>
@@ -217,6 +228,28 @@ collega, senza no. Resta da fare la parte «più utenti», che è organizzativa.
 <li>Più avanti, se servisse il nostro logo anche dentro: un Firefox compilato da noi come Tor
     Browser (pesante: compilazioni e aggiornamenti di sicurezza ogni 4 settimane).</li>
 </ul>
+<h2 id="oltre-lanonimato-invisibilita">Oltre l'anonimato: invisibilità</h2>
+<p>Anonimo vuol dire che non si sa <strong>chi parla con chi</strong>. Invisibile vuol dire che non si capisce
+nemmeno <strong>che</strong> stai usando una rete anonima, né <strong>quando</strong> e <strong>quanto</strong> comunichi. Qui Tor è
+debole, e le misure del punto K lo confermano anche per noi. I passi, in ordine:</p>
+<ol>
+<li><strong>Ponti nascosti.</strong> Entrate private, non nell'elenco pubblico, date a mano a chi serve: chi
+   ti osserva non vede «un nodo Nyctalus», vede un indirizzo qualunque.</li>
+<li><strong>Trasporto mimetico.</strong> Oggi il camuffamento rende il traffico simile a rumore, e il rumore
+   puro è sospetto (in alcuni paesi viene bloccato proprio così). Meglio farlo sembrare
+   <strong>traffico comune</strong>: una normale videochiamata (WebRTC) o un normale sito HTTPS.</li>
+<li><strong>Chat da mixnet.</strong> La modalità riservata è il primo passo. Il prossimo: i nodi trattengono
+   e <strong>rimescolano</strong> le buste con ritardi casuali, e si aggiungono buste finte calcolate apposta
+   (privacy differenziale, come Vuvuzela/Karaoke e Loopix). Così nemmeno chi vede <strong>tutta
+   Internet</strong> capisce chi scrive a chi. Per i messaggi è il punto in cui si può <strong>superare Tor</strong>.</li>
+<li><strong>Copertura costante durante l'uso.</strong> Il traffico resta piatto anche quando chiami o
+   scarichi. Le misure dicono che la copertura deve essere <strong>pari al traffico</strong>, non a celle
+   sparse: costa molta banda, quindi è un'opzione per chi ne ha bisogno.</li>
+<li><strong>Igiene automatica.</strong> Ritardi casuali sui messaggi (già nella modalità riservata), niente
+   dati del dispositivo in uscita, attenzione agli orari di attività.</li>
+</ol>
+<p>Il limite che resta: per chiamate e navigazione <strong>in tempo reale</strong> chi vede entrambi i capi
+può confrontare i tempi. Nessuna rete al mondo lo evita senza enormi quantità di banda.</p>
 <h2 id="tappa-6-revisione-indipendente">Tappa 6 · Revisione indipendente</h2>
 <ul>
 <li><strong>Revisione crittografica</strong> da esperti esterni (la combinazione Sphinx + strati simmetrici</li>
