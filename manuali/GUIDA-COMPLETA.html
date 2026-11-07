@@ -95,6 +95,8 @@ Usate <strong>la stessa versione</strong> su tutti gli apparecchi.</p>
 <li>Collegati alla rete: <code>nyctalus-rete importa NYCT1:…</code> (il codice te lo dà il gestore).
    Controlla che l'<strong>impronta</strong> mostrata sia uguale a quella del gestore.</li>
 <li>Apri il mini menu (<strong>Nyctalus</strong> nel menu delle applicazioni) → <strong>Chat</strong>.</li>
+<li>Per navigare: il <strong>Browser</strong> del mini menu (scheda 🦇). In più, per il web normale senza
+   farti riconoscere fra una visita e l'altra, <strong>Nyctalus Firefox</strong> (<a href="#8-browser-modalita-nyctalus">§8</a>).</li>
 </ol>
 <p><strong>Telefono Android</strong></p>
 <ol>
@@ -203,8 +205,8 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi <strong>ge
 <td>non iscritto</td>
 </tr>
 <tr>
-<td><a href="#8-browser-modalita-nyctalus">Browser 🦇</a></td>
-<td>navigare attraverso la rete</td>
+<td><a href="#8-browser-modalita-nyctalus">Browser 🦇 e Nyctalus Firefox</a></td>
+<td>navigare attraverso la rete; con Firefox anche con impronta uniforme</td>
 <td>da scegliere</td>
 </tr>
 <tr>
@@ -323,12 +325,28 @@ Contact ID. Ti iscrivi con un nome; puoi cancellarti quando vuoi.
 <h3 id="8-browser-modalita-nyctalus">8. Browser — 🦇 modalità Nyctalus</h3>
 <p><strong>A cosa serve:</strong> navigare <strong>attraverso la rete</strong> (il sito non vede il tuo IP) e aprire i siti
 <code>.nyct</code>. Nelle schede 🦇 non esce nulla finché la protezione non è attiva.
-<strong>Costo:</strong> pagine un po' più lente. Per l'anonimato «serio» sul web normale arriverà un
-browser apposta (piano, punto J).</p>
+<strong>Costo:</strong> pagine un po' più lente.</p>
 <ul>
 <li><strong>PC:</strong> mini menu → <strong>Browser</strong> → scheda 🦇.</li>
 <li><strong>Telefono:</strong> pulsante <strong>Browser</strong> → scegli <strong>🦇 Nyctalus</strong>.</li>
 </ul>
+<p><strong>In più, sul PC: Nyctalus Firefox.</strong> Non sostituisce il nostro browser, che resta quello di
+tutti i giorni e dei siti <code>.nyct</code>. Serve quando sul <strong>web normale</strong> non vuoi essere
+<strong>riconosciuto fra una visita e l'altra</strong>. La modalità Stealth nasconde il tuo IP, ma il suo
+motore (WebKitGTK) è usato da pochi, quindi un sito può riconoscerne l'«impronta». Firefox con le
+protezioni di Tor Browser ti fa somigliare a milioni di altri. È il tuo Firefox, con un <strong>profilo
+separato e blindato</strong> (il Firefox di tutti i giorni non viene toccato):</p>
+<ul>
+<li>tutto passa dalla rete, anche i nomi dei siti; se la rete è spenta <strong>non esce niente</strong>;</li>
+<li><strong>impronta uguale per tutti</strong> (finestra a misure fisse, ora UTC, lingua inglese, niente
+  WebGL): il browser non ti distingue dagli altri;</li>
+<li>niente WebRTC, posizione e sensori; niente telemetria né contatti a Mozilla o Google;</li>
+<li>navigazione privata: chiudendo non resta niente.</li>
+</ul>
+<p>Si apre da: menu delle applicazioni → <strong>Nyctalus Firefox</strong>, oppure mini menu → ⚙ → <strong>🦊
+Nyctalus Firefox</strong>, oppure il comando <code>nyctalus-firefox</code>. Se la rete non è accesa la accende
+(serve una rete importata con il codice, o la chat aperta). Non installare estensioni: rendono
+il browser riconoscibile.</p>
 <h3 id="9-terminale">9. Terminale</h3>
 <p><strong>A cosa serve:</strong> chat e file scrivendo comandi (<code>contatti</code>, <code>scrivi mario ciao</code>, <code>file -s</code>…).</p>
 <ul>
