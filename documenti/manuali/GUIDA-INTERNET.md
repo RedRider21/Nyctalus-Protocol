@@ -12,6 +12,15 @@ attraverso **la vostra** rete Nyctalus. Tempo: circa mezz'ora la prima volta.
 nodi) e la rende raggiungibile da Internet; il tuo amico **si collega** e basta, dal suo PC
 (Linux o Windows) o dal telefono. Lui non deve aprire nulla sul suo router.
 
+> ⚠️ **Cosa verifica questa prova, e cosa NO.** Verifica che Nyctalus **funzioni** fra due
+> città (collegamento, router, velocità, chat, file, chiamate) e che tutto viaggi **cifrato**:
+> nessuno, operatori compresi, legge messaggi, file o chiamate.
+> **Non vi rende anonimi**: i nodi sono tutti sul PC di chi ospita, quindi lui vede l'IP
+> dell'altro, e i vostri operatori vedono che i due indirizzi si parlano, quando e quanto.
+> **Non vi rende invisibili**: si vede che c'è traffico cifrato (il camuffamento lo fa sembrare
+> rumore, non lo fa sparire). Per un anonimato vero servono nodi su macchine di soggetti
+> diversi e più utenti: vedi il [Piano verso una rete anonima](PIANO-ANONIMATO.md).
+
 > Chi ospita la rete può essere anche il tuo amico: con un **IP statico** è perfino più
 > semplice (al posto del nome No-IP si usa direttamente l'IP). I passi sono gli stessi a
 > parti invertite.

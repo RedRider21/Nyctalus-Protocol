@@ -2,6 +2,10 @@
 
 > Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
 
+## 07/11/2026 · Anonimato: dove siamo davvero
+- L'utente ha chiesto se nei test via Internet sarà anonimo e invisibile: risposta NO (nodi tutti sul PC di casa → chi ospita vede l'IP dell'altro, operatori vedono chi parla con chi; invisibile mai). Aggiunto riquadro ⚠️ in GUIDA-INTERNET e **PIANO-ANONIMATO.md** (tappe 0-6).
+- **Limite del motore trovato:** `seleziona_conflux` (avvia_circuito.rs) usa nodi[0] come entrata e nodi[1] come uscita per TUTTI; solo gli intermedi sono casuali. → **Tappa 2 = prossimo sviluppo**: entrata casuale e persistente (guardie), uscita/intermedi casuali, regola di parentela (stesso fornitore/sottorete/famiglia dichiarata dal gestore), prove sulla distribuzione.
+
 ## Fatto il 04/11/2026 (a casa)
 - ✅ **APK 0.45**: motore Android (CI 41735131174) con l'elenco-cronologia di File; l'utente l'ha installata e provata: ok.
 - ✅ **nyctalus-cli** (`pc/cli/nyctalus-cli`, Python solo libreria standard): io, contatti, aggiungi, scrivi, leggi, ascolta, invia, file [-s], accetta/rifiuta/pausa/riprendi/annulla/togli/pulisci, impostazioni, avvia (motore senza finestre, `NYCTALUS_INTERFACCIA=nessuna`). Si adatta alla larghezza (COLUMNS). Prova 24.

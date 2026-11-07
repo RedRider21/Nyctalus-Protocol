@@ -395,6 +395,11 @@ apre il manuale nel browser.
 
 ## Cosa promette e cosa no
 
+> **Oggi è un prototipo.** La cifratura è già completa, ma le protezioni qui sotto valgono
+> solo con i nodi su macchine di **soggetti diversi** e con più utenti: con tutti i nodi su un
+> PC (come nelle prove fra amici) chi parla con chi resta visibile. Dove siamo e le tappe:
+> [PIANO-ANONIMATO.md](documenti/manuali/PIANO-ANONIMATO.md).
+
 **Protegge da:** provider Internet e reti Wi-Fi, tracciamento e profilazione,
 censura e blocchi, siti che vogliono il tuo IP, singoli nodi malevoli.
 
@@ -410,6 +415,7 @@ chi si identifica da solo (login, dati personali).
 - [STATO.md](documenti/STATO.md) — punto dei lavori e cose da fare
 - [DEPLOY.md](documenti/DEPLOY.md) — installare, configurare, mettere in piedi una rete, opzioni
 - [SICUREZZA.md](documenti/SICUREZZA.md) — come verificare sicurezza e anonimato (e cosa serve un audit)
+- [PIANO-ANONIMATO.md](documenti/manuali/PIANO-ANONIMATO.md) — dove siamo davvero con l'anonimato e le tappe per arrivarci (nodi di soggetti diversi, percorsi casuali, più utenti, misure, revisione)
 
 ## Il nome
 

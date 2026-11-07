@@ -174,6 +174,11 @@ predefinita.
 
 ## 3. Cosa serve l'uno (e cosa **non** basta da soli)
 
+> Il piano a tappe (dai nodi tutti su un PC fino alla revisione esterna), con cosa dà e cosa
+> non dà ciascuna tappa: [`manuali/PIANO-ANONIMATO.md`](manuali/PIANO-ANONIMATO.md).
+> **Limite attuale del motore:** entrata e uscita dei circuiti sono il 1° e il 2° nodo
+> dell'elenco (fissi per tutti); vanno scelte a caso con la regola di parentela (Tappa 2).
+
 Le verifiche sopra mostrano che le difese **ci sono e funzionano**. Ma
 **l'anonimato forte** dipende da cose che richiedono altro:
 
