@@ -160,6 +160,8 @@ banda. È un interruttore nelle impostazioni della chat.</p>
 restano diretti, con un avviso), e il fatto che sei collegato (il tuo servizio <code>.nyct</code> resta
 acceso per ricevere chiamate). Serve una rete <strong>con la casella</strong> (<code>nyctalus-rete rubrica</code>).
 I contatti devono avere la versione 0.3.3 o successiva.</p>
+<p><strong>Misurata in Shadow</strong> (punto K): con la chat normale chi vede tutte le linee scopre il 100% delle
+coppie; con la modalità riservata non va oltre il caso.</p>
 <p><strong>Come si usa:</strong> <a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a> §3-ter·1. Verificato dalla prova <code>26-riservata</code>: messaggio
 arrivato identico, nessuna ricevuta, buste finte spedite e tornate, <strong>tutte le buste della
 stessa misura</strong> nella casella, rubrica che non consegna subito.</p>
@@ -210,9 +212,15 @@ collega, senza no. Resta da fare la parte «più utenti», che è organizzativa.
 <li><strong>attacco di correlazione dei tempi</strong>: chi vede le linee degli utenti e del sito
   attribuisce giusti circa l'<strong>80%</strong> degli scaricamenti (a caso 17%), e il rumore di fondo a
   celle sparse non cambia molto. È il limite di tutte le reti in tempo reale, Tor compreso.</li>
+<li><strong>chi scrive a chi</strong> con un avversario che vede tutte le linee: chat normale <strong>100%</strong>
+  delle coppie scoperte, <strong>modalità riservata al livello del caso</strong> (17-33%, a caso 20%);</li>
+<li>la simulazione ha scoperto e fatto correggere un limite vero: ogni servizio <code>.nyct</code>
+  serviva al massimo 4 client insieme.</li>
+<li><strong>confronto con Tor 0.4.9</strong> nella stessa simulazione: sugli scaricamenti siamo alla pari
+  (l'avversario globale indovina 91% con Tor, 80% con Nyctalus; stessa velocità). Dove andiamo
+  oltre Tor è la chat: con la modalità riservata l'avversario resta al livello del caso.</li>
 </ul>
 </li>
-<li>Da fare: confronto con Tor nella stessa simulazione; misura della modalità riservata.</li>
 <li><strong>Browser pubblico</strong> basato su Firefox, con impronta uniforme per tutti (finestre a
   misure fisse, canvas e caratteri uniformati), per navigare sul web normale senza essere
   riconoscibili dal browser.</li>

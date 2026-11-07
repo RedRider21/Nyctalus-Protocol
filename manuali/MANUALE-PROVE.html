@@ -186,6 +186,10 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 <td><strong>programma File, motore</strong>: Alice → Bob sulla rete di prova (3 salti, canali paralleli): sotto soglia parte da solo, sopra soglia «Accetta», pausa/ripresa, motore di Bob spento a metà e riacceso (riprende dai pezzi già verificati), file sempre identico (SHA-256), non-contatto rifiutato senza proporglielo; nella chat il file compare all'ora d'arrivo con ✓✓ e diventa blu alla lettura; con «inchat 0» non compare in chat. Motore di Bob rallentato solo in prova (<code>NYCTALUS_PROVA_RALLENTA_MS</code>)</td>
 </tr>
 <tr>
+<td><code>31-servizio-molti-client</code></td>
+<td>un servizio <code>.nyct</code> serve <strong>8 client collegati insieme e a lungo</strong> (come la rubrica con le sessioni della chat): prima il limite era 4 (controprova: con il motore vecchio 4 su 8)</td>
+</tr>
+<tr>
 <td><code>30-impronta-browser</code></td>
 <td><strong>impronta uniforme</strong> delle schede 🦇 del browser del PC: una pagina misura identità, lingua (anche nell'intestazione), ora, schermo, processori, WebGL, Web Audio, WebRTC, canvas, funzioni «native» e cornici; due avvii con fuso (Roma / New York) e lingua (it / en-GB) diversi danno un'impronta IDENTICA</td>
 </tr>
