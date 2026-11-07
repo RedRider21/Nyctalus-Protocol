@@ -10,6 +10,8 @@ Per il GESTORE della rete (chi la tiene in piedi):
                                          --famiglia = stesso gestore/fornitore (mai due nello
                                          stesso percorso)
   nyctalus-rete famiglia IP:PORTA NOME|-  mette (o toglie con -) un nodo in una famiglia
+  nyctalus-rete banda IP:PORTA MBIT|-     banda del nodo (Mbit/s): i nodi più capaci si scelgono
+                                         più spesso (motori dalla 0.3.10)
   nyctalus-rete togli IP:PORTA           toglie un nodo
   nyctalus-rete elenco                   mostra rete, nodi e stato dell'elenco
   nyctalus-rete firma                    firma l'elenco dei nodi → directory.txt
@@ -69,7 +71,15 @@ from pathlib import Path
 DATI = Path(os.environ.get("NYCTALUS_RETE_DATI", Path.home() / ".nyctalus-rete"))
 CONFIG_CLIENT = Path.home() / ".nyctalus-browser" / "config.json"     # lo leggono chat e browser del PC
 PREFISSO = "NYCT1:"
-RIGA = re.compile(r"^(\[?[0-9A-Za-z.:-]+\]?):(\d{1,5}),([0-9a-f]{64}),([0-9a-f]{64})(,[A-Za-z0-9_.-]{1,32})?$")
+RIGA = re.compile(r"^(\[?[0-9A-Za-z.:-]+\]?):(\d{1,5}),([0-9a-f]{64}),([0-9a-f]{64})(,[A-Za-z0-9_.-]{0,32}(,[1-9][0-9]{0,6})?)?$")
+
+
+def componi_riga(campi, famiglia, banda):
+    """Riga del nodo «indirizzo,x25519,impronta[,famiglia[,banda]]» (vuoti in fondo tolti)."""
+    r = list(campi[:3]) + [famiglia or "", str(banda) if banda else ""]
+    while len(r) > 3 and not r[-1]:
+        r.pop()
+    return ",".join(r)
 FAMIGLIA = re.compile(r"^[A-Za-z0-9_.-]{1,32}$")
 
 
@@ -305,7 +315,8 @@ class Rete:
             if not RIGA.match(r):
                 esci("riga non valida: %r (atteso IP:PORTA,chiave,impronta)" % r)
             if famiglia:
-                r = ",".join(r.split(",")[:3] + [famiglia])
+                c = r.split(",")
+                r = componi_riga(c, famiglia, c[4] if len(c) > 4 else None)
             indirizzo = r.split(",")[0]
             attuali = [a for a in attuali if a.split(",")[0] != indirizzo] + [r]
             nuove += 1
@@ -318,8 +329,21 @@ class Rete:
             esci("nome di famiglia non valido: lettere, cifre, _ . - (al massimo 32)")
         attuali, trovato = [], False
         for a in self.nodi():
-            if a.split(",")[0] == indirizzo:
-                a, trovato = ",".join(a.split(",")[:3] + ([nome] if nome else [])), True
+            c = a.split(",")
+            if c[0] == indirizzo:
+                a, trovato = componi_riga(c, nome, c[4] if len(c) > 4 else None), True
+            attuali.append(a)
+        if not trovato:
+            esci("nodo non trovato: " + indirizzo)
+        self.salva_nodi(attuali)
+
+    def banda(self, indirizzo, mbit):
+        """Indica (Mbit/s) o toglie (None) la banda di un nodo: i percorsi scelgono più spesso i più capaci."""
+        attuali, trovato = [], False
+        for a in self.nodi():
+            c = a.split(",")
+            if c[0] == indirizzo:
+                a, trovato = componi_riga(c, c[3] if len(c) > 3 else None, mbit), True
             attuali.append(a)
         if not trovato:
             esci("nodo non trovato: " + indirizzo)
@@ -893,6 +917,12 @@ def principale(args):
             esci("uso: nyctalus-rete famiglia IP:PORTA NOME   (oppure - per toglierla)")
         rete.famiglia(args[0], None if args[1] == "-" else args[1])
         ok("fatto. Ricordati di firmare e ripubblicare: nyctalus-rete firma")
+    elif cmd == "banda":
+        if len(args) != 2 or not (args[1] == "-" or re.fullmatch(r"[1-9][0-9]{0,6}", args[1])):
+            esci("uso: nyctalus-rete banda IP:PORTA MBIT   (es. 100; oppure - per toglierla)")
+        rete.banda(args[0], None if args[1] == "-" else int(args[1]))
+        ok("fatto. I percorsi sceglieranno i nodi in proporzione alla banda. Firma e ripubblica: nyctalus-rete firma")
+        print("  ⚠️  Un elenco con le bande lo leggono i motori dalla 0.3.10: aggiorna prima tutti i client.")
     elif cmd == "togli":
         if not args:
             esci("indica IP:PORTA del nodo")
@@ -905,7 +935,8 @@ def principale(args):
         print("  nodi: %d" % len(nodi))
         for n in nodi:
             campi = n.split(",")
-            print("    " + campi[0] + ("   famiglia: " + campi[3] if len(campi) > 3 else ""))
+            print("    " + campi[0] + ("   famiglia: " + campi[3] if len(campi) > 3 and campi[3] else "")
+                  + ("   banda: %s Mbit/s" % campi[4] if len(campi) > 4 else ""))
         firmato = rete.f_elenco.exists() and rete.f_elenco.stat().st_mtime >= (rete.f_nodi.stat().st_mtime if rete.f_nodi.exists() else 0)
         print("  elenco firmato: %s" % (str(rete.f_elenco) if firmato else "DA FIRMARE (nyctalus-rete firma)"))
         if rete.f_codice.exists():

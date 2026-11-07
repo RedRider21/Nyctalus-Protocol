@@ -400,12 +400,16 @@ fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_cir
     // un nodo col nome che ora non si risolve (es. casa spenta) si salta: la rete funziona con gli altri
     let mut nodi = Vec::new();
     let mut famiglie = Vec::new();
+    let mut bande = Vec::new();
     for v in voci {
         match circuito_rete::risolvi_voce(&v.indirizzo, &v.x25519) {
             Ok(a) => {
                 nodi.push((a, v.x25519, Some(v.impronta_tls)));
                 if let Some(f) = v.famiglia {
                     famiglie.push((v.x25519, f));
+                }
+                if let Some(b) = v.banda {
+                    bande.push((v.x25519, b));
                 }
             }
             Err(e) => eprintln!("nodo saltato: {e}"),
@@ -416,6 +420,7 @@ fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_cir
     }
     // la rete (per ricordare la guardia di ciascuna) e le famiglie dichiarate dal gestore
     percorsi::imposta_rete(&autorita, famiglie);
+    percorsi::imposta_bande(bande);
     Ok(nodi)
 }
 
@@ -618,22 +623,30 @@ fn leggi_voci_elenco(testo: &str) -> Risultato<Vec<nyctalus_core::elenco::VoceEl
         .filter(|v| !v.trim().is_empty())
         .map(|voce| {
             let campi: Vec<&str> = voce.split(',').map(str::trim).collect();
-            let (addr, x, fp, famiglia) = match campi.as_slice() {
-                [a, x, f] => (a, x, f, None),
-                [a, x, f, fam] if fam.is_empty() => (a, x, f, None),
-                [a, x, f, fam] => {
-                    if !nyctalus_core::elenco::famiglia_valida(fam) {
-                        return Err(format!("invalid family name: {fam} (letters, digits, _ . -, max 32)").into());
-                    }
-                    (a, x, f, Some((*fam).to_string()))
-                }
-                _ => return Err("entry in the form address,x25519hex,fingerprinthex[,family]".into()),
+            let (addr, x, fp, fam, banda) = match campi.as_slice() {
+                [a, x, f] => (a, x, f, "", ""),
+                [a, x, f, fam] => (a, x, f, *fam, ""),
+                [a, x, f, fam, b] => (a, x, f, *fam, *b),
+                _ => return Err("entry in the form address,x25519hex,fingerprinthex[,family[,mbit]]".into()),
+            };
+            let famiglia = if fam.is_empty() {
+                None
+            } else if nyctalus_core::elenco::famiglia_valida(fam) {
+                Some(fam.to_string())
+            } else {
+                return Err(format!("invalid family name: {fam} (letters, digits, _ . -, max 32)").into());
+            };
+            let banda = if banda.is_empty() {
+                None
+            } else {
+                Some(banda.parse::<u32>().ok().filter(|b| (1..=1_000_000).contains(b)).ok_or("bandwidth: Mbit/s, 1-1000000")?)
             };
             Ok(nyctalus_core::elenco::VoceElenco {
                 indirizzo: (*addr).to_string(),
                 x25519: da_esadecimale(x)?,
                 impronta_tls: da_esadecimale(fp)?,
                 famiglia,
+                banda,
             })
         })
         .collect()

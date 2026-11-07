@@ -38,6 +38,9 @@ pub struct VoceElenco {
     pub impronta_tls: [u8; 32],
     /// Famiglia dichiarata dal gestore (stesso proprietario/fornitore), se c'è.
     pub famiglia: Option<String>,
+    /// Banda del nodo in Mbit/s dichiarata (o misurata) dal gestore, se c'è: i percorsi scelgono
+    /// più spesso i nodi più capaci (dalla 0.3.10).
+    pub banda: Option<u32>,
 }
 
 /// Nome di famiglia valido: 1-32 caratteri fra lettere, cifre, `_`, `.` e `-`.
@@ -124,6 +127,9 @@ fn righe_voci(voci: &[VoceElenco]) -> String {
         if let Some(f) = &v.famiglia {
             s.push_str(&format!(" famiglia={f}"));
         }
+        if let Some(b) = v.banda {
+            s.push_str(&format!(" banda={b}"));
+        }
         s.push('\n');
     }
     s
@@ -131,23 +137,29 @@ fn righe_voci(voci: &[VoceElenco]) -> String {
 
 fn analizza_voce(resto: &str) -> Result<VoceElenco, ErroreElenco> {
     let campi: Vec<&str> = resto.split_whitespace().collect();
-    let (indirizzo, x25519, impronta, famiglia) = match campi.as_slice() {
-        [a, x, f] => (a, x, f, None),
-        [a, x, f, fam] => {
-            let nome = fam
-                .strip_prefix("famiglia=")
-                .filter(|n| famiglia_valida(n))
-                .ok_or_else(|| ErroreElenco::Malformato(format!("campo sconosciuto: {fam}")))?;
-            (a, x, f, Some(nome.to_string()))
-        }
-        _ => return Err(ErroreElenco::Malformato("attesi indirizzo, x25519, impronta [famiglia=…]".into())),
+    let [indirizzo, x25519, impronta, extra @ ..] = campi.as_slice() else {
+        return Err(ErroreElenco::Malformato("attesi indirizzo, x25519, impronta [famiglia=…] [banda=…]".into()));
     };
+    // campi facoltativi «nome=valore»: quelli che non conosciamo si IGNORANO (sono comunque coperti
+    // dalla firma), così un elenco con campi nuovi resta leggibile dai motori più vecchi
+    let (mut famiglia, mut banda) = (None, None);
+    for c in extra {
+        let Some((k, v)) = c.split_once('=') else {
+            return Err(ErroreElenco::Malformato(format!("campo non valido: {c}")));
+        };
+        match k {
+            "famiglia" if famiglia_valida(v) => famiglia = Some(v.to_string()),
+            "famiglia" => return Err(ErroreElenco::Malformato(format!("famiglia non valida: {v}"))),
+            "banda" => banda = v.parse::<u32>().ok().filter(|b| (1..=1_000_000).contains(b)),
+            _ => {}
+        }
+    }
     let a_32 = |h: &str| -> Result<[u8; 32], ErroreElenco> {
         da_esadecimale(h)
             .and_then(|b| b.try_into().ok())
             .ok_or_else(|| ErroreElenco::Malformato("chiave esadecimale non a 32 byte".into()))
     };
-    Ok(VoceElenco { indirizzo: (*indirizzo).to_string(), x25519: a_32(x25519)?, impronta_tls: a_32(impronta)?, famiglia })
+    Ok(VoceElenco { indirizzo: (*indirizzo).to_string(), x25519: a_32(x25519)?, impronta_tls: a_32(impronta)?, famiglia, banda })
 }
 
 fn esadecimale(byte: &[u8]) -> String {
@@ -167,8 +179,8 @@ mod test {
 
     fn voci() -> Vec<VoceElenco> {
         vec![
-            VoceElenco { indirizzo: "127.0.0.1:4601".into(), x25519: [1; 32], impronta_tls: [2; 32], famiglia: None },
-            VoceElenco { indirizzo: "127.0.0.1:4602".into(), x25519: [3; 32], impronta_tls: [4; 32], famiglia: None },
+            VoceElenco { indirizzo: "127.0.0.1:4601".into(), x25519: [1; 32], impronta_tls: [2; 32], famiglia: None, banda: None },
+            VoceElenco { indirizzo: "127.0.0.1:4602".into(), x25519: [3; 32], impronta_tls: [4; 32], famiglia: None, banda: None },
         ]
     }
 
@@ -225,13 +237,29 @@ mod test {
     }
 
     #[test]
+    fn banda_firmata_e_campi_nuovi_ignorati() {
+        let (segreto, pubblica) = genera_autorita();
+        let mut v = voci();
+        v[0].banda = Some(100);
+        let testo = firma_elenco(&v, &segreto);
+        assert!(testo.contains(" banda=100\n"));
+        assert_eq!(verifica_elenco(&testo, &pubblica).unwrap()[0].banda, Some(100));
+        assert!(verifica_elenco(&testo.replace("banda=100", "banda=900"), &pubblica).is_err(), "la banda è firmata");
+        // un campo che questo motore non conosce non rompe la lettura
+        assert!(analizza_voce("127.0.0.1:1 0101010101010101010101010101010101010101010101010101010101010101 0202020202020202020202020202020202020202020202020202020202020202 futuro=1").is_ok());
+    }
+
+    #[test]
     fn famiglia_non_valida_rifiutata() {
         assert!(!famiglia_valida(""));
         assert!(!famiglia_valida("con spazio"));
         assert!(!famiglia_valida(&"x".repeat(33)));
         assert!(famiglia_valida("vps-mario_1.it"));
         let (_, pubblica) = genera_autorita();
-        let testo = format!("nyctalus-elenco v0\nv 1.2.3.4:5 {} {} colore=blu\nfirma 00\n", esadecimale(&[1; 32]), esadecimale(&[2; 32]));
+        // un campo senza «nome=valore» è malformato (i campi «nome=valore» sconosciuti si ignorano)
+        let testo = format!("nyctalus-elenco v0\nv 1.2.3.4:5 {} {} colore\nfirma 00\n", esadecimale(&[1; 32]), esadecimale(&[2; 32]));
+        assert!(matches!(verifica_elenco(&testo, &pubblica), Err(ErroreElenco::Malformato(_))));
+        let testo = format!("nyctalus-elenco v0\nv 1.2.3.4:5 {} {} famiglia=con/barra\nfirma 00\n", esadecimale(&[1; 32]), esadecimale(&[2; 32]));
         assert!(matches!(verifica_elenco(&testo, &pubblica), Err(ErroreElenco::Malformato(_))));
     }
 }

@@ -110,7 +110,10 @@ def prepara_nyctalus(out, a):
                 break
             time.sleep(0.1)
         p.kill()
-        righe.append((d / "riga-elenco.txt").read_text().strip() + ",gestore%d" % i)
+        riga = (d / "riga-elenco.txt").read_text().strip() + ",gestore%d" % i
+        if a.bande and not a.senza_pesi:       # la banda di ogni nodo nell'elenco firmato
+            riga += ",%s" % a.bande.split(",")[(i - 1) % len(a.bande.split(","))]
+        righe.append(riga)
     (out / "directory.txt").write_text(subprocess.run(
         [str(BIN), "directory", "--authority-secret", sec, "--entries", ";".join(righe)],
         capture_output=True, text=True).stdout)
@@ -158,6 +161,7 @@ def main():
     ap.add_argument("--sistema", choices=["tor", "nyctalus"], required=True)
     ap.add_argument("--perdita", type=float, default=0.0)
     ap.add_argument("--banda-nodi", type=int, default=0, help="Mbit dei nodi (0 = come gli utenti)")
+    ap.add_argument("--senza-pesi", action="store_true", help="Nyctalus: niente banda nell'elenco (scelta a caso)")
     ap.add_argument("--bande", default="", help="Mbit di ciascuno dei 7 nodi, es. 100,50,20,10,5,50,20")
     ap.add_argument("--utenti", type=int, default=1)
     ap.add_argument("--mb", type=float, default=5)
@@ -178,9 +182,9 @@ def main():
     tempi, primi, falliti = risultati(out, byte)
     media = sum(tempi) / len(tempi) if tempi else 0.0
     vel = sum(byte / t for t in tempi) / len(tempi) * 8 / 1e6 if tempi else 0.0
-    print("RISULTATO finestra=%s congestione=%s sistema=%s perdita=%g banda_nodi=%s utenti=%d mb=%g circuiti=%s seme=%d riusciti=%d falliti=%d "
+    print("RISULTATO pesi=%s finestra=%s congestione=%s sistema=%s perdita=%g banda_nodi=%s utenti=%d mb=%g circuiti=%s seme=%d riusciti=%d falliti=%d "
           "tempo_medio=%.2f primo_byte=%.2f mbit_s=%.2f"
-          % (a.finestra or "-", a.congestione or "bbr", a.sistema, a.perdita, (a.bande.replace(",", "/") if a.bande else (a.banda_nodi or "-")), a.utenti, a.mb, a.circuiti if a.sistema == "nyctalus" else "-",
+          % ("no" if a.senza_pesi or not a.bande else "si", a.finestra or "-", a.congestione or "bbr", a.sistema, a.perdita, (a.bande.replace(",", "/") if a.bande else (a.banda_nodi or "-")), a.utenti, a.mb, a.circuiti if a.sistema == "nyctalus" else "-",
              a.seme, len(tempi), falliti, media, sum(primi) / len(primi) if primi else 0.0, vel))
     # i file scaricati non servono più: si tiene solo il registro (il disco è quasi pieno)
     shutil.rmtree(out / "sito", ignore_errors=True)

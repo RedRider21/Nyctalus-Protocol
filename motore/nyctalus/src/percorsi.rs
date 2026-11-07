@@ -47,6 +47,43 @@ struct Contesto {
     rigida_prova: Option<bool>,
     /// ponti nascosti dell'utente: nodo e chiave di camuffamento per entrarci
     ponti: Vec<(NodoRete, [u8; 32])>,
+    /// banda dichiarata nell'elenco firmato (Mbit/s), per chiave X25519
+    bande: HashMap<[u8; 32], u32>,
+}
+
+/// Imposta le bande dei nodi (dall'elenco firmato): i nodi più capaci si scelgono più spesso.
+pub fn imposta_bande(bande: Vec<([u8; 32], u32)>) {
+    contesto().lock().unwrap().bande = bande.into_iter().collect();
+}
+
+/// Peso di un nodo nella scelta: la sua banda; chi non la dichiara vale la mediana di chi la
+/// dichiara (senza bande nell'elenco: tutti uguali, come prima). Come Tor, che pesa i relè per
+/// banda misurata: scegliere a caso fra nodi di 5 e 50 Mbit è una lotteria (velocita.py: da 2,7 a
+/// 9,3 Mbit/s a seconda di chi capita).
+fn pesi(nodi: &[NodoRete]) -> Vec<f64> {
+    let c = contesto().lock().unwrap();
+    if c.bande.is_empty() {
+        return vec![1.0; nodi.len()];
+    }
+    let mut note: Vec<u32> = c.bande.values().copied().collect();
+    note.sort_unstable();
+    let mediana = note[note.len() / 2] as f64;
+    nodi.iter().map(|n| c.bande.get(&n.1).map(|b| *b as f64).unwrap_or(mediana).max(0.1)).collect()
+}
+
+fn casuale_01() -> f64 {
+    let mut b = [0u8; 8];
+    getrandom::fill(&mut b).expect("generatore casuale di sistema");
+    ((u64::from_le_bytes(b) >> 11) as f64 + 0.5) / (1u64 << 53) as f64
+}
+
+/// Indici di `nodi` in ordine casuale **pesato per banda** (Efraimidis-Spirakis: chiave u^(1/peso),
+/// in ordine decrescente): chi ha più banda tende a venire prima.
+fn ordine_pesato(nodi: &[NodoRete]) -> Vec<usize> {
+    let p = pesi(nodi);
+    let mut chiavi: Vec<(f64, usize)> = p.iter().enumerate().map(|(i, w)| (casuale_01().ln() / w, i)).collect();
+    chiavi.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+    chiavi.into_iter().map(|(_, i)| i).collect()
 }
 
 /// Imposta i ponti nascosti (vuoto = si entra dai nodi dell'elenco).
@@ -146,18 +183,11 @@ fn casuale(n: usize) -> usize {
     (u64::from_le_bytes(b) % n.max(1) as u64) as usize
 }
 
-fn mescola<T>(v: &mut [T]) {
-    for i in (1..v.len()).rev() {
-        v.swap(i, casuale(i + 1));
-    }
-}
-
 /// Sceglie `quanti` nodi a caso fra `nodi`, diversi e non parenti fra loro né con `gia`.
 /// `None` se non è possibile.
 pub fn scegli_non_parenti(nodi: &[NodoRete], gia: &[NodoRete], quanti: usize) -> Option<Vec<NodoRete>> {
-    let mut indici: Vec<usize> = (0..nodi.len()).collect();
     for _ in 0..TENTATIVI {
-        mescola(&mut indici);
+        let indici = ordine_pesato(nodi);
         let mut scelti: Vec<NodoRete> = Vec::with_capacity(quanti);
         for &i in &indici {
             if scelti.len() == quanti {
@@ -177,10 +207,8 @@ pub fn scegli_non_parenti(nodi: &[NodoRete], gia: &[NodoRete], quanti: usize) ->
 
 /// Ripiego: `quanti` nodi a caso, solo diversi da quelli in `gia` (senza la regola).
 fn scegli_diversi(nodi: &[NodoRete], gia: &[NodoRete], quanti: usize) -> Vec<NodoRete> {
-    let mut liberi: Vec<NodoRete> = nodi.iter().copied().filter(|n| gia.iter().all(|g| g.1 != n.1)).collect();
-    mescola(&mut liberi);
-    liberi.truncate(quanti);
-    liberi
+    let liberi: Vec<NodoRete> = nodi.iter().copied().filter(|n| gia.iter().all(|g| g.1 != n.1)).collect();
+    ordine_pesato(&liberi).into_iter().take(quanti).map(|i| liberi[i]).collect()
 }
 
 /// Come `scegli_non_parenti`, ma se la regola è impossibile ripiega (con avviso) o, in
@@ -289,7 +317,7 @@ pub fn guardia(nodi: &[NodoRete]) -> NodoRete {
     let scelta = match salvata {
         Some(n) => n,
         None => {
-            let n = nodi[casuale(nodi.len())];
+            let n = nodi[ordine_pesato(nodi)[0]];
             let giorni = GUARDIA_MIN_GIORNI + casuale((GUARDIA_MAX_GIORNI - GUARDIA_MIN_GIORNI + 1) as usize) as u64;
             salva_guardia(&rete, &n.1, adesso() + giorni * 86_400);
             n
@@ -434,6 +462,7 @@ pub(crate) mod test {
         c.cartella_prova = Some(cartella.to_path_buf());
         c.rigida_prova = Some(false);
         c.ponti.clear();
+        c.bande.clear();
     }
 
     fn cartella(nome: &str) -> std::path::PathBuf {
@@ -541,6 +570,30 @@ pub(crate) mod test {
         assert_eq!(chiave_entrata(&nodi[0], Some([1; 32])), Some([1; 32]));
         imposta_ponti(vec![]);
         assert_ne!(guardia(&nodi).1, ponte.1, "senza ponti si torna ai nodi dell'elenco");
+    }
+
+    #[test]
+    fn nodi_piu_capaci_scelti_piu_spesso() {
+        let _b = blocco();
+        reimposta(vec![], &cartella("b"));
+        let nodi: Vec<NodoRete> = (1..=4).map(|i| nodo(&format!("{}.1.0.1", 40 + i), i)).collect();
+        imposta_bande(vec![(nodi[0].1, 100), (nodi[1].1, 10), (nodi[2].1, 10), (nodi[3].1, 10)]);
+        let mut primo = 0;
+        for _ in 0..2000 {
+            if nodi[ordine_pesato(&nodi)[0]].1 == nodi[0].1 {
+                primo += 1;
+            }
+        }
+        // atteso 100/130 ≈ 77%
+        assert!((1400..1700).contains(&primo), "il nodo da 100 Mbit scelto per primo {primo} volte su 2000");
+        imposta_bande(vec![]);
+        let mut primo = 0;
+        for _ in 0..2000 {
+            if nodi[ordine_pesato(&nodi)[0]].1 == nodi[0].1 {
+                primo += 1;
+            }
+        }
+        assert!((380..620).contains(&primo), "senza bande tutti uguali: {primo} su 2000");
     }
 
     #[test]
