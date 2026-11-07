@@ -146,9 +146,12 @@ cat > "$TMP/passi.json" <<EOF
  ["js","Terminale.esegui('io'); 'io'"],
  ["finche","document.querySelector('.term-uscita').textContent.includes(S.me) && document.querySelector('.term-ferma').disabled",20],
  ["js","'TERMIO '+document.querySelector('.term-uscita').textContent.split(String.fromCharCode(10)).includes(S.me)"],
- ["js","Terminale.esegui('aiuto'); 'aiuto'"],
- ["finche","document.querySelector('.term-uscita').textContent.includes('avvia ') && document.querySelector('.term-ferma').disabled",20],
- ["js","'TERMAIUTO '+document.querySelector('.term-uscita').textContent.includes('nyctalus-cli — Nyctalus dal terminale')"],
+ ["js","Terminale.esegui('aiuto'); 'aiuto'"],["attendi",0.5],
+ ["foto","${NYCT_FOTO:-$TMP}/terminale-aiuto.png"],
+ ["js","(()=>{const a=document.querySelector('.term-aiuto'); const voci=[...a.querySelectorAll('.term-aiuto-voce')]; const u=document.querySelector('.term-uscita'); const larghe=voci.filter(v=>v.scrollWidth>v.clientWidth+1).length; voci.find(v=>v.querySelector('.term-aiuto-cmd').textContent.startsWith('scrivi')).click(); const campo=document.querySelector('.term-campo').value; return 'TERMAIUTO '+voci.length+','+a.querySelectorAll('.term-aiuto-titolo').length+','+larghe+','+(u.scrollWidth<=u.clientWidth+1)+','+JSON.stringify(campo)+','+!a.textContent.includes('avvia')})()"],
+ ["js","(()=>{document.querySelector('.term-campo').value=''; [...document.querySelectorAll('.term-aiuto-voce')].find(v=>v.querySelector('.term-aiuto-cmd').textContent==='io').click(); return 'tocco'})()"],
+ ["finche","document.querySelector('.term-ferma').disabled && document.querySelector('.term-uscita').textContent.split(String.fromCharCode(10)).filter(r=>r===S.me).length>=2",20],
+ ["js","'TERMTOCCO ok'"],
  ["js","Terminale.esegui('io \$(touch $H/iniezione) ; touch $H/iniezione2'); 'iniezione'"],["attendi",3],
  ["js","Terminale.esegui('nyctalus-cli avvia'); 'avvia'"],["attendi",1.5],
  ["js","'TERMAVVIA '+document.querySelector('.term-uscita').textContent.includes('sul telefono il motore lo accende')"],
@@ -230,7 +233,8 @@ r ELIMINA | grep -q "^nota.pdf/.*|false|false|cartella non consentita$" && pass 
 [ "$(r ESCIIMP)" = "false,true" ] && pass "«←» chiude le impostazioni (nell'app si torna alla schermata iniziale)" || fail "uscita dalle impostazioni: $(r ESCIIMP)"
 [ "$(r TERM1)" = "true,true,true,true,6,true" ] && pass "⌨ Terminale dall'app (#terminale): schermata intera, pulsanti rapidi, campo senza maiuscola automatica, «←»" || fail "schermata Terminale: $(r TERM1)"
 [ "$(r TERMIO)" = "true" ] && pass "Terminale: «io» eseguito da nyctalus-cli in Termux, l'output torna nella schermata" || fail "Terminale io: $(r TERMIO)"
-[ "$(r TERMAIUTO)" = "true" ] && pass "Terminale: «aiuto» elenca i comandi" || fail "Terminale aiuto: $(r TERMAIUTO)"
+[ "$(r TERMAIUTO)" = '14,4,0,true,"scrivi ",true' ] && pass "Terminale: «aiuto» è una scheda per il telefono (14 comandi in 4 gruppi, niente righe spezzate né scorrimento in orizzontale); toccando «scrivi» lo prepara nel campo" || fail "Terminale aiuto: $(r TERMAIUTO)"
+[ "$(r TERMTOCCO)" = "ok" ] && pass "Terminale: toccando «io» nell'aiuto si esegue subito" || fail "Terminale tocco su io"
 [ ! -e "$H/iniezione" ] && [ ! -e "$H/iniezione2" ] && pass "Terminale: \$(…) e ; NON vengono eseguiti (solo nyctalus-cli, argomenti senza shell)" || fail "Terminale: comando iniettato eseguito!"
 [ "$(r TERMAVVIA)" = "true" ] && pass "Terminale: «avvia» rifiutato (il motore lo accende l'app)" || fail "Terminale avvia: $(r TERMAVVIA)"
 [ "$(r TERMCORSO)" = "true" ] && [ "$(r TERMSTOP)" = "true" ] && pass "Terminale: «ascolta» resta in diretta, ⏹ lo ferma" || fail "Terminale ascolta/stop: $(r TERMCORSO) $(r TERMSTOP)"

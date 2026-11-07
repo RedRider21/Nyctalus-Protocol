@@ -179,6 +179,7 @@ cargo test          # deve dare 95 test superati
 
 ## Release
 **Regola:** una release NUMERATA per ogni pubblicazione importante (tag sul codice di quel momento, note delle novità, «Latest»); i file di una release già pubblicata NON si sostituiscono (prima si faceva, ed è stato un errore: la 0.1.0 ha file più recenti del suo nome, segnalato nelle sue note).
+- **APK 0.47** (07/11/2026, cartella installazioni): nel ⌨ Terminale «aiuto» è una scheda per il telefono (gruppi, comando + spiegazione sotto, tocco = usa il comando); nyctalus-cli va a capo su parole intere nei terminali stretti; ■ al posto dell'emoji ⏹.
 - **v0.3.2** (07/11/2026, Latest, «anteprima»): ⌨ Terminale e nyctalus-cli (telefono seconda fila APK 0.46, PC mini menu, Windows), programma File con elenco-cronologia (Eliminato, ✕, Pulisci, interruttore file in chat), correzione dell'avvio (il motore aspetta l'ultima finestra). 5 pacchetti + motori dalla CI 42343180952 (tag).
 - **v0.3.1** (03/11/2026, Latest allora): correzione del pulsante File del telefono (APK 0.43).
 - **APK 0.45** (04/11/2026, solo cartella installazioni): motore Android dalla CI 41735131174 con elenco-cronologia del programma File (✕ Togli, Pulisci, «Eliminato», interruttore «file anche nella chat», file in chat all'ora d'arrivo con spunte).

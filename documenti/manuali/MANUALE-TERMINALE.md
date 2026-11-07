@@ -40,7 +40,7 @@ raggiungibile con `command file`.)
 | `aggiungi <indirizzo> <nome>` | aggiunge un contatto |
 | `scrivi <contatto> <testo>` | manda un messaggio |
 | `leggi <contatto> [-n 50]` | la conversazione (gli ultimi 20 messaggi, o quanti dici) |
-| `ascolta` | messaggi, file e richieste che arrivano, **in diretta** (Ctrl-C o ⏹ per smettere) |
+| `ascolta` | messaggi, file e richieste che arrivano, **in diretta** (Ctrl-C o ■ per smettere) |
 | `invia <contatto> <file…>` | manda uno o più file con il programma File (grandi, pezzi verificati, più percorsi) |
 | `file` | i trasferimenti con l'avanzamento; `file -s` li segue in diretta |
 | `accetta <id>` · `rifiuta <id>` | un file in arrivo che chiede conferma |
@@ -67,10 +67,11 @@ Sul telefono, i file si indicano con il loro percorso: per esempio
 
 - In alto scorre quello che rispondono i comandi; in basso il campo dove scrivi (niente
   maiuscola automatica né correttore) e **⏎** per eseguire.
+- **aiuto** (o il pulsante «aiuto») mostra una **scheda** fatta per il telefono: i comandi a gruppi, ognuno con la sua spiegazione sotto. **Toccando un comando** lo usi: quelli che non chiedono altro partono subito, gli altri (es. `scrivi`) si preparano nel campo e tu aggiungi il resto.
 - **↑** richiama i comandi già dati (anche le frecce della tastiera).
 - I **pulsanti rapidi** (contatti, il mio ID, file, file in diretta, ascolta, aiuto) eseguono
   il comando con un tocco.
-- **⏹** ferma un comando che resta acceso (`ascolta`, `file -s`).
+- **■** ferma un comando che resta acceso (`ascolta`, `file -s`).
 - `pulisci schermo` svuota il pannello; **←** torna alla schermata iniziale.
 
 **Sicurezza:** il pannello esegue **solo** nyctalus-cli. I comandi non passano mai da una shell

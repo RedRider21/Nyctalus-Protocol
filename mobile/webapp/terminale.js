@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 // Nyctalus · ⌨ Terminale: nyctalus-cli dentro l'app (telefono e Windows).
 // Come la shell nel pannello di Termux-NexusSEC-OS: si scrive un comando, l'orchestratore lo
-// esegue in Termux con le pipe e l'output scorre qui in diretta; ⏹ lo ferma. Per sicurezza
+// esegue in Termux con le pipe e l'output scorre qui in diretta; ■ lo ferma. Per sicurezza
 // esegue SOLO nyctalus-cli (si scrive «contatti», non «nyctalus-cli contatti»), mai una shell.
 //   →  {t:"cmd", riga} · {t:"in", d} · {t:"stop"}        ←  {t:"out", d} · {t:"err", d} · {t:"fine", codice}
 "use strict";
@@ -46,8 +46,52 @@ const Terminale = (() => {
   function stato(acceso) {
     inCorso = acceso;
     if (ferma) ferma.disabled = !acceso;
-    if (campo) campo.placeholder = acceso ? "comando in corso — ⏹ per fermarlo" : "scrivi un comando, es. contatti";
+    if (campo) campo.placeholder = acceso ? "comando in corso — ■ per fermarlo" : "scrivi un comando, es. contatti";
   }
+  // l'aiuto, impaginato per il telefono: gruppi, comando in evidenza e spiegazione sotto.
+  // Toccando una voce: senza altri dati si esegue, altrimenti si prepara nel campo.
+  const AIUTO = [
+    ["Tu e i contatti", [
+      ["io", "", "il tuo Contact ID, da dare agli amici"],
+      ["contatti", "", "i tuoi contatti; ● = in linea"],
+      ["aggiungi", "<indirizzo> <nome>", "aggiunge un contatto"]]],
+    ["Messaggi", [
+      ["scrivi", "<contatto> <testo>", "manda un messaggio"],
+      ["leggi", "<contatto>", "la conversazione (ultimi 20; con -n 50 di più)"],
+      ["ascolta", "", "messaggi e file in arrivo, in diretta (■ per smettere)"]]],
+    ["File grandi", [
+      ["invia", "<contatto> <file>", "manda un file, es. ~/storage/shared/Download/film.mkv"],
+      ["file", "", "i trasferimenti con l'avanzamento"],
+      ["file -s", "", "li segue in diretta (■ per smettere)"],
+      ["accetta", "<id>", "accetta un file in arrivo (anche rifiuta)"],
+      ["pausa", "<id>", "ferma un trasferimento (anche riprendi, annulla)"],
+      ["togli", "<id>", "lo toglie dall'elenco; «pulisci» toglie tutti i conclusi"],
+      ["impostazioni", "", "soglia, collegamenti, file in chat (es. impostazioni soglia 200)"]]],
+    ["Il pannello", [
+      ["pulisci schermo", "", "svuota questa schermata"]]],
+  ];
+  function mostraAiuto() {
+    const box = el("div", "term-aiuto");
+    for (const [titolo, voci] of AIUTO) {
+      box.append(el("div", "term-aiuto-titolo", titolo));
+      for (const [cmd, arg, desc] of voci) {
+        const b = el("button", "term-aiuto-voce"); b.type = "button";
+        const r = el("span", "term-aiuto-cmd", cmd);
+        if (arg) r.append(el("span", "term-aiuto-arg", " " + arg));
+        b.append(r, el("span", "term-aiuto-desc", desc));
+        b.onclick = () => {
+          if (inCorso) return;
+          if (arg) { campo.value = cmd + " "; campo.focus(); }
+          else esegui(cmd);
+        };
+        box.append(b);
+      }
+    }
+    box.append(el("div", "term-aiuto-nota", "<contatto> = il nome, anche solo l'inizio, o l'indirizzo .nyct · <id> = le prime lettere che mostra «file»"));
+    uscita.append(box);
+    uscita.scrollTop = uscita.scrollHeight - box.offsetHeight - 30;
+  }
+
   function esegui(riga) {
     riga = riga.trim();
     if (!riga) return;
@@ -57,11 +101,12 @@ const Terminale = (() => {
     storia = storia.slice(-50); posto = -1;
     try { localStorage.setItem("nyct-term-storia", JSON.stringify(storia)); } catch (e) { /* niente memoria: pazienza */ }
     scrivi("› " + riga + "\n", "term-comando");
+    if (riga === "aiuto" || riga === "help" || riga === "?") { mostraAiuto(); return; }
     stato(true);
     // quanti caratteri ci stanno in una riga del pannello: nyctalus-cli impagina di conseguenza
     const prova = el("span", "", "x".repeat(50)); prova.style.visibility = "hidden"; uscita.append(prova);
     const colonne = Math.floor((uscita.clientWidth - 24) / (prova.getBoundingClientRect().width / 50)) || 40; prova.remove();
-    manda({ t: "cmd", riga: riga === "aiuto" ? "" : riga, colonne });
+    manda({ t: "cmd", riga, colonne });
     uscita.scrollTop = uscita.scrollHeight;
   }
   function richiama(passo) {
@@ -92,7 +137,7 @@ const Terminale = (() => {
     };
     const su = el("button", "term-tasto", "↑"); su.type = "button"; su.title = "Comando precedente"; su.onclick = () => { richiama(-1); campo.focus(); };
     const vai = el("button", "term-tasto term-vai", "⏎"); vai.type = "submit"; vai.title = "Esegui";
-    ferma = el("button", "term-tasto term-ferma", "⏹"); ferma.type = "button"; ferma.title = "Ferma il comando (Ctrl-C)";
+    ferma = el("button", "term-tasto term-ferma", "■"); ferma.type = "button"; ferma.title = "Ferma il comando (Ctrl-C)";
     ferma.onclick = () => manda({ t: "stop" });
     riga.onsubmit = (e) => { e.preventDefault(); esegui(campo.value); campo.value = ""; };
     riga.append(el("span", "term-prompt", "›"), campo, su, vai, ferma);
@@ -104,9 +149,7 @@ const Terminale = (() => {
       const ind = el("button", "indietro-rubrica", "←"); ind.onclick = chiudiFoglio;
       document.querySelector("#foglio .titolo").prepend(ind);
     }
-    scrivi("Nyctalus dal terminale: chat e file con i tuoi contatti, attraverso la rete.\n" +
-           "Scrivi un comando (senza «nyctalus-cli» davanti) o tocca un pulsante. «aiuto» li elenca tutti.\n" +
-           "Esempi:  scrivi mario ciao  ·  leggi mario  ·  invia mario ~/storage/shared/Download/film.mkv\n\n", "term-tenue");
+    scrivi("Chat e file con i tuoi contatti, scrivendo comandi.\nTocca «aiuto» per l'elenco: toccando un comando lo usi.\n\n", "term-tenue");
     stato(false);
     collega();
   }

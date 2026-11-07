@@ -52,17 +52,23 @@ def colonne():
 
 def aiuto():
     """L'aiuto; su schermi stretti (il pannello del telefono) ogni comando va su due righe."""
-    if colonne() >= 72:
+    larghezza = colonne()
+    if larghezza >= 72:
         return AIUTO
+    import textwrap
+    a_capo = lambda t, rientro: textwrap.wrap(t, max(20, larghezza - 1), initial_indent=rientro,
+                                              subsequent_indent=rientro, break_on_hyphens=False) or [""]
     righe = []
     for r in AIUTO.splitlines():
         m = re.match(r"^  (\S.*?)\s{2,}(\S.*)$", r)
-        if m:
-            righe += ["  " + m.group(1), "      " + m.group(2)]
-        elif r.startswith("    ") and r.strip():
-            righe.append("      " + r.strip())
+        if m:                                        # comando, poi la spiegazione rientrata sotto
+            righe += a_capo(m.group(1), "  ") + a_capo(m.group(2), "      ")
+        elif r.startswith("    ") and r.strip():     # seguito di una spiegazione
+            righe += a_capo(r.strip(), "      ")
+        elif r.startswith("  ") and r.strip():       # comando lungo senza spiegazione sulla riga
+            righe += a_capo(r.strip(), "  ")
         else:
-            righe.append(r)
+            righe += a_capo(r, "") if r else [""]
     return "\n".join(righe)
 
 

@@ -487,3 +487,12 @@ body.solo-rubrica #velo { background: var(--panel); }
   background: rgba(var(--rgb), .12); color: var(--testo); }
 .term-vai { background: var(--invia); color: #fff; }
 .term-ferma:disabled { opacity: .35; }
+.term-aiuto { white-space: normal; font: 14px/1.35 system-ui, sans-serif; margin: 4px 0 12px; display: flex; flex-direction: column; gap: 2px; }
+.term-aiuto-titolo { color: var(--accento); font-weight: 700; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; margin: 12px 2px 4px; }
+.term-aiuto-voce { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; width: 100%;
+  border: 0; border-radius: 10px; padding: 8px 10px; background: rgba(var(--rgb), .07); color: var(--testo); }
+.term-aiuto-voce:active { background: rgba(var(--rgb), .2); }
+.term-aiuto-cmd { font: 600 14px ui-monospace, "DejaVu Sans Mono", monospace; color: var(--testo); }
+.term-aiuto-arg { font-weight: 400; color: var(--tenue); }
+.term-aiuto-desc { font-size: 13px; color: var(--tenue); }
+.term-aiuto-nota { font-size: 12px; color: var(--tenue); margin: 10px 2px 0; }
