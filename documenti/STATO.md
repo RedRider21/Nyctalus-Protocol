@@ -213,6 +213,7 @@ cargo test          # deve dare 95 test superati
 
 ## Release
 **Regola:** una release NUMERATA per ogni pubblicazione importante (tag sul codice di quel momento, note delle novità, «Latest»); i file di una release già pubblicata NON si sostituiscono (prima si faceva, ed è stato un errore: la 0.1.0 ha file più recenti del suo nome, segnalato nelle sue note).
+- **v0.3.6** (07/11/2026, Latest, «anteprima»): impronta uniforme nelle schede 🦇 del browser del PC (prova 30); APK 0.49 invariata.
 - **v0.3.5** (07/11/2026, Latest, «anteprima»): Nyctalus Firefox (J fase 1); APK 0.49 invariata.
 - **v0.3.4** (07/11/2026, Latest, «anteprima»): protezione di serie (Tappa 4), nodi ospiti (Tappa 3), GUIDA-COMPLETA, APK 0.49 (stesso motore della 0.48, CI 42347455902).
 - **v0.3.3** (07/11/2026, Latest, «anteprima»): percorsi casuali + famiglie (Tappa 2), modalità riservata (Tappa 2-bis), PIANO-ANONIMATO, Rispondi/Rifiuta nella notifica, scheda d'aiuto del Terminale; APK 0.48; motori Android/ARM/Windows dalla CI 42347455902.
