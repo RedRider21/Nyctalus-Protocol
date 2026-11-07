@@ -3,6 +3,7 @@
 > Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
 
 ## 07/11/2026 · Rispondi/Rifiuta nella notifica delle chiamate ✅ (APK 0.48)
+- APK 0.48 con il motore Android della CI 42347455902 (percorsi Tappa 2 + modalità riservata).
 - ServizioNotifiche: CallStyle.forIncomingCall (Android 12+, setIsVideo) o due azioni colorate; Rispondi → MainActivity extra `rispondi` (+ `#rispondi=` / `nyctRispondiChiamata`): la web-app risponde appena arriva il CALLIN (il motore lo rimanda dopo SUB); Rifiuta → `RifiutaChiamata` (receiver non esportato) → POST `/api/chiamata/rifiuta` → `CALLNO` al motore. Prova 03 (77/77). La prova 03 usa per «Bob» un indirizzo FINTO da 55 caratteri: per i controlli sull'indirizzo serve uno valido da 56.
 - L'utente: piano di sicurezza PER ULTIMO; prima i punti già previsti.
 
