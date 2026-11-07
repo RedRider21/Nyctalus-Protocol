@@ -65,7 +65,13 @@ PROT=(); PROT_SITO=()
 CAM="$(leggi_cfg camuffamento)"; RUM="$(leggi_cfg rumore)"
 [[ "$CAM" =~ ^[0-9a-f]{64}$ ]] && PROT+=(--obfuscation "$CAM") && PROT_SITO+=(--obfuscation "$CAM")
 [[ "$RUM" =~ ^[0-9]+(\.[0-9]+)?$ ]] && [ -n "${PROT[*]:-}" ] && PROT+=(--cover "$RUM")
-if [ -n "$URL" ] && [ -n "$AUTH" ]; then SOCKS="127.0.0.1:1080"; else SOCKS="127.0.0.1:1086"; fi
+# ponti nascosti della rete (righe segrete): al motore per variabile d'ambiente, non sulla riga
+# di comando, che tutti gli utenti del computer vedono con «ps»
+export NYCTALUS_PONTI="$(python3 -c "import json,sys
+try:
+    c=json.load(open(sys.argv[1])); print(';'.join((c.get('ponti') or {}).get(c.get('authority',''),[])))
+except Exception: print('')" "$CFG" 2>/dev/null)"
+if [ -n "$URL" ] && [ -n "$AUTH" ]; then SOCKS="127.0.0.1:1080"; else SOCKS="127.0.0.1:1086"; NYCTALUS_PONTI=""; fi
 
 # Segreto della porta di controllo: solo la nostra finestra potrà usarla
 # (passa per variabile d'ambiente, così non compare nell'elenco dei processi).

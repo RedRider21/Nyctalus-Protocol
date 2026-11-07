@@ -169,6 +169,9 @@ Note:
 - **Tema**: Notte, Ardesia (stile Telegram), Viola, Chiaro, Menta, Cielo, oppure **🎨 Personalizzato** (selettore di colore o codice `#rrggbb`, più Scuro/Chiaro). Vale per tutta l'app;
 - **Sfondo della chat**: pipistrelli, velo di colore, tinta unita;
 - **Foto senza metadati**;
+- **🌉 Ponti nascosti** (in Rete condivisa, quando sei su una rete condivisa): incolla la
+  riga segreta di un ponte, cioè un'entrata privata fuori dall'elenco. Da quel momento si entra
+  sempre da lì. Spiegazione: `GUIDA-COMPLETA.md` §13.
 - **Rete condivisa** (la stessa della riga 🔗 Rete della schermata iniziale: vale per tutta
   l'app): **📥 Importa codice** → incolla il codice `NYCT1:…` che ti ha dato
   chi gestisce la rete (per la rete di casa lo mostra il PC: apri nel browser del

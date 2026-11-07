@@ -36,7 +36,7 @@ pub async fn prova_circuito(percorso_rete: Vec<crate::avvia_circuito::NodoRete>,
         None => crate::tls::config_client_insicuro()?,
     };
     endpoint.set_default_client_config(config);
-    let connessione = endpoint.connect(guardiano, "nyctalus.invalid")?.await?;
+    let connessione = endpoint.connect(guardiano, &crate::tls::nome_per(&guardiano))?.await?;
     let (mut invio, mut ricezione) = connessione.open_bi().await?;
 
     // 1) Apertura del circuito (1º quadro).

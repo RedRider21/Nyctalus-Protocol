@@ -5,6 +5,7 @@
 # Gestione dei nodi Nyctalus installati su questo server.
 #   nyctalus-server stato     servizi attivi e porte
 #   nyctalus-server righe     le righe d'elenco da mandare al gestore della rete
+#                             (o, per un ponte nascosto, le righe segrete del ponte)
 #   nyctalus-server avvia | ferma | riavvia
 #   nyctalus-server log [PORTA]   ultimi messaggi dei nodi
 set -u
@@ -27,7 +28,11 @@ case "${1:-stato}" in
     for u in "${UNITA[@]}"; do
       s=$("${SC[@]}" is-active "$u" 2>/dev/null); printf '  %-24s %s\n' "$u" "${s:-sconosciuto}"
     done ;;
-  righe) cat "$NYCTALUS_STATO"/nodo-*/riga-elenco.txt ;;
+  righe) cat "$NYCTALUS_STATO"/nodo-*/riga-elenco.txt 2>/dev/null
+         if ls "$NYCTALUS_STATO"/nodo-*/riga-ponte.txt >/dev/null 2>&1; then
+           echo "# PONTI NASCOSTI: righe SEGRETE, solo per chi entra da qui" >&2
+           cat "$NYCTALUS_STATO"/nodo-*/riga-ponte.txt
+         fi ;;
   avvia|ferma|riavvia)
     az=$(case "$1" in avvia) echo start ;; ferma) echo stop ;; riavvia) echo restart ;; esac)
     "${SC[@]}" "$az" "${UNITA[@]}" && echo "✓ $1: ${UNITA[*]}" ;;

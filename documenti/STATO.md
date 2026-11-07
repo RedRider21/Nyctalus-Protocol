@@ -2,6 +2,21 @@
 
 > Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
 
+## ⚠️ DA FARE ALLA FINE DI TUTTO (richiesta dell'utente, 07/11/2026)
+1. **Guida passo per passo per il caso dell'utente**: installazione sul **telefono**, sul **PC di casa** e su
+   **un altro PC di casa come nodo/server raggiungibile da Internet**; ogni comando spiegato e nell'ordine giusto.
+2. **Glossario** di termini e comandi con il loro significato/funzione.
+3. **Riordino organico di tutta la documentazione** (manuali, guide, sito).
+L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
+
+## 07/11/2026 · Invisibilità punto 1: ponti nascosti ✅ + resistenza alle sonde + verifica delle scelte di fondo
+- Motore: `node --hidden-bridge` (chiave propria in `chiave-ponte`, riga segreta `riga-ponte.txt`), client `--bridge`/`NYCTALUS_PONTI`/`bridge =`; entrata sempre dal ponte (circuiti e siti `.nyct`).
+- **Resistenza alle sonde** (trasporto.rs): quinn rispondeva con Version Negotiation a byte casuali ≥1200 → 63/20.000 sonde con risposta sul motore 0.3.7 camuffato; ora 0. Compatibile con i nodi vecchi.
+- **Nome nel primo pacchetto tolto**: `nyctalus.invalid` era leggibile (Initial QUIC decifrabile da chiunque) a camuffamento spento; ora connessioni per IP (nessun SNI). ALPN `h3` rimandato al trasporto mimetico (rompe la compatibilità: rustls hs.rs).
+- `simulazione/verifica_paradigmi.py`: UDP/QUIC, entrata unica, ragnatela, cipolla, camuffamento, rumore verificati sui pacchetti (SICUREZZA §1.1-ter). SPECIFICA §8.1 corretta (porta 4601, non 443; TCP 443 non c'è).
+- Gestore PC `nyctalus-rete ponte aggiungi|togli|elenco` (config 600, per rete); avvia-chat/firefox/browser/sito via ambiente; `usa N` ora aggiorna anche camuffamento/rumore (difetto vecchio). Server `installa.sh --ponte`, `nyctalus-server righe`. Telefono: Impostazioni → Rete condivisa → 🌉 Ponti nascosti (sw v43).
+- Prova `32-ponte-nascosto` (21 verifiche). La suite ha trovato che ammettere per solo IP lasciava passare sonde dallo stesso computer/NAT di un utente vero → ora si ammette IP+porta. Corretto anche un test intermittente (`incontro` usava la guardia condivisa senza il blocco delle prove dei percorsi).
+
 ## 07/11/2026 · Tabella Nyctalus/Tor ✅
 - Home di Pages (IT/EN, voce «Tor» nel menu), README, PIANO-ANONIMATO («Nyctalus e Tor, a confronto») e domanda rapida in «Inizia qui»: misure K + cosa c'è/manca, onesta (tolte le frasi esagerate del vecchio confronto).
 - Prossimo: invisibilità punto 1, **ponti nascosti**.

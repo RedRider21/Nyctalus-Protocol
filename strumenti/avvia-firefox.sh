@@ -62,6 +62,12 @@ else
   CAM="$(leggi_cfg camuffamento)"; RUM="$(leggi_cfg rumore)"
   [[ "$CAM" =~ ^[0-9a-f]{64}$ ]] && PROT+=(--obfuscation "$CAM")
   [[ "$RUM" =~ ^[0-9]+(\.[0-9]+)?$ ]] && [ -n "${PROT[*]:-}" ] && PROT+=(--cover "$RUM")
+  # ponti nascosti della rete (righe segrete): al motore per variabile d'ambiente, non sulla riga
+  # di comando, che tutti gli utenti del computer vedono con «ps»
+  export NYCTALUS_PONTI="$(python3 -c "import json,sys
+  try:
+      c=json.load(open(sys.argv[1])); print(';'.join((c.get('ponti') or {}).get(c.get('authority',''),[])))
+  except Exception: print('')" "$CFG" 2>/dev/null)"
   "$BIN" start --directory "$WORK/dir.txt" --authority "$AUTH" --socks 127.0.0.1:1080 ${PROT[@]+"${PROT[@]}"} > "$WORK/rete.log" 2>&1 & MIO=$!
   for _ in $(seq 1 60); do porta_occupata 1080 && break; sleep 0.25; done
   porta_occupata 1080 || { avviso "La rete Nyctalus non parte: $(tail -2 "$WORK/rete.log" | tr '\n' ' ')"; exit 1; }

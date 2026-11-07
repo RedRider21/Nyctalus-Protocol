@@ -235,11 +235,30 @@ irraggiungibile, non lo sostituisce. Le voci con IP restano codificate come prim
 ## 8. Camuffamento (L0) 📐
 
 ### 8.1 Porta e mimetizzazione
-- **Porta predefinita: UDP 443**, configurabile. Il trasporto è QUIC (UDP), e HTTP/3 vive proprio su UDP 443: il traffico Nyctalus si confonde con un normale sito moderno o una videochiamata. La **porta 80 non si usa**: è HTTP in chiaro su TCP e ci farebbe dare nell'occhio.
-- ✅ **Offuscamento implementato** (`motore/nyctalus-core/src/offuscamento.rs`, `motore/nyctalus/src/trasporto.rs`): con una chiave di rete condivisa, ogni datagramma UDP è avvolto con ChaCha20 (nonce casuale per datagramma); sul filo è indistinguibile da rumore, quindi niente firma QUIC per il DPI. Attivabile con `--obfuscation`/`obfuscation`. Limiti attuali: niente resistenza al probing attivo né shaping dei tempi (rumore di fondo), che restano da fare.
-- Il collegamento tra nodi usa QUIC con una stretta di mano TLS 1.3 **indistinguibile da quella dei browser comuni**.
-- Un nodo sondato da un censore risponde come un normale sito web; solo chi presenta un segreto valido accede al protocollo, come fanno WebTunnel e obfs4.
-- Dove UDP è bloccato, ripiego su **TCP 443** travestito da HTTPS classico.
+Stato verificato sul traffico vero il 07/11/2026 (`simulazione/verifica_paradigmi.py`, pacchetti
+catturati in Shadow su tutte le macchine):
+- ✅ **Trasporto QUIC su UDP**: fra utente e rete solo UDP, nessuna connessione TCP.
+- **Porta:** di serie **UDP 4601** (installatore dei server) o 4600; si può scegliere **UDP 443**
+  (`installa.sh --porta 443`), la porta di HTTP/3, che dà meno nell'occhio. La porta 80 non si usa.
+- ✅ **Offuscamento** (`motore/nyctalus-core/src/offuscamento.rs`, `motore/nyctalus/src/trasporto.rs`):
+  con la chiave della rete ogni datagramma è avvolto con ChaCha20 (nonce casuale): sul filo nessuna
+  intestazione QUIC, byte distribuiti come rumore. Di serie nelle reti nuove (dalla 0.3.4).
+- ✅ **Resistenza alle sonde** (dalla 0.3.8): l'offuscamento non autentica, e QUIC rispondeva a
+  certi byte a caso (negoziazione di versione): misurato **63 risposte su 20.000 sonde**, abbastanza
+  per scoprire un nodo. Ora da un indirizzo sconosciuto passa solo un vero `Initial` QUIC v1:
+  **0 risposte su 20.000**. Un nodo sondato senza chiave sembra un indirizzo spento.
+- ✅ **Ponti nascosti** (dalla 0.3.8): entrate fuori dall'elenco pubblico con una chiave propria
+  (`node --hidden-bridge`, client `--bridge`/`NYCTALUS_PONTI`).
+- ✅ **Nessun nome nel primo pacchetto** (dalla 0.3.8): prima il client mandava il nome
+  `nyctalus.invalid`, leggibile da chiunque nel primo pacchetto QUIC (le cui chiavi sono pubbliche)
+  quando il camuffamento era spento; ora ci si collega per indirizzo IP e il nome non c'è.
+- 📐 **Da fare (trasporto mimetico, PIANO-ANONIMATO):** sembrare davvero HTTP/3 di un browser
+  (ALPN `h3`, parametri di trasporto e dimensioni come Chrome/Firefox) o una videochiamata WebRTC;
+  l'ALPN cambia la stretta di mano e va introdotto insieme a un salto di versione del protocollo
+  (un nodo vecchio rifiuta un client che lo offre, rustls `server/hs.rs`). Ripiego su **TCP 443**
+  dove UDP è bloccato: non c'è ancora.
+- Dimensioni sul filo: le celle sono fisse **dentro** il circuito; i datagrammi QUIC invece hanno
+  lunghezze diverse (pieni ~1200-1420 byte, più conferme e code più corte).
 
 ### 8.2 HTTP e HTTPS: due livelli distinti
 - **Dentro la rete:** Nyctalus trasporta qualunque protocollo (come Tor con qualsiasi TCP). Il nodo d'uscita parla HTTP/HTTPS con il sito di destinazione. HTTP/HTTPS stanno quindi *sopra* la rete, verso il sito finale, non sono il protocollo di trasporto.

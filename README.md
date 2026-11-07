@@ -107,7 +107,7 @@ Dove siamo e le prossime tappe: [piano verso una rete anonima](documenti/manuali
         settimane)     └──► nodo ──► nodo ──┘     oppure sito interno .nyct)
 ```
 
-1. **Camuffamento:** il traffico sembra una normale connessione HTTPS (QUIC su UDP 443).
+1. **Camuffamento:** QUIC su UDP; con la chiave della rete (di serie nelle reti nuove) ogni pacchetto sembra rumore, e chi sonda un nodo senza chiave non riceve risposta. Con i **ponti nascosti** si entra da un indirizzo privato, fuori dall'elenco.
 2. **Ingresso fisso:** il primo nodo resta lo stesso per settimane; è l'unico che vede il tuo IP, ma non sa dove vai.
 3. **Ragnatela:** i dati, spezzati in frammenti, viaggiano in parallelo su più strade.
 4. **Cipolla:** ogni frammento è chiuso in più strati; ogni nodo ne toglie uno e scopre solo il nodo successivo.
@@ -197,6 +197,7 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 - **CLI (comandi in inglese):** demone `nyctalus start` (SOCKS5 da configurazione, ragnatela conflux), `nyctalus status` e `nyctalus nodes` (elenco dei nodi, con `--probe` per vedere quali sono raggiungibili ora e il loro tempo di risposta); comandi di test `circuit`, `node`, `directory`, `authority`.
 - **Elenco firmato dei nodi** (directory, autorità Ed25519) e **autenticazione dei collegamenti**: il client pinna il guard, ogni relè pinna il nodo a valle con l'impronta presa dall'elenco firmato.
 - **Circuito condiviso**: un solo circuito trasporta più connessioni, multiplexate con celle dentro gli strati a cipolla (i relè restano ciechi ai singoli flussi).
+- **Ponti nascosti e resistenza alle sonde** (0.3.8): entrate private fuori dall'elenco, con una chiave propria (`installa.sh --ponte`, `nyctalus-rete ponte aggiungi`, telefono 🌉); un nodo camuffato o un ponte non risponde a chi lo sonda senza chiave. Le scelte di fondo (UDP/QUIC, ragnatela, cipolla, camuffamento) sono **verificate sui pacchetti** in Shadow: `simulazione/verifica_paradigmi.py`.
 - **Ponte verso i `.onion` di Tor**: l'uscita riconosce gli indirizzi `.onion` e li raggiunge attraverso un Tor già presente sul sistema (proxy SOCKS, `--tor-socks`, default `127.0.0.1:9050`); i siti normali vanno in TCP diretto.
 - **Camuffamento del trasporto**: con una chiave di rete, ogni datagramma UDP è offuscato (ChaCha20): sul filo appare rumore casuale, senza la firma di QUIC riconoscibile da un DPI. Opzione `--obfuscation` / `obfuscation` nel config.
 - **Ragnatela (conflux)**: un singolo scaricamento viene **spezzato su più circuiti** (guard e uscita condivisi, intermedi diversi) e **ricomposto a destinazione** grazie a una sequenza end-to-end dentro l'onion — così sfrutta la banda di più strade.

@@ -19,7 +19,7 @@ pub async fn avvia(uscita: SocketAddr, impronta: [u8; 32], socks: SocketAddr) ->
     let locale: SocketAddr = if uscita.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
     let mut endpoint = quinn::Endpoint::client(locale)?;
     endpoint.set_default_client_config(crate::tls::config_client(impronta)?);
-    let connessione = endpoint.connect(uscita, crate::tls::NOME_SERVER)?.await?;
+    let connessione = endpoint.connect(uscita, &crate::tls::nome_per(&uscita))?.await?;
     println!("Connected to exit node {uscita}");
 
     let ascoltatore = TcpListener::bind(socks).await?;

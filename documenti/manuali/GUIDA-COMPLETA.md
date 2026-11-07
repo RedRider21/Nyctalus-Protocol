@@ -107,7 +107,7 @@ codice di rete.
    ```
    Nasce **protetta** (camuffamento e rumore di fondo, [§12](#12-protezione-camuffamento-e-rumore-di-fondo)): il comando stampa la chiave per i
    nodi. Fai una copia di sicurezza di `~/.nyctalus-rete`.
-3. **Aggiungi i nodi** con le righe ricevute, ognuno con la **famiglia** del suo gestore ([§13](#13-famiglie-e-nodi-di-amici)):
+3. **Aggiungi i nodi** con le righe ricevute, ognuno con la **famiglia** del suo gestore ([§13](#14-famiglie-e-nodi-di-amici)):
    ```sh
    nyctalus-rete aggiungi --famiglia mario 'RIGA1' 'RIGA2'
    nyctalus-rete firma
@@ -146,9 +146,10 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi **gestisce
 | [Rete di casa / via Internet](#10-rete-di-casa-e-via-internet) | provare senza server | — |
 | [Rubrica e casella](#11-rubrica-e-casella) | posta per chi è spento, elenco di chi c'è | accese nella rete di casa |
 | [Protezione: camuffamento e rumore](#12-protezione-camuffamento-e-rumore-di-fondo) | traffico simile a rumore, ritmi nascosti | accesa nelle reti nuove |
-| [Famiglie e nodi di amici](#13-famiglie-e-nodi-di-amici) | mai due nodi dello stesso gestore in un percorso | — |
-| [Modalità rigida](#14-modalita-rigida) | rifiutare i percorsi non anonimi | spenta |
-| [Opzioni del motore](#15-opzioni-avanzate-del-motore) | salti, strade parallele (per esperti) | 3 · 2 |
+| [Ponti nascosti](#13-ponti-nascosti) | entrare da un indirizzo privato, fuori dall'elenco; invisibile alle sonde | nessuno |
+| [Famiglie e nodi di amici](#14-famiglie-e-nodi-di-amici) | mai due nodi dello stesso gestore in un percorso | — |
+| [Modalità rigida](#15-modalita-rigida) | rifiutare i percorsi non anonimi | spenta |
+| [Opzioni del motore](#16-opzioni-avanzate-del-motore) | salti, strade parallele (per esperti) | 3 · 2 |
 
 ---
 
@@ -286,7 +287,9 @@ nyctalus-rete codice --url URL           # poi il codice le include
 ### 12. Protezione: camuffamento e rumore di fondo
 **A cosa serve:**
 - **camuffamento**: ogni pacchetto è reso simile a rumore con una chiave della rete. Chi
-  guarda il traffico non riconosce Nyctalus, e chi non ha la chiave non riesce a collegarsi;
+  guarda il traffico non riconosce Nyctalus, e chi non ha la chiave non riesce a collegarsi.
+  Dalla 0.3.8 un nodo camuffato **non risponde a nessuna sonda** (prima rispondeva circa una
+  volta ogni 300 tentativi, e così si faceva scoprire);
 - **rumore di fondo**: celle finte a ritmo casuale, così i momenti in cui usi davvero la
   rete si notano meno.
 
@@ -305,7 +308,40 @@ Dopo il cambio: riavvia la rete (o la rete di casa), ridai il codice e reinstall
 server con `./installa.sh --codice NYCT1:…` (oppure `--camuffamento CHIAVE --rumore N`). Client
 PC, telefono e Windows prendono tutto dal codice, da soli.
 
-### 13. Famiglie e nodi di amici
+### 13. Ponti nascosti
+**A cosa serve:** di solito si entra nella rete da un nodo dell'**elenco pubblico**: chi osserva
+la tua linea (il fornitore Internet, la rete dell'ufficio, un paese che censura) può confrontare
+l'indirizzo con l'elenco e capire che usi Nyctalus. Un **ponte** è un'entrata **privata**:
+
+- non è nell'elenco, quindi il suo indirizzo non dice niente;
+- ha una **chiave tutta sua**: chi lo sonda senza la chiave (anche chi ha il codice della rete)
+  non riceve **nessuna risposta**, come se l'indirizzo fosse spento;
+- con almeno un ponte si entra **sempre** da lì, mai dai nodi dell'elenco.
+
+**Costo:** nessuno in velocità (il ponte prende il posto della guardia). Serve qualcuno che
+tenga acceso il ponte. La **riga del ponte è segreta**: chi la ha può trovarlo.
+**Di serie:** nessun ponte.
+
+**1) Chi ospita il ponte** (un server o un PC sempre acceso, anche di un amico):
+```sh
+sudo ./installa.sh --ponte --codice NYCT1:…      # pacchetto server; stampa la RIGA DEL PONTE
+nyctalus-server righe                             # la ristampa
+```
+La riga (`IP:PORTA,chiave,impronta,chiave-del-ponte`) **non** va al gestore della rete: va
+solo, a mano, a chi deve entrare da lì.
+
+**2) Chi usa il ponte:**
+- **PC:** `nyctalus-rete ponte aggiungi 'RIGA'` · `nyctalus-rete ponte elenco` ·
+  `nyctalus-rete ponte togli IP:PORTA` (o `tutti`). Poi chiudi e riapri chat e browser.
+- **Telefono / Windows:** ⚙️ Impostazioni → **Rete condivisa** → **🌉 Ponti nascosti** →
+  incolla la riga → **Aggiungi** (la rete riparte da sola).
+
+I ponti valgono **per la rete** a cui li hai aggiunti: cambiando rete restano da parte. Il
+motore li riceve per variabile d'ambiente, mai sulla riga di comando (che altri utenti del
+computer potrebbero leggere). A mano: `NYCTALUS_PONTI='RIGA' nyctalus start …` oppure
+`--bridge 'RIGA'`; un nodo diventa ponte con `nyctalus node … --hidden-bridge`.
+
+### 14. Famiglie e nodi di amici
 **A cosa serve:** un percorso fa 3 salti. Se due salti sono **dello stesso gestore**, lui
 vede entrata e uscita. Con le **famiglie** dichiari quali nodi sono della stessa persona o
 dello stesso fornitore: un percorso non ne userà mai due insieme. Servono **almeno 3
@@ -323,7 +359,7 @@ nyctalus-rete ospite elenco [--internet]
 Le righe dei nodi le stampa l'installatore sulla macchina dell'amico. Le famiglie vanno
 usate quando **tutti** hanno la 0.3.3 o successiva. Dettagli: `MANUALE-GESTORE-RETE.md`.
 
-### 14. Modalità rigida
+### 15. Modalità rigida
 **A cosa serve:** se la regola delle famiglie non si può rispettare (per esempio nodi tutti
 su un PC), di solito il motore **funziona lo stesso** e avvisa «cifrato ma NON anonimo». In
 modalità rigida invece **si rifiuta**: meglio niente che un percorso non anonimo.
@@ -332,7 +368,7 @@ modalità rigida invece **si rifiuta**: meglio niente che un percorso non anonim
 NYCTALUS_PARENTELA=rigida nyctalus-chat          # o davanti a qualunque comando del motore
 ```
 
-### 15. Opzioni avanzate del motore
+### 16. Opzioni avanzate del motore
 Per chi usa il motore a mano (`nyctalus start`, `nyctalus circuit`…). Tutte in `DEPLOY.md`.
 
 | Opzione | A cosa serve | Valori |
@@ -341,3 +377,5 @@ Per chi usa il motore a mano (`nyctalus start`, `nyctalus circuit`…). Tutte in
 | `--circuits N` | strade parallele (più veloce) | 1-8, di serie 2 |
 | `--cover HZ` | rumore di fondo (celle finte al secondo) | di serie 0, o quello della rete |
 | `--obfuscation HEX` | camuffamento con la chiave della rete | quella del codice |
+| `--bridge RIGA` / `NYCTALUS_PONTI` | entrare da un ponte nascosto | nessuno |
+| `--hidden-bridge` (nodo) | il nodo fa da ponte nascosto | spento |

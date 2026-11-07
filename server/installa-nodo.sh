@@ -12,13 +12,15 @@
 # Opzioni: --ip IP  --nodi N (1-8)  --porta PRIMA_PORTA  --camuffamento HEX
 #          --rumore HZ  --utente  --si (nessuna domanda: valori indicati o predefiniti)
 #          --codice NYCT1:…  il codice della rete: ne prende camuffamento e rumore di fondo
+#          --ponte   PONTE NASCOSTO: i nodi non vanno nell'elenco pubblico; ognuno ha una sua
+#                    chiave e stampa una RIGA DEL PONTE segreta, da dare solo a chi lo usa
 #
 # Alla fine stampa le RIGHE D'ELENCO dei nodi: vanno mandate a chi gestisce la rete,
 # che le firma (nyctalus-rete aggiungi … && nyctalus-rete firma).
 set -euo pipefail
 QUI="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 R="${NYCTALUS_RADICE:-}"            # solo per le prove: radice finta al posto di /
-IP=""; NODI=""; PORTA=""; CAMUFFA=""; RUMORE="0"; UTENTE=0; SI=0; CODICE=""
+IP=""; NODI=""; PORTA=""; CAMUFFA=""; RUMORE="0"; UTENTE=0; SI=0; CODICE=""; PONTE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --ip) IP="$2"; shift ;;
@@ -28,6 +30,7 @@ while [ $# -gt 0 ]; do
     --rumore) RUMORE="$2"; shift ;;
     --codice) CODICE="$2"; shift ;;
     --utente) UTENTE=1 ;;
+    --ponte) PONTE=1 ;;
     --si) SI=1 ;;
     *) echo "opzione sconosciuta: $1"; exit 2 ;;
   esac
@@ -106,6 +109,8 @@ fi
 
 OPZIONI="--cover $RUMORE"
 [ -n "$CAMUFFA" ] && OPZIONI="$OPZIONI --obfuscation $CAMUFFA"
+[ "$PONTE" = 1 ] && OPZIONI="$OPZIONI --hidden-bridge"
+RIGA_F="riga-elenco.txt"; [ "$PONTE" = 1 ] && RIGA_F="riga-ponte.txt"
 umask 077
 cat > "$CONF" <<EOF
 # Nyctalus server: letto dai servizi nyctalus-nodo@PORTA (modifica e poi: nyctalus-server riavvia)
@@ -123,13 +128,15 @@ umask 022
 say "Preparo l'identità di ${#PORTE[@]} nodi"
 for p in "${PORTE[@]}"; do
   D="$STATO/nodo-$p"; mkdir -p "$D"; chmod 700 "$D"
-  if [ ! -s "$D/riga-elenco.txt" ] || ! grep -q "^$IP:$p," "$D/riga-elenco.txt"; then
-    rm -f "$D/riga-elenco.txt"
-    "$BASE/bin/nyctalus" node --listen 127.0.0.1:0 --data "$D" --announce "$IP:$p" > /dev/null 2>&1 & NP=$!
-    for _ in $(seq 1 50); do [ -s "$D/riga-elenco.txt" ] && break; sleep 0.1; done
+  if [ ! -s "$D/$RIGA_F" ] || ! grep -q "^$IP:$p," "$D/$RIGA_F"; then
+    rm -f "$D/riga-elenco.txt" "$D/riga-ponte.txt"
+    PARTE=(); [ "$PONTE" = 1 ] && PARTE=(--hidden-bridge)
+    "$BASE/bin/nyctalus" node --listen 127.0.0.1:0 --data "$D" --announce "$IP:$p" ${PARTE[@]+"${PARTE[@]}"} > /dev/null 2>&1 & NP=$!
+    for _ in $(seq 1 50); do [ -s "$D/$RIGA_F" ] && break; sleep 0.1; done
     kill "$NP" 2>/dev/null || true; wait "$NP" 2>/dev/null || true
-    [ -s "$D/riga-elenco.txt" ] || err "identità del nodo $p non creata"
+    [ -s "$D/$RIGA_F" ] || err "identità del nodo $p non creata"
   fi
+  [ "$PONTE" = 0 ] && rm -f "$D/riga-ponte.txt" "$D/chiave-ponte"     # di nuovo nodo normale: niente chiave vecchia
 done
 [ -n "$PROPRIETARIO" ] && chown -R "$PROPRIETARIO:" "$STATO"
 
@@ -170,6 +177,24 @@ elif command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1;
   for p in "${PORTE[@]}"; do firewall-cmd --permanent --add-port="$p/udp" >/dev/null; done; firewall-cmd --reload >/dev/null; ok "Firewall (firewalld): aperte le porte UDP ${PORTE[*]}"
 else
   avv "Nessun firewall attivo rilevato. Se il fornitore ha un firewall nel pannello, apri lì le porte UDP ${PORTE[*]}."
+fi
+
+# --- ponte nascosto: le righe sono SEGRETE ------------------------------------------------
+if [ "$PONTE" = 1 ]; then
+  RIGHE="$(dirname "$CONF")/righe-ponti.txt"
+  ( umask 077; cat "$STATO"/nodo-*/riga-ponte.txt > "$RIGHE" )
+  [ -n "$PROPRIETARIO" ] && chown -R "$PROPRIETARIO:" "$STATO"
+  echo
+  ok "Ponti nascosti installati. Queste righe sono SEGRETE: dalle SOLO a chi deve entrare da qui"
+  echo "   (non al gestore della rete, non in chat pubbliche: chi le ha può trovare il ponte):"
+  echo
+  sed 's/^/   /' "$RIGHE"
+  echo
+  echo "   (salvate in $RIGHE, leggibili solo da root · ristampale con: nyctalus-server righe)"
+  echo "   Chi le riceve, sul PC:  nyctalus-rete ponte aggiungi 'RIGA'"
+  echo "   sul telefono: Impostazioni → Rete → Ponti nascosti."
+  echo "   Gestione: nyctalus-server stato | righe | riavvia | ferma | avvia | log"
+  exit 0
 fi
 
 # --- le righe da mandare al gestore -----------------------------------------------------

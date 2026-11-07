@@ -75,6 +75,31 @@ riposo. Non vede *cosa* passa né *con chi*. La maggior parte dei pacchetti ha l
 dimensione (~1420 byte, celle a lunghezza fissa). Per nascondere anche il ritmo esiste il
 **rumore di fondo** (`--cover`, §2.5), a costo di banda.
 
+### 1.1-ter Sonde, ponti nascosti e scelte di fondo verificate sul traffico vero
+
+```sh
+bash test/funzionamento/32-ponte-nascosto.sh          # ponti nascosti e sonde (in locale)
+python3 simulazione/verifica_paradigmi.py CARTELLA [--camuffamento] [--rumore 0.2]   # in Shadow
+```
+
+**Sonde di un censore.** `test/strumenti/sonda_quic.py` manda a un nodo datagrammi come l'inizio
+di un collegamento QUIC e byte a caso. Un nodo **senza** camuffamento risponde (si scopre); un nodo
+camuffato e un ponte nascosto **non rispondono mai**. Misura su 20.000 sonde a raffica: motore
+0.3.7 camuffato **63 risposte**, motore 0.3.8 **0**.
+
+**Le scelte di fondo, controllate sui pacchetti** (Shadow, cattura su utente, 4 nodi e sito):
+
+| Scelta | Verificato |
+|---|---|
+| trasporto QUIC su UDP | ✅ solo UDP fra utente e rete, 0 pacchetti TCP |
+| entrata unica | ✅ l'utente parla solo con la sua entrata (o il suo ponte) |
+| ragnatela (più circuiti) | ✅ i due nodi intermedi portano **metà ciascuno** dello stesso scaricamento |
+| cipolla | ✅ il contenuto è in chiaro **solo** fra uscita e sito, mai su entrata, intermedi, linea dell'utente |
+| camuffamento | ✅ nessuna intestazione QUIC visibile, primo byte distribuito come rumore |
+| senza camuffamento | ⚠️ si riconosce QUIC; il **nome** nel primo pacchetto (`nyctalus.invalid`) è stato **tolto** nella 0.3.8 |
+| rumore di fondo | ✅ traffico anche da fermi (1,3 contro 0,9 pacchetti/s a 0,2 celle/s) |
+| celle fisse | ✅ dentro il circuito; i datagrammi QUIC sul filo hanno lunghezze diverse |
+
 ### 1.1-bis Impronta del browser del PC (schede 🦇)
 Le schede Stealth hanno un'**impronta uniforme**: identità Safari/macOS, lingua en-US (anche
 nell'intestazione), ora UTC, schermo arrotondato, 2 processori, niente WebGL, Web Audio e

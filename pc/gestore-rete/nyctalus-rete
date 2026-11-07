@@ -38,6 +38,9 @@ Per i CLIENT (chi usa la rete):
   nyctalus-rete importa CODICE|FILE      collega questo PC alla rete del codice
   nyctalus-rete importa --prova          torna alla rete di prova locale
   nyctalus-rete reti                     le reti salvate (● quella in uso)
+  nyctalus-rete ponte aggiungi RIGA…     PONTI NASCOSTI della rete in uso: si entra sempre da lì
+                                         (righe SEGRETE avute da chi gestisce il ponte)
+  nyctalus-rete ponte togli IP:PORTA|tutti · ponte elenco
   nyctalus-rete usa N                    passa alla rete salvata N
   nyctalus-rete stato                    a quale rete è collegato questo PC
 
@@ -456,10 +459,25 @@ def importa(argomento):
                                                     and r["directory_url"] == rete["directory_url"])]
         cfg["reti"] = (reti + [rete])[-20:]
         msg = "questo PC ora usa la rete «%s» (impronta %s)" % (rete["nome"], impronta(rete["authority"]))
-    CONFIG_CLIENT.parent.mkdir(parents=True, exist_ok=True)
-    CONFIG_CLIENT.write_text(json.dumps(cfg, indent=1) + "\n")
+    scrivi_config_client(cfg)
     ok(msg)
+    if ponti_della_rete(cfg):
+        print("  Per questa rete hai %d ponti nascosti: si entra da lì." % len(ponti_della_rete(cfg)))
     print("  Chiudi e riapri chat e browser perché la usino.")
+
+
+PONTE = re.compile(r"^(\[?[0-9A-Za-z.:-]+\]?):(\d{1,5}),([0-9a-f]{64}),([0-9a-f]{64}),([0-9a-f]{64})$")
+
+
+def scrivi_config_client(cfg):
+    """La configurazione del client; leggibile solo dal proprietario (ci sono le chiavi dei ponti)."""
+    CONFIG_CLIENT.parent.mkdir(parents=True, exist_ok=True)
+    scrivi_privato(CONFIG_CLIENT, json.dumps(cfg, indent=1) + "\n")
+
+
+def ponti_della_rete(cfg):
+    """I ponti nascosti per la rete in uso (per autorità: cambiando rete restano da parte)."""
+    return [r for r in (cfg.get("ponti") or {}).get(cfg.get("authority", ""), []) if PONTE.match(r)]
 
 
 def leggi_config_client():
@@ -498,11 +516,11 @@ def usa_rete(n):
         esci("rete %d non trovata (nyctalus-rete reti per l'elenco)" % n)
     r = reti[n]
     cfg.update({"directory_url": r["directory_url"], "authority": r["authority"], "nome_rete": r["nome"], "reti": reti})
-    for k in ("rubrica", "casella"):          # rubrica e casella della rete (se ci sono)
+    for k in ("rubrica", "casella", "camuffamento", "rumore"):   # della rete (se ci sono)
         cfg.pop(k, None)
         if r.get(k):
             cfg[k] = r[k]
-    CONFIG_CLIENT.write_text(json.dumps(cfg, indent=1) + "\n")
+    scrivi_config_client(cfg)
     ok("questo PC ora usa la rete «%s» (impronta %s)" % (r["nome"], impronta(r["authority"])))
     print("  Chiudi e riapri chat e browser perché la usino.")
 
@@ -1000,6 +1018,44 @@ def principale(args):
         importa(args[0])
     elif cmd == "stato":
         stato_client()
+    elif cmd == "ponte":
+        cfg = leggi_config_client()
+        if not cfg.get("authority"):
+            esci("prima collega questo PC a una rete: nyctalus-rete importa CODICE")
+        sotto = args.pop(0) if args else "elenco"
+        tutti = dict(cfg.get("ponti") or {})
+        prima = ponti_della_rete(cfg)
+        if sotto == "aggiungi":
+            nuove = [a.strip() for a in args if a.strip()]
+            for r in nuove:
+                if not PONTE.match(r):
+                    esci("riga del ponte non valida: %r\n  attesa: IP:PORTA,chiave,impronta,chiave-ponte (la stampa «installa.sh --ponte»)" % r[:60])
+            if not nuove:
+                esci("indica la riga del ponte (segreta: te la dà chi gestisce il ponte)")
+            indirizzi = {r.split(",")[0] for r in nuove}
+            tutti[cfg["authority"]] = [r for r in prima if r.split(",")[0] not in indirizzi] + nuove
+            cfg["ponti"] = tutti
+            scrivi_config_client(cfg)
+            ok("%d ponti nascosti per la rete «%s»: d'ora in poi si entra sempre da lì" % (len(nuove), cfg.get("nome_rete", "?")))
+            print("  Chiudi e riapri chat e browser perché li usino.")
+        elif sotto == "togli":
+            if not args:
+                esci("indica IP:PORTA del ponte (o «tutti»)")
+            resto = [] if args[0] == "tutti" else [r for r in prima if r.split(",")[0] != args[0]]
+            if len(resto) == len(prima):
+                esci("nessun ponte %s" % args[0])
+            tutti[cfg["authority"]] = resto
+            cfg["ponti"] = {k: v for k, v in tutti.items() if v}
+            scrivi_config_client(cfg)
+            ok("ponte tolto" + ("" if resto else ": si entra di nuovo dai nodi dell'elenco"))
+        elif sotto == "elenco":
+            if not prima:
+                print("Nessun ponte nascosto: si entra dai nodi dell'elenco pubblico.")
+                print("Aggiungine uno: nyctalus-rete ponte aggiungi 'RIGA'")
+            for r in prima:
+                print("  🌉 %s" % r.split(",")[0])
+        else:
+            esci("uso: nyctalus-rete ponte aggiungi|togli|elenco")
     elif cmd == "reti":
         elenca_reti()
     elif cmd == "usa":

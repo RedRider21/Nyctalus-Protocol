@@ -93,7 +93,7 @@ async fn sonda_nodo(
     let inizio = Instant::now();
     let connessione = tokio::time::timeout(scadenza, async {
         endpoint
-            .connect_with(config, addr, "nyctalus.invalid")
+            .connect_with(config, addr, &crate::tls::nome_per(&addr))
             .map_err(|e| e.to_string())?
             .await
             .map_err(|e| e.to_string())

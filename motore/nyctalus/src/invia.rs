@@ -27,7 +27,7 @@ pub async fn invia(
         if destinazione.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
     let mut endpoint = quinn::Endpoint::client(locale)?;
     endpoint.set_default_client_config(tls::config_client(impronta)?);
-    let connessione = endpoint.connect(destinazione, tls::NOME_SERVER)?.await?;
+    let connessione = endpoint.connect(destinazione, &tls::nome_per(&destinazione))?.await?;
     println!("Connected with {destinazione}, {corsie} parallel lanes");
 
     // Stretta di mano Noise NK: solo chi possiede la chiave privata del

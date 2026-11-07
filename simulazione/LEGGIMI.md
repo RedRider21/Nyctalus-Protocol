@@ -30,6 +30,11 @@ Misure dell'anonimato con il **codice vero** di Nyctalus. Sono due tipi di misur
      Shadow: 1 autorità, 4 relè, 2 uscite), stessa Internet simulata e stessi utenti: confronto alla
      pari. Serve Tor compilato in `~/.local/share/nyctalus-sim/installato` (sotto).
 
+   - `verifica_paradigmi.py CARTELLA [--camuffamento] [--rumore 0.2]`: **le scelte di fondo
+     controllate sui pacchetti** (UDP/QUIC, entrata unica, ragnatela, cipolla, camuffamento, nome
+     nel primo pacchetto decifrato come farebbe un osservatore, rumore di fondo, dimensioni).
+     Risultati in `documenti/SICUREZZA.md` §1.1-ter.
+
 ## Installare Shadow (una volta)
 
 Servono compilatori, CMake, Rust e GLib (su Mint/Ubuntu già presenti con gli strumenti di

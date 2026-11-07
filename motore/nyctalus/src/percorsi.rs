@@ -13,6 +13,10 @@
 //!   fornitore. Gli indirizzi privati e locali (reti di casa, prove) non hanno sottorete.
 //! - Se la regola non si può rispettare (es. tutti i nodi su un PC), il percorso si fa
 //!   lo stesso con un **avviso**; con `NYCTALUS_PARENTELA=rigida` invece si rifiuta.
+//! - **Ponti nascosti** (invisibilità, punto 1): se l'utente ne ha (`--bridge` o `bridge =`),
+//!   si entra **sempre** da un ponte, mai da un nodo dell'elenco pubblico. Il ponte è un nodo
+//!   che non è nell'elenco, con una sua chiave di camuffamento: chi osserva l'utente vede solo
+//!   un indirizzo qualunque, e chi sonda il ponte senza quella chiave non riceve risposta.
 
 use std::collections::HashMap;
 use std::net::IpAddr;
@@ -41,6 +45,28 @@ struct Contesto {
     /// solo per le prove: cartella delle guardie e modalità rigida senza toccare l'ambiente
     cartella_prova: Option<PathBuf>,
     rigida_prova: Option<bool>,
+    /// ponti nascosti dell'utente: nodo e chiave di camuffamento per entrarci
+    ponti: Vec<(NodoRete, [u8; 32])>,
+}
+
+/// Imposta i ponti nascosti (vuoto = si entra dai nodi dell'elenco).
+pub fn imposta_ponti(ponti: Vec<(NodoRete, [u8; 32])>) {
+    let mut c = contesto().lock().unwrap();
+    if c.ponti.iter().map(|p| p.0.1).ne(ponti.iter().map(|p| p.0.1)) {
+        c.guardia = None;
+    }
+    c.ponti = ponti;
+}
+
+/// I nodi-ponte impostati.
+pub fn ponti() -> Vec<NodoRete> {
+    contesto().lock().unwrap().ponti.iter().map(|p| p.0).collect()
+}
+
+/// Chiave di camuffamento per collegarsi al nodo d'entrata `n`: quella del ponte se `n` è un
+/// ponte, altrimenti quella della rete.
+pub fn chiave_entrata(n: &NodoRete, rete: Option<[u8; 32]>) -> Option<[u8; 32]> {
+    contesto().lock().unwrap().ponti.iter().find(|p| p.0.1 == n.1).map(|p| p.1).or(rete)
 }
 
 fn contesto() -> &'static Mutex<Contesto> {
@@ -246,10 +272,14 @@ fn salva_guardia(rete: &str, chiave: &[u8; 32], scadenza: u64) {
 /// La guardia (nodo d'entrata) per questa rete: quella salvata se è ancora nell'elenco e
 /// non è scaduta, altrimenti una nuova a caso, tenuta 30-60 giorni.
 pub fn guardia(nodi: &[NodoRete]) -> NodoRete {
-    let (gia, rete) = {
+    let (gia, rete, ponti) = {
         let c = contesto().lock().unwrap();
-        (c.guardia, if c.rete.is_empty() { "manuale".to_string() } else { c.rete.clone() })
+        let rete = if c.rete.is_empty() { "manuale".to_string() } else { c.rete.clone() };
+        (c.guardia, rete, c.ponti.iter().map(|p| p.0).collect::<Vec<_>>())
     };
+    // con i ponti la guardia è uno dei ponti (ricordato a parte), mai un nodo dell'elenco
+    let (nodi, rete) = if ponti.is_empty() { (nodi.to_vec(), rete) } else { (ponti, rete + "-ponte") };
+    let nodi = nodi.as_slice();
     if let Some(n) = gia.and_then(|k| nodi.iter().find(|n| n.1 == k)) {
         return *n;
     }
@@ -278,8 +308,11 @@ pub fn percorso_verso(nodi: &[NodoRete], ultimo: NodoRete, salti: usize) -> Risu
         return Ok(vec![ultimo]);
     }
     let g = guardia(nodi);
+    let ponti = ponti();
+    // se la guardia è parente del punto d'incontro si entra da un'altra (fra i ponti, se ci sono)
+    let candidati: &[NodoRete] = if ponti.is_empty() { nodi } else { &ponti };
     let entrata = if parenti(&g, &ultimo) {
-        scegli(nodi, &[ultimo], 1)?.0.into_iter().next()
+        scegli(candidati, &[ultimo], 1)?.0.into_iter().next().or(Some(g))
     } else {
         Some(g)
     };
@@ -377,7 +410,7 @@ pub fn simula(
 }
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
     use super::*;
     use std::net::SocketAddr;
 
@@ -386,7 +419,9 @@ mod test {
     }
 
     // le prove condividono il contesto globale: si eseguono una alla volta
-    fn blocco() -> std::sync::MutexGuard<'static, ()> {
+    /// Le prove che toccano la guardia (anche di altri moduli) passano una alla volta: il
+    /// contesto e il file della guardia sono condivisi.
+    pub(crate) fn blocco() -> std::sync::MutexGuard<'static, ()> {
         static B: Mutex<()> = Mutex::new(());
         B.lock().unwrap_or_else(|e| e.into_inner())
     }
@@ -398,6 +433,7 @@ mod test {
         c.avvisato = false;
         c.cartella_prova = Some(cartella.to_path_buf());
         c.rigida_prova = Some(false);
+        c.ponti.clear();
     }
 
     fn cartella(nome: &str) -> std::path::PathBuf {
@@ -485,6 +521,26 @@ mod test {
         let _ = guardia(&nodi);
         assert!(leggi_guardia(&rete).unwrap().1 > adesso());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn con_i_ponti_si_entra_sempre_da_un_ponte() {
+        let _b = blocco();
+        reimposta(vec![], &cartella("p"));
+        let nodi: Vec<NodoRete> = (1..=5).map(|i| nodo(&format!("{}.1.0.1", 40 + i), i)).collect();
+        let ponte = nodo("60.1.0.1", 99);
+        imposta_ponti(vec![(ponte, [5; 32])]);
+        assert_eq!(guardia(&nodi).1, ponte.1, "la guardia è il ponte, non un nodo dell'elenco");
+        for _ in 0..30 {
+            let p = percorso_verso(&nodi, nodi[2], 3).unwrap();
+            assert_eq!(p[0].1, ponte.1);
+            assert_eq!(p.len(), 3);
+        }
+        // chiave d'entrata: quella del ponte per il ponte, quella della rete per gli altri
+        assert_eq!(chiave_entrata(&ponte, Some([1; 32])), Some([5; 32]));
+        assert_eq!(chiave_entrata(&nodi[0], Some([1; 32])), Some([1; 32]));
+        imposta_ponti(vec![]);
+        assert_ne!(guardia(&nodi).1, ponte.1, "senza ponti si torna ai nodi dell'elenco");
     }
 
     #[test]

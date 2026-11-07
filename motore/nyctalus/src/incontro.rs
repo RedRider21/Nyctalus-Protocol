@@ -238,7 +238,7 @@ async fn canale_diretto(nodo: &NodoRete, offusca: Option<[u8; 32]>) -> Risultato
     let locale: SocketAddr = if indirizzo.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
     let endpoint = crate::trasporto::endpoint_client(locale, offusca)?;
     let config = crate::tls::config_client(impronta)?;
-    let conn = endpoint.connect_with(config, *indirizzo, crate::tls::NOME_SERVER)?.await?;
+    let conn = endpoint.connect_with(config, *indirizzo, &crate::tls::nome_per(indirizzo))?.await?;
     let (invio, ricezione) = conn.open_bi().await?;
     Ok(Canale::Diretto { invio, ricezione, _conn: Some(conn), _endpoint: Some(endpoint) })
 }
@@ -254,12 +254,13 @@ async fn canale_onion(percorso: &[NodoRete], offusca: Option<[u8; 32]>) -> Risul
 
     let (guard, _, impronta_guard) = percorso[0];
     let locale: SocketAddr = if guard.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
-    let endpoint = crate::trasporto::endpoint_client(locale, offusca)?;
+    // all'entrata con la chiave del ponte, se è un ponte nascosto
+    let endpoint = crate::trasporto::endpoint_client(locale, crate::percorsi::chiave_entrata(&percorso[0], offusca))?;
     let config = match impronta_guard {
         Some(fp) => crate::tls::config_client(fp)?,
         None => crate::tls::config_client_insicuro()?,
     };
-    let conn = endpoint.connect_with(config, guard, crate::tls::NOME_SERVER)?.await?;
+    let conn = endpoint.connect_with(config, guard, &crate::tls::nome_per(&guard))?.await?;
     let (mut invio, ricezione) = conn.open_bi().await?;
     // 1º quadro = pacchetto di apertura Sphinx; poi i quadri onion (n da 0).
     scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
@@ -1182,6 +1183,8 @@ mod test {
 
     #[test]
     fn percorso_onion_finisce_al_rendezvous() {
+        // la guardia è condivisa con le prove di `percorsi`: una alla volta
+        let _b = crate::percorsi::test::blocco();
         let nodo = |p: u16| -> NodoRete {
             (format!("127.0.0.1:{p}").parse().unwrap(), [p as u8; 32], Some([0u8; 32]))
         };

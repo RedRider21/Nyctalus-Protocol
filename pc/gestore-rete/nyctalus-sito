@@ -251,6 +251,12 @@ def avvia(nome):
                                             "--authority", rete["authority"], "--hops", "3"]
     if re.fullmatch(r"[0-9a-f]{64}", str(rete.get("camuffamento", ""))):
         cmd += ["--obfuscation", rete["camuffamento"]]      # rete protetta: senza la chiave i nodi non rispondono
+    # ponti nascosti che questo PC usa per quella rete (per ambiente: la riga di comando è visibile a tutti)
+    try:
+        cc = json.loads((Path.home() / ".nyctalus-browser" / "config.json").read_text())
+        os.environ["NYCTALUS_PONTI"] = ";".join((cc.get("ponti") or {}).get(rete["authority"], []))
+    except (OSError, ValueError):
+        os.environ.pop("NYCTALUS_PONTI", None)
     (d / "pid").write_text(str(os.getpid()))
     figlio = None
     fermo = {"si": False}

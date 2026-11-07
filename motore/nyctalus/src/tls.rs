@@ -17,8 +17,17 @@ use rustls::{DigitallySignedStruct, SignatureScheme};
 
 use crate::Risultato;
 
-/// Nome del server nel certificato (non viene verificato: conta l'impronta).
+/// Nome del server nel certificato (non viene verificato: conta l'impronta). Il certificato
+/// viaggia cifrato (TLS 1.3): un osservatore non lo vede.
 pub const NOME_SERVER: &str = "nyctalus.invalid";
+
+/// Nome da usare collegandosi a `indirizzo`: il suo IP. Così il primo pacchetto QUIC **non porta
+/// nessun nome** (con un IP il client TLS non manda l'SNI). Prima c'era `nyctalus.invalid`, che
+/// chiunque poteva leggere nel primo pacchetto (le sue chiavi sono pubbliche per standard) se il
+/// camuffamento era spento: verificato in Shadow con `simulazione/verifica_paradigmi.py`.
+pub fn nome_per(indirizzo: &std::net::SocketAddr) -> String {
+    indirizzo.ip().to_string()
+}
 
 pub struct IdentitaServer {
     pub config: quinn::ServerConfig,

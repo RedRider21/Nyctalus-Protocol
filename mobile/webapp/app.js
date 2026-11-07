@@ -1126,14 +1126,42 @@ function impostazioni(solo) {
   const condivisa = el("div", "pulsanti"); condivisa.style.justifyContent = "flex-start";
   const quale = el("p", "nota-rete", "…");
   const bi = el("button", "", "📥 Importa codice"), bp = el("button", "nascosto", "↩ Rete di prova");
-  condivisa.append(bi, bp);
+  const bpo = el("button", "nascosto", "🌉 Ponti nascosti");
+  condivisa.append(bi, bpo, bp);
+  let pontiRete = [];
   fetch("/api/rete").then((r) => r.json()).then((x) => {
     quale.textContent = x.condivisa ? "Collegato a «" + (x.nome || "rete condivisa") + "» · impronta " + x.impronta
         + " (deve essere uguale a quella mostrata da chi gestisce la rete)."
       : "Ora usi la rete di prova: solo su questo dispositivo. Con un codice di rete parli con gli altri.";
     if (HOST) quale.textContent += " La rete vale per tutta l'app (chat, browser, file): la trovi anche nella schermata iniziale, «🔗 Rete».";
     bp.classList.toggle("nascosto", !x.condivisa);
+    bpo.classList.toggle("nascosto", !x.condivisa);
+    pontiRete = x.ponti || [];
+    if (pontiRete.length) quale.textContent += " Entri da " + pontiRete.length + (pontiRete.length === 1 ? " ponte nascosto." : " ponti nascosti.");
   }).catch(() => {});
+  // PONTI NASCOSTI: entrate private fuori dall'elenco pubblico (righe segrete avute da chi le gestisce)
+  bpo.onclick = () => {
+    const area = el("textarea"); area.placeholder = "IP:PORTA,chiave,impronta,chiave-ponte"; area.rows = 4; area.className = "campo-codice";
+    const lista = el("div", "lista-ponti");
+    pontiRete.forEach((a) => {
+      const riga = el("div", "pulsanti"); riga.style.justifyContent = "space-between";
+      const via = el("button", "pericoloso", "✕ Togli");
+      via.onclick = async () => {
+        const r = await postJson("/api/rete", { ponte_togli: a });
+        if (r.ok) { toast("Ponte tolto: riavvio la rete…"); $("dialogo").classList.add("nascosto"); controllaServizi(); } else toast("✗ " + (r.errore || "non riuscito"));
+      };
+      riga.append(el("span", "", "🌉 " + a), via); lista.append(riga);
+    });
+    dialogo("🌉 Ponti nascosti", [
+      el("p", "", "Un ponte è un'entrata privata della rete, fuori dall'elenco pubblico: chi osserva la tua linea vede solo un indirizzo qualunque, e chi lo sonda senza la sua chiave non riceve risposta. Con almeno un ponte si entra sempre da lì."),
+      el("p", "nota-rete", pontiRete.length ? "I tuoi ponti per questa rete:" : "Nessun ponte: entri dai nodi dell'elenco pubblico."), lista,
+      el("p", "", "Aggiungi la riga che ti ha dato chi gestisce il ponte (è segreta: non condividerla):"), area],
+      [["Chiudi", null], ["Aggiungi", async () => {
+        const r = await postJson("/api/rete", { ponte: area.value });
+        if (r.ok) { toast("Ponte aggiunto: riavvio la rete…"); controllaServizi(); }
+        else toast("✗ " + (r.errore || "riga non accettata"));
+      }, "primario"]]);
+  };
   bi.onclick = () => {
     const area = el("textarea"); area.placeholder = "NYCT1:…"; area.rows = 4; area.className = "campo-codice";
     dialogo("Importa codice di rete", [el("p", "", "Incolla il codice che ti ha dato chi gestisce la rete (per la rete di casa: lo mostra il PC con «nyctalus-rete casa»)."), area],

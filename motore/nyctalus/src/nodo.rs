@@ -39,6 +39,29 @@ pub struct Autenticazione {
 pub struct Contorno {
     pub dati: Option<PathBuf>,
     pub annuncia: Option<String>,
+    /// **ponte nascosto**: non va nell'elenco pubblico; chi entra usa una chiave di camuffamento
+    /// tutta sua (salvata in `chiave-ponte`), verso i nodi successivi si usa quella della rete
+    pub ponte: bool,
+}
+
+/// La chiave di camuffamento del ponte: letta da `DATI/chiave-ponte` o creata la prima volta.
+fn chiave_ponte(dati: Option<&std::path::Path>) -> Risultato<[u8; 32]> {
+    let nuova = || {
+        let mut k = [0u8; 32];
+        getrandom::fill(&mut k).expect("generatore casuale di sistema");
+        k
+    };
+    let Some(d) = dati else {
+        eprintln!("WARNING: hidden bridge without --data: a new bridge key at every start");
+        return Ok(nuova());
+    };
+    if let Ok(t) = std::fs::read_to_string(d.join("chiave-ponte")) {
+        return crate::da_esadecimale(t.trim());
+    }
+    let k = nuova();
+    std::fs::create_dir_all(d)?;
+    crate::tls::scrivi_privato(&d.join("chiave-ponte"), in_esadecimale(&k).as_bytes())?;
+    Ok(k)
 }
 
 pub async fn nodo(
@@ -54,13 +77,27 @@ pub async fn nodo(
     let identita = crate::tls::identita_server_in(contorno.dati.as_deref())?;
     let annunciato = contorno.annuncia.clone().unwrap_or_else(|| ascolta.to_string());
     let riga = format!("{annunciato},{},{}", in_esadecimale(&pubblica), in_esadecimale(&identita.impronta));
+    let ingresso = if contorno.ponte { Some(chiave_ponte(contorno.dati.as_deref())?) } else { offusca };
+    let riga_ponte = ingresso.filter(|_| contorno.ponte).map(|k| format!("{riga},{}", in_esadecimale(&k)));
     if let Some(d) = &contorno.dati {
-        std::fs::write(d.join("riga-elenco.txt"), format!("{riga}\n"))?;   // per lo script del server
+        if let Some(rp) = &riga_ponte {
+            // un ponte NON va nell'elenco: niente riga-elenco.txt, solo la riga da dare a mano
+            let _ = std::fs::remove_file(d.join("riga-elenco.txt"));
+            crate::tls::scrivi_privato(&d.join("riga-ponte.txt"), format!("{rp}\n").as_bytes())?;
+        } else {
+            std::fs::write(d.join("riga-elenco.txt"), format!("{riga}\n"))?;   // per lo script del server
+        }
     }
     println!("Node listening on {ascolta}");
     println!("  X25519 public key: {}", in_esadecimale(&pubblica));
     println!("  TLS fingerprint:   {}", in_esadecimale(&identita.impronta));
-    println!("  directory entry:   {riga}");
+    match &riga_ponte {
+        Some(rp) => {
+            println!("  HIDDEN BRIDGE: not in the public directory; give this line only to the people who use it:");
+            println!("  bridge line:       {rp}");
+        }
+        None => println!("  directory entry:   {riga}"),
+    }
     if auth.is_some() {
         println!("  downstream link authentication: ON (via signed directory)");
     } else {
@@ -73,7 +110,7 @@ pub async fn nodo(
         println!("  cover traffic (downstream): ~{copertura:.1} dummy cells/s");
     }
 
-    let endpoint = crate::trasporto::endpoint_server(identita.config, ascolta, offusca)?;
+    let endpoint = crate::trasporto::endpoint_server(identita.config, ascolta, ingresso)?;
     let auth = Arc::new(auth);
     while let Some(in_arrivo) = endpoint.accept().await {
         let auth = auth.clone();
@@ -454,7 +491,7 @@ async fn collega_valle(
         None => crate::tls::config_client_insicuro()?,
     };
     endpoint.set_default_client_config(config);
-    let connessione = endpoint.connect(prossimo, "nyctalus.invalid")?.await?;
+    let connessione = endpoint.connect(prossimo, &crate::tls::nome_per(&prossimo))?.await?;
     let (mut invio, ricezione) = connessione.open_bi().await?;
     scrivi_quadro(&mut invio, &pacchetto_apertura).await?;
     Ok((endpoint, invio, ricezione))

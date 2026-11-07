@@ -224,11 +224,17 @@ Anonimo vuol dire che non si sa **chi parla con chi**. Invisibile vuol dire che 
 nemmeno **che** stai usando una rete anonima, né **quando** e **quanto** comunichi. Qui Tor è
 debole, e le misure del punto K lo confermano anche per noi. I passi, in ordine:
 
-1. **Ponti nascosti.** Entrate private, non nell'elenco pubblico, date a mano a chi serve: chi
-   ti osserva non vede «un nodo Nyctalus», vede un indirizzo qualunque.
+1. ✅ **Ponti nascosti** (fatto il 07/11/2026, 0.3.8). Entrate private, non nell'elenco
+   pubblico, date a mano a chi serve: chi ti osserva non vede «un nodo Nyctalus», vede un
+   indirizzo qualunque. Ogni ponte ha una chiave sua, e chi lo sonda senza chiave **non riceve
+   risposta** (lo stesso ora vale per tutti i nodi camuffati: prima uno su ~300 tentativi
+   otteneva risposta). Nel primo pacchetto non c'è più nessun nome. Come si usa:
+   `GUIDA-COMPLETA.md` §13; prova `32-ponte-nascosto`.
 2. **Trasporto mimetico.** Oggi il camuffamento rende il traffico simile a rumore, e il rumore
    puro è sospetto (in alcuni paesi viene bloccato proprio così). Meglio farlo sembrare
-   **traffico comune**: una normale videochiamata (WebRTC) o un normale sito HTTPS.
+   **traffico comune**: una normale videochiamata (WebRTC) o un normale sito HTTPS/HTTP-3
+   (con ALPN `h3`, porta 443, dimensioni dei pacchetti come i browser), più il ripiego su TCP 443
+   dove UDP è bloccato. Cambia la stretta di mano: va con un salto di versione del protocollo.
 3. **Chat da mixnet.** La modalità riservata è il primo passo. Il prossimo: i nodi trattengono
    e **rimescolano** le buste con ritardi casuali, e si aggiungono buste finte calcolate apposta
    (privacy differenziale, come Vuvuzela/Karaoke e Loopix). Così nemmeno chi vede **tutta

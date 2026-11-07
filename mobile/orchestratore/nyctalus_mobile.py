@@ -76,6 +76,18 @@ def scrivi_config(cfg):
 
 
 PREFISSO_CODICE = "NYCT1:"
+# riga di un PONTE NASCOSTO (segreta): IP:PORTA,chiave,impronta,chiave-del-ponte
+PONTE = re.compile(r"^(\[?[0-9A-Za-z.:-]+\]?):(\d{1,5}),([0-9a-f]{64}),([0-9a-f]{64}),([0-9a-f]{64})$")
+
+
+def ponti_di(cfg):
+    """I ponti nascosti per la rete in uso (tenuti per autorità: cambiando rete restano da parte)."""
+    return [r for r in (cfg.get("ponti") or {}).get(cfg.get("authority", ""), []) if PONTE.match(r)]
+
+
+def ambiente_ponti(cfg):
+    """Ambiente per il motore con i ponti: mai sulla riga di comando, che altre app potrebbero leggere."""
+    return dict(os.environ, NYCTALUS_PONTI=";".join(ponti_di(cfg)))
 
 
 def leggi_codice(testo):
@@ -275,7 +287,7 @@ class Servizi:
                 autorita = cfg["authority"]
                 self._lancia([binario, "start", "--directory", str(dirf), "--authority", autorita,
                               "--socks", socks, "--control", "127.0.0.1:%d" % int(PORTE["monitor"])] + opz_prot(cfg),
-                             lavoro / "demone.log")
+                             lavoro / "demone.log", env=ambiente_ponti(cfg))
             else:
                 self.modalita, self.dettaglio = "locale", "rete di prova"
                 out = subprocess.run([binario, "authority"], capture_output=True, text=True,
@@ -310,7 +322,7 @@ class Servizi:
             self._lancia([binario, "site", "--backend", BACKEND, "--identity", str(DATI_CHAT / "identita"),
                           "--directory", str(dirf), "--authority", autorita, "--hops", "3"]
                          + (opz_prot(cfg, rumore=False) if pubblica else []),
-                         lavoro / "site.log")
+                         lavoro / "site.log", env=ambiente_ponti(cfg) if pubblica else None)
             self.stato, self.dettaglio = "pronto", ""
             log("servizi pronti (%s) — %s" % (self.modalita, self.indirizzo))
         except Exception as e:    # noqa: BLE001
@@ -1084,6 +1096,8 @@ async def instrada(req, lettore, scrittore):
                                                "rubrica": cfg.get("rubrica", "") if condivisa else "",
                                                "url": cfg.get("directory_url", "") if condivisa else "",
                                                "impronta": impronta_rete(cfg["authority"]) if condivisa else "",
+                                               # solo gli indirizzi: le chiavi dei ponti non escono mai
+                                               "ponti": [r.split(",")[0] for r in ponti_di(cfg)] if condivisa else [],
                                                "reti": reti})
     if p == "/api/servizi/avvia" and req.metodo == "POST":
         SERVIZI.avvia()
@@ -1177,7 +1191,9 @@ async def cambia_rete(lettore, scrittore, req):
       {"codice": "NYCT1:…"}  importa (e la aggiunge alle reti salvate)
       {"usa": N}             passa alla rete salvata N
       {"togli": N}           toglie la rete salvata N (se era attiva, si torna alla prova)
-      {"prova": true}        rete di prova locale"""
+      {"prova": true}        rete di prova locale
+      {"ponte": "RIGA"}      aggiunge un ponte nascosto alla rete in uso
+      {"ponte_togli": "IP:PORTA"|"tutti"}  toglie un ponte (o tutti)"""
     try:
         n = int(req.h.get("content-length", "0"))
     except ValueError:
@@ -1195,7 +1211,23 @@ async def cambia_rete(lettore, scrittore, req):
             via = reti.pop(int(dati["togli"]))
             if via["authority"] == cfg.get("authority") and via["directory_url"] == cfg.get("directory_url"):
                 dati = {"prova": True}
-        if dati.get("prova"):
+        if "ponte" in dati or "ponte_togli" in dati:
+            if not (cfg.get("directory_url") and cfg.get("authority")):
+                raise ValueError("i ponti servono su una rete condivisa: prima importa il codice di rete")
+            tutti = dict(cfg.get("ponti") or {})
+            prima = ponti_di(cfg)
+            if "ponte" in dati:
+                riga = str(dati["ponte"]).strip().split()[-1] if str(dati["ponte"]).strip() else ""
+                if not PONTE.match(riga):
+                    raise ValueError("riga del ponte non valida (attesa: IP:PORTA,chiave,impronta,chiave-ponte)")
+                nuovi = [r for r in prima if r.split(",")[0] != riga.split(",")[0]] + [riga]
+            else:
+                via = str(dati["ponte_togli"])
+                nuovi = [] if via == "tutti" else [r for r in prima if r.split(",")[0] != via]
+            tutti[cfg["authority"]] = nuovi
+            cfg["ponti"] = {k: v for k, v in tutti.items() if v}
+            nome = cfg.get("nome_rete", "")
+        elif dati.get("prova"):
             for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella", "camuffamento", "rumore"):
                 cfg.pop(k, None)
             nome = ""

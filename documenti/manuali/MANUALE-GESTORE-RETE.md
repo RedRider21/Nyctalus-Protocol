@@ -170,6 +170,13 @@ nyctalus-rete protezione no                   # spegne (la chiave resta da parte
 Dopo il cambio: riavvia la rete, ridai il codice, e reinstalla i nodi dei server con
 `./installa.sh --codice NYCT1:…`. Spiegazione completa: `GUIDA-COMPLETA.md` §12.
 
+## 6-quater. Ponti nascosti
+Un ponte è un'entrata **privata**: non sta nell'elenco e ha una chiave sua. Non lo gestisci tu
+come gestore: lo installa chi lo ospita (`./installa.sh --ponte --codice NYCT1:…` sul server) e
+la riga segreta passa a mano a chi lo usa (`nyctalus-rete ponte aggiungi 'RIGA'`). Utile per chi
+è dietro una rete che osserva o blocca i nodi dell'elenco. Spiegazione completa:
+`GUIDA-COMPLETA.md` §13.
+
 ## 7. Sicurezza in tre righe
 - La chiave **segreta** non esce mai da `~/.nyctalus-rete`: il codice e l'elenco
   contengono solo la pubblica.

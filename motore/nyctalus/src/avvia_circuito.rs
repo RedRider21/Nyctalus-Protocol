@@ -64,6 +64,9 @@ pub async fn avvia_circuito(
     let mut set_id = [0u8; 16];
     getrandom::fill(&mut set_id).expect("generatore casuale di sistema");
     let percorsi = seleziona_conflux(&nodi, circuiti, salti)?;
+    if !crate::percorsi::ponti().is_empty() {
+        println!("  entry: hidden bridge (not in the public directory)");
+    }
     for (i, p) in percorsi.iter().enumerate() {
         let strada: Vec<String> = p.iter().map(|n| n.0.to_string()).collect();
         println!("  circuit {i}: {}", strada.join(" → "));
@@ -72,12 +75,13 @@ pub async fn avvia_circuito(
     // Un solo collegamento QUIC verso il guard condiviso.
     let (guardiano, _, impronta_guard) = percorsi[0][0];
     let locale: SocketAddr = if guardiano.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
-    let mut endpoint = crate::trasporto::endpoint_client(locale, offusca)?;
+    // all'entrata con la chiave del ponte, se è un ponte nascosto
+    let mut endpoint = crate::trasporto::endpoint_client(locale, crate::percorsi::chiave_entrata(&percorsi[0][0], offusca))?;
     endpoint.set_default_client_config(match impronta_guard {
         Some(fp) => crate::tls::config_client(fp)?,
         None => crate::tls::config_client_insicuro()?,
     });
-    let connessione = endpoint.connect(guardiano, "nyctalus.invalid")?.await?;
+    let connessione = endpoint.connect(guardiano, &crate::tls::nome_per(&guardiano))?.await?;
 
     // Canali condivisi: scrittore(i) in andata, ritorno riordinato.
     let flussi: MappaFlussi = Arc::new(Mutex::new(HashMap::new()));

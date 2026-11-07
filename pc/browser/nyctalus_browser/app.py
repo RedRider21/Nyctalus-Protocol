@@ -707,10 +707,13 @@ class Browser(FunzioniExtra, Gtk.Window):
                             prot += ["--cover", "%g" % float(rum)]
                     except (TypeError, ValueError):
                         pass
+                # ponti nascosti della rete: per ambiente (la riga di comando la vede chiunque)
+                ponti = (config.get("ponti") or {}).get(auth, [])
+                ambiente = dict(os.environ, NYCTALUS_PONTI=";".join(ponti))
                 p = subprocess.Popen(
                     [binario, "start", "--directory", str(dirf), "--authority", auth,
                      "--socks", socks] + prot,
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=ambiente)
                 self._servizi_proc.append(p)
             else:
                 self._servizi_locale = True

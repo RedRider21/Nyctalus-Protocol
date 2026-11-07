@@ -51,12 +51,12 @@ pub const ID_FLUSSO_DATI: u64 = 1;
 
 const USO: &str = "\
 Usage:
-  nyctalus start   [--config FILE] [--directory FILE] [--authority HEX] [--socks 127.0.0.1:1080] [--circuits 2] [--hops 3] [--cover 0]
+  nyctalus start   [--config FILE] [--directory FILE] [--authority HEX] [--socks 127.0.0.1:1080] [--circuits 2] [--hops 3] [--cover 0] [--bridge LINE]
   nyctalus status  [--config FILE]
   nyctalus nodes   [--config FILE] [--directory FILE] [--authority HEX] [--probe] [--timeout 3] [--obfuscation HEX]
   nyctalus exec    [--socks ADDR] [--config FILE] -- PROGRAM [ARG...]
   nyctalus monitor [--control 127.0.0.1:1090]
-  nyctalus node    --listen 0.0.0.0:4601 [--data DIR] [--announce PUBLIC_IP:PORT] [--secret HEX] [--directory FILE --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0]
+  nyctalus node    --listen 0.0.0.0:4601 [--data DIR] [--announce PUBLIC_IP:PORT] [--secret HEX] [--directory FILE --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0] [--hidden-bridge]
   nyctalus authority
   nyctalus directory --authority-secret HEX --entries 'addr,x,fp;addr,x,fp'
   nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)] [--cover 0]
@@ -74,6 +74,9 @@ Usage:
 'nodes': list the signed directory; with --probe, test which nodes are reachable now (and their RTT).
 'node'/'authority'/'directory': nodes and the signed directory.
 'circuit': like 'start' but with nodes given explicitly (testing).
+'--hidden-bridge' (node): a private entry NOT in the directory, with its own camouflage key; it prints the
+  bridge line. '--bridge LINE[;LINE]' (start/circuit/site/browse, or env NYCTALUS_PONTI, or 'bridge = ' in the config): always enter
+  the network through those bridges.
 'site'/'browse': host and visit an internal .nyct site through a rendezvous node (a node reached with --rendezvous/--fingerprint).
 'chat': metadata-free .nyct chat engine (needs 'start' for the SOCKS and a 'site --backend' pointing at its backend port); a GTK UI talks to it on the control port.
 'receive'/'send': file transfer (L2 test). 'single-hop'/'exit': 1-hop proxy (test).";
@@ -98,6 +101,13 @@ async fn esegui() -> Risultato<()> {
         return esegui_exec(resto);
     }
     let (opzioni, posizionali) = leggi_opzioni(resto)?;
+    // ponti nascosti per entrare nella rete (start li legge anche dalla configurazione)
+    // (meglio la variabile NYCTALUS_PONTI: la riga contiene una chiave e la riga di comando la
+    // vedono tutti gli utenti del computer con `ps`, l'ambiente solo il proprietario)
+    let da_ambiente = std::env::var("NYCTALUS_PONTI").ok().filter(|p| !p.trim().is_empty());
+    if let Some(p) = opzione(&opzioni, "bridge").map(String::from).or(da_ambiente) {
+        percorsi::imposta_ponti(leggi_ponti(&p)?);
+    }
     match comando.as_str() {
         "receive" => {
             let ascolta: SocketAddr = opzione(&opzioni, "listen").unwrap_or("0.0.0.0:4433").parse()?;
@@ -125,6 +135,9 @@ async fn esegui() -> Risultato<()> {
         "start" => {
             let cfg = Config::carica(&opzioni)?;
             println!("Configuration: {}", cfg.percorso.display());
+            if let (Some(p), true) = (&cfg.ponti, percorsi::ponti().is_empty()) {
+                percorsi::imposta_ponti(leggi_ponti(p)?);
+            }
             let nodi = nodi_da_elenco(&cfg.elenco, cfg.autorita)?;
             avvia_circuito::avvia_circuito(nodi, cfg.circuiti, cfg.salti, cfg.socks, cfg.controllo, cfg.offuscamento, cfg.copertura).await
         }
@@ -209,7 +222,11 @@ async fn esegui() -> Risultato<()> {
                 },
                 (None, None) => nyctalus_core::circuito::genera_segreto(),
             };
-            let contorno = nodo::Contorno { dati, annuncia: opzione(&opzioni, "announce").map(String::from) };
+            let contorno = nodo::Contorno {
+                dati,
+                annuncia: opzione(&opzioni, "announce").map(String::from),
+                ponte: opzione(&opzioni, "hidden-bridge").is_some(),
+            };
             let auth = match (opzione(&opzioni, "directory"), opzione(&opzioni, "authority")) {
                 (Some(e), Some(a)) => {
                     Some(nodo::Autenticazione { elenco: PathBuf::from(e), autorita: da_esadecimale(a)? })
@@ -318,7 +335,7 @@ async fn esegui() -> Risultato<()> {
 type Opzioni = HashMap<String, String>;
 
 /// Opzioni senza valore (flag sì/no): se presenti valgono "true".
-const FLAG_BOOLEANI: &[&str] = &["probe"];
+const FLAG_BOOLEANI: &[&str] = &["probe", "hidden-bridge"];
 
 fn leggi_opzioni(argomenti: &[String]) -> Risultato<(Opzioni, Vec<String>)> {
     let mut opzioni = HashMap::new();
@@ -432,6 +449,7 @@ struct Config {
     controllo: SocketAddr,
     offuscamento: Option<[u8; 32]>,
     copertura: f64,
+    ponti: Option<String>,
 }
 
 impl Config {
@@ -450,7 +468,8 @@ impl Config {
         let controllo: SocketAddr = val("control").unwrap_or_else(|| "127.0.0.1:1090".into()).parse()?;
         let offuscamento = da_esadecimale_opt(val("obfuscation").as_deref())?;
         let copertura: f64 = val("cover").map(|s| s.parse()).transpose()?.unwrap_or(0.0);
-        Ok(Self { percorso, elenco, autorita, socks, circuiti, salti, controllo, offuscamento, copertura })
+        let ponti = val("bridge").filter(|p| !p.trim().is_empty());
+        Ok(Self { percorso, elenco, autorita, socks, circuiti, salti, controllo, offuscamento, copertura, ponti })
     }
 
     fn stampa(&self) {
@@ -557,6 +576,24 @@ fn carica_nodi(opzioni: &Opzioni) -> Risultato<Vec<avvia_circuito::NodoRete>> {
         .map(|voce| {
             let (addr, hex) = voce.split_once(',').ok_or("node in the form address,pubkeyhex")?;
             Ok((addr.trim().parse()?, da_esadecimale(hex.trim())?, None))
+        })
+        .collect()
+}
+
+/// Ponti nascosti: `indirizzo,x25519hex,improntahex,chiavehex` separati da ';' (la riga che il
+/// nodo stampa con `--hidden-bridge`).
+fn leggi_ponti(testo: &str) -> Risultato<Vec<(avvia_circuito::NodoRete, [u8; 32])>> {
+    testo
+        .split(';')
+        .filter(|v| !v.trim().is_empty())
+        .map(|voce| {
+            let campi: Vec<&str> = voce.split(',').map(str::trim).collect();
+            let [a, x, f, k] = campi.as_slice() else {
+                return Err("bridge line: address,x25519,fingerprint,key (as printed by the bridge)".into());
+            };
+            let x = da_esadecimale(x)?;
+            let addr = circuito_rete::risolvi_voce(a, &x)?;
+            Ok(((addr, x, Some(da_esadecimale(f)?)), da_esadecimale(k)?))
         })
         .collect()
 }
