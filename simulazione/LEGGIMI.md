@@ -35,8 +35,9 @@ Misure dell'anonimato con il **codice vero** di Nyctalus. Sono due tipi di misur
      nel primo pacchetto decifrato come farebbe un osservatore, rumore di fondo, dimensioni).
      Risultati in `documenti/SICUREZZA.md` §1.1-ter.
 
-   - `velocita.py CARTELLA --sistema tor|nyctalus [--perdita 0.01] [--banda-nodi 10] [--utenti 4]
-     [--mb 5] [--circuiti 2] [--congestione bbr|cubic|newreno] [--seme N]`: **confronto di
+   - `velocita.py CARTELLA --sistema tor|nyctalus [--perdita 0.01] [--banda-nodi 10 | --bande A,B,…]
+     [--utenti 4] [--mb 5] [--circuiti 2] [--congestione bbr|cubic|newreno] [--finestra KB]
+     [--codifica K,R] [--senza-pesi] [--seme N]`: **confronto di
      velocità** in condizioni realistiche (pacchetti persi, nodi carichi, più utenti insieme). Tor:
      rete di prova di Shadow (7 relè); Nyctalus: 7 nodi. Ogni corsa dura pochi secondi.
 
@@ -133,6 +134,22 @@ passaggio a **BBR** (scelta locale, compatibile). Restano due punti da capire: c
 Tor è avanti, e **più circuiti in parallelo non aiutano** in nessun caso (1, 2 e 4 vanno uguali).
 Limite: Shadow simula il TCP di Tor con un suo modello, non quello di Linux; servono anche misure
 su rete vera.
+
+**Velocità 0.3.10** (distributore verso la strada più libera, finestra 256 KB, scelta pesata per
+banda; `--bande 50,30,20,10,5,30,10` = nodi di velocità diverse; 3-5 ripetizioni, Mbit/s):
+
+| Scenario | Tor | Nyctalus 0.3.10 |
+|---|---|---|
+| linea pulita | 6,4 | **10,9** |
+| nodi diversi, 1 utente | 6,2 | **9,9** (a caso, senza bande: 3,9-4,2) |
+| nodi diversi, 4 utenti | 2,6 | **4,8** |
+| 1% di perdite | 2,0-2,3 | 2,2 |
+| 2% di perdite | 0,47 | **1,1** |
+| nodi tutti da 10 Mbit, 4 utenti | **2,9** | 2,4 |
+| idem + 1% di perdite | 1,4 | **1,8** |
+
+**Ragnatela codificata** (`--codifica 8,2`, `8,4`): non accelera (-5..-25%): ogni tratta QUIC recupera
+già i pacchetti persi e le strade condividono entrata e uscita; spenta di serie.
 
 **Difetti veri trovati dalla simulazione (corretti):**
 1. un servizio `.nyct` serviva al massimo **4 client insieme** (il «posto» restava occupato finché il

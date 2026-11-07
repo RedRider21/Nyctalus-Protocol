@@ -193,11 +193,13 @@ stesso attacco, 3 ripetizioni (velocità: `simulazione/velocita.py`, file da 5 M
 
 | Misura | Tor 0.4.9 | Nyctalus |
 |---|---|---|
-| Scaricare 5 MB, linea pulita | 6,4 Mbit/s | **~10 Mbit/s · +55%** |
-| … con l'1% di pacchetti persi (Wi-Fi, rete mobile) | 2,3 Mbit/s | 2,2-2,4 · alla pari (prima della 0.3.8: 1,3) |
-| … con il 2% di pacchetti persi | 0,47 Mbit/s | **0,98 · ×2** |
-| … nodi carichi (4 utenti insieme su nodi da 10 Mbit) | **2,9 Mbit/s** | 2,0-2,5 · Tor avanti |
-| … nodi carichi e 1% di perdite | 1,4 Mbit/s | **1,8 · +25%** |
+| Scaricare 5 MB, linea pulita | 6,4 Mbit/s | **10,9 · +70%** |
+| … nodi di velocità diverse (da 5 a 50 Mbit) | 6,2 Mbit/s | **9,9 · +60%** |
+| … nodi diversi, 4 utenti insieme | 2,6 Mbit/s | **4,8 · +80%** |
+| … con l'1% di pacchetti persi (Wi-Fi, rete mobile) | 2,0-2,3 Mbit/s | 2,2 · alla pari |
+| … con il 2% di pacchetti persi | 0,47 Mbit/s | **1,1 · ×2** |
+| … nodi tutti uguali e saturi (4 utenti su nodi da 10 Mbit) | **2,9 Mbit/s** | 2,4 · Tor avanti |
+| … nodi saturi e 1% di perdite | 1,4 Mbit/s | **1,8 · +25%** |
 | Primo byte | 0,49 s | 0,50 s · alla pari |
 | Avversario che vede tutte le linee: scaricamenti attribuiti a chi li ha fatti | 91% | 80% · alla pari (limite di tutte le reti in tempo reale) |
 | Chat: lo stesso avversario scopre chi scrive a chi | — (Tor non ha una chat sua) | normale 100%; **modalità riservata al livello del caso** (17-33%, a caso 20%) |
@@ -218,8 +220,8 @@ stesso attacco, 3 ripetizioni (velocità: `simulazione/velocita.py`, file da 5 M
 | Siti interni | `.onion` | `.nyct` |
 | Linguaggio | C | Rust (meno errori di memoria) |
 
-In breve: **velocità**: su linea pulita Nyctalus è più veloce di Tor, con perdite alla pari o
-meglio; con nodi carichi Tor è ancora avanti. **Anonimato** sul tempo reale alla pari; sulla
+In breve: **velocità**: Nyctalus è più veloce di Tor quasi ovunque (+60-80% con nodi di
+velocità diverse, come nella realtà); alla pari con poche perdite; Tor avanti solo con nodi tutti saturi. **Anonimato** sul tempo reale alla pari; sulla
 **chat**, con la modalità riservata, va oltre. Tor resta avanti in maturità, numero di utenti e
 camuffamento collaudato.
 
