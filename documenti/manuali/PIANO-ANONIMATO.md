@@ -18,7 +18,7 @@ cosa si ottiene e cosa manca ancora.
 | 1 | 3 piccoli server su 3 fornitori diversi | gli operatori non vedono più chi parla con chi | i nodi sono tutti tuoi |
 | 2 ✅ | entrata e uscita scelte a caso, mai due nodi «parenti» | nessun nodo è fisso per tutti | i nodi sono ancora di una sola persona |
 | 2-bis ✅ | **modalità riservata** per la chat: messaggi solo tramite casella, a ritmo casuale, con buste finte e tutte uguali | non si capisce **quando** né **a chi** scrivi, anche con pochi nodi | chiamate e file restano diretti |
-| 3 | nodi gestiti da persone diverse | nessuno controlla tutto il percorso | servono più utenti |
+| 3 🔧 | nodi gestiti da persone diverse | nessuno controlla tutto il percorso | servono più utenti |
 | 4 | più utenti, rumore di fondo e camuffamento sempre accesi | ci si confonde fra tanti, i ritmi si vedono meno | misure e revisione |
 | 5 | misure con la simulazione, browser pubblico | numeri veri, navigazione con impronta uniforme | revisione esterna |
 | 6 | revisione indipendente, pentest | ci si può fidare davvero | — |
@@ -113,7 +113,7 @@ stessa misura** nella casella, rubrica che non consegna subito.
 copertura a ritmo costante fra client e guardia, utile anche per le chiamate ma costoso in
 banda.
 
-## Tappa 3 · Nodi di persone diverse
+## Tappa 3 · Nodi di persone diverse 🔧 strumenti pronti (07/11/2026)
 
 - **I PC come nodi intermedi** (scelta iniziale del progetto: ogni PC anche nodo): in una rete
   piccola moltiplica i nodi senza comprare server. I telefoni restano solo client.
@@ -121,6 +121,13 @@ banda.
   altri amici, volontari. Ognuno con il suo server o il PC sempre acceso.
 - Il gestore li aggiunge all'elenco con la loro «famiglia» (Tappa 2).
 - Regola d'oro: **nessuno gestisce più di un terzo dei nodi**.
+
+**Gli strumenti ci sono:** l'installatore del nodo stampa le righe da mandare al gestore;
+il gestore le aggiunge con la famiglia (`nyctalus-rete aggiungi --famiglia`, oppure, nella
+rete di casa, `nyctalus-rete ospite aggiungi … --famiglia NOME`); la rete di casa marca i
+propri nodi come famiglia «casa». Verificato dalla prova `27-nodi-ospiti`: con 3 gestori,
+ogni percorso usa 3 gestori diversi e il traffico passa davvero dai nodi degli amici. Il resto
+è organizzazione: trovare chi ospita i nodi (`GUIDA-INTERNET.md`, Passo 8).
 
 **Cosa si ottiene:** per scoprire chi parla con chi bisogna mettere d'accordo i gestori di
 entrata e uscita, che sono persone diverse.

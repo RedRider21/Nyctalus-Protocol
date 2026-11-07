@@ -136,6 +136,32 @@ e tocca 📲.
    Su Internet ogni pacchetto fa 3 salti fra i nodi, quindi un piccolo ritardo è normale.
 
 
+## Passo 8 (facoltativo) · Anche il tuo amico ospita dei nodi
+
+Così la rete non sta più tutta a casa tua, e ogni percorso usa nodi di **gestori diversi**.
+Il tuo amico con l'IP statico è il candidato ideale.
+
+1. **Lui**, su un PC Linux o un Raspberry sempre acceso, scompatta `Nyctalus-Server-Linux.zip`
+   (`-arm64` per il Raspberry) e lancia `./installa.sh --utente` (oppure `sudo ./installa.sh`).
+   L'installatore chiede l'IP pubblico (il suo IP statico) e alla fine **stampa delle righe**:
+   te le manda (non sono segrete).
+2. **Lui** inoltra sul suo router le porte **UDP** dei nodi (quelle che dice l'installatore)
+   verso quel PC.
+3. **Tu**, con la rete di casa accesa:
+   ```sh
+   nyctalus-rete ospite aggiungi --internet 'RIGA1' 'RIGA2' --famiglia mario
+   nyctalus-rete ospite elenco --internet
+   ```
+   (`mario` = il suo nome: dice che quei nodi sono suoi). L'elenco si aggiorna subito; chi è
+   già collegato li usa alla prossima apertura della chat. Restano anche ai riavvii.
+4. Per togliere un suo nodo: `nyctalus-rete ospite togli --internet IP:PORTA`.
+
+**Quante famiglie servono:** un percorso ha 3 nodi, tutti di gestori diversi. Con i tuoi
+nodi e quelli del tuo amico le famiglie sono **2**: la rete funziona, ma il motore avvisa
+«NON anonimo», perché un percorso deve per forza usare due nodi dello stesso gestore. Con un
+**terzo** gestore (un altro amico, o un piccolo server affittato) i percorsi diventano tutti
+di 3 gestori diversi. Il perché, in `PIANO-ANONIMATO.md` (Tappa 3).
+
 ## Se qualcosa non va
 
 | Sintomo | Causa probabile · cosa fare |
@@ -154,8 +180,7 @@ e tocca 📲.
 - Con tutti i nodi sul tuo PC la rete **funziona**, ma verso di **te** non è anonima: tu
   ospiti ogni salto. Per l'anonimato vero servono nodi su macchine e linee diverse.
 - **Passo successivo, facoltativo:** il tuo amico, con l'IP statico, ospita **anche lui** un
-  paio di nodi (pacchetto Server-Linux su un PC Linux o un Raspberry). Così la rete diventa
-  distribuita fra due città. Si fa con `MANUALE-SERVER.md` e `MANUALE-GESTORE-RETE.md`.
+  paio di nodi (Passo 8). Così la rete diventa distribuita fra due città.
 - Tutto il traffico in rete è cifrato e senza parole riconoscibili: lo dimostra la prova
   «Wireshark in mezzo» (`SICUREZZA.md` §1.1). Da fuori si capisce solo **quando** state
   usando molta banda, non cosa né con chi.

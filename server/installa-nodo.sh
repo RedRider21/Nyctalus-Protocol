@@ -167,4 +167,7 @@ echo
 sed 's/^/   /' "$RIGHE"
 echo
 echo "   (salvate anche in $RIGHE · ristampale con: nyctalus-server righe)"
+echo "   Il gestore le aggiunge con:  nyctalus-rete aggiungi --famiglia TUONOME 'RIGA' …"
+echo "   (rete di casa di un amico:   nyctalus-rete ospite aggiungi 'RIGA' … --famiglia TUONOME)"
+echo "   La «famiglia» dice che questi nodi sono tuoi: un percorso non ne userà mai due insieme."
 echo "   Gestione: nyctalus-server stato | righe | riavvia | ferma | avvia | log"

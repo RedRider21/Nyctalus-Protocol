@@ -2,6 +2,10 @@
 
 > Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
 
+## 07/11/2026 · Tappa 3, strumenti per i nodi di persone diverse ✅
+- `nyctalus-rete ospite aggiungi|togli|elenco [--internet]` (file `ospiti.txt` nella rete di casa/Internet, famiglia obbligatoria e ≠ «casa», elenco rifirmato e servito subito, ospiti inclusi a ogni avvio); con ospiti i nodi del PC = famiglia «casa» (senza ospiti nessuna famiglia → compatibile coi client < 0.3.3). Installatore del nodo: spiega come aggiungere con la famiglia. GUIDA-INTERNET Passo 8, MANUALE-GESTORE-RETE, PIANO (Tappa 3 🔧). Prova 27. Il resto della Tappa 3 è organizzativo (trovare chi ospita i nodi: servono ≥3 famiglie).
+- Prossimi dal piano: Tappa 4 (rumore di fondo + camuffamento di serie), J browser pubblico, K Shadow; per ULTIMO il piano di sicurezza.
+
 ## 07/11/2026 · Rispondi/Rifiuta nella notifica delle chiamate ✅ (APK 0.48)
 - APK 0.48 con il motore Android della CI 42347455902 (percorsi Tappa 2 + modalità riservata).
 - ServizioNotifiche: CallStyle.forIncomingCall (Android 12+, setIsVideo) o due azioni colorate; Rispondi → MainActivity extra `rispondi` (+ `#rispondi=` / `nyctRispondiChiamata`): la web-app risponde appena arriva il CALLIN (il motore lo rimanda dopo SUB); Rifiuta → `RifiutaChiamata` (receiver non esportato) → POST `/api/chiamata/rifiuta` → `CALLNO` al motore. Prova 03 (77/77). La prova 03 usa per «Bob» un indirizzo FINTO da 55 caratteri: per i controlli sull'indirizzo serve uno valido da 56.

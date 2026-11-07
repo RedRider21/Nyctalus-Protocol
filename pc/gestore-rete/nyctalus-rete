@@ -21,6 +21,10 @@ Per il GESTORE della rete (chi la tiene in piedi):
                                          codice per il telefono (Ctrl-C per fermare)
   nyctalus-rete casa --internet NOME     la stessa, raggiungibile DA INTERNET (NOME = No-IP/
                                          DuckDNS o IP pubblico; porte da inoltrare sul router)
+  nyctalus-rete ospite aggiungi RIGA… --famiglia NOME [--internet]
+                                         aggiunge alla rete di casa (o Internet) il NODO DI UN
+                                         AMICO (righe dal suo «installa.sh»); vale subito
+  nyctalus-rete ospite togli IP:PORTA [--internet] · ospite elenco [--internet]
   nyctalus-rete rubrica [--codice NYCT1:…] [--servizio [--togli|--stampa]]
                                          RUBRICA + CASELLA CIFRATA della rete, sempre accese
                                          (es. sul server); poi il codice le include
@@ -165,6 +169,24 @@ class Rete:
         self.f_nodi = cartella / "nodi.txt"
         self.f_elenco = cartella / "directory.txt"
         self.f_codice = cartella / "codice.txt"
+        self.f_ospiti = cartella / "ospiti.txt"     # nodi di altri inclusi nella rete di casa
+
+    def ospiti(self):
+        if not self.f_ospiti.exists():
+            return []
+        return [r.strip() for r in self.f_ospiti.read_text().splitlines() if RIGA.match(r.strip())]
+
+    def salva_ospiti(self, righe):
+        scrivi_privato(self.f_ospiti, "".join(r + "\n" for r in righe))
+
+    def rifirma_con_ospiti(self, prima=()):
+        """I nodi propri (quelli che non erano ospiti) più gli ospiti di adesso: elenco rifirmato."""
+        vecchi = {r.split(",")[0] for r in prima} | {r.split(",")[0] for r in self.ospiti()}
+        propri = [",".join(r.split(",")[:3] + (["casa"] if self.ospiti() else []))
+                  for r in self.nodi() if r.split(",")[0] not in vecchi]
+        self.salva_nodi(propri + self.ospiti())
+        if self.f_aut.exists() and len(propri) + len(self.ospiti()) >= 3:
+            self.firma()
 
     def esiste(self):
         return self.f_aut.exists()
@@ -563,8 +585,16 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None):
                          % (porta_base + i, r.dir / ("nodo-%d.log" % (porta_base + i))))
                 time.sleep(0.1)
             righe.append(f.read_text().strip())
-        r.salva_nodi(righe)
+        ospiti = r.ospiti()                                   # nodi di amici, con la loro famiglia
+        if ospiti:
+            # con nodi di altri, quelli di questo PC si dichiarano UNA famiglia (stesso gestore):
+            # mai due nello stesso percorso. Senza ospiti l'elenco resta quello di sempre, leggibile
+            # anche dai client prima della 0.3.3.
+            righe = [",".join(x.split(",")[:3] + ["casa"]) for x in righe]
+        r.salva_nodi(righe + ospiti)
         r.firma()
+        if ospiti:
+            print("» nodi ospiti nella rete: %d (%s)" % (len(ospiti), ", ".join(o.split(",")[0] for o in ospiti)))
         avvia_rubrica(r, r.autorita()["pubblica"], proc)      # chi usa la rete vede chi c'è
         srv, url = servitore(r, porta_web, ip)
         cod = r.codice(url)
@@ -823,6 +853,55 @@ def principale(args):
         casa(int(opzione(args, "--nodi", "4")), int(opzione(args, "--porta-base", "4701")),
              int(opzione(args, "--porta", "18800")), opzione(args, "--ip", ip_locale()),
              "--non-importare" not in args, internet)
+    elif cmd == "ospite":
+        internet = "--internet" in args
+        if internet:
+            args.remove("--internet")
+        r = Rete(DATI / ("internet" if internet else "casa"))
+        if not r.esiste():
+            esci("prima avvia almeno una volta la rete: nyctalus-rete casa%s" % (" --internet NOME" if internet else ""))
+        sotto = args.pop(0) if args else "elenco"
+        prima = r.ospiti()
+        if sotto == "aggiungi":
+            famiglia = opzione(args, "--famiglia")
+            if not famiglia or not FAMIGLIA.match(famiglia) or famiglia == "casa":
+                esci("indica --famiglia NOME (il nome di chi gestisce quel nodo, es. --famiglia mario)")
+            nuove = []
+            for riga in args:
+                riga = riga.strip().split()[-1] if riga.strip() else ""
+                if not RIGA.match(riga):
+                    esci("riga non valida: %r (atteso IP:PORTA,chiave,impronta)" % riga)
+                nuove.append(",".join(riga.split(",")[:3] + [famiglia]))
+            if not nuove:
+                esci("indica le righe del nodo (le stampa «installa.sh» sul PC o server dell'amico)")
+            indirizzi = {n.split(",")[0] for n in nuove}
+            r.salva_ospiti([o for o in prima if o.split(",")[0] not in indirizzi] + nuove)
+            r.rifirma_con_ospiti(prima)
+            ok("%d nodi di «%s» aggiunti alla rete%s: l'elenco è già firmato e pubblicato" % (len(nuove), famiglia, " Internet" if internet else " di casa"))
+            print("  Chi è già collegato li userà al prossimo avvio della chat.")
+        elif sotto == "togli":
+            if not args:
+                esci("indica IP:PORTA del nodo ospite")
+            resto = [o for o in prima if o.split(",")[0] != args[0]]
+            if len(resto) == len(prima):
+                esci("nessun nodo ospite %s" % args[0])
+            r.salva_ospiti(resto)
+            r.rifirma_con_ospiti(prima)
+            ok("nodo ospite tolto e elenco rifirmato")
+        elif sotto == "elenco":
+            if not prima:
+                print("Nessun nodo ospite. Aggiungine uno: nyctalus-rete ospite aggiungi RIGA --famiglia NOME")
+            fam = {}
+            for o in prima:
+                fam.setdefault(o.split(",")[3], []).append(o.split(",")[0])
+            for f, nodi in fam.items():
+                print("  %-16s %s" % (f, ", ".join(nodi)))
+            if prima:
+                n = len(fam) + 1
+                print("\nFamiglie in rete: %d (casa + %d ospiti). Per percorsi di 3 nodi tutti di gestori diversi" % (n, n - 1))
+                print("ne servono almeno 3%s." % ("" if n >= 3 else ": per ora la rete funziona ma NON è anonima"))
+        else:
+            esci("uso: nyctalus-rete ospite aggiungi|togli|elenco")
     elif cmd == "rubrica":
         rubrica(opzione(args, "--codice"), "--servizio" in args, "--togli" in args, "--stampa" in args)
     elif cmd == "importa":

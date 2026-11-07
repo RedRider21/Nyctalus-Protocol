@@ -126,6 +126,20 @@ sei sicuro che nessuno sulla Wi-Fi ti abbia passato un codice diverso. La pagina
 `http` perché è solo nella rete locale e distribuisce dati pubblici; l'elenco dei nodi è
 firmato, e l'impronta protegge il codice.
 
+### Nodi di amici nella rete di casa (ospiti)
+La rete di casa (anche `--internet`) può includere i nodi di altre persone, ognuno con la sua
+famiglia: i nodi del tuo PC diventano la famiglia «casa», e un percorso non usa mai due nodi
+della stessa famiglia.
+```sh
+nyctalus-rete ospite aggiungi 'RIGA1' 'RIGA2' --famiglia mario [--internet]
+nyctalus-rete ospite elenco [--internet]           # ospiti per famiglia, e quante famiglie ci sono
+nyctalus-rete ospite togli IP:PORTA [--internet]
+```
+Vale subito (elenco rifirmato e pubblicato) e resta ai riavvii. Le righe le stampa
+l'installatore del nodo sulla macchina dell'amico (`MANUALE-SERVER.md`). Servono almeno **3
+famiglie** perché ogni percorso sia di 3 gestori diversi; con meno, la rete funziona ma il
+motore avvisa «NON anonimo».
+
 ## 6-bis. Rubrica e casella per la tua rete
 
 > Dalla 0.3.3 la rubrica rispetta la **modalità riservata** dei client (posta consegnata solo
