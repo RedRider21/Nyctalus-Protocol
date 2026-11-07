@@ -105,6 +105,9 @@ restano diretti, con un avviso), e il fatto che sei collegato (il tuo servizio `
 acceso per ricevere chiamate). Serve una rete **con la casella** (`nyctalus-rete rubrica`).
 I contatti devono avere la versione 0.3.3 o successiva.
 
+**Misurata in Shadow** (punto K): con la chat normale chi vede tutte le linee scopre il 100% delle
+coppie; con la modalità riservata non va oltre il caso.
+
 **Come si usa:** `MANUALE-CHAT.md` §3-ter·1. Verificato dalla prova `26-riservata`: messaggio
 arrivato identico, nessuna ricevuta, buste finte spedite e tornate, **tutte le buste della
 stessa misura** nella casella, rubrica che non consegna subito.
@@ -160,7 +163,11 @@ collega, senza no. Resta da fare la parte «più utenti», che è organizzativa.
     - **attacco di correlazione dei tempi**: chi vede le linee degli utenti e del sito
       attribuisce giusti circa l'**80%** degli scaricamenti (a caso 17%), e il rumore di fondo a
       celle sparse non cambia molto. È il limite di tutte le reti in tempo reale, Tor compreso.
-  - Da fare: confronto con Tor nella stessa simulazione; misura della modalità riservata.
+    - **chi scrive a chi** con un avversario che vede tutte le linee: chat normale **100%**
+      delle coppie scoperte, **modalità riservata al livello del caso** (17-33%, a caso 20%);
+    - la simulazione ha scoperto e fatto correggere un limite vero: ogni servizio `.nyct`
+      serviva al massimo 4 client insieme.
+  - Da fare: confronto con Tor nella stessa simulazione.
 - **Browser pubblico** basato su Firefox, con impronta uniforme per tutti (finestre a
   misure fisse, canvas e caratteri uniformati), per navigare sul web normale senza essere
   riconoscibili dal browser.

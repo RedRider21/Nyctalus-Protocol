@@ -274,6 +274,9 @@ async fn canale_onion(percorso: &[NodoRete], offusca: Option<[u8; 32]>) -> Risul
     })
 }
 
+/// Client serviti insieme da un servizio .nyct (oltre, i nuovi aspettano che se ne liberi uno).
+const CLIENT_MAX: usize = 256;
+
 /// Percorso onion per raggiungere `elenco[rendezvous]` come uscita: si entra dalla
 /// **guardia** persistente della rete (o, se è parente del punto d'incontro, da un altro
 /// nodo), poi intermedi a caso, mai parenti fra loro ([`crate::percorsi`]). Fino a
@@ -619,26 +622,38 @@ pub async fn site(
         return site_diretto(nodo, identita, modo, offusca).await;
     }
 
-    // Modo onion: il servizio serve un client per circuito; un pool di
-    // registrazioni concorrenti permette a un browser di caricare più risorse in
-    // parallelo. Ogni task del pool: registra un circuito, serve un client, e si
-    // re-registra.
+    // Modo onion: il servizio serve un client per circuito. Un pool di registrazioni
+    // concorrenti ASPETTA i client: appena uno arriva, viene servito in un compito a parte e il
+    // posto si ri-registra SUBITO per il prossimo. (Prima il posto restava occupato finché il
+    // client non se ne andava: con sessioni lunghe, come la chat, dal 5° client in poi nessuno
+    // entrava più. L'ha scoperto la simulazione in Shadow, PIANO-ANONIMATO punto K.)
+    // Tetto ai client serviti insieme, perché nessuno possa esaurire le risorse del servizio.
     let pool = pool.clamp(1, 32);
     let elenco = Arc::new(elenco);
+    let attivi = Arc::new(tokio::sync::Semaphore::new(CLIENT_MAX));
     let mut task = Vec::new();
     for _ in 0..pool {
         let identita = identita.clone();
         let modo = modo.clone();
         let elenco = elenco.clone();
+        let attivi = attivi.clone();
         task.push(tokio::spawn(async move {
             loop {
+                let Ok(posto) = attivi.clone().acquire_owned().await else { return };
                 match registra_onion_e_canale(&identita.pubblica(), &elenco, offusca, salti).await {
                     Ok(canale) => {
-                        if let Err(e) = servi_client(canale, &identita, &modo).await {
-                            eprintln!("client error: {e}");
-                        }
+                        let (identita, modo) = (identita.clone(), modo.clone());
+                        tokio::spawn(async move {
+                            let _posto = posto; // libero quando il client se ne va
+                            crate::diagnosi(|| "servizio: arriva un client".into());
+                            if let Err(e) = servi_client(canale, &identita, &modo).await {
+                                eprintln!("client error: {e}");
+                            }
+                            crate::diagnosi(|| "servizio: client finito".into());
+                        });
                     }
                     Err(e) => {
+                        drop(posto);
                         eprintln!("could not register at a rendezvous node: {e}");
                         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
                     }

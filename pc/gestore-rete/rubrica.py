@@ -45,12 +45,12 @@ MAX_ISCRITTI = 1000
 MAX_NOME = 40
 NOME_VALIDO = re.compile(r"^[^\x00-\x1f\x7f<>]{1,40}$")
 INDIRIZZO = re.compile(r"^[a-z2-7]{56}\.nyct$")
-ID_BUSTA = re.compile(r"^[0-9]{10}-[0-9a-f]{16}$")
+ID_BUSTA = re.compile(r"^[0-9]{1,12}-[0-9a-f]{16}$")     # ora del deposito - casuale
 BUSTA_MAX = 64 * 1024
 BUSTE_PER_DESTINATARIO = 200
 CASELLA_MAX = 50 * 1024 * 1024
 CASELLA_GIORNI = 14
-LOTTO_POSTA = 40 * 1024          # buste per messaggio di consegna (in esadecimale, sotto i 64 KB)
+LOTTO_POSTA = int(os.environ.get("NYCTALUS_LOTTO_POSTA", 40 * 1024))   # buste per messaggio di consegna (in esadecimale, sotto i 64 KB); più piccolo solo nelle simulazioni
 
 
 def hx(t):
@@ -146,10 +146,16 @@ class Rubrica:
             (self.solo_ritiro.add if parti[2:3] == ["RISERVATA"] else self.solo_ritiro.discard)(addr)
             self.consegna(addr)
         elif parti[:2] == ["CASELLA", "RICEVUTI"]:
+            tolte = 0
             for i in parti[2:]:
-                if ID_BUSTA.match(i):
-                    (self.casella / addr / (i + ".busta")).unlink(missing_ok=True)
-            self.consegna(addr)                  # se ne restano, il lotto successivo
+                f = self.casella / addr / (i + ".busta")
+                if ID_BUSTA.match(i) and f.exists():
+                    f.unlink(missing_ok=True)
+                    tolte += 1
+            # il lotto successivo, se ne restano; ma solo se qualcosa è stato davvero tolto:
+            # rimandare le stesse buste farebbe un giro senza fine
+            if tolte:
+                self.consegna(addr)
         self.manda("CLEAR %s" % addr)
 
     def richiesta(self, addr, testo):

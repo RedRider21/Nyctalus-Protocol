@@ -417,6 +417,7 @@ impl Stato {
     ///   `D <id> <byte…>`                         un blocco dell'allegato
     ///   `E <id> <blake3 hex>`                    fine: impronta di tutto il file
     fn ricevi_messaggio(&self, peer: &str, sid: u64, chiaro: &[u8]) {
+        crate::diagnosi(|| format!("sessione {}: {} byte «{}»", &peer[..8], chiaro.len(), String::from_utf8_lossy(&chiaro[..chiaro.len().min(24)])));
         if let Some(r) = chiaro.strip_prefix(b"D ") {
             return self.ricevi_blocco(peer, r);
         }
@@ -1044,7 +1045,9 @@ impl Stato {
             if let Some(rub) = self.rubrica.clone() {
                 // riservata: la rubrica consegna SOLO su richiesta, a questi intervalli fissi
                 let richiesta: &[u8] = if riservata { b"CASELLA RITIRA RISERVATA" } else { b"CASELLA RITIRA" };
-                let _ = self.invia_grezzo(&rub, richiesta).await;
+                crate::diagnosi(|| format!("ritiro: chiedo la posta a {}", &rub[..8]));
+                let esito = self.invia_grezzo(&rub, richiesta).await;
+                crate::diagnosi(|| format!("ritiro: {:?}", esito.as_ref().map_err(|e| e.to_string())));
             }
             tokio::select! {
                 _ = tokio::time::sleep(if riservata { ritiro_riservato() } else { RITIRO_GIRO }) => {}
@@ -1232,10 +1235,12 @@ impl Stato {
         let (tx, mut rx) = mpsc::unbounded_channel::<String>();
         let scrittore = tokio::spawn(async move {
             while let Some(riga) = rx.recv().await {
-                if scrittura.write_all(riga.as_bytes()).await.is_err() {
+                if let Err(e) = scrittura.write_all(riga.as_bytes()).await {
+                    crate::diagnosi(|| format!("controllo: scrittura fallita ({e}), {} byte", riga.len()));
                     break;
                 }
             }
+            crate::diagnosi(|| "controllo: lo scrittore si ferma".into());
         });
 
         let mut lettore = BufReader::new(lettura);
@@ -1259,8 +1264,17 @@ impl Stato {
         }
         loop {
             linea.clear();
-            if lettore.read_line(&mut linea).await? == 0 {
-                break;
+            match lettore.read_line(&mut linea).await {
+                Ok(0) => {
+                    crate::diagnosi(|| "controllo: chiuso dal programma".into());
+                    break;
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    crate::diagnosi(|| format!("controllo: lettura fallita ({e})"));
+                    scrittore.abort();
+                    return Err(e.into());
+                }
             }
             self.comando(linea.trim_end(), &tx).await;
         }
@@ -1269,6 +1283,7 @@ impl Stato {
     }
 
     async fn comando(self: &Arc<Self>, riga: &str, tx: &mpsc::UnboundedSender<String>) {
+        crate::diagnosi(|| format!("comando {} ({} byte)", riga.split(' ').next().unwrap_or(""), riga.len()));
         let mut it = riga.splitn(3, ' ');
         match it.next().unwrap_or("") {
             "WHOAMI" => {

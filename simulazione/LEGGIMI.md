@@ -21,6 +21,10 @@ Misure dell'anonimato con il **codice vero** di Nyctalus. Sono due tipi di misur
      scaricamento attraverso 3 salti.
    - `correlazione.py CARTELLA [--utenti 6] [--giri 3] [--rumore HZ] [--seme N]`: **attacco di
      correlazione dei tempi** di un avversario che vede le linee degli utenti e del sito.
+   - `riservata.py CARTELLA (--normale | --riservata) [--messaggi 15] [--seme N]`: **chi scrive a
+     chi?** 6 utenti chattano a coppie con rubrica e casella; un avversario che vede le linee di
+     tutti prova a scoprire le coppie (quattro attacchi, vale il migliore). Con `DIAGNOSI=1` motori
+     e rubrica scrivono un registro dettagliato (`NYCTALUS_DIAGNOSI`, `rubrica_diagnosi.py`).
 
 ## Installare Shadow (una volta)
 
@@ -71,3 +75,25 @@ di 3 ripetizioni:
 Il rumore di fondo a celle sparse **non protegge gli scaricamenti** da chi vede entrambi i capi: è
 il limite noto di tutte le reti in tempo reale, Tor compreso. Servono copertura costante pari al
 traffico, oppure ritardi e rimescolamento (mixnet), praticabili per chat e messaggi.
+
+**Chi scrive a chi** (6 utenti a coppie, 90 messaggi tutti consegnati; a caso 20%), 3 ripetizioni:
+
+| Chat | L'avversario scopre le coppie |
+|---|---|
+| normale | **100%** (6 su 6, in tutte e tre) |
+| modalità riservata | **17-33%**: al livello del caso |
+
+La modalità riservata (Tappa 2-bis) regge contro un avversario che vede **tutte** le linee.
+
+**Difetti veri trovati dalla simulazione (corretti):**
+1. un servizio `.nyct` serviva al massimo **4 client insieme** (il «posto» restava occupato finché il
+   client non se ne andava): la rubrica non reggeva il 5° utente, un utente il 5° contatto collegato.
+   Ora il posto si ri-registra subito (tetto di 256 client). Prova `31-servizio-molti-client`
+   (con il motore vecchio: 4 su 8);
+2. `rubrica.py` accettava solo nomi di busta con l'ora a 10 cifre e, se una conferma non
+   corrispondeva, rispediva **all'infinito** la stessa busta. Ora 1-12 cifre e nessun giro infinito.
+
+**Limite di Shadow (non del programma):** una riga molto lunga (~67 KB, un lotto di 4 buste) sul
+collegamento **locale** fra `rubrica.py` e il suo motore blocca quel collegamento simulato; sul PC
+vero funziona (prova `26`). In simulazione la rubrica consegna una busta per messaggio
+(`NYCTALUS_LOTTO_POSTA`, solo per le prove).

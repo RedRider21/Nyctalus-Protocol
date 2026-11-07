@@ -595,6 +595,15 @@ fn da_esadecimale_opt(hex: Option<&str>) -> Risultato<Option<[u8; 32]>> {
     hex.map(da_esadecimale).transpose()
 }
 
+/// Diagnosi accendibile con NYCTALUS_DIAGNOSI=1 (spenta di serie): righe su stderr con l'ora.
+pub(crate) fn diagnosi(testo: impl FnOnce() -> String) {
+    static ACCESA: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    if *ACCESA.get_or_init(|| std::env::var("NYCTALUS_DIAGNOSI").is_ok_and(|v| v == "1")) {
+        let t = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs_f64()).unwrap_or(0.0);
+        eprintln!("[diagnosi {t:.1}] {}", testo());
+    }
+}
+
 /// Velocità leggibile (MB/s) per i riepiloghi.
 pub fn velocita(byte: u64, secondi: f64) -> String {
     format!("{:.1} MB/s", byte as f64 / 1_000_000.0 / secondi.max(1e-9))

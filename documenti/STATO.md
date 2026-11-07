@@ -2,6 +2,12 @@
 
 > Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
 
+## 07/11/2026 · K: modalità riservata misurata ✅ + 2 difetti veri corretti
+- `simulazione/riservata.py` (6 utenti a coppie, rubrica+casella, 4 attacchi): normale 100% coppie scoperte, riservata 17-33% (caso 20%), 90/90 consegnati.
+- DIFETTO 1 (motore, incontro.rs `site`): ogni posto del pool serviva UN client fino alla sua uscita → max 4 sessioni lunghe per servizio (rubrica, casella, utenti). Ora spawn + ri-registrazione immediata, Semaphore CLIENT_MAX=256. Prova 31 (controprova: vecchio 4/8). Serve motore Android nuovo (CI) → APK 0.50.
+- DIFETTO 2 (rubrica.py): ID_BUSTA solo 10 cifre + reinvio infinito della stessa busta; ora `[0-9]{1,12}` e consegna successiva solo se `tolte`.
+- Limite di Shadow: riga lunga (~67 KB) sul TCP locale rubrica.py↔motore blocca il collegamento simulato → in sim `NYCTALUS_LOTTO_POSTA=9000`. Motore: `crate::diagnosi()` con `NYCTALUS_DIAGNOSI=1`; il controllo ora annota errori di lettura/scrittura.
+
 ## 07/11/2026 · K, prime misure ✅ (Shadow funzionante)
 - Shadow 3.3 (commit in `simulazione/shadow-versione.txt`) in `~/.local/share/nyctalus-sim/` (NON nel progetto; build cancellata dopo l'installazione, 36 MB), con `simulazione/shadow-patch-nyctalus.patch`: `recvmmsg` (un recvmsg alla volta) + `IP_PKTINFO` accettata senza effetto — senza, quinn non riceveva nulla e la simulazione girava a vuoto.
 - Motore: `nyctalus simulate-paths` + `percorsi::simula` (Strategia Vecchia/SenzaGuardia/Attuale, test). Script `simulazione/shadow-base.sh`, `simulazione/correlazione.py` (pcap di Shadow, avversario globale per correlazione delle serie temporali). Risultati in `simulazione/LEGGIMI.md` e nel PIANO: 1 gestore → 0% collegati; correlazione ≈80% indovinati anche con rumore (limite del tempo reale).
