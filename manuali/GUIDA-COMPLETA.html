@@ -1,0 +1,449 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guida completa: scaricare, configurare, opzioni · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html" class="qui">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
+<article>
+<h1 id="guida-completa-scaricare-configurare-opzioni">Guida completa: scaricare, configurare, opzioni</h1><nav class="sommario"><b>In questa pagina</b><a href="#parte-1-cosa-scaricare">Parte 1 · Cosa scaricare</a><a href="#parte-2-i-tre-ruoli-client-nodo-gestore">Parte 2 · I tre ruoli: client, nodo, gestore</a><a href="#parte-3-le-opzioni">Parte 3 · Le opzioni</a></nav>
+<p>Tutto in un posto, con passi brevi:</p>
+<ol>
+<li><strong><a href="#parte-1-cosa-scaricare">Cosa scaricare</a></strong>, apparecchio per apparecchio;</li>
+<li><strong><a href="#parte-2-i-tre-ruoli-client-nodo-gestore">I tre ruoli</a></strong>: chi <strong>usa</strong> la rete (client), chi la <strong>fa
+   funzionare</strong> (nodo, su un server o un PC sempre acceso), chi la <strong>tiene in piedi</strong> (gestore);</li>
+<li><strong><a href="#parte-3-le-opzioni">Le opzioni</a></strong>: a cosa serve ciascuna, cosa costa, come si accende.</li>
+</ol>
+<p>Per i dettagli, ogni passo rimanda al manuale apposito.</p>
+<hr />
+<h2 id="parte-1-cosa-scaricare">Parte 1 · Cosa scaricare</h2>
+<p>Tutto dalla <strong><a href="https://github.com/RedRider21/Nyctalus-Protocol/releases/latest">release più recente</a></strong>.
+Usate <strong>la stessa versione</strong> su tutti gli apparecchi.</p>
+<table>
+<thead>
+<tr>
+<th>Apparecchio</th>
+<th>File</th>
+<th>Serve per</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PC Linux</td>
+<td><code>Nyctalus-PC-Linux.zip</code></td>
+<td>client, gestore, e anche nodo</td>
+</tr>
+<tr>
+<td>Telefono Android</td>
+<td><code>Nyctalus-Android.zip</code> (dentro: l'app <code>Nyctalus.apk</code> e il pacchetto per Termux)</td>
+<td>client</td>
+</tr>
+<tr>
+<td>Windows (anteprima)</td>
+<td><code>Nyctalus-Windows.zip</code></td>
+<td>client</td>
+</tr>
+<tr>
+<td>Server o VPS Linux (x86_64)</td>
+<td><code>Nyctalus-Server-Linux.zip</code></td>
+<td>nodo</td>
+</tr>
+<tr>
+<td>Raspberry Pi, server ARM</td>
+<td><code>Nyctalus-Server-Linux-arm64.zip</code></td>
+<td>nodo</td>
+</tr>
+<tr>
+<td>Solo il motore</td>
+<td><code>nyctalus-&lt;sistema&gt;</code> (Linux, Android, Windows, macOS)</td>
+<td>uso da riga di comando, per esperti</td>
+</tr>
+</tbody>
+</table>
+<p>Sul telefono serve anche <strong>Termux</strong>, da F-Droid o da GitHub (non dal Play Store):
+<a href="MANUALE-INSTALLAZIONE.html"><code>MANUALE-INSTALLAZIONE.md</code></a> §2.</p>
+<hr />
+<h2 id="parte-2-i-tre-ruoli-client-nodo-gestore">Parte 2 · I tre ruoli: client, nodo, gestore</h2>
+<pre><code class="language-text">   CLIENT (tu, i tuoi amici)  ──►  NODI (3 salti, su server o PC sempre accesi)  ──►  il contatto o il sito
+                                  ▲
+   GESTORE: firma l'elenco dei nodi e dà a tutti il CODICE DI RETE «NYCT1:…»
+</code></pre>
+<p>Per <strong>provare</strong> basta un PC: fa da gestore, da nodi e da client insieme (rete di casa,
+<a href="#10-rete-di-casa-e-via-internet">§10</a>). Per una rete <strong>vera</strong> servono nodi su macchine di persone diverse
+(<a href="PIANO-ANONIMATO.html"><code>PIANO-ANONIMATO.md</code></a>).</p>
+<h3 id="client-usare-la-rete">Client: usare la rete</h3>
+<p><strong>PC Linux</strong></p>
+<ol>
+<li><code>sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1</code> (una volta).</li>
+<li>Scompatta <code>Nyctalus-PC-Linux.zip</code>, entra nella cartella <code>Nyctalus</code> e lancia <code>./installa.sh</code> →
+   scelta <strong>1 · Client</strong>.</li>
+<li>Collegati alla rete: <code>nyctalus-rete importa NYCT1:…</code> (il codice te lo dà il gestore).
+   Controlla che l'<strong>impronta</strong> mostrata sia uguale a quella del gestore.</li>
+<li>Apri il mini menu (<strong>Nyctalus</strong> nel menu delle applicazioni) → <strong>Chat</strong>.</li>
+</ol>
+<p><strong>Telefono Android</strong></p>
+<ol>
+<li>Installa <strong>Termux</strong> e aprilo una volta.</li>
+<li>Installa <code>Nyctalus.apk</code> e aprila; consenti «Esegui comandi in Termux».</li>
+<li><strong>Strumenti ▾ → 🦇 Installa / aggiorna Nyctalus in Termux</strong>.</li>
+<li><strong>🔗 Rete</strong> → incolla il codice <code>NYCT1:…</code> (oppure apri nel browser l'indirizzo della rete
+   e tocca <strong>📲 Collega l'app Nyctalus</strong>). Controlla l'impronta.</li>
+<li><strong>Chat</strong>.</li>
+</ol>
+<p><strong>Windows (anteprima)</strong></p>
+<ol>
+<li>Scompatta <code>Nyctalus-Windows.zip</code>, doppio clic su <code>Nyctalus.cmd</code>.</li>
+<li><strong>🔗 Rete</strong> → incolla il codice. Poi <strong>Chat</strong>.</li>
+</ol>
+<p><strong>Per aggiornare:</strong> stesso pacchetto, versione nuova. PC: <code>./installa.sh</code> di nuovo. Telefono:
+nuova APK, poi di nuovo il punto 3. I tuoi dati restano.</p>
+<p>Dettagli: <a href="MANUALE-INSTALLAZIONE.html"><code>MANUALE-INSTALLAZIONE.md</code></a>, <a href="MANUALE-PC.html"><code>MANUALE-PC.md</code></a>, <a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a>, <a href="MANUALE-WINDOWS.html"><code>MANUALE-WINDOWS.md</code></a>.</p>
+<h3 id="nodo-far-funzionare-la-rete-server-o-pc-sempre-acceso">Nodo: far funzionare la rete (server o PC sempre acceso)</h3>
+<p>Un nodo <strong>inoltra</strong> traffico cifrato: non vede cosa passa né chi lo manda. Serve una macchina
+sempre accesa con un <strong>IP pubblico</strong> (anche dinamico, con un nome No-IP) e le porte <strong>UDP</strong>
+aperte.</p>
+<ol>
+<li>Porta sul server <code>Nyctalus-Server-Linux.zip</code> (<code>-arm64</code> per Raspberry) e scompattalo.</li>
+<li>Fatti dare dal gestore il <strong>codice di rete</strong>, poi:
+   <code>sh
+   sudo ./installa.sh --codice NYCT1:…      # senza root: ./installa.sh --utente --codice NYCT1:…</code>
+   Chiede IP pubblico, quanti nodi e la prima porta; dal codice prende camuffamento e
+   rumore di fondo della rete.</li>
+<li>Se il server è dietro un router: inoltra le porte <strong>UDP</strong> indicate verso quella macchina.</li>
+<li>L'installatore stampa delle <strong>righe</strong> (<code>IP:PORTA,chiave,impronta</code>): mandale al gestore.
+   Non sono segrete.</li>
+<li>Gestione: <code>nyctalus-server stato | righe | riavvia | log</code>.</li>
+</ol>
+<p>Dettagli: <a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>.</p>
+<h3 id="gestore-tenere-in-piedi-la-rete">Gestore: tenere in piedi la rete</h3>
+<p>Firma l'elenco dei nodi con una chiave che <strong>non esce mai</strong> dal suo PC, e dà a tutti il
+codice di rete.</p>
+<ol>
+<li>Sul PC: <code>./installa.sh</code> → scelta <strong>2 · Gestore</strong> (è anche client).</li>
+<li><strong>Crea la rete:</strong>
+   <code>sh
+   nyctalus-rete crea --nome "La nostra rete"</code>
+   Nasce <strong>protetta</strong> (camuffamento e rumore di fondo, <a href="#12-protezione-camuffamento-e-rumore-di-fondo">§12</a>): il comando stampa la chiave per i
+   nodi. Fai una copia di sicurezza di <code>~/.nyctalus-rete</code>.</li>
+<li><strong>Aggiungi i nodi</strong> con le righe ricevute, ognuno con la <strong>famiglia</strong> del suo gestore (<a href="#13-famiglie-e-nodi-di-amici">§13</a>):
+   <code>sh
+   nyctalus-rete aggiungi --famiglia mario 'RIGA1' 'RIGA2'
+   nyctalus-rete firma
+   nyctalus-rete verifica          # i nodi rispondono?</code></li>
+<li><strong>Pubblica l'elenco</strong> dove i client lo scaricano: <code>nyctalus-rete servi</code> su questo PC, una
+   cartella web del server, o un hosting statico. Dopo ogni <code>firma</code> ricaricalo nello stesso posto.</li>
+<li><strong>Accendi rubrica e casella</strong> (<a href="#11-rubrica-e-casella">§11</a>): <code>nyctalus-rete rubrica --servizio</code>.</li>
+<li><strong>Crea il codice:</strong> <code>nyctalus-rete codice --url https://…/directory.txt</code> → <code>NYCT1:…</code>.
+   Dallo ai client e a chi installa i nodi, insieme all'<strong>impronta</strong> (<code>nyctalus-rete elenco</code>).</li>
+</ol>
+<p>Il codice va rifatto solo se cambia l'URL o la protezione; aggiungere o togliere nodi non lo
+cambia. Dettagli: <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a>.</p>
+<hr />
+<h2 id="parte-3-le-opzioni">Parte 3 · Le opzioni</h2>
+<p>Per ognuna: <strong>a cosa serve</strong>, <strong>cosa costa</strong> e i <strong>passi</strong> su PC, telefono (o Windows) e
+terminale. Le prime sono per chi usa la chat; quelle in fondo per chi <strong>gestisce la rete</strong>.</p>
+<p><strong>Indice delle opzioni</strong></p>
+<table>
+<thead>
+<tr>
+<th>Opzione</th>
+<th>A cosa serve</th>
+<th>Di serie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#1-tema-e-sfondo">Tema e sfondo</a></td>
+<td>l'aspetto, uguale su tutti i programmi</td>
+<td>Notte</td>
+</tr>
+<tr>
+<td><a href="#2-foto-senza-metadati">Foto senza metadati</a></td>
+<td>non far sapere dove hai scattato una foto</td>
+<td>accesa</td>
+</tr>
+<tr>
+<td><a href="#3-notifiche">Notifiche</a></td>
+<td>sapere che è arrivato un messaggio o una chiamata</td>
+<td>accese</td>
+</tr>
+<tr>
+<td><a href="#4-avvio-allaccensione-telefono">Avvio all'accensione</a></td>
+<td>ricevere anche dopo aver riacceso il telefono</td>
+<td>spento</td>
+</tr>
+<tr>
+<td><a href="#5-modalita-riservata">Modalità riservata</a></td>
+<td>non far capire <strong>quando</strong> né <strong>a chi</strong> scrivi</td>
+<td>spenta</td>
+</tr>
+<tr>
+<td><a href="#6-programma-file">File: soglia, collegamenti, chat</a></td>
+<td>quanto accettare da solo, velocità, traccia in chat</td>
+<td>100 MB · 3 · sì</td>
+</tr>
+<tr>
+<td><a href="#7-rubrica-della-rete">Rubrica della rete</a></td>
+<td>farsi trovare dagli altri della rete</td>
+<td>non iscritto</td>
+</tr>
+<tr>
+<td><a href="#8-browser-modalita-nyctalus">Browser 🦇</a></td>
+<td>navigare attraverso la rete</td>
+<td>da scegliere</td>
+</tr>
+<tr>
+<td><a href="#9-terminale">Terminale</a></td>
+<td>chat e file scrivendo comandi</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Per chi gestisce la rete</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><a href="#10-rete-di-casa-e-via-internet">Rete di casa / via Internet</a></td>
+<td>provare senza server</td>
+<td>—</td>
+</tr>
+<tr>
+<td><a href="#11-rubrica-e-casella">Rubrica e casella</a></td>
+<td>posta per chi è spento, elenco di chi c'è</td>
+<td>accese nella rete di casa</td>
+</tr>
+<tr>
+<td><a href="#12-protezione-camuffamento-e-rumore-di-fondo">Protezione: camuffamento e rumore</a></td>
+<td>traffico simile a rumore, ritmi nascosti</td>
+<td>accesa nelle reti nuove</td>
+</tr>
+<tr>
+<td><a href="#13-famiglie-e-nodi-di-amici">Famiglie e nodi di amici</a></td>
+<td>mai due nodi dello stesso gestore in un percorso</td>
+<td>—</td>
+</tr>
+<tr>
+<td><a href="#14-modalita-rigida">Modalità rigida</a></td>
+<td>rifiutare i percorsi non anonimi</td>
+<td>spenta</td>
+</tr>
+<tr>
+<td><a href="#15-opzioni-avanzate-del-motore">Opzioni del motore</a></td>
+<td>salti, strade parallele (per esperti)</td>
+<td>3 · 2</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="1-tema-e-sfondo">1. Tema e sfondo</h3>
+<p><strong>A cosa serve:</strong> l'aspetto. Il tema vale per <strong>tutti</strong> i programmi dell'apparecchio (chat,
+File, browser, mini menu). Ci sono Notte, Ardesia, Viola, Chiaro, Menta, Cielo e
+<strong>Personalizzato</strong> (scegli un colore e chiaro/scuro; «↺ Ripristina» lo riporta all'inizio).</p>
+<ul>
+<li><strong>PC:</strong> mini menu → ultimo pulsante a destra (⚙) → <strong>Tema</strong>; oppure nella chat, menu <strong>Aspetto</strong>.</li>
+<li><strong>Telefono / Windows:</strong> <strong>Impostazioni</strong> → Tema; lo sfondo della chat poco sotto.</li>
+</ul>
+<h3 id="2-foto-senza-metadati">2. Foto senza metadati</h3>
+<p><strong>A cosa serve:</strong> le foto contengono spesso la <strong>posizione GPS</strong> e il modello del telefono.
+Con l'opzione accesa Nyctalus li toglie prima di spedire.
+<strong>Costo:</strong> nessuno. Lasciala accesa.</p>
+<ul>
+<li><strong>PC:</strong> chat → menu <strong>Aspetto</strong> → «Foto senza metadati».</li>
+<li><strong>Telefono / Windows:</strong> <strong>Impostazioni</strong> → «Foto senza metadati».</li>
+</ul>
+<h3 id="3-notifiche">3. Notifiche</h3>
+<p><strong>A cosa serve:</strong> sapere che è arrivato un messaggio, un file o una chiamata. Sul telefono
+funzionano <strong>anche con l'app chiusa</strong>, senza passare da Google. Le chiamate hanno i pulsanti
+<strong>Rispondi</strong> (verde) e <strong>Rifiuta</strong> (rosso).
+<strong>Costo:</strong> un po' di batteria sul telefono (in Android: App → Nyctalus e Termux → Batteria →
+<strong>Senza restrizioni</strong>, altrimenti Android le ferma).</p>
+<ul>
+<li><strong>PC:</strong> chat → menu <strong>Aspetto</strong> → «Notifiche sul desktop».</li>
+<li><strong>Telefono:</strong> <strong>Impostazioni</strong> → App → «🔔 Notifiche…». La prima volta Android chiede il
+  permesso: <strong>Consenti</strong>.</li>
+</ul>
+<h3 id="4-avvio-allaccensione-telefono">4. Avvio all'accensione (telefono)</h3>
+<p><strong>A cosa serve:</strong> riaccendendo il telefono Nyctalus riparte da solo, così ricevi messaggi e
+chiamate senza aprire l'app.
+<strong>Costo:</strong> un po' di batteria.</p>
+<ul>
+<li><strong>Telefono:</strong> <strong>Impostazioni</strong> → App → «⏻ Riparti da solo all'accensione».</li>
+</ul>
+<h3 id="5-modalita-riservata">5. Modalità riservata</h3>
+<p><strong>A cosa serve:</strong> non far capire <strong>quando</strong> e <strong>a chi</strong> scrivi, anche in una rete piccola.
+I messaggi passano dalla casella cifrata a ritmo casuale, insieme a buste finte, tutte della
+stessa misura. Niente spunte e niente «in linea».
+<strong>Costo:</strong> i messaggi arrivano con <strong>qualche decina di secondi</strong> di ritardo; circa 12 MB al giorno
+di buste. Serve una rete <strong>con la casella</strong>, e anche i contatti devono avere la 0.3.3 o
+successiva. Chiamate e file restano diretti.</p>
+<ul>
+<li><strong>PC:</strong> chat → menu <strong>Aspetto</strong> → «Modalità riservata» → leggi la spiegazione → <strong>OK</strong>.</li>
+<li><strong>Telefono / Windows:</strong> <strong>Impostazioni</strong> → Riservatezza → «🕶 Modalità riservata» → <strong>Accendi</strong>.</li>
+<li><strong>Terminale:</strong> <code>impostazioni riservata si</code> (per spegnerla: <code>impostazioni riservata no</code>).</li>
+</ul>
+<p>Dettagli: <a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a> §3-ter·1.</p>
+<h3 id="6-programma-file">6. Programma File</h3>
+<p><strong>A cosa serve:</strong></p>
+<ul>
+<li><strong>soglia</strong>: i file fino a questa misura arrivano da soli, quelli più grandi chiedono
+  «Accetta»;</li>
+<li><strong>collegamenti in parallelo</strong>: più strade = più veloce, ma più carico sulla rete;</li>
+<li>
+<p><strong>file anche nella chat</strong>: i file compaiono anche nella conversazione con quel contatto.</p>
+</li>
+<li>
+<p><strong>PC:</strong> programma File → ⚙ in alto.</p>
+</li>
+<li><strong>Telefono / Windows:</strong> File → ⚙.</li>
+<li><strong>Terminale:</strong> <code>impostazioni soglia 200 canali 4 inchat no</code>.</li>
+</ul>
+<h3 id="7-rubrica-della-rete">7. Rubrica della rete</h3>
+<p><strong>A cosa serve:</strong> un elenco di chi usa la rete, per trovarsi senza scambiarsi a mano il
+Contact ID. Ti iscrivi con un nome; puoi cancellarti quando vuoi.
+<strong>Costo:</strong> chi è iscritto vede che sei «in linea».</p>
+<ul>
+<li><strong>PC:</strong> mini menu → <strong>Rubrica</strong> (o il pulsante 👥 nella chat) → iscriviti.</li>
+<li><strong>Telefono / Windows:</strong> pulsante <strong>Rubrica</strong> → iscriviti.</li>
+</ul>
+<h3 id="8-browser-modalita-nyctalus">8. Browser — 🦇 modalità Nyctalus</h3>
+<p><strong>A cosa serve:</strong> navigare <strong>attraverso la rete</strong> (il sito non vede il tuo IP) e aprire i siti
+<code>.nyct</code>. Nelle schede 🦇 non esce nulla finché la protezione non è attiva.
+<strong>Costo:</strong> pagine un po' più lente. Per l'anonimato «serio» sul web normale arriverà un
+browser apposta (piano, punto J).</p>
+<ul>
+<li><strong>PC:</strong> mini menu → <strong>Browser</strong> → scheda 🦇.</li>
+<li><strong>Telefono:</strong> pulsante <strong>Browser</strong> → scegli <strong>🦇 Nyctalus</strong>.</li>
+</ul>
+<h3 id="9-terminale">9. Terminale</h3>
+<p><strong>A cosa serve:</strong> chat e file scrivendo comandi (<code>contatti</code>, <code>scrivi mario ciao</code>, <code>file -s</code>…).</p>
+<ul>
+<li><strong>PC:</strong> mini menu → <strong>⌨ Terminale</strong>.</li>
+<li><strong>Telefono:</strong> seconda fila della schermata iniziale → <strong>⌨ Terminale</strong> (scrivi <code>aiuto</code>).</li>
+<li><strong>Windows:</strong> pulsante <strong>⌨️ Terminale</strong>.</li>
+</ul>
+<p>Dettagli: <a href="MANUALE-TERMINALE.html"><code>MANUALE-TERMINALE.md</code></a>.</p>
+<hr />
+<h3 id="per-chi-gestisce-la-rete">Per chi gestisce la rete</h3>
+<p>I comandi sono di <code>nyctalus-rete</code>, sul PC del gestore. Dopo ogni cambio che tocca il
+<strong>codice di rete</strong>, va ridato a chi si collega (importandolo di nuovo).</p>
+<h3 id="10-rete-di-casa-e-via-internet">10. Rete di casa e via Internet</h3>
+<p><strong>A cosa serve:</strong> provare tutto senza server: il tuo PC tiene accesi 4 nodi, l'elenco, la
+rubrica e la casella.</p>
+<pre><code class="language-sh">nyctalus-rete casa                       # nella tua Wi-Fi
+nyctalus-rete casa --internet NOME       # raggiungibile da Internet (NOME = No-IP o IP pubblico)
+</code></pre>
+<p>Passo passo: <a href="GUIDA-RETE-DI-CASA.html"><code>GUIDA-RETE-DI-CASA.md</code></a> e <a href="GUIDA-INTERNET.html"><code>GUIDA-INTERNET.md</code></a>. Con i nodi tutti su un PC la rete
+<strong>non è anonima</strong> (il motore lo dice nei registri).</p>
+<h3 id="11-rubrica-e-casella">11. Rubrica e casella</h3>
+<p><strong>A cosa serve:</strong> la <strong>casella cifrata</strong> tiene i messaggi per chi è spento (e serve alla
+modalità riservata); la <strong>rubrica</strong> è l'elenco di chi c'è. Nella rete di casa sono già accese.
+Per una rete su server:</p>
+<pre><code class="language-sh">nyctalus-rete rubrica --servizio         # sempre accese su questo PC (o con --codice NYCT1:… sul server)
+nyctalus-rete codice --url URL           # poi il codice le include
+</code></pre>
+<h3 id="12-protezione-camuffamento-e-rumore-di-fondo">12. Protezione: camuffamento e rumore di fondo</h3>
+<p><strong>A cosa serve:</strong></p>
+<ul>
+<li><strong>camuffamento</strong>: ogni pacchetto è reso simile a rumore con una chiave della rete. Chi
+  guarda il traffico non riconosce Nyctalus, e chi non ha la chiave non riesce a collegarsi;</li>
+<li><strong>rumore di fondo</strong>: celle finte a ritmo casuale, così i momenti in cui usi davvero la
+  rete si notano meno.</li>
+</ul>
+<p><strong>Costo:</strong> il rumore consuma banda (di serie 0,2 celle al secondo, circa 20 MB al giorno). La
+chiave viaggia nel codice di rete: chi ha il codice ce l'ha.
+<strong>Di serie:</strong> accesa nelle <strong>reti create dalla 0.3.4</strong>. Le reti più vecchie restano come sono
+finché non la accendi (poi va ridato il codice a tutti).</p>
+<pre><code class="language-sh">nyctalus-rete protezione                       # com'è adesso (e la chiave per i server)
+nyctalus-rete protezione si [--rumore 0.5]     # accende (la rete principale)
+nyctalus-rete protezione si --casa             # … la rete di casa  (--internet: quella via Internet)
+nyctalus-rete protezione no                    # spegne (la chiave resta da parte)
+</code></pre>
+<p>Dopo il cambio: riavvia la rete (o la rete di casa), ridai il codice e reinstalla i nodi dei
+server con <code>./installa.sh --codice NYCT1:…</code> (oppure <code>--camuffamento CHIAVE --rumore N</code>). Client
+PC, telefono e Windows prendono tutto dal codice, da soli.</p>
+<h3 id="13-famiglie-e-nodi-di-amici">13. Famiglie e nodi di amici</h3>
+<p><strong>A cosa serve:</strong> un percorso fa 3 salti. Se due salti sono <strong>dello stesso gestore</strong>, lui
+vede entrata e uscita. Con le <strong>famiglie</strong> dichiari quali nodi sono della stessa persona o
+dello stesso fornitore: un percorso non ne userà mai due insieme. Servono <strong>almeno 3
+famiglie</strong> perché ogni percorso sia di 3 gestori diversi.</p>
+<pre><code class="language-sh"># rete su server
+nyctalus-rete aggiungi --famiglia mario 'RIGA1' 'RIGA2'
+nyctalus-rete famiglia IP:PORTA NOME|-           # mette o toglie un nodo da una famiglia
+nyctalus-rete firma
+# rete di casa: i nodi di un amico, ognuno con la sua famiglia (i tuoi = «casa»)
+nyctalus-rete ospite aggiungi 'RIGA' … --famiglia mario [--internet]
+nyctalus-rete ospite elenco [--internet]
+</code></pre>
+<p>Le righe dei nodi le stampa l'installatore sulla macchina dell'amico. Le famiglie vanno
+usate quando <strong>tutti</strong> hanno la 0.3.3 o successiva. Dettagli: <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a>.</p>
+<h3 id="14-modalita-rigida">14. Modalità rigida</h3>
+<p><strong>A cosa serve:</strong> se la regola delle famiglie non si può rispettare (per esempio nodi tutti
+su un PC), di solito il motore <strong>funziona lo stesso</strong> e avvisa «cifrato ma NON anonimo». In
+modalità rigida invece <strong>si rifiuta</strong>: meglio niente che un percorso non anonimo.</p>
+<pre><code class="language-sh">NYCTALUS_PARENTELA=rigida nyctalus-chat          # o davanti a qualunque comando del motore
+</code></pre>
+<h3 id="15-opzioni-avanzate-del-motore">15. Opzioni avanzate del motore</h3>
+<p>Per chi usa il motore a mano (<code>nyctalus start</code>, <code>nyctalus circuit</code>…). Tutte in <a href="DEPLOY.html"><code>DEPLOY.md</code></a>.</p>
+<table>
+<thead>
+<tr>
+<th>Opzione</th>
+<th>A cosa serve</th>
+<th>Valori</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--hops N</code></td>
+<td>nodi per percorso; sotto 3 niente anonimato</td>
+<td>1-5, di serie 3</td>
+</tr>
+<tr>
+<td><code>--circuits N</code></td>
+<td>strade parallele (più veloce)</td>
+<td>1-8, di serie 2</td>
+</tr>
+<tr>
+<td><code>--cover HZ</code></td>
+<td>rumore di fondo (celle finte al secondo)</td>
+<td>di serie 0, o quello della rete</td>
+</tr>
+<tr>
+<td><code>--obfuscation HEX</code></td>
+<td>camuffamento con la chiave della rete</td>
+<td>quella del codice</td>
+</tr>
+</tbody>
+</table>
+</article>
+</main>
+<button class="torna-su" id="torna-su" type="button" title="Torna su" aria-label="Torna su">↑</button>
+<script>
+(function(){var b=document.getElementById('torna-su');
+function aggiorna(){b.classList.toggle('visibile',window.scrollY>250);}
+window.addEventListener('scroll',aggiorna,{passive:true});aggiorna();
+b.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});})();
+</script>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>

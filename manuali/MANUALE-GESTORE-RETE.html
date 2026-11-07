@@ -19,9 +19,9 @@
   <button class="btn-icona" id="tema" title="Tema">🌓</button>
 </div></div>
 <main class="wrap manuale-doc">
-<nav class="indice-manuali"><a href="index.html">Inizia qui</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html" class="qui">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html" class="qui">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
-<h1 id="manuale-del-gestore-della-rete">Manuale del gestore della rete</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-in-breve">1. In breve</a><a href="#2-creare-la-rete-una-volta">2. Creare la rete (una volta)</a><a href="#3-aggiungere-e-togliere-nodi">3. Aggiungere e togliere nodi</a><a href="#4-pubblicare-lelenco">4. Pubblicare l'elenco</a><a href="#5-il-codice-per-i-client">5. Il codice per i client</a><a href="#6-rete-di-casa-prove-senza-server">6. Rete di casa (prove senza server)</a><a href="#6-bis-rubrica-e-casella-per-la-tua-rete">6-bis. Rubrica e casella per la tua rete</a><a href="#7-sicurezza-in-tre-righe">7. Sicurezza in tre righe</a></nav>
+<h1 id="manuale-del-gestore-della-rete">Manuale del gestore della rete</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-in-breve">1. In breve</a><a href="#2-creare-la-rete-una-volta">2. Creare la rete (una volta)</a><a href="#3-aggiungere-e-togliere-nodi">3. Aggiungere e togliere nodi</a><a href="#4-pubblicare-lelenco">4. Pubblicare l'elenco</a><a href="#5-il-codice-per-i-client">5. Il codice per i client</a><a href="#6-rete-di-casa-prove-senza-server">6. Rete di casa (prove senza server)</a><a href="#6-bis-rubrica-e-casella-per-la-tua-rete">6-bis. Rubrica e casella per la tua rete</a><a href="#6-ter-protezione-camuffamento-e-rumore-di-fondo">6-ter. Protezione: camuffamento e rumore di fondo</a><a href="#7-sicurezza-in-tre-righe">7. Sicurezza in tre righe</a></nav>
 <p>Il <strong>gestore</strong> decide quali nodi fanno parte della rete. Firma il loro elenco con una
 chiave che solo lui possiede e dà ai client il <strong>codice di rete</strong>. Basta un PC, anche
 quello che usi tutti i giorni. Quadro generale: <a href="index.html"><code>LEGGIMI.md</code></a> (Inizia qui).</p>
@@ -98,8 +98,10 @@ firmato: anche se qualcuno lo alterasse, i client lo rifiuterebbero. Scegli tu d
 </code></pre>
 <p>Stampa <code>NYCT1:…</code> e lo salva in <code>~/.nyctalus-rete/codice.txt</code>.</p>
 <ul>
-<li>Contiene solo <strong>nome, URL e chiave pubblica</strong>: puoi mandarlo per messaggio o mail.</li>
-<li><strong>Va rifatto solo se cambi l'URL.</strong> Aggiungere o togliere nodi non cambia il codice.</li>
+<li>Contiene <strong>nome, URL, chiave pubblica</strong> e, se la rete è protetta, la <strong>chiave di
+  camuffamento</strong> e il rumore di fondo: mandalo solo a chi deve usare la rete.</li>
+<li><strong>Va rifatto se cambi l'URL o la protezione</strong> (lo rifà da solo <code>nyctalus-rete protezione</code>).
+  Aggiungere o togliere nodi non cambia il codice.</li>
 <li>Rubrica e casella, se le hai accese, entrano nel codice (§6-bis).</li>
 <li>I client lo importano: PC <code>nyctalus-rete importa NYCT1:…</code> (<a href="MANUALE-PC.html"><code>MANUALE-PC.md</code></a> §3), telefono
   <strong>🔗 Rete</strong> → Importa codice (<a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a> §1).</li>
@@ -146,6 +148,18 @@ l'importazione il telefono la mostra nella riga <strong>🔗 Rete</strong> della
 sei sicuro che nessuno sulla Wi-Fi ti abbia passato un codice diverso. La pagina è in
 <code>http</code> perché è solo nella rete locale e distribuisce dati pubblici; l'elenco dei nodi è
 firmato, e l'impronta protegge il codice.</p>
+<h3 id="nodi-di-amici-nella-rete-di-casa-ospiti">Nodi di amici nella rete di casa (ospiti)</h3>
+<p>La rete di casa (anche <code>--internet</code>) può includere i nodi di altre persone, ognuno con la sua
+famiglia: i nodi del tuo PC diventano la famiglia «casa», e un percorso non usa mai due nodi
+della stessa famiglia.</p>
+<pre><code class="language-sh">nyctalus-rete ospite aggiungi 'RIGA1' 'RIGA2' --famiglia mario [--internet]
+nyctalus-rete ospite elenco [--internet]           # ospiti per famiglia, e quante famiglie ci sono
+nyctalus-rete ospite togli IP:PORTA [--internet]
+</code></pre>
+<p>Vale subito (elenco rifirmato e pubblicato) e resta ai riavvii. Le righe le stampa
+l'installatore del nodo sulla macchina dell'amico (<a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>). Servono almeno <strong>3
+famiglie</strong> perché ogni percorso sia di 3 gestori diversi; con meno, la rete funziona ma il
+motore avvisa «NON anonimo».</p>
 <h2 id="6-bis-rubrica-e-casella-per-la-tua-rete">6-bis. Rubrica e casella per la tua rete</h2>
 <blockquote>
 <p>Dalla 0.3.3 la rubrica rispetta la <strong>modalità riservata</strong> dei client (posta consegnata solo
@@ -162,6 +176,16 @@ sempre in rete:</p>
   che ha stampato. Il codice li ricorda.</li>
 </ul>
 <p>Ridai il codice nuovo ai client (sul telefono 📲 o «🔗 Rete», sul PC <code>nyctalus-rete importa</code>).</p>
+<h2 id="6-ter-protezione-camuffamento-e-rumore-di-fondo">6-ter. Protezione: camuffamento e rumore di fondo</h2>
+<p>Le reti create dalla 0.3.4 nascono <strong>protette</strong>: il traffico è reso simile a rumore con una
+chiave della rete (chi non ce l'ha non si collega e non riconosce Nyctalus), e c'è un po' di
+rumore di fondo che nasconde i ritmi. Le reti più vecchie restano come sono finché non la accendi.</p>
+<pre><code class="language-sh">nyctalus-rete protezione                      # com'è adesso, e la chiave per i nodi dei server
+nyctalus-rete protezione si [--rumore 0.5]    # accende (--casa / --internet per la rete di casa)
+nyctalus-rete protezione no                   # spegne (la chiave resta da parte)
+</code></pre>
+<p>Dopo il cambio: riavvia la rete, ridai il codice, e reinstalla i nodi dei server con
+<code>./installa.sh --codice NYCT1:…</code>. Spiegazione completa: <a href="GUIDA-COMPLETA.html"><code>GUIDA-COMPLETA.md</code></a> §12.</p>
 <h2 id="7-sicurezza-in-tre-righe">7. Sicurezza in tre righe</h2>
 <ul>
 <li>La chiave <strong>segreta</strong> non esce mai da <code>~/.nyctalus-rete</code>: il codice e l'elenco
