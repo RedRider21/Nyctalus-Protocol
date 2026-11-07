@@ -185,6 +185,39 @@ collega, senza no. Resta da fare la parte «più utenti», che è organizzativa.
   - Più avanti, se servisse il nostro logo anche dentro: un Firefox compilato da noi come Tor
     Browser (pesante: compilazioni e aggiornamenti di sicurezza ogni 4 settimane).
 
+## Nyctalus e Tor, a confronto
+
+**Misurato** con Shadow (il simulatore usato nella ricerca su Tor): Tor 0.4.9 e Nyctalus veri
+sulla stessa Internet simulata (30 ms fra due computer, linee 50/20 Mbit), stessi utenti e
+stesso attacco, 3 ripetizioni. Come rifarla: [simulazione/LEGGIMI.md](https://github.com/RedRider21/Nyctalus-Protocol/blob/main/simulazione/LEGGIMI.md).
+
+| Misura | Tor 0.4.9 | Nyctalus |
+|---|---|---|
+| Scaricare 500 KB attraverso 3 salti | 1,10 s | 1,16 s · alla pari |
+| Primo byte | 0,49 s | 0,50 s · alla pari |
+| Avversario che vede tutte le linee: scaricamenti attribuiti a chi li ha fatti | 91% | 80% · alla pari (limite di tutte le reti in tempo reale) |
+| Chat: lo stesso avversario scopre chi scrive a chi | — (Tor non ha una chat sua) | normale 100%; **modalità riservata al livello del caso** (17-33%, a caso 20%) |
+| Un gestore di nodi disonesto collega entrata e uscita | no (famiglie e guardie) | no: 0% (famiglie e guardie, dalla 0.3.3) |
+
+**Cosa c'è:**
+
+| | Tor | Nyctalus |
+|---|---|---|
+| Maturità | 20 anni, revisioni indipendenti, milioni di utenti, migliaia di nodi | prototipo **non ancora revisionato**, reti piccole |
+| Trasporto | TCP | QUIC/UDP (un pacchetto perso non ferma gli altri) |
+| Più strade insieme | sì (conflux, dalla 0.4.8) | sì (2 circuiti di serie, fino a 8) |
+| Camuffamento | ponti con obfs4, Snowflake, meek: collaudati contro la censura | chiave della rete, di serie nelle reti nuove; ponti nascosti e trasporto mimetico in arrivo |
+| Rumore di fondo | limitato | regolabile per rete; buste finte nella modalità riservata |
+| Chat, chiamate, videochiamate | con app esterne | integrate, con modalità riservata |
+| File grandi | con app esterne (OnionShare) | integrati: pezzi verificati, più strade, pausa e ripresa |
+| Browser | Tor Browser: il riferimento | impronta uniforme fra utenti Nyctalus + Nyctalus Firefox |
+| Siti interni | `.onion` | `.nyct` |
+| Linguaggio | C | Rust (meno errori di memoria) |
+
+In breve: sul **tempo reale** (navigare, scaricare) Nyctalus è alla pari con Tor; sulla
+**chat**, con la modalità riservata, va oltre. Tor resta avanti in maturità, numero di utenti e
+camuffamento collaudato.
+
 ## Oltre l'anonimato: invisibilità
 
 Anonimo vuol dire che non si sa **chi parla con chi**. Invisibile vuol dire che non si capisce

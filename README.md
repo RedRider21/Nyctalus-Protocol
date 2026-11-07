@@ -58,24 +58,45 @@ Sito e manuale: **https://redrider21.github.io/Nyctalus-Protocol/** · manuali: 
 
 ## L'idea in una frase
 
-Ogni utente è anche un nodo, così la rete diventa più veloce man mano che cresce.
+Ogni utente può fare anche da nodo, così la rete diventa più veloce man mano che cresce.
 Il traffico è camuffato da normale navigazione, e i dati viaggiano spezzati in
 tanti frammenti su molte strade in parallelo — una **ragnatela** — per
 ricomporsi solo a destinazione.
 
-## Perché, se c'è già Tor
+## Nyctalus e Tor, a confronto
 
-Tor funziona, ma è lento per ragioni strutturali. Nyctalus cambia le scelte di
-fondo per guadagnare velocità senza rinunciare all'anonimato:
+**Misurato** con Shadow (il simulatore usato nella ricerca su Tor): Tor 0.4.9 e Nyctalus veri
+sulla stessa Internet simulata (30 ms fra due computer, linee 50/20 Mbit), stessi utenti e
+stesso attacco, 3 ripetizioni. Come rifarla: [simulazione/LEGGIMI.md](simulazione/LEGGIMI.md).
+
+| Misura | Tor 0.4.9 | Nyctalus |
+|---|---|---|
+| Scaricare 500 KB attraverso 3 salti | 1,10 s | 1,16 s · alla pari |
+| Primo byte | 0,49 s | 0,50 s · alla pari |
+| Avversario che vede tutte le linee: scaricamenti attribuiti a chi li ha fatti | 91% | 80% · alla pari (limite di tutte le reti in tempo reale) |
+| Chat: lo stesso avversario scopre chi scrive a chi | — (Tor non ha una chat sua) | normale 100%; **modalità riservata al livello del caso** (17-33%, a caso 20%) |
+| Un gestore di nodi disonesto collega entrata e uscita | no (famiglie e guardie) | no: 0% (famiglie e guardie, dalla 0.3.3) |
+
+**Cosa c'è:**
 
 | | Tor | Nyctalus |
 |---|---|---|
-| Chi fa da nodo | ~7.000 volontari per milioni di utenti | ogni PC è anche un nodo: più utenti, più capacità |
-| Strade per i dati | un solo percorso per connessione | ragnatela: più percorsi in parallelo dopo un ingresso fisso |
-| Trasporto | TCP (un pacchetto perso blocca gli altri) | QUIC/UDP (un pacchetto perso non ferma il resto) |
-| Camuffamento | opzionale (bridge) | sempre attivo, di serie |
-| Siti interni | `.onion` | `.nyct`, con percorsi paralleli |
-| Linguaggio | C (Tor classico) | Rust (niente bug di memoria) |
+| Maturità | 20 anni, revisioni indipendenti, milioni di utenti, migliaia di nodi | prototipo **non ancora revisionato**, reti piccole |
+| Trasporto | TCP | QUIC/UDP (un pacchetto perso non ferma gli altri) |
+| Più strade insieme | sì (conflux, dalla 0.4.8) | sì (2 circuiti di serie, fino a 8) |
+| Camuffamento | ponti con obfs4, Snowflake, meek: collaudati contro la censura | chiave della rete, di serie nelle reti nuove; ponti nascosti e trasporto mimetico in arrivo |
+| Rumore di fondo | limitato | regolabile per rete; buste finte nella modalità riservata |
+| Chat, chiamate, videochiamate | con app esterne | integrate, con modalità riservata |
+| File grandi | con app esterne (OnionShare) | integrati: pezzi verificati, più strade, pausa e ripresa |
+| Browser | Tor Browser: il riferimento | impronta uniforme fra utenti Nyctalus + Nyctalus Firefox |
+| Siti interni | `.onion` | `.nyct` |
+| Linguaggio | C | Rust (meno errori di memoria) |
+
+In breve: sul **tempo reale** (navigare, scaricare) Nyctalus è alla pari con Tor; sulla
+**chat**, con la modalità riservata, va oltre. Tor resta avanti in maturità, numero di utenti e
+camuffamento collaudato.
+
+Dove siamo e le prossime tappe: [piano verso una rete anonima](documenti/manuali/PIANO-ANONIMATO.md).
 
 ## Come viaggia un dato
 

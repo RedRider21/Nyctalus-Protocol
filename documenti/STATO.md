@@ -2,6 +2,10 @@
 
 > Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
 
+## 07/11/2026 · Tabella Nyctalus/Tor ✅
+- Home di Pages (IT/EN, voce «Tor» nel menu), README, PIANO-ANONIMATO («Nyctalus e Tor, a confronto») e domanda rapida in «Inizia qui»: misure K + cosa c'è/manca, onesta (tolte le frasi esagerate del vecchio confronto).
+- Prossimo: invisibilità punto 1, **ponti nascosti**.
+
 ## 07/11/2026 · K: confronto con Tor ✅
 - Scaricati (ok utente) e verificati Tor 0.4.9.16 (SHA-256 ufficiale) e libevent 2.1.13; compilati in ~/.local/share/nyctalus-sim/installato. `simulazione/tor_correlazione.py` usa la rete Tor di prova di Shadow (src/test/tor/minimal). Risultati: Tor 91% vs Nyctalus 80% di scaricamenti attribuiti (alla pari), stessa velocità (500 KB ~1,1 s, primo byte 0,5 s). Errore mio corretto in correlazione.py (variabile `proto` sovrascritta nel ciclo del sito → Nyctalus risultava al 17%).
 
