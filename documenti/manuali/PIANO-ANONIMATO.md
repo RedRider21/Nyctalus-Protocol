@@ -167,7 +167,9 @@ collega, senza no. Resta da fare la parte «più utenti», che è organizzativa.
       delle coppie scoperte, **modalità riservata al livello del caso** (17-33%, a caso 20%);
     - la simulazione ha scoperto e fatto correggere un limite vero: ogni servizio `.nyct`
       serviva al massimo 4 client insieme.
-  - Da fare: confronto con Tor nella stessa simulazione.
+    - **confronto con Tor 0.4.9** nella stessa simulazione: sugli scaricamenti siamo alla pari
+      (l'avversario globale indovina 91% con Tor, 80% con Nyctalus; stessa velocità). Dove andiamo
+      oltre Tor è la chat: con la modalità riservata l'avversario resta al livello del caso.
 - **Browser pubblico** basato su Firefox, con impronta uniforme per tutti (finestre a
   misure fisse, canvas e caratteri uniformati), per navigare sul web normale senza essere
   riconoscibili dal browser.

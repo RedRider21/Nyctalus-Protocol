@@ -86,7 +86,7 @@ def prepara(out, a):
             t = 40 + 25 * g + rnd.uniform(0, 8)          # scaricamenti sovrapposti fra utenti
             verita.append((u, g, t))
             y += ["    - path: /usr/bin/curl",
-                  "      args: %s" % lista("-s", "-o", "/dev/null", "--socks5-hostname", "127.0.0.1:1080",
+                  "      args: %s" % lista("-s", "-o", "/dev/null", "-w", "%{time_total} %{time_starttransfer}\\n", "--socks5-hostname", "127.0.0.1:1080",
                                            "http://12.0.0.20/file.bin?u=%d&g=%d" % (u, g)),
                   "      start_time: %d ms" % int(t * 1000), "      expected_final_state: { exited: 0 }"]
     (out / "shadow.yaml").write_text("\n".join(y) + "\n")
@@ -123,6 +123,19 @@ def leggi_pcap(p):
     return out
 
 
+def tempi(out):
+    """(tempo medio di uno scaricamento, tempo medio del primo byte) dai curl degli utenti."""
+    v = []
+    for f in (out / "shadow.data" / "hosts").glob("utente*/curl.*.stdout"):
+        for r in f.read_text().split("\n"):
+            p = r.split()
+            if len(p) == 2:
+                v.append((float(p[0]), float(p[1])))
+    if not v:
+        return 0.0, 0.0
+    return sum(x for x, _ in v) / len(v), sum(y for _, y in v) / len(v)
+
+
 def serie(pacchetti, t0, t1):
     n = int((t1 - t0) / CASELLA) + 1
     v = [0.0] * n
@@ -144,13 +157,15 @@ def pearson(a, b):
     return sum((x - ma) * (y - mb) for x, y in zip(a, b)) / (sa * sb)
 
 
-def analizza(out, a):
+def analizza(out, a, proto=17, ip_utente=None):
+    """proto: 17 = UDP (Nyctalus/QUIC), 6 = TCP (Tor). ip_utente(u) → indirizzo dell'utente u."""
+    ip_utente = ip_utente or (lambda u: "13.0.%d.%d" % (u // 200, u % 200 + 10))
     h = out / "shadow.data" / "hosts"
     sito = leggi_pcap(next((h / "sito").glob("eth0*.pcap")))
     # scaricamenti visti dal sito: connessioni TCP, con la richiesta (u=…&g=…) come verità
     flussi = {}
-    for t, src, dst, proto, ps, pd, lung, dati in sito:
-        if proto != 6:
+    for t, src, dst, pr_sito, ps, pd, lung, dati in sito:
+        if pr_sito != 6:
             continue
         chiave = (dst, pd) if src == "12.0.0.20" else (src, ps)
         f = flussi.setdefault(chiave, {"giu": [], "u": None})
@@ -162,8 +177,8 @@ def analizza(out, a):
     utenti = {}
     for u in range(a.utenti):
         pk = leggi_pcap(next((h / ("utente%d" % u)).glob("eth0*.pcap")))
-        mio = "13.0.%d.%d" % (u // 200, u % 200 + 10)
-        utenti[u] = [(t, lung) for t, src, dst, proto, ps, pd, lung, _ in pk if proto == 17 and dst == mio]
+        mio = ip_utente(u)
+        utenti[u] = [(t, lung) for t, src, dst, pr, ps, pd, lung, _ in pk if pr == proto and dst == mio]
     giusti = tot = 0
     for f in flussi.values():
         if f["u"] is None or len(f["giu"]) < 5:
@@ -199,9 +214,10 @@ def main():
     if r.returncode != 0:
         print("shadow: errore (vedi %s)" % (out / "shadow.log"))
     giusti, tot = analizza(out, a)
+    tt, tp = tempi(out)
     caso = 100.0 / a.utenti
-    print("utenti %d · scaricamenti %d · rumore %s/s · ritardo %d ms → l'avversario ne attribuisce giusti %d su %d (%.0f%%; a caso %.0f%%)"
-          % (a.utenti, tot, a.rumore, a.ritardo, giusti, tot, 100.0 * giusti / max(tot, 1), caso))
+    print("utenti %d · scaricamenti %d · rumore %s/s · ritardo %d ms → l'avversario ne attribuisce giusti %d su %d (%.0f%%; a caso %.0f%%) · 500 KB in %.2f s, primo byte %.2f s"
+          % (a.utenti, tot, a.rumore, a.ritardo, giusti, tot, 100.0 * giusti / max(tot, 1), caso, tt, tp))
 
 
 if __name__ == "__main__":

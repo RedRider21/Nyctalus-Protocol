@@ -2,6 +2,9 @@
 
 > Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
 
+## 07/11/2026 · K: confronto con Tor ✅
+- Scaricati (ok utente) e verificati Tor 0.4.9.16 (SHA-256 ufficiale) e libevent 2.1.13; compilati in ~/.local/share/nyctalus-sim/installato. `simulazione/tor_correlazione.py` usa la rete Tor di prova di Shadow (src/test/tor/minimal). Risultati: Tor 91% vs Nyctalus 80% di scaricamenti attribuiti (alla pari), stessa velocità (500 KB ~1,1 s, primo byte 0,5 s). Errore mio corretto in correlazione.py (variabile `proto` sovrascritta nel ciclo del sito → Nyctalus risultava al 17%).
+
 ## 07/11/2026 · K: modalità riservata misurata ✅ + 2 difetti veri corretti
 - `simulazione/riservata.py` (6 utenti a coppie, rubrica+casella, 4 attacchi): normale 100% coppie scoperte, riservata 17-33% (caso 20%), 90/90 consegnati.
 - DIFETTO 1 (motore, incontro.rs `site`): ogni posto del pool serviva UN client fino alla sua uscita → max 4 sessioni lunghe per servizio (rubrica, casella, utenti). Ora spawn + ri-registrazione immediata, Semaphore CLIENT_MAX=256. Prova 31 (controprova: vecchio 4/8). Serve motore Android nuovo (CI) → APK 0.50.
