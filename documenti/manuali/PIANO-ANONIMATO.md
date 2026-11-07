@@ -210,7 +210,7 @@ stesso attacco, 3 ripetizioni (velocità: `simulazione/velocita.py`, file da 5 M
 | Maturità | 20 anni, revisioni indipendenti, milioni di utenti, migliaia di nodi | prototipo **non ancora revisionato**, reti piccole |
 | Trasporto | TCP | QUIC/UDP (un pacchetto perso non ferma gli altri) |
 | Più strade insieme | sì (conflux, dalla 0.4.8) | sì (2 circuiti di serie, fino a 8) |
-| Camuffamento | ponti con obfs4, Snowflake, meek: collaudati contro la censura | chiave della rete, di serie nelle reti nuove; ponti nascosti e trasporto mimetico in arrivo |
+| Camuffamento | ponti con obfs4, Snowflake, meek: collaudati contro la censura | chiave della rete di serie (rumore), oppure forma HTTP/3; ponti nascosti; nessuna risposta alle sonde |
 | Rumore di fondo | limitato | regolabile per rete; buste finte nella modalità riservata |
 | Chat, chiamate, videochiamate | con app esterne | integrate, con modalità riservata |
 | File grandi | con app esterne (OnionShare) | integrati: pezzi verificati, più strade, pausa e ripresa |
@@ -235,7 +235,10 @@ debole, e le misure del punto K lo confermano anche per noi. I passi, in ordine:
    risposta** (lo stesso ora vale per tutti i nodi camuffati: prima uno su ~300 tentativi
    otteneva risposta). Nel primo pacchetto non c'è più nessun nome. Come si usa:
    `GUIDA-COMPLETA.md` §13; prova `32-ponte-nascosto`.
-2. **Trasporto mimetico.** Oggi il camuffamento rende il traffico simile a rumore, e il rumore
+2. 🔧 **Trasporto mimetico** — ✅ **forma HTTP/3 fatta** (0.3.9): i nodi sembrano un sito HTTP/3
+   sulla porta 443 con il nome scelto dal gestore, e chi li sonda (anche un vero Chrome) riceve una
+   pagina 404. Restano: impronta identica a un browser, forma «videochiamata», ripiego su TCP 443.
+   Il camuffamento di serie rende il traffico simile a rumore, e il rumore
    puro è sospetto (in alcuni paesi viene bloccato proprio così). Meglio farlo sembrare
    **traffico comune**: una normale videochiamata (WebRTC) o un normale sito HTTPS/HTTP-3
    (con ALPN `h3`, porta 443, dimensioni dei pacchetti come i browser), più il ripiego su TCP 443

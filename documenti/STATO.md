@@ -9,6 +9,12 @@
 3. **Riordino organico di tutta la documentazione** (manuali, guide, sito).
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
 
+## 07/11/2026 · Invisibilità punto 2a: forma HTTP/3 ✅
+- Motore `--mimic [--mimic-name]`: QUIC con ALPN h3, contrassegno della rete dentro TLS, 404 HTTP/3 a chi sonda (Chrome vero lo vede), certificati nuovi con dati normali (rcgen era «rcgen self signed cert», 1975-4096).
+- Rete: `protezione si --forma h3 --nome SITO`, codice `forma`/`nome_h3`, client PC/telefono/Windows/siti, `installa.sh --http3/--nuova-identita` (porta 443 + CAP_NET_BIND_SERVICE), casa rifà le identità vecchie.
+- In Shadow: porta 443, SNI www.esempio.it, ALPN h3. Limite: impronta rustls/quinn ≠ browser. Prova 33.
+- Restano del punto 2: forma videochiamata, ripiego TCP 443, impronta da browser.
+
 ## 07/11/2026 · Release v0.3.8 (APK 0.51) ✅ — ponti nascosti, sonde, BBR
 
 ## 07/11/2026 · Confronto di velocità con Tor ✅ → BBR di serie

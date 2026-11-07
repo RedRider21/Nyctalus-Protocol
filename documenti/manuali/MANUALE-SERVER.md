@@ -87,7 +87,12 @@ Le righe **non cambiano** tra un riavvio e l'altro: ogni nodo conserva la sua id
   `nyctalus-rete ponte aggiungi 'RIGA'`; telefono: Impostazioni → Rete condivisa → 🌉 Ponti
   nascosti). Insieme a `--codice NYCT1:…` (il ponte parla con la rete con la sua chiave). Chi
   sonda il ponte senza la sua chiave non riceve risposta.
-- `--porta 443`: la porta di HTTP/3, la più comune per il traffico UDP cifrato.
+- `--porta 443`: la porta di HTTP/3, la più comune per il traffico UDP cifrato (solo installazione
+  di sistema: il servizio riceve il permesso di usare le porte basse senza essere root).
+- `--http3 SITO`: **forma HTTP/3**, i nodi sembrano il sito SITO (di solito arriva già dal
+  `--codice` della rete); propone da sola la porta 443.
+- `--nuova-identita`: rifà chiavi e certificato dei nodi (il certificato nuovo ha dati normali e,
+  nella forma HTTP/3, il nome del sito). Cambiano le righe: rimandale al gestore.
 - Per cambiare IP o opzioni: modifica `/etc/nyctalus/server.conf`, poi
   `nyctalus-server riavvia`. Se cambia l'IP, rimanda le righe al gestore (con un nome, §6, non serve).
 

@@ -145,7 +145,7 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi **gestisce
 | **Per chi gestisce la rete** | | |
 | [Rete di casa / via Internet](#10-rete-di-casa-e-via-internet) | provare senza server | — |
 | [Rubrica e casella](#11-rubrica-e-casella) | posta per chi è spento, elenco di chi c'è | accese nella rete di casa |
-| [Protezione: camuffamento e rumore](#12-protezione-camuffamento-e-rumore-di-fondo) | traffico simile a rumore, ritmi nascosti | accesa nelle reti nuove |
+| [Protezione: camuffamento e rumore](#12-protezione-camuffamento-e-rumore-di-fondo) | traffico simile a rumore (o a un sito HTTP/3), ritmi nascosti | accesa nelle reti nuove |
 | [Ponti nascosti](#13-ponti-nascosti) | entrare da un indirizzo privato, fuori dall'elenco; invisibile alle sonde | nessuno |
 | [Famiglie e nodi di amici](#14-famiglie-e-nodi-di-amici) | mai due nodi dello stesso gestore in un percorso | — |
 | [Modalità rigida](#15-modalita-rigida) | rifiutare i percorsi non anonimi | spenta |
@@ -308,6 +308,26 @@ Dopo il cambio: riavvia la rete (o la rete di casa), ridai il codice e reinstall
 server con `./installa.sh --codice NYCT1:…` (oppure `--camuffamento CHIAVE --rumore N`). Client
 PC, telefono e Windows prendono tutto dal codice, da soli.
 
+**Due forme, a scelta del gestore** (dalla 0.3.9):
+
+| Forma | Cosa vede chi osserva | Quando usarla |
+|---|---|---|
+| **rumore** (di serie) | pacchetti UDP che sembrano rumore puro; chi sonda non riceve risposta | quasi sempre |
+| **HTTP/3** (`--forma h3`) | un normale **sito HTTP/3**: QUIC sulla porta 443, con il nome che scegli tu (es. `www.miosito.it`); chi sonda il nodo riceve una pagina «404 Not Found», come da un sito qualunque | dove il traffico «tutto rumore» viene bloccato (alcuni paesi, alcune reti aziendali) |
+
+```sh
+nyctalus-rete protezione si --forma h3 --nome www.miosito.it   # forma HTTP/3
+nyctalus-rete protezione si --forma rumore                     # di nuovo rumore
+```
+Nella forma HTTP/3 la chiave della rete non cifra i pacchetti: diventa un **contrassegno** che i
+client mandano dentro la cifratura TLS. Chi non lo ha vede solo il «sito». Sui server:
+`sudo ./installa.sh --codice NYCT1:… --nuova-identita` (porta 443 proposta da sola; la nuova
+identità dà ai nodi un certificato con il nome del sito, quindi **rimanda le righe al gestore**).
+I nodi della rete di casa si rifanno l'identità da soli. **Limite onesto:** chi analizza a fondo la
+stretta di mano può capire che il programma non è un browser (impronta TLS/QUIC diversa da quella
+di Chrome o Firefox); il nome scelto è solo un'etichetta (non serve possedere il dominio, ma un
+dominio vero tuo è più credibile).
+
 ### 13. Ponti nascosti
 **A cosa serve:** di solito si entra nella rete da un nodo dell'**elenco pubblico**: chi osserva
 la tua linea (il fornitore Internet, la rete dell'ufficio, un paese che censura) può confrontare
@@ -378,4 +398,5 @@ Per chi usa il motore a mano (`nyctalus start`, `nyctalus circuit`…). Tutte in
 | `--cover HZ` | rumore di fondo (celle finte al secondo) | di serie 0, o quello della rete |
 | `--obfuscation HEX` | camuffamento con la chiave della rete | quella del codice |
 | `--bridge RIGA` / `NYCTALUS_PONTI` | entrare da un ponte nascosto | nessuno |
+| `--mimic [--mimic-name SITO]` / `NYCTALUS_MIMETICO=1` | forma HTTP/3 (con `--obfuscation`) | spenta |
 | `--hidden-bridge` (nodo) | il nodo fa da ponte nascosto | spento |

@@ -252,11 +252,15 @@ catturati in Shadow su tutte le macchine):
 - ✅ **Nessun nome nel primo pacchetto** (dalla 0.3.8): prima il client mandava il nome
   `nyctalus.invalid`, leggibile da chiunque nel primo pacchetto QUIC (le cui chiavi sono pubbliche)
   quando il camuffamento era spento; ora ci si collega per indirizzo IP e il nome non c'è.
-- 📐 **Da fare (trasporto mimetico, PIANO-ANONIMATO):** sembrare davvero HTTP/3 di un browser
-  (ALPN `h3`, parametri di trasporto e dimensioni come Chrome/Firefox) o una videochiamata WebRTC;
-  l'ALPN cambia la stretta di mano e va introdotto insieme a un salto di versione del protocollo
-  (un nodo vecchio rifiuta un client che lo offre, rustls `server/hs.rs`). Ripiego su **TCP 443**
-  dove UDP è bloccato: non c'è ancora.
+- ✅ **Forma HTTP/3** (dalla 0.3.9, scelta della rete): QUIC in chiaro con ALPN `h3`, nome del
+  server scelto dal gestore, porta 443; la chiave della rete diventa un contrassegno di 16 byte
+  scritto all'inizio di ogni flusso **dentro** TLS; chi non lo ha riceve una risposta HTTP/3 vera
+  (SETTINGS sul flusso di controllo, HEADERS `:status 404` in QPACK statico, DATA con una pagina
+  HTML). Certificati nuovi con nome e validità normali (il predefinito di rcgen era riconoscibile).
+  Non mescolabile con i nodi in forma «rumore»: è una scelta di tutta la rete (rustls rifiuta
+  ALPN diversi, `server/hs.rs`).
+- 📐 **Da fare:** impronta TLS/QUIC identica a un browser (oggi si vede rustls/quinn); forma
+  «videochiamata» (WebRTC); ripiego su **TCP 443** dove UDP è bloccato.
 - Dimensioni sul filo: le celle sono fisse **dentro** il circuito; i datagrammi QUIC invece hanno
   lunghezze diverse (pieni ~1200-1420 byte, più conferme e code più corte).
 
