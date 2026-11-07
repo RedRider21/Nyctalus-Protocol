@@ -9,6 +9,8 @@
 3. **Riordino organico di tutta la documentazione** (manuali, guide, sito).
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
 
+## 07/11/2026 · Release v0.3.8 (APK 0.51) ✅ — ponti nascosti, sonde, BBR
+
 ## 07/11/2026 · Confronto di velocità con Tor ✅ → BBR di serie
 - `simulazione/velocita.py`: con perdite Tor era ~1,8× più veloce (Cubic dimezza a ogni perdita). Con BBR: linea pulita ~10 vs 6,4 Mbit/s, 0,5-1% alla pari, 2% ×2, nodi carichi Tor avanti (2,9 vs 2,0-2,5), carichi+1% +25%. BBR di serie (tls.rs, `NYCTALUS_CONGESTIONE`).
 - Da capire: nodi carichi; più circuiti non aiutano (1=2=4). Tabelle aggiornate (Pages, README, PIANO, LEGGIMI, simulazione/LEGGIMI).
