@@ -9,6 +9,10 @@
 3. **Riordino organico di tutta la documentazione** (manuali, guide, sito).
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
 
+## 07/11/2026 · Confronto di velocità con Tor ✅ → BBR di serie
+- `simulazione/velocita.py`: con perdite Tor era ~1,8× più veloce (Cubic dimezza a ogni perdita). Con BBR: linea pulita ~10 vs 6,4 Mbit/s, 0,5-1% alla pari, 2% ×2, nodi carichi Tor avanti (2,9 vs 2,0-2,5), carichi+1% +25%. BBR di serie (tls.rs, `NYCTALUS_CONGESTIONE`).
+- Da capire: nodi carichi; più circuiti non aiutano (1=2=4). Tabelle aggiornate (Pages, README, PIANO, LEGGIMI, simulazione/LEGGIMI).
+
 ## 07/11/2026 · Invisibilità punto 1: ponti nascosti ✅ + resistenza alle sonde + verifica delle scelte di fondo
 - Motore: `node --hidden-bridge` (chiave propria in `chiave-ponte`, riga segreta `riga-ponte.txt`), client `--bridge`/`NYCTALUS_PONTI`/`bridge =`; entrata sempre dal ponte (circuiti e siti `.nyct`).
 - **Resistenza alle sonde** (trasporto.rs): quinn rispondeva con Version Negotiation a byte casuali ≥1200 → 63/20.000 sonde con risposta sul motore 0.3.7 camuffato; ora 0. Compatibile con i nodi vecchi.

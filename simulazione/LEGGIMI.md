@@ -35,6 +35,11 @@ Misure dell'anonimato con il **codice vero** di Nyctalus. Sono due tipi di misur
      nel primo pacchetto decifrato come farebbe un osservatore, rumore di fondo, dimensioni).
      Risultati in `documenti/SICUREZZA.md` §1.1-ter.
 
+   - `velocita.py CARTELLA --sistema tor|nyctalus [--perdita 0.01] [--banda-nodi 10] [--utenti 4]
+     [--mb 5] [--circuiti 2] [--congestione bbr|cubic|newreno] [--seme N]`: **confronto di
+     velocità** in condizioni realistiche (pacchetti persi, nodi carichi, più utenti insieme). Tor:
+     rete di prova di Shadow (7 relè); Nyctalus: 7 nodi. Ogni corsa dura pochi secondi.
+
 ## Installare Shadow (una volta)
 
 Servono compilatori, CMake, Rust e GLib (su Mint/Ubuntu già presenti con gli strumenti di
@@ -109,6 +114,25 @@ significativa con 18 scaricamenti per prova), con la stessa velocità.
 | modalità riservata | **17-33%**: al livello del caso |
 
 La modalità riservata (Tappa 2-bis) regge contro un avversario che vede **tutte** le linee.
+
+**Velocità in condizioni realistiche** (`velocita.py`, file da 5 MB, 3 ripetizioni, Mbit/s medi):
+
+| Condizioni | Tor 0.4.9 | Nyctalus, Cubic (fino alla 0.3.7) | **Nyctalus, BBR (dalla 0.3.8)** |
+|---|---|---|---|
+| linea pulita | 6,4 | 10,2 | **9,7-10,5** |
+| 0,5% di pacchetti persi | 3,5 | 1,7 | **3,5** |
+| 1% | 2,3 | 1,3 | **2,2-2,4** |
+| 2% | 0,47 | 0,77 | **0,98** |
+| nodi da 10 Mbit, 4 utenti insieme | **2,9** | 2,2 | 2,0-2,5 |
+| idem + 1% di perdite | 1,4 | 1,0 | **1,8** |
+
+La prova da 500 KB del confronto precedente era dominata dai ritardi (alla pari). Con file più
+grandi, su linea pulita siamo più veloci; con **Cubic** (il controllo di congestione di serie di
+QUIC) ogni pacchetto perso dimezzava la velocità e Tor ci superava di ~1,8 volte: da qui il
+passaggio a **BBR** (scelta locale, compatibile). Restano due punti da capire: con nodi carichi
+Tor è avanti, e **più circuiti in parallelo non aiutano** in nessun caso (1, 2 e 4 vanno uguali).
+Limite: Shadow simula il TCP di Tor con un suo modello, non quello di Linux; servono anche misure
+su rete vera.
 
 **Difetti veri trovati dalla simulazione (corretti):**
 1. un servizio `.nyct` serviva al massimo **4 client insieme** (il «posto» restava occupato finché il

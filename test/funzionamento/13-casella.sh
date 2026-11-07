@@ -105,7 +105,10 @@ C=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 --socks5-hostname 127.0
 [ "$C" = 200 ] && pass "deposito anonimo attraverso la rete (curl via SOCKS, senza identità)" || fail "deposito via SOCKS: $C"
 head -c 70000 /dev/urandom > "$TMP/grande.bin"
 C=$(curl -s -o /dev/null -w '%{http_code}' --max-time 90 --socks5-hostname 127.0.0.1:20640 --data-binary @"$TMP/grande.bin" "http://$CAS/deposita?a=$BRUNO")
-[ "$C" = 413 ] && pass "busta troppo grande rifiutata" || fail "busta grande: $C"
+# rifiutata: con 413, oppure con il collegamento chiuso mentre il client sta ancora spedendo (000:
+# il servizio risponde e chiude prima di leggere tutto; più frequente con BBR). Che non sia rimasto
+# niente nella casella lo controllano le righe sotto.
+[ "$C" = 413 ] || [ "$C" = 000 ] && pass "busta troppo grande rifiutata ($C)" || fail "busta grande: $C"
 for _ in $(seq 1 150); do [ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && break; sleep 1; done
 [ -z "$(ls "$D/$BRUNO"/*.busta 2>/dev/null)" ] && [ "$(wc -l < "$TMP/bruno/cronologia/$ANNA.log")" = "$PRIMA" ] \
   && ! ls "$TMP/bruno/cronologia/" | grep -qv "$ANNA" \

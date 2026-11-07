@@ -105,6 +105,22 @@ fn trasporto_client() -> Arc<quinn::TransportConfig> {
     // caduta si propaga lungo il circuito fino al punto d'incontro.
     t.keep_alive_interval(Some(std::time::Duration::from_secs(5)));
     t.max_idle_timeout(Some(std::time::Duration::from_secs(15).try_into().expect("15s valido")));
+    // Controllo di congestione: di serie **BBR** (dalla 0.3.8). Cubic, quello di serie di quinn,
+    // scambia ogni pacchetto perso per congestione e dimezza la velocità: con l'1% di perdite
+    // (Wi-Fi, rete mobile) eravamo a 1,3 Mbit/s contro i 2,3 di Tor; con BBR 2,2-2,4, e senza
+    // perdite ~10 contro 6,4 (simulazione/velocita.py, Shadow). È una scelta locale di ogni
+    // programma: nessun cambio di protocollo. `NYCTALUS_CONGESTIONE=cubic|newreno` per tornare indietro.
+    match std::env::var("NYCTALUS_CONGESTIONE").as_deref() {
+        Ok("cubic") => {
+            t.congestion_controller_factory(Arc::new(quinn::congestion::CubicConfig::default()));
+        }
+        Ok("newreno") => {
+            t.congestion_controller_factory(Arc::new(quinn::congestion::NewRenoConfig::default()));
+        }
+        _ => {
+            t.congestion_controller_factory(Arc::new(quinn::congestion::BbrConfig::default()));
+        }
+    }
     Arc::new(t)
 }
 
