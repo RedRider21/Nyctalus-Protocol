@@ -291,6 +291,91 @@ pub fn percorso_verso(nodi: &[NodoRete], ultimo: NodoRete, salti: usize) -> Risu
     Ok(p)
 }
 
+// --- simulazione (PIANO-ANONIMATO, punto K): quanto spesso un avversario sta ai due capi ---
+
+/// La famiglia dichiarata di un nodo (dall'elenco firmato), se c'è.
+pub fn famiglia_di(chiave: &[u8; 32]) -> Option<String> {
+    contesto().lock().unwrap().famiglie.get(chiave).cloned()
+}
+
+/// Come si sceglievano / si scelgono entrata e uscita.
+#[derive(Clone, Copy, Debug)]
+pub enum Strategia {
+    /// prima della Tappa 2: entrata = 1° nodo dell'elenco, uscita = 2°, per tutti
+    Vecchia,
+    /// entrata e uscita a caso a ogni circuito, senza guardia né regola di parentela
+    SenzaGuardia,
+    /// adesso: guardia persistente 30-60 giorni, uscita a caso, regola di parentela
+    Attuale,
+}
+
+/// Risultato di una simulazione.
+#[derive(Debug, Default)]
+pub struct EsitoSimulazione {
+    pub circuiti: u64,
+    /// circuiti con l'avversario sia all'entrata sia all'uscita (può collegare chi con chi)
+    pub compromessi: u64,
+    pub utenti: usize,
+    /// utenti con almeno un circuito compromesso nel periodo
+    pub utenti_colpiti: usize,
+    /// utenti che almeno una volta sono entrati da un nodo dell'avversario (ne vede l'IP)
+    pub utenti_entrata_vista: usize,
+}
+
+/// Simula `utenti` che per `giorni` aprono `circuiti_al_giorno` circuiti ciascuno, con la
+/// strategia data, e conta quando l'avversario (i nodi per cui `avversario` è vero) sta ai due
+/// capi. Usa le stesse funzioni di scelta del motore vero (`scegli`, regola di parentela).
+pub fn simula(
+    nodi: &[NodoRete],
+    avversario: &dyn Fn(&NodoRete) -> bool,
+    strategia: Strategia,
+    utenti: usize,
+    giorni: u64,
+    circuiti_al_giorno: u64,
+) -> Risultato<EsitoSimulazione> {
+    if nodi.len() < 2 {
+        return Err("servono almeno 2 nodi".into());
+    }
+    let mut e = EsitoSimulazione { utenti, ..Default::default() };
+    for _ in 0..utenti {
+        let (mut colpito, mut visto) = (false, false);
+        let mut guardia: Option<(NodoRete, u64)> = None; // (nodo, ultimo giorno)
+        for giorno in 0..giorni {
+            if matches!(strategia, Strategia::Attuale) && guardia.is_none_or(|(_, fine)| giorno > fine) {
+                let durata = GUARDIA_MIN_GIORNI + casuale((GUARDIA_MAX_GIORNI - GUARDIA_MIN_GIORNI + 1) as usize) as u64;
+                guardia = Some((nodi[casuale(nodi.len())], giorno + durata - 1));
+            }
+            for _ in 0..circuiti_al_giorno {
+                let (entrata, uscita) = match strategia {
+                    Strategia::Vecchia => (nodi[0], nodi[1]),
+                    Strategia::SenzaGuardia => {
+                        let a = nodi[casuale(nodi.len())];
+                        let altri: Vec<NodoRete> = nodi.iter().copied().filter(|n| n.1 != a.1).collect();
+                        (a, altri[casuale(altri.len())])
+                    }
+                    Strategia::Attuale => {
+                        let g = guardia.expect("guardia scelta").0;
+                        let u = scegli_non_parenti(nodi, &[g], 1)
+                            .or_else(|| Some(scegli_diversi(nodi, &[g], 1)))
+                            .and_then(|v| v.first().copied())
+                            .ok_or("nessuna uscita possibile")?;
+                        (g, u)
+                    }
+                };
+                e.circuiti += 1;
+                visto |= avversario(&entrata);
+                if avversario(&entrata) && avversario(&uscita) {
+                    e.compromessi += 1;
+                    colpito = true;
+                }
+            }
+        }
+        e.utenti_colpiti += usize::from(colpito);
+        e.utenti_entrata_vista += usize::from(visto);
+    }
+    Ok(e)
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -420,5 +505,27 @@ mod test {
         let p = percorso_verso(&nodi, g, 3).unwrap();
         assert_ne!(p[0].1, g.1);
         assert_eq!(p[2].1, g.1);
+    }
+
+    #[test]
+    fn simulazione_un_gestore_solo_non_sta_mai_ai_due_capi() {
+        let _b = blocco();
+        // 4 gestori × 3 nodi; l'avversario è UN gestore (un quarto dei nodi)
+        let mut fam = vec![];
+        let mut nodi = vec![];
+        for g in 0..4u8 {
+            for n in 0..3u8 {
+                let k = 10 * g + n + 1;
+                nodi.push(nodo(&format!("{}.{}.0.1", 40 + g, n + 1), k));
+                fam.push(([k; 32], format!("g{g}")));
+            }
+        }
+        reimposta(fam, &cartella("s"));
+        let avv = |n: &NodoRete| famiglia_di(&n.1).as_deref() == Some("g1");
+        let att = simula(&nodi, &avv, Strategia::Attuale, 200, 90, 10).unwrap();
+        assert_eq!(att.compromessi, 0, "con le famiglie un solo gestore non può stare ai due capi");
+        let senza = simula(&nodi, &avv, Strategia::SenzaGuardia, 200, 90, 10).unwrap();
+        assert!(senza.compromessi > 0 && senza.utenti_colpiti > 150, "senza regole sì, e colpisce quasi tutti: {senza:?}");
+        assert!(att.utenti_entrata_vista < senza.utenti_entrata_vista, "con la guardia molti meno utenti mostrano l'IP all'avversario");
     }
 }

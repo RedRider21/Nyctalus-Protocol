@@ -2,6 +2,11 @@
 
 > Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
 
+## 07/11/2026 · K, prime misure ✅ (Shadow funzionante)
+- Shadow 3.3 (commit in `simulazione/shadow-versione.txt`) in `~/.local/share/nyctalus-sim/` (NON nel progetto; build cancellata dopo l'installazione, 36 MB), con `simulazione/shadow-patch-nyctalus.patch`: `recvmmsg` (un recvmsg alla volta) + `IP_PKTINFO` accettata senza effetto — senza, quinn non riceveva nulla e la simulazione girava a vuoto.
+- Motore: `nyctalus simulate-paths` + `percorsi::simula` (Strategia Vecchia/SenzaGuardia/Attuale, test). Script `simulazione/shadow-base.sh`, `simulazione/correlazione.py` (pcap di Shadow, avversario globale per correlazione delle serie temporali). Risultati in `simulazione/LEGGIMI.md` e nel PIANO: 1 gestore → 0% collegati; correlazione ≈80% indovinati anche con rumore (limite del tempo reale).
+- L'utente ha chiesto cosa manca per essere «invisibili» oltre Tor: aggiunta al PIANO la parte «Oltre l'anonimato: invisibilità» (ponti nascosti, trasporto mimetico, chat mixnet, copertura costante, igiene). Da fare in K: confronto con Tor (download sorgenti Tor ~10 MB), misura della modalità riservata in Shadow.
+
 ## 07/11/2026 · Stealth con impronta uniforme ✅
 - `pc/browser/nyctalus_browser/impronta.js` iniettato (UserContentManager, tutte le cornici, all'avvio) nelle schede 🦇: Safari/macOS (UA cambiato da «Firefox/Windows», incoerente col motore), en-US (anche Accept-Language via set_preferred_languages), UTC (Date/Intl), schermo arrotondato 200×100, 2 CPU, canvas non leggibile, measureText arrotondato, toString «native»; impostazioni WebKit: WebGL/WebAudio/media-stream/EME spenti. Prova 30 (12/12: due PC con fuso/lingua diversi → impronta identica); 08 sicurezza 7/7. Caratteri installati: NON uniformati (WebKitGTK non lo permette per contesto) — limite dichiarato nel manuale.
 

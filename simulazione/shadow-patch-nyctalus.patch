@@ -1,0 +1,69 @@
+diff --git a/src/main/host/descriptor/socket/inet/udp.rs b/src/main/host/descriptor/socket/inet/udp.rs
+index fbc1e51..02a02d6 100644
+--- a/src/main/host/descriptor/socket/inet/udp.rs
++++ b/src/main/host/descriptor/socket/inet/udp.rs
+@@ -998,6 +998,11 @@ impl UdpSocket {
+                     );
+                 }
+             }
++            (libc::IPPROTO_IP, libc::IP_PKTINFO) | (libc::IPPROTO_IPV6, libc::IPV6_RECVPKTINFO) => {
++                // Nyctalus (QUIC/quinn): chiede l'indirizzo di destinazione dei pacchetti ricevuti.
++                // Accettata senza effetto: nessun dato accessorio, e quinn ne fa a meno.
++                warn_once_then_debug!("setsockopt IP_PKTINFO accettata senza effetto (patch Nyctalus)");
++            }
+             _ => {
+                 log_once_per_value_at_level!(
+                     (level, optname),
+diff --git a/src/main/host/syscall/handler/mod.rs b/src/main/host/syscall/handler/mod.rs
+index 432c55f..2f27089 100644
+--- a/src/main/host/syscall/handler/mod.rs
++++ b/src/main/host/syscall/handler/mod.rs
+@@ -457,6 +457,7 @@ impl SyscallHandler {
+             SyscallNum::NR_readv => handle!(readv),
+             SyscallNum::NR_recvfrom => handle!(recvfrom),
+             SyscallNum::NR_recvmsg => handle!(recvmsg),
++            SyscallNum::NR_recvmmsg => handle!(recvmmsg),
+             SyscallNum::NR_renameat => handle!(renameat),
+             SyscallNum::NR_renameat2 => handle!(renameat2),
+             SyscallNum::NR_rseq => handle!(rseq),
+diff --git a/src/main/host/syscall/handler/socket.rs b/src/main/host/syscall/handler/socket.rs
+index 352f7d4..a5c751b 100644
+--- a/src/main/host/syscall/handler/socket.rs
++++ b/src/main/host/syscall/handler/socket.rs
+@@ -505,6 +505,36 @@ impl SyscallHandler {
+         Ok(result.return_val)
+     }
+ 
++    log_syscall!(
++        recvmmsg,
++        /* rv */ std::ffi::c_int,
++        /* sockfd */ std::ffi::c_int,
++        /* msgvec */ *const std::ffi::c_void,
++        /* vlen */ std::ffi::c_uint,
++        /* flags */ std::ffi::c_int,
++        /* timeout */ *const std::ffi::c_void,
++    );
++    /// Patch Nyctalus: `recvmmsg` (usata da QUIC/quinn per ricevere più pacchetti insieme) come
++    /// UN solo `recvmsg` nel primo elemento del vettore. Stesso comportamento di blocco e degli
++    /// errori di `recvmsg`; restituisce 1 messaggio. A quinn basta, e i tempi simulati non cambiano.
++    pub fn recvmmsg(
++        ctx: &mut SyscallContext,
++        fd: std::ffi::c_int,
++        msgvec: ForeignPtr<libc::mmsghdr>,
++        vlen: std::ffi::c_uint,
++        flags: std::ffi::c_int,
++        _timeout: ForeignPtr<libc::timespec>,
++    ) -> Result<std::ffi::c_int, SyscallError> {
++        if vlen == 0 {
++            return Ok(0);
++        }
++        let n = Self::recvmsg(ctx, fd, msgvec.cast::<libc::msghdr>(), flags & !libc::MSG_WAITFORONE)?;
++        let posto = std::mem::offset_of!(libc::mmsghdr, msg_len);
++        let len_ptr = msgvec.cast::<u8>().add(posto).cast::<std::ffi::c_uint>();
++        ctx.objs.process.memory_borrow_mut().write(len_ptr, &(n as std::ffi::c_uint))?;
++        Ok(1)
++    }
++
+     log_syscall!(
+         getsockname,
+         /* rv */ std::ffi::c_int,

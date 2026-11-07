@@ -241,6 +241,30 @@ async fn esegui() -> Risultato<()> {
             let messaggio = opzione(&opzioni, "message").unwrap_or("example.com:80").to_string();
             prova_circuito::prova_circuito(nodi, messaggio).await
         }
+        "simulate-paths" => {
+            // PIANO-ANONIMATO, punto K: con l'elenco vero, quanto spesso un avversario (alcune
+            // famiglie) sta sia all'entrata sia all'uscita, con la scelta vecchia e quella attuale
+            let nodi = carica_nodi(&opzioni)?;
+            let avversari: Vec<String> = obbligatoria(&opzioni, "adversary")?.split(',').map(|s| s.trim().to_string()).collect();
+            let utenti: usize = opzione(&opzioni, "users").map(str::parse).transpose()?.unwrap_or(1000);
+            let giorni: u64 = opzione(&opzioni, "days").map(str::parse).transpose()?.unwrap_or(90);
+            let al_giorno: u64 = opzione(&opzioni, "circuits-per-day").map(str::parse).transpose()?.unwrap_or(20);
+            let avv = |n: &avvia_circuito::NodoRete| percorsi::famiglia_di(&n.1).is_some_and(|f| avversari.contains(&f));
+            let quanti = nodi.iter().filter(|n| avv(n)).count();
+            println!("nodes: {} · adversary families: {} ({} nodes) · {} users × {} days × {} circuits/day",
+                     nodi.len(), avversari.join(","), quanti, utenti, giorni, al_giorno);
+            println!("{:<14} {:>12} {:>16} {:>18}", "strategy", "linked %", "users linked %", "users IP seen %");
+            for (nome, st) in [("old", percorsi::Strategia::Vecchia), ("no-guard", percorsi::Strategia::SenzaGuardia),
+                               ("current", percorsi::Strategia::Attuale)] {
+                let e = percorsi::simula(&nodi, &avv, st, utenti, giorni, al_giorno)?;
+                let pc = |a: f64, b: f64| if b > 0.0 { 100.0 * a / b } else { 0.0 };
+                println!("{:<14} {:>11.3}% {:>15.2}% {:>17.2}%", nome,
+                         pc(e.compromessi as f64, e.circuiti as f64),
+                         pc(e.utenti_colpiti as f64, e.utenti as f64),
+                         pc(e.utenti_entrata_vista as f64, e.utenti as f64));
+            }
+            Ok(())
+        }
         "circuit" => {
             let nodi = carica_nodi(&opzioni)?;
             let socks: SocketAddr = opzione(&opzioni, "socks").unwrap_or("127.0.0.1:1080").parse()?;

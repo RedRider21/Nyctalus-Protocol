@@ -152,6 +152,15 @@ collega, senza no. Resta da fare la parte «più utenti», che è organizzativa.
 - **Simulazione con Shadow:** una rete finta con centinaia di nodi e utenti, per misurare
   quanto è facile collegare entrata e uscita guardando i tempi, quanto è grande il «gruppo in
   cui ci si confonde», e confrontare tutto con Tor.
+  - ✅ **Prime misure (07/11/2026)**, con il codice vero (`simulazione/LEGGIMI.md`):
+    - **scelta dei percorsi**: con la Tappa 2 un singolo gestore disonesto non collega mai
+      chi con chi (prima: 0% o 100% a seconda dell'ordine dell'elenco); due gestori d'accordo
+      o 4 nodi infiltrati collegano ancora il 5-8% dei circuiti → servono molti gestori;
+    - **Nyctalus vero in Shadow**: 2 MB in ~2,1 s su 3 salti con 30 ms fra i computer;
+    - **attacco di correlazione dei tempi**: chi vede le linee degli utenti e del sito
+      attribuisce giusti circa l'**80%** degli scaricamenti (a caso 17%), e il rumore di fondo a
+      celle sparse non cambia molto. È il limite di tutte le reti in tempo reale, Tor compreso.
+  - Da fare: confronto con Tor nella stessa simulazione; misura della modalità riservata.
 - **Browser pubblico** basato su Firefox, con impronta uniforme per tutti (finestre a
   misure fisse, canvas e caratteri uniformati), per navigare sul web normale senza essere
   riconoscibili dal browser.
@@ -166,6 +175,30 @@ collega, senza no. Resta da fare la parte «più utenti», che è organizzativa.
     nome e logo di Mullvad. Download ~105 MB, verificato con la firma ufficiale.
   - Più avanti, se servisse il nostro logo anche dentro: un Firefox compilato da noi come Tor
     Browser (pesante: compilazioni e aggiornamenti di sicurezza ogni 4 settimane).
+
+## Oltre l'anonimato: invisibilità
+
+Anonimo vuol dire che non si sa **chi parla con chi**. Invisibile vuol dire che non si capisce
+nemmeno **che** stai usando una rete anonima, né **quando** e **quanto** comunichi. Qui Tor è
+debole, e le misure del punto K lo confermano anche per noi. I passi, in ordine:
+
+1. **Ponti nascosti.** Entrate private, non nell'elenco pubblico, date a mano a chi serve: chi
+   ti osserva non vede «un nodo Nyctalus», vede un indirizzo qualunque.
+2. **Trasporto mimetico.** Oggi il camuffamento rende il traffico simile a rumore, e il rumore
+   puro è sospetto (in alcuni paesi viene bloccato proprio così). Meglio farlo sembrare
+   **traffico comune**: una normale videochiamata (WebRTC) o un normale sito HTTPS.
+3. **Chat da mixnet.** La modalità riservata è il primo passo. Il prossimo: i nodi trattengono
+   e **rimescolano** le buste con ritardi casuali, e si aggiungono buste finte calcolate apposta
+   (privacy differenziale, come Vuvuzela/Karaoke e Loopix). Così nemmeno chi vede **tutta
+   Internet** capisce chi scrive a chi. Per i messaggi è il punto in cui si può **superare Tor**.
+4. **Copertura costante durante l'uso.** Il traffico resta piatto anche quando chiami o
+   scarichi. Le misure dicono che la copertura deve essere **pari al traffico**, non a celle
+   sparse: costa molta banda, quindi è un'opzione per chi ne ha bisogno.
+5. **Igiene automatica.** Ritardi casuali sui messaggi (già nella modalità riservata), niente
+   dati del dispositivo in uscita, attenzione agli orari di attività.
+
+Il limite che resta: per chiamate e navigazione **in tempo reale** chi vede entrambi i capi
+può confrontare i tempi. Nessuna rete al mondo lo evita senza enormi quantità di banda.
 
 ## Tappa 6 · Revisione indipendente
 
