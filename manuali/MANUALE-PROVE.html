@@ -186,6 +186,10 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 <td><strong>programma File, motore</strong>: Alice → Bob sulla rete di prova (3 salti, canali paralleli): sotto soglia parte da solo, sopra soglia «Accetta», pausa/ripresa, motore di Bob spento a metà e riacceso (riprende dai pezzi già verificati), file sempre identico (SHA-256), non-contatto rifiutato senza proporglielo; nella chat il file compare all'ora d'arrivo con ✓✓ e diventa blu alla lettura; con «inchat 0» non compare in chat. Motore di Bob rallentato solo in prova (<code>NYCTALUS_PROVA_RALLENTA_MS</code>)</td>
 </tr>
 <tr>
+<td><code>30-impronta-browser</code></td>
+<td><strong>impronta uniforme</strong> delle schede 🦇 del browser del PC: una pagina misura identità, lingua (anche nell'intestazione), ora, schermo, processori, WebGL, Web Audio, WebRTC, canvas, funzioni «native» e cornici; due avvii con fuso (Roma / New York) e lingua (it / en-GB) diversi danno un'impronta IDENTICA</td>
+</tr>
+<tr>
 <td><code>29-firefox</code></td>
 <td><strong>Nyctalus Firefox</strong> con il Firefox vero, senza finestra (headless), su una rete di prova: profilo 700 con proxy anche per i nomi, mai diretto, <code>resistFingerprinting</code>, WebRTC spento; la pagina arriva attraverso 3 salti; dentro la pagina niente WebRTC, ora UTC, lingua en-US, niente WebGL; a rete spenta non esce niente; senza rete lo dice e non apre Firefox</td>
 </tr>

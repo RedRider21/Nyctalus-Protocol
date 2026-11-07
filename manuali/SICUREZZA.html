@@ -111,6 +111,13 @@ due contatti (Noise).</p>
 riposo. Non vede <em>cosa</em> passa né <em>con chi</em>. La maggior parte dei pacchetti ha la stessa
 dimensione (~1420 byte, celle a lunghezza fissa). Per nascondere anche il ritmo esiste il
 <strong>rumore di fondo</strong> (<code>--cover</code>, §2.5), a costo di banda.</p>
+<h3 id="11-bis-impronta-del-browser-del-pc-schede">1.1-bis Impronta del browser del PC (schede 🦇)</h3>
+<p>Le schede Stealth hanno un'<strong>impronta uniforme</strong>: identità Safari/macOS, lingua en-US (anche
+nell'intestazione), ora UTC, schermo arrotondato, 2 processori, niente WebGL, Web Audio e
+WebRTC, canvas non leggibile, anche nelle cornici. Due PC con fuso e lingua diversi danno la
+stessa impronta: lo verifica la prova <code>30-impronta-browser</code>. <strong>Limiti:</strong> i Web Worker non vedono
+le coperture, i caratteri installati non sono uniformati e il motore WebKitGTK è raro; per i
+casi delicati sul web normale c'è Nyctalus Firefox (profilo sul modello di Tor Browser, prova <code>29</code>).</p>
 <h3 id="12-porta-di-controllo-e-terminale">1.2 Porta di controllo e ⌨ Terminale</h3>
 <ul>
 <li>La porta di controllo del motore ascolta solo su <code>127.0.0.1</code> e risponde solo a chi presenta il
