@@ -1,0 +1,202 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piano verso una rete anonima · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html" class="qui">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
+<article>
+<h1 id="piano-verso-una-rete-anonima">Piano verso una rete anonima</h1><nav class="sommario"><b>In questa pagina</b><a href="#in-breve">In breve</a><a href="#tappa-0-oggi-la-prova-di-funzionamento">Tappa 0 · Oggi: la prova di funzionamento</a><a href="#tappa-1-tre-piccoli-server-su-tre-fornitori-diversi">Tappa 1 · Tre piccoli server su tre fornitori diversi</a><a href="#tappa-2-percorsi-davvero-casuali-lavoro-sul-motore">Tappa 2 · Percorsi davvero casuali (lavoro sul motore)</a><a href="#tappa-3-nodi-di-persone-diverse">Tappa 3 · Nodi di persone diverse</a><a href="#tappa-4-piu-utenti-meno-ritmi-riconoscibili">Tappa 4 · Più utenti, meno ritmi riconoscibili</a><a href="#tappa-5-misure-e-browser-pubblico">Tappa 5 · Misure e browser pubblico</a><a href="#tappa-6-revisione-indipendente">Tappa 6 · Revisione indipendente</a><a href="#cosa-nessuna-tappa-puo-dare">Cosa nessuna tappa può dare</a><a href="#cosa-fare-adesso">Cosa fare adesso</a></nav>
+<p>Nyctalus <strong>cifra</strong> già tutto da un capo all'altro. L'<strong>anonimato</strong>, cioè che nessuno sappia
+<em>chi parla con chi</em>, non dipende però solo dal programma. Dipende da <strong>dove stanno i nodi</strong>,
+da <strong>chi li gestisce</strong> e da <strong>quanta gente usa la rete</strong>. Questo piano dice, tappa per tappa,
+cosa si ottiene e cosa manca ancora.</p>
+<h2 id="in-breve">In breve</h2>
+<table>
+<thead>
+<tr>
+<th>Tappa</th>
+<th>Cosa si fa</th>
+<th>Cosa si ottiene</th>
+<th>Cosa manca ancora</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0 · oggi</td>
+<td>nodi tutti sul PC di casa</td>
+<td>funziona, tutto cifrato</td>
+<td>anonimato: nessuno</td>
+</tr>
+<tr>
+<td>1</td>
+<td>3 piccoli server su 3 fornitori diversi</td>
+<td>gli operatori non vedono più chi parla con chi</td>
+<td>i nodi sono tutti tuoi</td>
+</tr>
+<tr>
+<td>2</td>
+<td>entrata e uscita scelte a caso, mai due nodi «parenti»</td>
+<td>nessun nodo è fisso per tutti</td>
+<td>i nodi sono ancora di una sola persona</td>
+</tr>
+<tr>
+<td>3</td>
+<td>nodi gestiti da persone diverse</td>
+<td>nessuno controlla tutto il percorso</td>
+<td>servono più utenti</td>
+</tr>
+<tr>
+<td>4</td>
+<td>più utenti, rumore di fondo e camuffamento sempre accesi</td>
+<td>ci si confonde fra tanti, i ritmi si vedono meno</td>
+<td>misure e revisione</td>
+</tr>
+<tr>
+<td>5</td>
+<td>misure con la simulazione, browser pubblico</td>
+<td>numeri veri, navigazione con impronta uniforme</td>
+<td>revisione esterna</td>
+</tr>
+<tr>
+<td>6</td>
+<td>revisione indipendente, pentest</td>
+<td>ci si può fidare davvero</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h2 id="tappa-0-oggi-la-prova-di-funzionamento">Tappa 0 · Oggi: la prova di funzionamento</h2>
+<p>I 4 nodi e l'elenco stanno sul PC di chi ospita la rete (<a href="GUIDA-INTERNET.html"><code>GUIDA-INTERNET.md</code></a>).</p>
+<ul>
+<li>✅ <strong>Cifratura completa:</strong> messaggi, file, chiamate e video non sono leggibili né dagli
+  operatori né dai nodi. Lo verificano le prove, compresa «Wireshark in mezzo» (<a href="SICUREZZA.html"><code>SICUREZZA.md</code></a>).</li>
+<li>✅ <strong>Contatti autenticati:</strong> nessuno può fingersi un tuo contatto.</li>
+<li>❌ <strong>Anonimato:</strong> chi ospita vede l'IP degli altri, e gli operatori vedono che due
+  indirizzi si parlano, quando e quanto.</li>
+<li>❌ <strong>Invisibilità:</strong> si vede che c'è traffico cifrato verso un indirizzo.</li>
+</ul>
+<p>Va benissimo per <strong>provare</strong>: collegamento, router, velocità, chiamate, file.</p>
+<h2 id="tappa-1-tre-piccoli-server-su-tre-fornitori-diversi">Tappa 1 · Tre piccoli server su tre fornitori diversi</h2>
+<p><strong>Cosa si fa</strong></p>
+<ul>
+<li><strong>3 VPS</strong> (server virtuali), uno per fornitore, possibilmente in <strong>paesi diversi</strong>. Basta il
+  più piccolo: 1 CPU, 512 MB–1 GB di RAM, IP pubblico, porte UDP apribili; costa pochi euro al
+  mese ciascuno.</li>
+<li>Su ognuno, <strong>un nodo</strong> con <code>Nyctalus-Server-Linux.zip</code> (<a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>). Il tuo PC può
+  restare il quarto nodo, oppure no.</li>
+<li>Il <strong>gestore</strong> (la chiave che firma l'elenco) resta sul tuo PC: non va mai su un server.</li>
+<li><strong>Camuffamento</strong> (<code>--obfuscation</code>) e <strong>rumore di fondo</strong> (<code>--cover</code>) accesi su tutti
+  (<a href="DEPLOY.html"><code>DEPLOY.md</code></a>).</li>
+<li><strong>Rubrica e casella</strong> su uno dei server, così la posta per chi non è in linea non passa da
+  casa tua.</li>
+</ul>
+<p><strong>Cosa si ottiene:</strong> tu e il tuo amico vi collegate a <strong>server</strong>, non l'uno all'altro.
+Gli operatori di casa vedono «traffico cifrato verso un server», non «Daniele parla con
+Mario». Il tuo IP non è più quello della rete.</p>
+<p><strong>Cosa manca:</strong> i nodi sono <strong>tutti tuoi</strong>. Tu, o chi riuscisse a entrare nei tuoi server,
+potresti mettere insieme entrata e uscita. Ogni fornitore vede il traffico del proprio
+server (cifrato), e l'abbonamento ai VPS è intestato a qualcuno.</p>
+<h2 id="tappa-2-percorsi-davvero-casuali-lavoro-sul-motore">Tappa 2 · Percorsi davvero casuali (lavoro sul motore)</h2>
+<p>Oggi ogni circuito usa <strong>il primo nodo dell'elenco come entrata e il secondo come uscita</strong>;
+cambiano a caso solo quelli in mezzo. È una semplificazione del prototipo, da togliere:</p>
+<ul>
+<li><strong>entrata scelta a caso</strong> e poi tenuta a lungo (come le «guardie» di Tor), così non si
+  ricomincia ogni volta il rischio di pescare un'entrata malevola;</li>
+<li><strong>uscita</strong> e <strong>nodi intermedi</strong> scelti a caso;</li>
+<li><strong>regola di parentela:</strong> mai due nodi dello stesso fornitore o della stessa sottorete nello
+  stesso percorso, e mai due nodi che il gestore ha dichiarato «della stessa persona»;</li>
+<li>prove automatiche che controllino la distribuzione e la regola.</li>
+</ul>
+<p><strong>Cosa si ottiene:</strong> nessun nodo vede passare tutti, e un percorso non attraversa mai due
+volte lo stesso proprietario dichiarato.</p>
+<h2 id="tappa-3-nodi-di-persone-diverse">Tappa 3 · Nodi di persone diverse</h2>
+<ul>
+<li>Altri gestiscono <strong>i propri nodi</strong>: il tuo amico di Pavia (ha l'IP statico, è perfetto),
+  altri amici, volontari. Ognuno con il suo server o il PC sempre acceso.</li>
+<li>Il gestore li aggiunge all'elenco con la loro «famiglia» (Tappa 2).</li>
+<li>Regola d'oro: <strong>nessuno gestisce più di un terzo dei nodi</strong>.</li>
+</ul>
+<p><strong>Cosa si ottiene:</strong> per scoprire chi parla con chi bisogna mettere d'accordo i gestori di
+entrata e uscita, che sono persone diverse.</p>
+<h2 id="tappa-4-piu-utenti-meno-ritmi-riconoscibili">Tappa 4 · Più utenti, meno ritmi riconoscibili</h2>
+<ul>
+<li><strong>Più persone</strong> usano la rete: l'anonimato è nascondersi fra tanti. Con 2 utenti, «chi parla
+  con chi» si indovina; con 200 molto meno.</li>
+<li><strong>Rumore di fondo</strong> sempre acceso: le chiamate hanno un ritmo che si nota (circa 40 volte il
+  traffico a riposo, misurato dalla prova del traffico); il rumore lo copre, a costo di banda.</li>
+<li><strong>Camuffamento</strong> obbligatorio su tutta la rete.</li>
+<li><strong>Rubrica e casella</strong> su server di persone diverse.</li>
+</ul>
+<h2 id="tappa-5-misure-e-browser-pubblico">Tappa 5 · Misure e browser pubblico</h2>
+<ul>
+<li><strong>Simulazione con Shadow:</strong> una rete finta con centinaia di nodi e utenti, per misurare
+  quanto è facile collegare entrata e uscita guardando i tempi, quanto è grande il «gruppo in
+  cui ci si confonde», e confrontare tutto con Tor.</li>
+<li><strong>Browser pubblico</strong> basato su Firefox ESR, con impronta uniforme per tutti (finestre a
+  misure fisse, canvas e caratteri uniformati), per navigare sul web normale senza essere
+  riconoscibili dal browser.</li>
+</ul>
+<h2 id="tappa-6-revisione-indipendente">Tappa 6 · Revisione indipendente</h2>
+<ul>
+<li><strong>Revisione crittografica</strong> da esperti esterni (la combinazione Sphinx + strati simmetrici</li>
+<li>Noise + QUIC), pubblicazione a PETS/USENIX, analisi formale.</li>
+<li><strong>Pentest</strong> pubblico e <strong>bug bounty</strong>.</li>
+<li>Possibili fondi: NLnet / NGI Zero.</li>
+</ul>
+<p>Solo dopo questa tappa ha senso dire «fidatevi». Fino ad allora Nyctalus è un <strong>prototipo
+da provare</strong>, non uno strumento da cui far dipendere la propria sicurezza.</p>
+<h2 id="cosa-nessuna-tappa-puo-dare">Cosa nessuna tappa può dare</h2>
+<ul>
+<li><strong>Invisibilità totale.</strong> Si può rendere il traffico simile a rumore o a un altro protocollo
+  (<code>--obfuscation</code>, in futuro i «ponti»), ma chi guarda il filo vede comunque che passano dati.
+  Vale anche per Tor.</li>
+<li><strong>Protezione da un apparecchio compromesso.</strong> Se il telefono o il PC hanno un programma
+  spia, la rete non può farci niente.</li>
+<li><strong>Protezione da ciò che scrivi.</strong> Se in chat dici il tuo nome, la rete non lo nasconde. Lo
+  stesso vale per le foto con i dati di posizione (Nyctalus li toglie da sé, ma una foto
+  condivisa fuori dall'app no).</li>
+<li><strong>Un avversario che vede tutta Internet</strong> e confronta i tempi di entrata e di uscita: il
+  rumore di fondo lo ostacola, ma non lo rende impossibile. È il limite noto di tutte le reti
+  a bassa latenza, Tor compreso.</li>
+</ul>
+<h2 id="cosa-fare-adesso">Cosa fare adesso</h2>
+<ol>
+<li><strong>Prova con il tuo amico</strong> così com'è (Tappa 0), per collegamento, velocità, chiamate e file.</li>
+<li><strong>Tappa 1:</strong> scegliete 3 fornitori di VPS diversi e installate i nodi. Il tuo amico può
+   ospitarne uno.</li>
+<li><strong>Tappa 2:</strong> il lavoro sul motore (percorsi casuali e regola di parentela) si può fare in
+   parallelo, ed è la prossima cosa da sviluppare.</li>
+</ol>
+</article>
+</main>
+<button class="torna-su" id="torna-su" type="button" title="Torna su" aria-label="Torna su">↑</button>
+<script>
+(function(){var b=document.getElementById('torna-su');
+function aggiorna(){b.classList.toggle('visibile',window.scrollY>250);}
+window.addEventListener('scroll',aggiorna,{passive:true});aggiorna();
+b.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});})();
+</script>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>
