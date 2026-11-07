@@ -21,7 +21,7 @@
 <main class="wrap manuale-doc">
 <nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html" class="qui">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
-<h1 id="piano-verso-una-rete-anonima">Piano verso una rete anonima</h1><nav class="sommario"><b>In questa pagina</b><a href="#in-breve">In breve</a><a href="#tappa-0-oggi-la-prova-di-funzionamento">Tappa 0 · Oggi: la prova di funzionamento</a><a href="#tappa-1-tre-piccoli-server-su-tre-fornitori-diversi">Tappa 1 · Tre piccoli server su tre fornitori diversi</a><a href="#tappa-2-percorsi-davvero-casuali-lavoro-sul-motore-fatta-07112026">Tappa 2 · Percorsi davvero casuali (lavoro sul motore) ✅ fatta (07/11/2026)</a><a href="#tappa-2-bis-modalita-riservata-chat-fatta-07112026">Tappa 2-bis · Modalità riservata (chat) ✅ fatta (07/11/2026)</a><a href="#tappa-3-nodi-di-persone-diverse-strumenti-pronti-07112026">Tappa 3 · Nodi di persone diverse 🔧 strumenti pronti (07/11/2026)</a><a href="#tappa-4-piu-utenti-meno-ritmi-riconoscibili-protezione-di-serie-fatta-07112026">Tappa 4 · Più utenti, meno ritmi riconoscibili 🔧 protezione di serie fatta (07/11/2026)</a><a href="#tappa-5-misure-e-browser-pubblico">Tappa 5 · Misure e browser pubblico</a><a href="#nyctalus-e-tor-a-confronto">Nyctalus e Tor, a confronto</a><a href="#oltre-lanonimato-invisibilita">Oltre l'anonimato: invisibilità</a><a href="#tappa-6-revisione-indipendente">Tappa 6 · Revisione indipendente</a><a href="#cosa-nessuna-tappa-puo-dare">Cosa nessuna tappa può dare</a><a href="#cosa-fare-adesso">Cosa fare adesso</a></nav>
+<h1 id="piano-verso-una-rete-anonima">Piano verso una rete anonima</h1><nav class="sommario"><b>In questa pagina</b><a href="#in-breve">In breve</a><a href="#tappa-0-oggi-la-prova-di-funzionamento">Tappa 0 · Oggi: la prova di funzionamento</a><a href="#tappa-1-tre-piccoli-server-su-tre-fornitori-diversi">Tappa 1 · Tre piccoli server su tre fornitori diversi</a><a href="#tappa-2-percorsi-davvero-casuali-lavoro-sul-motore-fatta-07112026">Tappa 2 · Percorsi davvero casuali (lavoro sul motore) ✅ fatta (07/11/2026)</a><a href="#tappa-2-bis-modalita-riservata-chat-fatta-07112026">Tappa 2-bis · Modalità riservata (chat) ✅ fatta (07/11/2026)</a><a href="#tappa-3-nodi-di-persone-diverse-strumenti-pronti-07112026">Tappa 3 · Nodi di persone diverse 🔧 strumenti pronti (07/11/2026)</a><a href="#tappa-4-piu-utenti-meno-ritmi-riconoscibili-protezione-di-serie-fatta-07112026">Tappa 4 · Più utenti, meno ritmi riconoscibili 🔧 protezione di serie fatta (07/11/2026)</a><a href="#tappa-5-misure-e-browser-pubblico">Tappa 5 · Misure e browser pubblico</a><a href="#nyctalus-e-tor-a-confronto">Nyctalus e Tor, a confronto</a><a href="#velocita-dove-siamo-e-cosa-viene-dopo">Velocità: dove siamo e cosa viene dopo</a><a href="#oltre-lanonimato-invisibilita">Oltre l'anonimato: invisibilità</a><a href="#tappa-6-revisione-indipendente">Tappa 6 · Revisione indipendente</a><a href="#cosa-nessuna-tappa-puo-dare">Cosa nessuna tappa può dare</a><a href="#cosa-fare-adesso">Cosa fare adesso</a></nav>
 <p>Nyctalus <strong>cifra</strong> già tutto da un capo all'altro. L'<strong>anonimato</strong>, cioè che nessuno sappia
 <em>chi parla con chi</em>, non dipende però solo dal programma. Dipende da <strong>dove stanno i nodi</strong>,
 da <strong>chi li gestisce</strong> e da <strong>quanta gente usa la rete</strong>. Questo piano dice, tappa per tappa,
@@ -252,25 +252,35 @@ stesso attacco, 3 ripetizioni (velocità: <code>simulazione/velocita.py</code>, 
 <tr>
 <td>Scaricare 5 MB, linea pulita</td>
 <td>6,4 Mbit/s</td>
-<td><strong>~10 Mbit/s · +55%</strong></td>
+<td><strong>10,9 · +70%</strong></td>
+</tr>
+<tr>
+<td>… nodi di velocità diverse (da 5 a 50 Mbit)</td>
+<td>6,2 Mbit/s</td>
+<td><strong>9,9 · +60%</strong></td>
+</tr>
+<tr>
+<td>… nodi diversi, 4 utenti insieme</td>
+<td>2,6 Mbit/s</td>
+<td><strong>4,8 · +80%</strong></td>
 </tr>
 <tr>
 <td>… con l'1% di pacchetti persi (Wi-Fi, rete mobile)</td>
-<td>2,3 Mbit/s</td>
-<td>2,2-2,4 · alla pari (prima della 0.3.8: 1,3)</td>
+<td>2,0-2,3 Mbit/s</td>
+<td>2,2 · alla pari</td>
 </tr>
 <tr>
 <td>… con il 2% di pacchetti persi</td>
 <td>0,47 Mbit/s</td>
-<td><strong>0,98 · ×2</strong></td>
+<td><strong>1,1 · ×2</strong></td>
 </tr>
 <tr>
-<td>… nodi carichi (4 utenti insieme su nodi da 10 Mbit)</td>
+<td>… nodi tutti uguali e saturi (4 utenti su nodi da 10 Mbit)</td>
 <td><strong>2,9 Mbit/s</strong></td>
-<td>2,0-2,5 · Tor avanti</td>
+<td>2,4 · Tor avanti</td>
 </tr>
 <tr>
-<td>… nodi carichi e 1% di perdite</td>
+<td>… nodi saturi e 1% di perdite</td>
 <td>1,4 Mbit/s</td>
 <td><strong>1,8 · +25%</strong></td>
 </tr>
@@ -358,10 +368,26 @@ stesso attacco, 3 ripetizioni (velocità: <code>simulazione/velocita.py</code>, 
 </tr>
 </tbody>
 </table>
-<p>In breve: <strong>velocità</strong>: su linea pulita Nyctalus è più veloce di Tor, con perdite alla pari o
-meglio; con nodi carichi Tor è ancora avanti. <strong>Anonimato</strong> sul tempo reale alla pari; sulla
+<p>In breve: <strong>velocità</strong>: Nyctalus è più veloce di Tor quasi ovunque (+60-80% con nodi di
+velocità diverse, come nella realtà); alla pari con poche perdite; Tor avanti solo con nodi tutti saturi. <strong>Anonimato</strong> sul tempo reale alla pari; sulla
 <strong>chat</strong>, con la modalità riservata, va oltre. Tor resta avanti in maturità, numero di utenti e
 camuffamento collaudato.</p>
+<h2 id="velocita-dove-siamo-e-cosa-viene-dopo">Velocità: dove siamo e cosa viene dopo</h2>
+<p>Misure in Shadow con <code>simulazione/velocita.py</code> (dettagli in <code>simulazione/LEGGIMI.md</code>):</p>
+<ol>
+<li>✅ <strong>BBR</strong> (0.3.8): con i pacchetti persi non si dimezza più la velocità.</li>
+<li>✅ <strong>Ragnatela con distributore intelligente</strong> e <strong>finestra per circuito di 256 KB</strong> (0.3.10):
+   ogni cella va alla strada più libera, le strade lente si sentono subito.</li>
+<li>✅ <strong>Scelta dei nodi pesata per banda</strong> (0.3.10): il guadagno più grande con nodi di velocità
+   diverse (come nella realtà).</li>
+<li>❌ <strong>Ragnatela codificata</strong> (riserve con codice MDS): provata e misurata, <strong>non accelera</strong>
+   (-5..-25%) perché ogni tratta QUIC recupera già i pacchetti persi e le strade condividono entrata
+   e uscita. Resta sperimentale; da riprovare con uscite diverse per strada.</li>
+<li><strong>«🦇 Aiuta la rete»</strong> (prossimo): i PC degli utenti, se vogliono, fanno da <strong>nodo intermedio</strong>
+   (mai uscita), con un tetto di banda. Più utenti, più capacità: la differenza vera con Tor nel
+   mondo reale. In più il traffico degli altri copre in parte i tuoi ritmi (da misurare).</li>
+<li>Uscite diverse per strada, per gli scaricamenti grandi (da pesare contro l'anonimato).</li>
+</ol>
 <h2 id="oltre-lanonimato-invisibilita">Oltre l'anonimato: invisibilità</h2>
 <p>Anonimo vuol dire che non si sa <strong>chi parla con chi</strong>. Invisibile vuol dire che non si capisce
 nemmeno <strong>che</strong> stai usando una rete anonima, né <strong>quando</strong> e <strong>quanto</strong> comunichi. Qui Tor è

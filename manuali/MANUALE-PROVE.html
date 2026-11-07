@@ -186,6 +186,10 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 <td><strong>programma File, motore</strong>: Alice → Bob sulla rete di prova (3 salti, canali paralleli): sotto soglia parte da solo, sopra soglia «Accetta», pausa/ripresa, motore di Bob spento a metà e riacceso (riprende dai pezzi già verificati), file sempre identico (SHA-256), non-contatto rifiutato senza proporglielo; nella chat il file compare all'ora d'arrivo con ✓✓ e diventa blu alla lettura; con «inchat 0» non compare in chat. Motore di Bob rallentato solo in prova (<code>NYCTALUS_PROVA_RALLENTA_MS</code>)</td>
 </tr>
 <tr>
+<td><code>34-banda</code></td>
+<td><strong>banda dei nodi</strong>: <code>nyctalus-rete banda</code>, la banda nell'elenco firmato (alterarla rompe la firma), il motore la legge; famiglia e banda insieme</td>
+</tr>
+<tr>
 <td><code>33-forma-http3</code></td>
 <td><strong>forma HTTP/3</strong>: navigazione a 3 salti, siti <code>.nyct</code> e ponti con i nodi che sembrano un sito HTTP/3; senza contrassegno non si entra; un <strong>vero Chrome</strong> visita il nodo e riceve una pagina 404; certificato con dati normali; gestore (<code>--forma h3 --nome</code>), codice, PC, telefono, installatore (porta 443, <code>--nuova-identita</code>)</td>
 </tr>

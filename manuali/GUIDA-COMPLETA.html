@@ -240,6 +240,11 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi <strong>ge
 <td>nessuno</td>
 </tr>
 <tr>
+<td><a href="#14-famiglie-e-nodi-di-amici">Banda dei nodi</a></td>
+<td>i nodi più veloci si usano di più (molto più veloce con nodi diversi)</td>
+<td>non indicata</td>
+</tr>
+<tr>
 <td><a href="#14-famiglie-e-nodi-di-amici">Famiglie e nodi di amici</a></td>
 <td>mai due nodi dello stesso gestore in un percorso</td>
 <td>—</td>
@@ -481,6 +486,14 @@ nyctalus-rete ospite elenco [--internet]
 </code></pre>
 <p>Le righe dei nodi le stampa l'installatore sulla macchina dell'amico. Le famiglie vanno
 usate quando <strong>tutti</strong> hanno la 0.3.3 o successiva. Dettagli: <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a>.</p>
+<p><strong>Banda dei nodi</strong> (dalla 0.3.10). Indica quanta banda ha ogni nodo (in Mbit/s, quella reale in
+upload del server): i percorsi sceglieranno più spesso i nodi più capaci, come fa Tor. Con nodi
+di velocità diverse è il miglioramento più grande: in simulazione da 3,9 a 9,9 Mbit/s (Tor 6,2).</p>
+<pre><code class="language-sh">nyctalus-rete banda IP:PORTA 100      # 100 Mbit/s;  «-» per toglierla
+nyctalus-rete firma
+</code></pre>
+<p>I nodi senza banda contano come la media degli altri. ⚠️ Un elenco con le bande lo leggono i
+motori dalla <strong>0.3.10</strong>: aggiorna prima tutti i client (quelli vecchi rifiuterebbero l'elenco).</p>
 <h3 id="15-modalita-rigida">15. Modalità rigida</h3>
 <p><strong>A cosa serve:</strong> se la regola delle famiglie non si può rispettare (per esempio nodi tutti
 su un PC), di solito il motore <strong>funziona lo stesso</strong> e avvisa «cifrato ma NON anonimo». In
@@ -532,6 +545,21 @@ modalità rigida invece <strong>si rifiuta</strong>: meglio niente che un percor
 <td><code>--hidden-bridge</code> (nodo)</td>
 <td>il nodo fa da ponte nascosto</td>
 <td>spento</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_FINESTRA_KB</code></td>
+<td>finestra per circuito (KB): più piccola = la ragnatela sente prima le strade lente</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_CONGESTIONE</code></td>
+<td>controllo di congestione: <code>bbr</code>, <code>cubic</code>, <code>newreno</code></td>
+<td>bbr</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_CODIFICA=8,2</code></td>
+<td>ragnatela codificata <strong>sperimentale</strong> (k celle + r riserve); misurata: non accelera</td>
+<td>spenta</td>
 </tr>
 </tbody>
 </table>
