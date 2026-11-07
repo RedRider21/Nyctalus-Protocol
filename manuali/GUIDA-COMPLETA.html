@@ -231,7 +231,7 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi <strong>ge
 </tr>
 <tr>
 <td><a href="#12-protezione-camuffamento-e-rumore-di-fondo">Protezione: camuffamento e rumore</a></td>
-<td>traffico simile a rumore, ritmi nascosti</td>
+<td>traffico simile a rumore (o a un sito HTTP/3), ritmi nascosti</td>
 <td>accesa nelle reti nuove</td>
 </tr>
 <tr>
@@ -403,6 +403,39 @@ nyctalus-rete protezione no                    # spegne (la chiave resta da part
 <p>Dopo il cambio: riavvia la rete (o la rete di casa), ridai il codice e reinstalla i nodi dei
 server con <code>./installa.sh --codice NYCT1:…</code> (oppure <code>--camuffamento CHIAVE --rumore N</code>). Client
 PC, telefono e Windows prendono tutto dal codice, da soli.</p>
+<p><strong>Due forme, a scelta del gestore</strong> (dalla 0.3.9):</p>
+<table>
+<thead>
+<tr>
+<th>Forma</th>
+<th>Cosa vede chi osserva</th>
+<th>Quando usarla</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>rumore</strong> (di serie)</td>
+<td>pacchetti UDP che sembrano rumore puro; chi sonda non riceve risposta</td>
+<td>quasi sempre</td>
+</tr>
+<tr>
+<td><strong>HTTP/3</strong> (<code>--forma h3</code>)</td>
+<td>un normale <strong>sito HTTP/3</strong>: QUIC sulla porta 443, con il nome che scegli tu (es. <code>www.miosito.it</code>); chi sonda il nodo riceve una pagina «404 Not Found», come da un sito qualunque</td>
+<td>dove il traffico «tutto rumore» viene bloccato (alcuni paesi, alcune reti aziendali)</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-sh">nyctalus-rete protezione si --forma h3 --nome www.miosito.it   # forma HTTP/3
+nyctalus-rete protezione si --forma rumore                     # di nuovo rumore
+</code></pre>
+<p>Nella forma HTTP/3 la chiave della rete non cifra i pacchetti: diventa un <strong>contrassegno</strong> che i
+client mandano dentro la cifratura TLS. Chi non lo ha vede solo il «sito». Sui server:
+<code>sudo ./installa.sh --codice NYCT1:… --nuova-identita</code> (porta 443 proposta da sola; la nuova
+identità dà ai nodi un certificato con il nome del sito, quindi <strong>rimanda le righe al gestore</strong>).
+I nodi della rete di casa si rifanno l'identità da soli. <strong>Limite onesto:</strong> chi analizza a fondo la
+stretta di mano può capire che il programma non è un browser (impronta TLS/QUIC diversa da quella
+di Chrome o Firefox); il nome scelto è solo un'etichetta (non serve possedere il dominio, ma un
+dominio vero tuo è più credibile).</p>
 <h3 id="13-ponti-nascosti">13. Ponti nascosti</h3>
 <p><strong>A cosa serve:</strong> di solito si entra nella rete da un nodo dell'<strong>elenco pubblico</strong>: chi osserva
 la tua linea (il fornitore Internet, la rete dell'ufficio, un paese che censura) può confrontare
@@ -489,6 +522,11 @@ modalità rigida invece <strong>si rifiuta</strong>: meglio niente che un percor
 <td><code>--bridge RIGA</code> / <code>NYCTALUS_PONTI</code></td>
 <td>entrare da un ponte nascosto</td>
 <td>nessuno</td>
+</tr>
+<tr>
+<td><code>--mimic [--mimic-name SITO]</code> / <code>NYCTALUS_MIMETICO=1</code></td>
+<td>forma HTTP/3 (con <code>--obfuscation</code>)</td>
+<td>spenta</td>
 </tr>
 <tr>
 <td><code>--hidden-bridge</code> (nodo)</td>

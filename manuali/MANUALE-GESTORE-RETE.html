@@ -186,6 +186,9 @@ nyctalus-rete protezione no                   # spegne (la chiave resta da parte
 </code></pre>
 <p>Dopo il cambio: riavvia la rete, ridai il codice, e reinstalla i nodi dei server con
 <code>./installa.sh --codice NYCT1:…</code>. Spiegazione completa: <a href="GUIDA-COMPLETA.html"><code>GUIDA-COMPLETA.md</code></a> §12.</p>
+<p><strong>Forma HTTP/3</strong> (<code>nyctalus-rete protezione si --forma h3 --nome www.miosito.it</code>): i nodi sembrano
+un normale sito HTTP/3 sulla porta 443 invece di rumore; chi li sonda riceve una pagina 404. Sui
+server reinstalla con <code>--codice … --nuova-identita</code> e aggiorna le righe nell'elenco.</p>
 <h2 id="6-quater-ponti-nascosti">6-quater. Ponti nascosti</h2>
 <p>Un ponte è un'entrata <strong>privata</strong>: non sta nell'elenco e ha una chiave sua. Non lo gestisci tu
 come gestore: lo installa chi lo ospita (<code>./installa.sh --ponte --codice NYCT1:…</code> sul server) e

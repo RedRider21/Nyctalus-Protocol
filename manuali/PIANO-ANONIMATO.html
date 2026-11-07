@@ -324,7 +324,7 @@ stesso attacco, 3 ripetizioni (velocità: <code>simulazione/velocita.py</code>, 
 <tr>
 <td>Camuffamento</td>
 <td>ponti con obfs4, Snowflake, meek: collaudati contro la censura</td>
-<td>chiave della rete, di serie nelle reti nuove; ponti nascosti e trasporto mimetico in arrivo</td>
+<td>chiave della rete di serie (rumore), oppure forma HTTP/3; ponti nascosti; nessuna risposta alle sonde</td>
 </tr>
 <tr>
 <td>Rumore di fondo</td>
@@ -373,7 +373,10 @@ debole, e le misure del punto K lo confermano anche per noi. I passi, in ordine:
    risposta</strong> (lo stesso ora vale per tutti i nodi camuffati: prima uno su ~300 tentativi
    otteneva risposta). Nel primo pacchetto non c'è più nessun nome. Come si usa:
    <a href="GUIDA-COMPLETA.html"><code>GUIDA-COMPLETA.md</code></a> §13; prova <code>32-ponte-nascosto</code>.</li>
-<li><strong>Trasporto mimetico.</strong> Oggi il camuffamento rende il traffico simile a rumore, e il rumore
+<li>🔧 <strong>Trasporto mimetico</strong> — ✅ <strong>forma HTTP/3 fatta</strong> (0.3.9): i nodi sembrano un sito HTTP/3
+   sulla porta 443 con il nome scelto dal gestore, e chi li sonda (anche un vero Chrome) riceve una
+   pagina 404. Restano: impronta identica a un browser, forma «videochiamata», ripiego su TCP 443.
+   Il camuffamento di serie rende il traffico simile a rumore, e il rumore
    puro è sospetto (in alcuni paesi viene bloccato proprio così). Meglio farlo sembrare
    <strong>traffico comune</strong>: una normale videochiamata (WebRTC) o un normale sito HTTPS/HTTP-3
    (con ALPN <code>h3</code>, porta 443, dimensioni dei pacchetti come i browser), più il ripiego su TCP 443
