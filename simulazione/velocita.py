@@ -42,8 +42,14 @@ def testa(a, stop):
             "          packet_loss %.4f" % a.perdita, "        ]", "      ]", "hosts:"]
 
 
-def banda(a):
-    return ['    bandwidth_down: "%d Mbit"' % a.banda_nodi, '    bandwidth_up: "%d Mbit"' % a.banda_nodi] if a.banda_nodi else []
+def banda(a, i=0):
+    """Banda del nodo i (0-6): --bande «a,b,…» (nodi di velocità diverse) o --banda-nodi uguale per tutti."""
+    if a.bande:
+        v = [int(x) for x in a.bande.split(",")]
+        b = v[i % len(v)]
+    else:
+        b = a.banda_nodi
+    return ['    bandwidth_down: "%d Mbit"' % b, '    bandwidth_up: "%d Mbit"' % b] if b else []
 
 
 def sito(out):
@@ -71,7 +77,7 @@ def prepara_tor(out, a):
     inizio = 1500
     y = testa(a, inizio + ATTESA)
     for h in RELE_TOR:
-        y += ["  %s:" % h, "    network_node_id: 0"] + (["    ip_addr: 100.0.0.1"] if h == "4uthority" else []) + banda(a) + [
+        y += ["  %s:" % h, "    network_node_id: 0"] + (["    ip_addr: 100.0.0.1"] if h == "4uthority" else []) + banda(a, RELE_TOR.index(h)) + [
             "    processes:", "    - path: %s" % TOR,
             "      args: %s" % lista("--Address", h, "--Nickname", h, "--defaults-torrc", "torrc-defaults", "-f", "torrc"),
             "      start_time: %ds" % (1 if h == "4uthority" else 60), "      expected_final_state: running"]
@@ -111,7 +117,7 @@ def prepara_nyctalus(out, a):
     inizio = 40
     y = testa(a, inizio + ATTESA)
     for i in range(1, NODI_NYCT + 1):
-        y += ["  nodo%d:" % i, "    network_node_id: 0", "    ip_addr: 11.%d.0.1" % i] + banda(a) + [
+        y += ["  nodo%d:" % i, "    network_node_id: 0", "    ip_addr: 11.%d.0.1" % i] + banda(a, i - 1) + [
               "    processes:", "    - path: %s" % BIN,
               "      args: %s" % lista("node", "--listen", "0.0.0.0:4600", "--data", str(out / ("nodo%d" % i)),
                                        "--announce", "11.%d.0.1:4600" % i),
@@ -152,6 +158,7 @@ def main():
     ap.add_argument("--sistema", choices=["tor", "nyctalus"], required=True)
     ap.add_argument("--perdita", type=float, default=0.0)
     ap.add_argument("--banda-nodi", type=int, default=0, help="Mbit dei nodi (0 = come gli utenti)")
+    ap.add_argument("--bande", default="", help="Mbit di ciascuno dei 7 nodi, es. 100,50,20,10,5,50,20")
     ap.add_argument("--utenti", type=int, default=1)
     ap.add_argument("--mb", type=float, default=5)
     ap.add_argument("--circuiti", type=int, default=2)
@@ -172,7 +179,7 @@ def main():
     vel = sum(byte / t for t in tempi) / len(tempi) * 8 / 1e6 if tempi else 0.0
     print("RISULTATO congestione=%s sistema=%s perdita=%g banda_nodi=%s utenti=%d mb=%g circuiti=%s seme=%d riusciti=%d falliti=%d "
           "tempo_medio=%.2f primo_byte=%.2f mbit_s=%.2f"
-          % (a.congestione or "bbr", a.sistema, a.perdita, a.banda_nodi or "-", a.utenti, a.mb, a.circuiti if a.sistema == "nyctalus" else "-",
+          % (a.congestione or "bbr", a.sistema, a.perdita, (a.bande.replace(",", "/") if a.bande else (a.banda_nodi or "-")), a.utenti, a.mb, a.circuiti if a.sistema == "nyctalus" else "-",
              a.seme, len(tempi), falliti, media, sum(primi) / len(primi) if primi else 0.0, vel))
     # i file scaricati non servono più: si tiene solo il registro (il disco è quasi pieno)
     shutil.rmtree(out / "sito", ignore_errors=True)
