@@ -9,6 +9,13 @@
 3. **Riordino organico di tutta la documentazione** (manuali, guide, sito).
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
 
+## 08/11/2026 · Velocità: ragnatela, finestre, scelta pesata ✅ · ragnatela codificata ❌ (sperimentale)
+- Diagnosi (nodi 5-50 Mbit): scelta a caso = lotteria (2,7-9,3), distributore a turno = N × la strada più lenta.
+- Distributore verso la coda più libera + finestra 256 KB; banda= nell'elenco firmato (campi sconosciuti ignorati) + `nyctalus-rete banda`; prova 34.
+- Risultati: nodi diversi 1 utente 9,9 vs Tor 6,2; 4 utenti 4,8 vs 2,6; 1% perdite 2,2-2,4 vs 2,0; carichi+perdite 2,2 vs 1,3.
+- Ragnatela codificata (codifica.rs, MDS Cauchy GF(256), negoziata nel LINK, rumore utile): -5..-25% → spenta (NYCTALUS_CODIFICA).
+- Prossimo: «🦇 Aiuta la rete» (PC utente = nodo intermedio, mai uscita), poi uscite diverse per strada.
+
 ## 07/11/2026 · Release v0.3.9 (APK 0.52) ✅
 
 ## 07/11/2026 · Invisibilità punto 2a: forma HTTP/3 ✅

@@ -223,6 +223,23 @@ meglio; con nodi carichi Tor è ancora avanti. **Anonimato** sul tempo reale all
 **chat**, con la modalità riservata, va oltre. Tor resta avanti in maturità, numero di utenti e
 camuffamento collaudato.
 
+## Velocità: dove siamo e cosa viene dopo
+
+Misure in Shadow con `simulazione/velocita.py` (dettagli in `simulazione/LEGGIMI.md`):
+
+1. ✅ **BBR** (0.3.8): con i pacchetti persi non si dimezza più la velocità.
+2. ✅ **Ragnatela con distributore intelligente** e **finestra per circuito di 256 KB** (0.3.10):
+   ogni cella va alla strada più libera, le strade lente si sentono subito.
+3. ✅ **Scelta dei nodi pesata per banda** (0.3.10): il guadagno più grande con nodi di velocità
+   diverse (come nella realtà).
+4. ❌ **Ragnatela codificata** (riserve con codice MDS): provata e misurata, **non accelera**
+   (-5..-25%) perché ogni tratta QUIC recupera già i pacchetti persi e le strade condividono entrata
+   e uscita. Resta sperimentale; da riprovare con uscite diverse per strada.
+5. **«🦇 Aiuta la rete»** (prossimo): i PC degli utenti, se vogliono, fanno da **nodo intermedio**
+   (mai uscita), con un tetto di banda. Più utenti, più capacità: la differenza vera con Tor nel
+   mondo reale. In più il traffico degli altri copre in parte i tuoi ritmi (da misurare).
+6. Uscite diverse per strada, per gli scaricamenti grandi (da pesare contro l'anonimato).
+
 ## Oltre l'anonimato: invisibilità
 
 Anonimo vuol dire che non si sa **chi parla con chi**. Invisibile vuol dire che non si capisce

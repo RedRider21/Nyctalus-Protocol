@@ -147,6 +147,7 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi **gestisce
 | [Rubrica e casella](#11-rubrica-e-casella) | posta per chi è spento, elenco di chi c'è | accese nella rete di casa |
 | [Protezione: camuffamento e rumore](#12-protezione-camuffamento-e-rumore-di-fondo) | traffico simile a rumore (o a un sito HTTP/3), ritmi nascosti | accesa nelle reti nuove |
 | [Ponti nascosti](#13-ponti-nascosti) | entrare da un indirizzo privato, fuori dall'elenco; invisibile alle sonde | nessuno |
+| [Banda dei nodi](#14-famiglie-e-nodi-di-amici) | i nodi più veloci si usano di più (molto più veloce con nodi diversi) | non indicata |
 | [Famiglie e nodi di amici](#14-famiglie-e-nodi-di-amici) | mai due nodi dello stesso gestore in un percorso | — |
 | [Modalità rigida](#15-modalita-rigida) | rifiutare i percorsi non anonimi | spenta |
 | [Opzioni del motore](#16-opzioni-avanzate-del-motore) | salti, strade parallele (per esperti) | 3 · 2 |
@@ -379,6 +380,16 @@ nyctalus-rete ospite elenco [--internet]
 Le righe dei nodi le stampa l'installatore sulla macchina dell'amico. Le famiglie vanno
 usate quando **tutti** hanno la 0.3.3 o successiva. Dettagli: `MANUALE-GESTORE-RETE.md`.
 
+**Banda dei nodi** (dalla 0.3.10). Indica quanta banda ha ogni nodo (in Mbit/s, quella reale in
+upload del server): i percorsi sceglieranno più spesso i nodi più capaci, come fa Tor. Con nodi
+di velocità diverse è il miglioramento più grande: in simulazione da 3,9 a 9,9 Mbit/s (Tor 6,2).
+```sh
+nyctalus-rete banda IP:PORTA 100      # 100 Mbit/s;  «-» per toglierla
+nyctalus-rete firma
+```
+I nodi senza banda contano come la media degli altri. ⚠️ Un elenco con le bande lo leggono i
+motori dalla **0.3.10**: aggiorna prima tutti i client (quelli vecchi rifiuterebbero l'elenco).
+
 ### 15. Modalità rigida
 **A cosa serve:** se la regola delle famiglie non si può rispettare (per esempio nodi tutti
 su un PC), di solito il motore **funziona lo stesso** e avvisa «cifrato ma NON anonimo». In
@@ -400,3 +411,6 @@ Per chi usa il motore a mano (`nyctalus start`, `nyctalus circuit`…). Tutte in
 | `--bridge RIGA` / `NYCTALUS_PONTI` | entrare da un ponte nascosto | nessuno |
 | `--mimic [--mimic-name SITO]` / `NYCTALUS_MIMETICO=1` | forma HTTP/3 (con `--obfuscation`) | spenta |
 | `--hidden-bridge` (nodo) | il nodo fa da ponte nascosto | spento |
+| `NYCTALUS_FINESTRA_KB` | finestra per circuito (KB): più piccola = la ragnatela sente prima le strade lente | 256 |
+| `NYCTALUS_CONGESTIONE` | controllo di congestione: `bbr`, `cubic`, `newreno` | bbr |
+| `NYCTALUS_CODIFICA=8,2` | ragnatela codificata **sperimentale** (k celle + r riserve); misurata: non accelera | spenta |

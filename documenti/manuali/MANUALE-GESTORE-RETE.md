@@ -58,6 +58,11 @@ senza famiglie, due nodi con indirizzo pubblico nella stessa sottorete (/16) son
 parenti. Le famiglie vanno usate quando **tutti** i client sono aggiornati (0.3.3 o successive):
 i client più vecchi non leggono un elenco con le famiglie.
 
+### Banda dei nodi
+`nyctalus-rete banda IP:PORTA MBIT` (es. 100, oppure `-` per toglierla) mette nell'elenco firmato
+la banda del nodo: i percorsi scelgono più spesso i nodi più capaci. Indica la banda **in upload**
+reale del server (il pannello del fornitore la dice). Serve che tutti i client abbiano la 0.3.10.
+
 ## 4. Pubblicare l'elenco
 I client scaricano `~/.nyctalus-rete/directory.txt` da un indirizzo web. Il file è
 firmato: anche se qualcuno lo alterasse, i client lo rifiuterebbero. Scegli tu dove:
