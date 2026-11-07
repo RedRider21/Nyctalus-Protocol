@@ -2,6 +2,13 @@
 
 > Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
 
+## 07/11/2026 · Stealth con impronta uniforme ✅
+- `pc/browser/nyctalus_browser/impronta.js` iniettato (UserContentManager, tutte le cornici, all'avvio) nelle schede 🦇: Safari/macOS (UA cambiato da «Firefox/Windows», incoerente col motore), en-US (anche Accept-Language via set_preferred_languages), UTC (Date/Intl), schermo arrotondato 200×100, 2 CPU, canvas non leggibile, measureText arrotondato, toString «native»; impostazioni WebKit: WebGL/WebAudio/media-stream/EME spenti. Prova 30 (12/12: due PC con fuso/lingua diversi → impronta identica); 08 sicurezza 7/7. Caratteri installati: NON uniformati (WebKitGTK non lo permette per contesto) — limite dichiarato nel manuale.
+
+## 07/11/2026 · Decisioni dell'utente sul browser
+- **Per ora resta Nyctalus Firefox** (Firefox del sistema + profilo blindato). **DA FARE IN SEGUITO (nota dell'utente): Mullvad Browser** incluso, con la rete Nyctalus, come «Nyctalus Browser (Firefox)» (il nostro logo su menu/barra/pagina iniziale; dentro resta Mullvad — l'utente ha chiesto del logo). Download ~105 MB da far approvare quando si farà.
+- **In corso: potenziamento della modalità Stealth del NOSTRO browser** (UTC, en-US, UA uniforme, misure arrotondate, WebGL spento, canvas protetto, caratteri forniti da noi via fontconfig, CPU/memoria uniformi, prova d'impronta).
+
 ## 07/11/2026 · J fase 1: Nyctalus Firefox ✅
 - Niente download (Firefox 159 già installato): `pc/firefox/user.js` (≈70 regole stile Tor Browser: proxy+DNS remoto, failover_direct false, RFP+letterboxing, FPI, no WebRTC/WebGL/telemetria/safebrowsing, privato) e `inizio.html`; `strumenti/avvia-firefox.sh` (usa 1080/1086 se accese, altrimenti `start` con la protezione del codice e lo spegne alla fine; `--prepara PORTA`; profilo `~/.nyctalus-firefox/profilo` 700). Comando `nyctalus-firefox`, voce di menu, ⚙ del mini menu (5 lingue). Prova 29 (8/8, headless). Fase 2 (Firefox ESR incluso nel pacchetto) = DOWNLOAD ~100 MB: chiedere l'ok.
 - L'utente aveva chiesto se fosse un add-on: NO, profilo + impostazioni interne (un add-on non può fare RFP/proxy fail-closed e rende il browser più riconoscibile).

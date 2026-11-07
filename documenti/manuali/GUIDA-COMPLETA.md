@@ -221,7 +221,9 @@ Contact ID. Ti iscrivi con un nome; puoi cancellarti quando vuoi.
 
 ### 8. Browser — 🦇 modalità Nyctalus
 **A cosa serve:** navigare **attraverso la rete** (il sito non vede il tuo IP) e aprire i siti
-`.nyct`. Nelle schede 🦇 non esce nulla finché la protezione non è attiva.
+`.nyct`. Nelle schede 🦇 non esce nulla finché la protezione non è attiva, e il browser ha
+un'**impronta uniforme**: a un sito sembrano tutti uguali gli utenti di Nyctalus (ora UTC,
+lingua inglese, schermo arrotondato, niente WebGL e audio, immagini disegnate non leggibili).
 **Costo:** pagine un po' più lente.
 
 - **PC:** mini menu → **Browser** → scheda 🦇.

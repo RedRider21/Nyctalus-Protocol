@@ -95,8 +95,12 @@ def _host_interno(url):
 
 
 # UA di Firefox: il browser e' un clone di Firefox e si confonde nella massa.
-STEALTH_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) "
-              "Gecko/20100101 Firefox/128.0")
+# Identità delle schede 🦇: Safari su macOS, COERENTE con il motore WebKit (prima diceva
+# «Firefox su Windows», e un sito se ne accorge subito: un'impronta in più). Insieme a
+# impronta.js rende uguali fra loro tutti gli utenti di Nyctalus.
+STEALTH_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
+              "(KHTML, like Gecko) Version/17.6 Safari/605.1.15")
+IMPRONTA_JS = (Path(__file__).resolve().parent / "impronta.js").read_text(encoding="utf-8")
 # Larghezze sidebar preferiti (come nella versione precedente): COLLASSATA
 # mostra le SOLE ICONE dei preferiti in colonna verticale; APERTA mostra
 # l'elenco completo. La sidebar PARTE COLLASSATA (chiusa): si vedono subito
@@ -804,6 +808,10 @@ class Browser(FunzioniExtra, Gtk.Window):
                 ctx = WebKit2.WebContext.new_ephemeral()
             except Exception:
                 ctx = WebKit2.WebContext.new()
+            try:
+                ctx.set_preferred_languages(["en-US", "en"])   # lingua uguale per tutti (anche nell'intestazione)
+            except Exception:
+                pass
             if self._ensure_tor():         # instrada tutto nella rete Nyctalus (IP nascosto)
                 try:
                     ps = WebKit2.NetworkProxySettings.new(TOR_SOCKS, None)
@@ -834,13 +842,30 @@ class Browser(FunzioniExtra, Gtk.Window):
         self._contexts[stealth] = ctx
         return ctx
 
+    def _contenuti_stealth(self):
+        """Gestore dei contenuti delle schede 🦇: lo script dell'impronta uniforme, iniettato
+        all'avvio di ogni pagina e cornice (i popup lo ereditano dalla scheda d'origine)."""
+        ucm = getattr(self, "_ucm_stealth", None)
+        if ucm is None:
+            ucm = WebKit2.UserContentManager()
+            ucm.add_script(WebKit2.UserScript.new(
+                IMPRONTA_JS, WebKit2.UserContentInjectedFrames.ALL_FRAMES,
+                WebKit2.UserScriptInjectionTime.START, None, None))
+            self._ucm_stealth = ucm
+        return ucm
+
     def _harden(self, view):
         """Anti-leak per le schede stealth: niente WebRTC (fuga IP locale), UA
         generico, niente prefetch DNS/hyperlink-auditing, permessi negati."""
         s = view.get_settings()
         for prop, val in (("enable-webrtc", False),
                           ("enable-hyperlink-auditing", False),
-                          ("enable-dns-prefetching", False)):
+                          ("enable-dns-prefetching", False),
+                          # impronta uniforme: niente scheda video, audio e DRM misurabili
+                          ("enable-webgl", False),
+                          ("enable-webaudio", False),
+                          ("enable-media-stream", False),
+                          ("enable-encrypted-media", False)):
             try:
                 s.set_property(prop, val)
             except Exception:
@@ -905,7 +930,11 @@ class Browser(FunzioniExtra, Gtk.Window):
         webkit_created = view is not None
         mode = self.stealth if stealth is None else stealth
         if view is None:
-            view = WebKit2.WebView(web_context=self._context(mode))
+            if mode:      # 🦇: impronta uniforme in ogni pagina e cornice (impronta.js)
+                view = WebKit2.WebView(web_context=self._context(mode),
+                                       user_content_manager=self._contenuti_stealth())
+            else:
+                view = WebKit2.WebView(web_context=self._context(mode))
         else:
             # il popup eredita il contesto (e quindi la modalita') dell'apertura
             mode = self._view_mode.get(view, mode)

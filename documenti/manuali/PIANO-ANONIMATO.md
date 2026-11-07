@@ -159,8 +159,13 @@ collega, senza no. Resta da fare la parte «più utenti», che è organizzativa.
     separato e blindato (proxy anche per i nomi, mai diretto, `resistFingerprinting` e finestre a
     misure fisse, siti isolati, niente WebRTC/WebGL/telemetria, navigazione privata). Verificato
     con Firefox vero dalla prova `29-firefox`.
-  - Fase 2: un **Firefox ESR incluso** nel pacchetto, uguale per tutti (stessa versione = impronta
-    ancora più uniforme), e poi Windows e telefono.
+  - Fase 2 (scelta dell'utente per DOPO): **Mullvad Browser** incluso nel pacchetto, con la
+    rete Nyctalus. È Tor Browser senza Tor (Tor Project + Mullvad): tutte le protezioni del motore
+    di Tor Browser e impronta identica a milioni di utenti. Si apre come «Nyctalus Browser
+    (Firefox)» con il nostro logo su menu, barra e pagina iniziale; dentro il programma restano
+    nome e logo di Mullvad. Download ~105 MB, verificato con la firma ufficiale.
+  - Più avanti, se servisse il nostro logo anche dentro: un Firefox compilato da noi come Tor
+    Browser (pesante: compilazioni e aggiornamenti di sicurezza ogni 4 settimane).
 
 ## Tappa 6 · Revisione indipendente
 

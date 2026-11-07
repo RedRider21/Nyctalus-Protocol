@@ -66,8 +66,14 @@ preferiti, cronologia, download, ricerca nella pagina, traduzione, 5 lingue).
 - Il bottone **Stealth** accende la rete Nyctalus: **avvia da solo i servizi** (rete
   pubblica se configurata, altrimenti una rete di prova locale) e da quel momento le
   nuove schede passano dalla rete anonima, senza cookie né cronologia su disco, con le
-  protezioni contro le fughe di dati (WebRTC spento, User-Agent generico, niente
-  geolocalizzazione).
+  protezioni contro le fughe di dati (WebRTC spento, niente geolocalizzazione).
+- **Impronta uniforme**: nelle schede Stealth il browser si presenta a tutti i siti
+  **uguale per tutti gli utenti di Nyctalus**, qualunque sia il PC: identità Safari su macOS
+  (coerente con il motore), lingua inglese, ora UTC, schermo arrotondato, 2 processori,
+  niente WebGL né Web Audio, immagini disegnate (canvas) non leggibili; anche nelle cornici
+  interne. Due PC con fuso e lingua diversi danno la stessa impronta (prova `30`).
+  Limite onesto: il motore WebKitGTK è usato da pochi e un sito molto determinato può accorgersi
+  dei valori coperti; per i casi delicati sul web normale c'è in più **Nyctalus Firefox**.
 - Le scritte del bottone: **Stealth OFF**, **Stealth (avvio…)**, **Stealth ON**,
   **Stealth ON · prova locale**, **Stealth (non connesso)**.
 

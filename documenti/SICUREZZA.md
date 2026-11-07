@@ -75,6 +75,14 @@ riposo. Non vede *cosa* passa né *con chi*. La maggior parte dei pacchetti ha l
 dimensione (~1420 byte, celle a lunghezza fissa). Per nascondere anche il ritmo esiste il
 **rumore di fondo** (`--cover`, §2.5), a costo di banda.
 
+### 1.1-bis Impronta del browser del PC (schede 🦇)
+Le schede Stealth hanno un'**impronta uniforme**: identità Safari/macOS, lingua en-US (anche
+nell'intestazione), ora UTC, schermo arrotondato, 2 processori, niente WebGL, Web Audio e
+WebRTC, canvas non leggibile, anche nelle cornici. Due PC con fuso e lingua diversi danno la
+stessa impronta: lo verifica la prova `30-impronta-browser`. **Limiti:** i Web Worker non vedono
+le coperture, i caratteri installati non sono uniformati e il motore WebKitGTK è raro; per i
+casi delicati sul web normale c'è Nyctalus Firefox (profilo sul modello di Tor Browser, prova `29`).
+
 ### 1.2 Porta di controllo e ⌨ Terminale
 
 - La porta di controllo del motore ascolta solo su `127.0.0.1` e risponde solo a chi presenta il
