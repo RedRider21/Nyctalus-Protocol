@@ -11,13 +11,14 @@
 #
 # Opzioni: --ip IP  --nodi N (1-8)  --porta PRIMA_PORTA  --camuffamento HEX
 #          --rumore HZ  --utente  --si (nessuna domanda: valori indicati o predefiniti)
+#          --codice NYCT1:…  il codice della rete: ne prende camuffamento e rumore di fondo
 #
 # Alla fine stampa le RIGHE D'ELENCO dei nodi: vanno mandate a chi gestisce la rete,
 # che le firma (nyctalus-rete aggiungi … && nyctalus-rete firma).
 set -euo pipefail
 QUI="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 R="${NYCTALUS_RADICE:-}"            # solo per le prove: radice finta al posto di /
-IP=""; NODI=""; PORTA=""; CAMUFFA=""; RUMORE="0"; UTENTE=0; SI=0
+IP=""; NODI=""; PORTA=""; CAMUFFA=""; RUMORE="0"; UTENTE=0; SI=0; CODICE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --ip) IP="$2"; shift ;;
@@ -25,6 +26,7 @@ while [ $# -gt 0 ]; do
     --porta) PORTA="$2"; shift ;;
     --camuffamento) CAMUFFA="$2"; shift ;;
     --rumore) RUMORE="$2"; shift ;;
+    --codice) CODICE="$2"; shift ;;
     --utente) UTENTE=1 ;;
     --si) SI=1 ;;
     *) echo "opzione sconosciuta: $1"; exit 2 ;;
@@ -71,6 +73,18 @@ esac
 [[ "$NODI" =~ ^[1-8]$ ]] || err "numero di nodi fra 1 e 8"
 [ -n "$PORTA" ] || PORTA="$(chiedi "Prima porta UDP (le altre a seguire)" 4601)"
 [[ "$PORTA" =~ ^[0-9]+$ ]] && [ "$PORTA" -ge 1024 ] && [ "$((PORTA + NODI - 1))" -le 65535 ] || err "porta non valida"
+# dal codice della rete: camuffamento e rumore di fondo (se la rete li usa)
+if [ -n "$CODICE" ]; then
+  read -r C_CAM C_RUM < <(python3 -c "import base64,json,sys,re
+c=sys.argv[1].strip()
+if not c.startswith('NYCT1:'): print('ERR -'); sys.exit()
+d=json.loads(base64.urlsafe_b64decode(c[6:]+'='*(-len(c[6:])%4)))
+cam=str(d.get('camuffamento','')); rum=d.get('rumore',0)
+print((cam if re.fullmatch('[0-9a-f]{64}',cam) else '-'), (rum if isinstance(rum,(int,float)) and 0<rum<=10 else 0))" "$CODICE" 2>/dev/null || echo "ERR -")
+  [ "$C_CAM" = ERR ] && err "codice di rete non valido (deve iniziare con NYCT1:)"
+  [ "$C_CAM" != "-" ] && CAMUFFA="$C_CAM" && RUMORE="$C_RUM"
+  [ "$C_CAM" != "-" ] && ok "Dal codice della rete: camuffamento acceso, rumore di fondo $RUMORE" || ok "La rete del codice non usa il camuffamento"
+fi
 [ -z "$CAMUFFA" ] || [[ "$CAMUFFA" =~ ^[0-9a-f]{64}$ ]] || err "chiave di camuffamento: 64 caratteri esadecimali"
 PORTE=(); for i in $(seq 0 $((NODI - 1))); do PORTE+=($((PORTA + i))); done
 

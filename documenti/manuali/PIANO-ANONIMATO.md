@@ -19,7 +19,7 @@ cosa si ottiene e cosa manca ancora.
 | 2 ✅ | entrata e uscita scelte a caso, mai due nodi «parenti» | nessun nodo è fisso per tutti | i nodi sono ancora di una sola persona |
 | 2-bis ✅ | **modalità riservata** per la chat: messaggi solo tramite casella, a ritmo casuale, con buste finte e tutte uguali | non si capisce **quando** né **a chi** scrivi, anche con pochi nodi | chiamate e file restano diretti |
 | 3 🔧 | nodi gestiti da persone diverse | nessuno controlla tutto il percorso | servono più utenti |
-| 4 | più utenti, rumore di fondo e camuffamento sempre accesi | ci si confonde fra tanti, i ritmi si vedono meno | misure e revisione |
+| 4 🔧 | più utenti, rumore di fondo e camuffamento sempre accesi | ci si confonde fra tanti, i ritmi si vedono meno | misure e revisione |
 | 5 | misure con la simulazione, browser pubblico | numeri veri, navigazione con impronta uniforme | revisione esterna |
 | 6 | revisione indipendente, pentest | ci si può fidare davvero | — |
 
@@ -132,7 +132,7 @@ ogni percorso usa 3 gestori diversi e il traffico passa davvero dai nodi degli a
 **Cosa si ottiene:** per scoprire chi parla con chi bisogna mettere d'accordo i gestori di
 entrata e uscita, che sono persone diverse.
 
-## Tappa 4 · Più utenti, meno ritmi riconoscibili
+## Tappa 4 · Più utenti, meno ritmi riconoscibili 🔧 protezione di serie fatta (07/11/2026)
 
 - **Più persone** usano la rete: l'anonimato è nascondersi fra tanti. Con 2 utenti, «chi parla
   con chi» si indovina; con 200 molto meno.
@@ -140,6 +140,12 @@ entrata e uscita, che sono persone diverse.
   traffico a riposo, misurato dalla prova del traffico); il rumore lo copre, a costo di banda.
 - **Camuffamento** obbligatorio su tutta la rete.
 - **Rubrica e casella** su server di persone diverse.
+
+**Fatto:** le reti nuove nascono con **camuffamento** e **rumore di fondo** accesi (0,2 celle
+finte al secondo); il codice di rete li porta a PC, telefono, Windows, rubrica, casella e
+all'installatore dei nodi (`--codice`). Le reti vecchie si accendono con
+`nyctalus-rete protezione si`. Verificato dalla prova `28-protezione`: con la chiave ci si
+collega, senza no. Resta da fare la parte «più utenti», che è organizzativa.
 
 ## Tappa 5 · Misure e browser pubblico
 

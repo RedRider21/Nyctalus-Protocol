@@ -33,6 +33,11 @@ cd Nyctalus-Server
 ```sh
 sudo ./installa.sh
 ```
+Con il **codice di rete** (te lo dà il gestore) l'installatore prende da lì camuffamento e
+rumore di fondo della rete:
+```sh
+sudo ./installa.sh --codice NYCT1:…
+```
 L'installatore chiede:
 
 | Domanda | Cosa rispondere |

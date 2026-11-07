@@ -16,6 +16,7 @@ for _ in $(seq 1 240); do grep -q "Rete di casa attiva" "$TMP/casa.log" && break
 grep -q "Rete di casa attiva" "$TMP/casa.log" || { fail "rete di casa: $(tail -3 "$TMP/casa.log")"; exit 1; }
 COD=$(grep -oE 'NYCT1:[A-Za-z0-9_-]+' "$TMP/casa.log" | head -1)
 PUB=$(python3 -c "import json;print(json.load(open('$G/.nyctalus-rete/casa/autorita.json'))['pubblica'])")
+OBF=$(opz_camuffamento "$COD")    # la rete di casa nasce protetta (Tappa 4)
 curl -s http://127.0.0.1:19920/directory.txt -o "$TMP/dir.txt"
 H="$TMP/autore"; mkdir -p "$H"
 SITO() { HOME="$H" NYCTALUS_BIN="$BIN" python3 "$ROOT/pc/gestore-rete/nyctalus-sito" "$@"; }
@@ -36,7 +37,7 @@ HOME="$H" NYCTALUS_BIN="$BIN" python3 "$ROOT/pc/gestore-rete/nyctalus-sito" avvi
 attendi_regex "$TMP/avvia.log" "ONLINE" 60 > /dev/null
 grep -q "ONLINE" "$TMP/avvia.log" && pass "avvia: il sito è online" || fail "avvia: $(tail -3 "$TMP/avvia.log")"
 SITO elenco | grep -q "online" && pass "elenco: indirizzo e stato «online»" || fail "elenco: $(SITO elenco)"
-visita() { timeout 90 "$BIN" browse "$ADDR" --directory "$TMP/dir.txt" --authority "$PUB" --path "${1:-/}" 2>/dev/null; }
+visita() { timeout 90 "$BIN" browse "$ADDR" --directory "$TMP/dir.txt" --authority "$PUB" $OBF --path "${1:-/}" 2>/dev/null; }
 visita / | grep -q "Benvenuto sul mio sito" && pass "visitato attraverso la rete: la pagina d'esempio" || fail "visita: $(visita / | head -3)"
 echo '<h1>Pagina mia</h1>' > "$D/www/mia.html"
 visita /mia.html | grep -q "Pagina mia" && pass "una pagina aggiunta alla cartella si vede subito" || fail "pagina aggiunta"

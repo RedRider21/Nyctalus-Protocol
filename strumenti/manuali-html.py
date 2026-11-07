@@ -16,7 +16,7 @@ RADICE = Path(__file__).resolve().parents[1]
 SORGENTI = sorted((RADICE / "documenti" / "manuali").glob("*.md")) + \
     [RADICE / "documenti" / "DEPLOY.md", RADICE / "documenti" / "SICUREZZA.md"]
 # l'indice laterale, a gruppi: dall'inizio, alle guide, all'uso, alla gestione, agli approfondimenti
-GRUPPI = [("", ["LEGGIMI"]),
+GRUPPI = [("", ["LEGGIMI", "GUIDA-COMPLETA"]),
           ("Guide passo passo", ["MANUALE-INSTALLAZIONE", "GUIDA-RETE-DI-CASA", "GUIDA-INTERNET"]),
           ("Usare Nyctalus", ["MANUALE-CHAT", "MANUALE-FILE", "MANUALE-TERMINALE", "MANUALE-TELEFONO", "MANUALE-PC", "MANUALE-WINDOWS", "MANUALE-SITI"]),
           ("Gestire una rete", ["MANUALE-SERVER", "MANUALE-GESTORE-RETE"]),

@@ -25,6 +25,7 @@ tcz/ABI): WebKit2GTK e' la resa equivalente e nativa per lo stack NexusSec.
 import html
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -692,9 +693,19 @@ class Browser(FunzioniExtra, Gtk.Window):
                         dirf.write_bytes(r.read())
                 except Exception:        # noqa: BLE001
                     return               # directory non scaricabile: niente avvio
+                # camuffamento e rumore di fondo della rete (dal codice di rete), se li usa
+                prot = []
+                cam, rum = str(config.get("camuffamento", "")), config.get("rumore")
+                if re.fullmatch(r"[0-9a-f]{64}", cam):
+                    prot = ["--obfuscation", cam]
+                    try:
+                        if 0 < float(rum) <= 10:
+                            prot += ["--cover", "%g" % float(rum)]
+                    except (TypeError, ValueError):
+                        pass
                 p = subprocess.Popen(
                     [binario, "start", "--directory", str(dirf), "--authority", auth,
-                     "--socks", socks],
+                     "--socks", socks] + prot,
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 self._servizi_proc.append(p)
             else:

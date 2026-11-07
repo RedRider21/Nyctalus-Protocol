@@ -18,15 +18,16 @@ COD=$(grep -oE 'NYCT1:[A-Za-z0-9_-]+' "$TMP/casa.log" | head -1)
 RUB=$(python3 -c "import base64,json,sys;c=sys.argv[1][6:];print(json.loads(base64.urlsafe_b64decode(c+'='*(-len(c)%4))).get('rubrica',''))" "$COD")
 [[ "$RUB" =~ ^[a-z2-7]{56}\.nyct$ ]] && pass "il codice di rete contiene l'indirizzo della rubrica" || { fail "rubrica non nel codice"; exit 1; }
 PUB=$(python3 -c "import json;print(json.load(open('$H/.nyctalus-rete/casa/autorita.json'))['pubblica'])")
+OBF=$(opz_camuffamento "$COD")    # la rete di casa nasce protetta (Tappa 4)
 curl -s http://127.0.0.1:19720/directory.txt -o "$TMP/dir.txt"
 
 utente() { # nome base_porte segreto → avvia rete+chat+servizio, mette l'indirizzo in $ADDR
   local n="$1" b="$2" seg="$3"; mkdir -p "$TMP/$n"
-  "$BIN" start --directory "$TMP/dir.txt" --authority "$PUB" --socks 127.0.0.1:$b --control 127.0.0.1:$((b+3)) > "$TMP/$n.rete.log" 2>&1 & PIDS+=($!)
+  "$BIN" start --directory "$TMP/dir.txt" --authority "$PUB" $OBF --socks 127.0.0.1:$b --control 127.0.0.1:$((b+3)) > "$TMP/$n.rete.log" 2>&1 & PIDS+=($!)
   NYCTALUS_CHAT_TOKEN="$seg" "$BIN" chat --data "$TMP/$n" --backend 127.0.0.1:$((b+1)) --control 127.0.0.1:$((b+2)) \
     --socks 127.0.0.1:$b > "$TMP/$n.chat.log" 2>&1 & PIDS+=($!)
   ADDR=$(attendi_regex "$TMP/$n.chat.log" '[a-z2-7]{56}\.nyct' 15)
-  "$BIN" site --backend 127.0.0.1:$((b+1)) --identity "$TMP/$n/identita" --directory "$TMP/dir.txt" --authority "$PUB" \
+  "$BIN" site --backend 127.0.0.1:$((b+1)) --identity "$TMP/$n/identita" --directory "$TMP/dir.txt" --authority "$PUB" $OBF \
     --hops 3 > "$TMP/$n.site.log" 2>&1 & PIDS+=($!)
 }
 SA=annasegreto0123456789abcdef01; utente anna 19740 "$SA"; ANNA=$ADDR

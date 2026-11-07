@@ -49,6 +49,9 @@ R1=$(grep -oE 'directory entry: +[^ ]+' "$TMP/n19971.log" | awk '{print $3}')
 # --- 2) gestore --------------------------------------------------------------------------
 G() { env HOME="$TMP/gestore" NYCTALUS_BIN="$BIN" python3 "$ROOT/pc/gestore-rete/nyctalus-rete" "$@"; }
 G crea --nome "Rete di prova del test" > "$TMP/g.log" 2>&1 && pass "gestore: rete creata" || fail "crea: $(cat "$TMP/g.log")"
+# i nodi qui sopra sono stati installati SENZA camuffamento: la rete va tenuta senza (come le reti
+# nate prima della 0.3.4); la rete protetta di serie la prova la 28
+G protezione no > /dev/null 2>&1
 [ "$(stat -c %a "$TMP/gestore/.nyctalus-rete/autorita.json")" = 600 ] && [ "$(stat -c %a "$TMP/gestore/.nyctalus-rete")" = 700 ] \
   && pass "chiave segreta dell'autorità protetta (600, cartella 700)" || fail "permessi dell'autorità"
 G crea > /dev/null 2>&1 && fail "seconda «crea» ha sovrascritto la rete" || pass "seconda «crea» rifiutata (la rete non si perde per sbaglio)"

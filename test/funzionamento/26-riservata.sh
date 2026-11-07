@@ -18,17 +18,18 @@ COD=$(grep -oE 'NYCT1:[A-Za-z0-9_-]+' "$TMP/casa.log" | head -1)
 leggi() { python3 -c "import base64,json,sys;c=sys.argv[1][6:];print(json.loads(base64.urlsafe_b64decode(c+'='*(-len(c)%4))).get(sys.argv[2],''))" "$COD" "$1"; }
 RUB=$(leggi rubrica); CAS=$(leggi casella)
 PUB=$(python3 -c "import json;print(json.load(open('$H/.nyctalus-rete/casa/autorita.json'))['pubblica'])")
+OBF=$(opz_camuffamento "$COD")    # la rete di casa nasce protetta (Tappa 4)
 for _ in $(seq 1 20); do curl -sf http://127.0.0.1:23620/directory.txt -o "$TMP/dir.txt" && [ -s "$TMP/dir.txt" ] && break; sleep 1; done
 [ -s "$TMP/dir.txt" ] || { fail "elenco dei nodi non scaricato"; exit 1; }
 D="$H/.nyctalus-rete/casa/rubrica/casella"
 
 utente() { # nome base segreto → rete + chat (con rubrica e casella) + servizio; indirizzo in $ADDR
   local n="$1" b="$2" seg="$3"; mkdir -p "$TMP/$n"
-  "$BIN" start --directory "$TMP/dir.txt" --authority "$PUB" --socks 127.0.0.1:$b --control 127.0.0.1:$((b+3)) > "$TMP/$n.rete.log" 2>&1 & PIDS+=($!)
+  "$BIN" start --directory "$TMP/dir.txt" --authority "$PUB" $OBF --socks 127.0.0.1:$b --control 127.0.0.1:$((b+3)) > "$TMP/$n.rete.log" 2>&1 & PIDS+=($!)
   NYCTALUS_RITMO_RISERVATO=2 NYCTALUS_RITIRO_RISERVATO=${RITIRO:-3} NYCTALUS_CHAT_TOKEN="$seg" "$BIN" chat --data "$TMP/$n" \
     --backend 127.0.0.1:$((b+1)) --control 127.0.0.1:$((b+2)) --socks 127.0.0.1:$b --rubrica "$RUB" --casella "$CAS" > "$TMP/$n.chat.log" 2>&1 & PIDS+=($!)
   ADDR=$(attendi_regex "$TMP/$n.chat.log" '[a-z2-7]{56}\.nyct' 15)
-  "$BIN" site --backend 127.0.0.1:$((b+1)) --identity "$TMP/$n/identita" --directory "$TMP/dir.txt" --authority "$PUB" \
+  "$BIN" site --backend 127.0.0.1:$((b+1)) --identity "$TMP/$n/identita" --directory "$TMP/dir.txt" --authority "$PUB" $OBF \
     --hops 3 > "$TMP/$n.site.log" 2>&1 & PIDS+=($!)
 }
 SA=annasegreto0123456789abcdef01; SB=brunosegreto0123456789abcdef0

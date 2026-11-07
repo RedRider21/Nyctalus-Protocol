@@ -1944,6 +1944,11 @@ mod prove {
             battito_noto: Mutex::new(HashSet::new()),
             inviti: Mutex::new(HashMap::new()),
             trasf: trasferimenti::Registro::carica(&d),
+            riservata: std::sync::atomic::AtomicBool::new(false),
+            coda_riservata: Mutex::new(std::collections::VecDeque::new()),
+            giri: Mutex::new(HashSet::new()),
+            giri_conti: Mutex::new((0, 0)),
+            sveglia_ritiro: tokio::sync::Notify::new(),
         };
         st.registra_riga("x.nyct", "in 1 6161");
         st.registra_riga("x.nyct", "out 2 6262");

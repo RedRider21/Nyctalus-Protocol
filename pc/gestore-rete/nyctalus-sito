@@ -85,7 +85,10 @@ def leggi_codice(testo):
     url, aut = str(cfg.get("directory_url", "")), str(cfg.get("authority", ""))
     if not re.match(r"^https?://[^\s]+$", url) or not re.fullmatch(r"[0-9a-f]{64}", aut):
         raise ValueError("codice di rete incompleto")
-    return {"nome": str(cfg.get("nome") or "Rete Nyctalus")[:60], "directory_url": url, "authority": aut}
+    rete = {"nome": str(cfg.get("nome") or "Rete Nyctalus")[:60], "directory_url": url, "authority": aut}
+    if re.fullmatch(r"[0-9a-f]{64}", str(cfg.get("camuffamento", ""))):
+        rete["camuffamento"] = cfg["camuffamento"]           # la rete è protetta (Tappa 4)
+    return rete
 
 
 def rete_del_pc():
@@ -94,8 +97,11 @@ def rete_del_pc():
     except Exception:     # noqa: BLE001
         return None
     if cfg.get("directory_url") and re.fullmatch(r"[0-9a-f]{64}", str(cfg.get("authority", ""))):
-        return {"nome": cfg.get("nome_rete") or "Rete Nyctalus", "directory_url": cfg["directory_url"],
+        rete = {"nome": cfg.get("nome_rete") or "Rete Nyctalus", "directory_url": cfg["directory_url"],
                 "authority": cfg["authority"]}
+        if re.fullmatch(r"[0-9a-f]{64}", str(cfg.get("camuffamento", ""))):
+            rete["camuffamento"] = cfg["camuffamento"]       # la rete è protetta (Tappa 4)
+        return rete
     return None
 
 
@@ -243,6 +249,8 @@ def avvia(nome):
         esci("la cartella del sito non c'è più: %s" % sito["cartella"])
     cmd = [binario(), "site"] + contenuto + ["--identity", str(d / "identita"), "--directory", str(d / "directory.txt"),
                                             "--authority", rete["authority"], "--hops", "3"]
+    if re.fullmatch(r"[0-9a-f]{64}", str(rete.get("camuffamento", ""))):
+        cmd += ["--obfuscation", rete["camuffamento"]]      # rete protetta: senza la chiave i nodi non rispondono
     (d / "pid").write_text(str(os.getpid()))
     figlio = None
     fermo = {"si": False}

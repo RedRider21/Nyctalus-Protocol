@@ -60,6 +60,11 @@ except Exception: print('')" "$CFG" "$1" 2>/dev/null; }
 porta_occupata() { ss -ltn 2>/dev/null | grep -q ":$1\b"; }
 
 URL="$(leggi_cfg directory_url)"; AUTH="$(leggi_cfg authority)"
+# camuffamento e rumore di fondo della rete (dal codice di rete; reti senza: niente)
+PROT=(); PROT_SITO=()
+CAM="$(leggi_cfg camuffamento)"; RUM="$(leggi_cfg rumore)"
+[[ "$CAM" =~ ^[0-9a-f]{64}$ ]] && PROT+=(--obfuscation "$CAM") && PROT_SITO+=(--obfuscation "$CAM")
+[[ "$RUM" =~ ^[0-9]+(\.[0-9]+)?$ ]] && [ -n "${PROT[*]:-}" ] && PROT+=(--cover "$RUM")
 if [ -n "$URL" ] && [ -n "$AUTH" ]; then SOCKS="127.0.0.1:1080"; else SOCKS="127.0.0.1:1086"; fi
 
 # Segreto della porta di controllo: solo la nostra finestra potrà usarla
@@ -97,7 +102,7 @@ avvia_rete() {
     if command -v curl >/dev/null 2>&1; then curl -fsS "$URL" -o "$WORK/dir.txt" || { echo "✗ download elenco fallito"; return; }
     else python3 -c "import urllib.request,sys;open(sys.argv[2],'wb').write(urllib.request.urlopen(sys.argv[1],timeout=25).read())" "$URL" "$WORK/dir.txt" || { echo "✗ download elenco fallito"; return; }; fi
     if ! porta_occupata 1080; then
-      "$BIN" start --directory "$WORK/dir.txt" --authority "$AUTH" --socks 127.0.0.1:1080 > "$WORK/daemon.log" 2>&1 & MIEI+=($!)
+      "$BIN" start --directory "$WORK/dir.txt" --authority "$AUTH" --socks 127.0.0.1:1080 ${PROT[@]+"${PROT[@]}"} > "$WORK/daemon.log" 2>&1 & MIEI+=($!)
     fi
     DIRFILE="$WORK/dir.txt"; AUTHORITY="$AUTH"
   else
@@ -116,7 +121,7 @@ avvia_rete() {
   fi
   # pubblica il nostro servizio .nyct (entrata)
   for _ in $(seq 1 30); do porta_occupata "${SOCKS##*:}" && break; sleep 0.2; done
-  "$BIN" site --backend "$BACKEND" --identity "$DATI/identita" --directory "$DIRFILE" --authority "$AUTHORITY" --hops 3 > "$WORK/site.log" 2>&1 & MIEI+=($!)
+  "$BIN" site --backend "$BACKEND" --identity "$DATI/identita" --directory "$DIRFILE" --authority "$AUTHORITY" --hops 3 ${PROT_SITO[@]+"${PROT_SITO[@]}"} > "$WORK/site.log" 2>&1 & MIEI+=($!)
   echo "» (sottofondo) rete pronta — puoi scrivere"
 }
 # NB: in primo piano nella shell principale (la finestra è GIÀ aperta sopra),

@@ -10,6 +10,7 @@ assicura_binario
 G="$TMP/gestore"; SRV="$TMP/server"; mkdir -p "$G" "$SRV"
 RETE() { local h="$1"; shift; HOME="$h" NYCTALUS_BIN="$BIN" python3 "$ROOT/pc/gestore-rete/nyctalus-rete" "$@"; }
 RETE "$G" crea --nome "Rete di prova" > /dev/null || { fail "crea"; exit 1; }
+RETE "$G" protezione no > /dev/null   # nodi qui sotto senza chiave (la rete protetta la prova la 28)
 PUB=$(python3 -c "import json;print(json.load(open('$G/.nyctalus-rete/autorita.json'))['pubblica'])")
 righe=()
 for p in 20801 20802 20803 20804; do

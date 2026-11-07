@@ -76,6 +76,7 @@ Il binario `nyctalus` fa tutto, con sotto-comandi (`nyctalus help` per l'elenco)
 - `--hops N` (demone): nodi per percorso. **Min 1, max 5, default 3.** Sotto 3 niente vero anonimato.
 - `--circuits N` (demone): strade parallele. **Min 1, max 8, default 2.**
 - `--cover HZ` (demone **e** nodo): **rumore di fondo** (celle finte a ritmo di Poisson). `circuit/start --cover` = in salita, `node --cover` = in discesa. Default 0.
+- Con `nyctalus-rete` non serve passarle a mano: la protezione della rete (camuffamento + rumore) viaggia nel **codice di rete** e la usano da soli client, rubrica e installatore dei nodi (`GUIDA-COMPLETA.md` §12).
 - `--obfuscation HEX` (demone **e** nodi): **camuffamento del trasporto** con una chiave di rete condivisa (ogni datagramma UDP reso rumore per il DPI). Deve essere **uguale su tutti** i nodi e sul client.
 - **Scelta dei percorsi** (demone, chat, siti): entrata = **guardia** scelta a caso e tenuta 30-60 giorni (file privato in `~/.nyctalus/guardie/<rete>`, o in `NYCTALUS_GUARDIE`); uscita e intermedi a caso; mai due nodi **parenti** nello stesso percorso (stessa `famiglia=` nell'elenco, o stessa sottorete pubblica /16). Se è impossibile (es. tutti i nodi su un PC) il percorso si fa con un **avviso** «cifrato ma NON anonimo»; con `NYCTALUS_PARENTELA=rigida` il motore invece si rifiuta.
 - `directory --entries 'addr,x25519,impronta[,famiglia];…'`: la famiglia (facoltativa) dichiara i nodi dello stesso gestore/fornitore; è coperta dalla firma.

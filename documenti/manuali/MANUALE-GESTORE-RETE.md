@@ -75,8 +75,10 @@ Dopo ogni `firma` ricarica il file nello stesso posto.
 nyctalus-rete codice --url https://tuo-sito/directory.txt
 ```
 Stampa `NYCT1:…` e lo salva in `~/.nyctalus-rete/codice.txt`.
-- Contiene solo **nome, URL e chiave pubblica**: puoi mandarlo per messaggio o mail.
-- **Va rifatto solo se cambi l'URL.** Aggiungere o togliere nodi non cambia il codice.
+- Contiene **nome, URL, chiave pubblica** e, se la rete è protetta, la **chiave di
+  camuffamento** e il rumore di fondo: mandalo solo a chi deve usare la rete.
+- **Va rifatto se cambi l'URL o la protezione** (lo rifà da solo `nyctalus-rete protezione`).
+  Aggiungere o togliere nodi non cambia il codice.
 - Rubrica e casella, se le hai accese, entrano nel codice (§6-bis).
 - I client lo importano: PC `nyctalus-rete importa NYCT1:…` (`MANUALE-PC.md` §3), telefono
   **🔗 Rete** → Importa codice (`MANUALE-TELEFONO.md` §1).
@@ -155,6 +157,18 @@ sempre in rete:
   che ha stampato. Il codice li ricorda.
 
 Ridai il codice nuovo ai client (sul telefono 📲 o «🔗 Rete», sul PC `nyctalus-rete importa`).
+
+## 6-ter. Protezione: camuffamento e rumore di fondo
+Le reti create dalla 0.3.4 nascono **protette**: il traffico è reso simile a rumore con una
+chiave della rete (chi non ce l'ha non si collega e non riconosce Nyctalus), e c'è un po' di
+rumore di fondo che nasconde i ritmi. Le reti più vecchie restano come sono finché non la accendi.
+```sh
+nyctalus-rete protezione                      # com'è adesso, e la chiave per i nodi dei server
+nyctalus-rete protezione si [--rumore 0.5]    # accende (--casa / --internet per la rete di casa)
+nyctalus-rete protezione no                   # spegne (la chiave resta da parte)
+```
+Dopo il cambio: riavvia la rete, ridai il codice, e reinstalla i nodi dei server con
+`./installa.sh --codice NYCT1:…`. Spiegazione completa: `GUIDA-COMPLETA.md` §12.
 
 ## 7. Sicurezza in tre righe
 - La chiave **segreta** non esce mai da `~/.nyctalus-rete`: il codice e l'elenco

@@ -96,7 +96,31 @@ def leggi_codice(testo):
     for k in ("rubrica", "casella"):                     # rubrica e casella della rete
         if re.fullmatch(r"[a-z2-7]{56}\.nyct", str(cfg.get(k, ""))):
             rete[k] = cfg[k]                # la rubrica della rete
+    rete.update(prot_da_codice(cfg))                     # camuffamento e rumore di fondo della rete
     return rete
+
+
+def prot_da_codice(cfg):
+    """Camuffamento (chiave della rete) e rumore di fondo dal codice: {} se la rete non li usa."""
+    out = {}
+    if re.fullmatch(r"[0-9a-f]{64}", str(cfg.get("camuffamento", ""))):
+        out["camuffamento"] = cfg["camuffamento"]
+        try:
+            r = float(cfg.get("rumore", 0))
+            if 0 < r <= 10:
+                out["rumore"] = r
+        except (TypeError, ValueError):
+            pass
+    return out
+
+
+def opz_prot(cfg, rumore=True):
+    """Opzioni del motore per la rete configurata: --obfuscation (e --cover)."""
+    p = prot_da_codice(cfg)
+    o = ["--obfuscation", p["camuffamento"]] if p.get("camuffamento") else []
+    if rumore and p.get("rumore"):
+        o += ["--cover", "%g" % p["rumore"]]
+    return o
 
 
 PORTE = dict(PORTE_DEFAULT, **{k: v for k, v in leggi_config().get("porte", {}).items() if k in PORTE_DEFAULT})
@@ -250,7 +274,7 @@ class Servizi:
                     dirf.write_bytes(r.read())
                 autorita = cfg["authority"]
                 self._lancia([binario, "start", "--directory", str(dirf), "--authority", autorita,
-                              "--socks", socks, "--control", "127.0.0.1:%d" % int(PORTE["monitor"])],
+                              "--socks", socks, "--control", "127.0.0.1:%d" % int(PORTE["monitor"])] + opz_prot(cfg),
                              lavoro / "demone.log")
             else:
                 self.modalita, self.dettaglio = "locale", "rete di prova"
@@ -284,7 +308,8 @@ class Servizi:
                     break
                 time.sleep(0.25)
             self._lancia([binario, "site", "--backend", BACKEND, "--identity", str(DATI_CHAT / "identita"),
-                          "--directory", str(dirf), "--authority", autorita, "--hops", "3"],
+                          "--directory", str(dirf), "--authority", autorita, "--hops", "3"]
+                         + (opz_prot(cfg, rumore=False) if pubblica else []),
                          lavoro / "site.log")
             self.stato, self.dettaglio = "pronto", ""
             log("servizi pronti (%s) — %s" % (self.modalita, self.indirizzo))
@@ -1171,13 +1196,13 @@ async def cambia_rete(lettore, scrittore, req):
             if via["authority"] == cfg.get("authority") and via["directory_url"] == cfg.get("directory_url"):
                 dati = {"prova": True}
         if dati.get("prova"):
-            for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella"):
+            for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella", "camuffamento", "rumore"):
                 cfg.pop(k, None)
             nome = ""
         elif "usa" in dati:
             rete = reti[int(dati["usa"])]
             cfg.update(directory_url=rete["directory_url"], authority=rete["authority"], nome_rete=rete["nome"])
-            for k in ("rubrica", "casella"):          # rubrica e casella della rete (se ci sono)
+            for k in ("rubrica", "casella", "camuffamento", "rumore"):   # se la rete li ha
                 cfg.pop(k, None)
                 if rete.get(k):
                     cfg[k] = rete[k]
@@ -1187,7 +1212,7 @@ async def cambia_rete(lettore, scrittore, req):
         else:
             rete = leggi_codice(dati.get("codice", ""))
             cfg.update(directory_url=rete["directory_url"], authority=rete["authority"], nome_rete=rete["nome"])
-            for k in ("rubrica", "casella"):          # rubrica e casella della rete (se ci sono)
+            for k in ("rubrica", "casella", "camuffamento", "rumore"):   # se la rete li ha
                 cfg.pop(k, None)
                 if rete.get(k):
                     cfg[k] = rete[k]

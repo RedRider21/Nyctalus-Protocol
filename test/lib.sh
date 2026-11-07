@@ -94,6 +94,28 @@ identita() {
   ADDR="$addr"
 }
 
+# camuffamento della rete (Tappa 4): «--obfuscation CHIAVE» da un codice NYCT1:… o dalla cartella
+# di una rete del gestore (protezione.json); niente se la rete non è protetta
+opz_camuffamento() {
+  python3 - "$1" <<'PY'
+import base64, json, os, sys
+a = sys.argv[1]
+try:
+    if a.startswith("NYCT1:"):
+        c = a[6:]
+        d = json.loads(base64.urlsafe_b64decode(c + "=" * (-len(c) % 4)))
+    else:
+        d = json.load(open(os.path.join(a, "protezione.json")))
+        if d.get("attiva") is False:
+            d = {}
+    k = str(d.get("camuffamento", ""))
+    if len(k) == 64:
+        print("--obfuscation", k)
+except Exception:
+    pass
+PY
+}
+
 # controllo PORTA [SEGRETO] [ATTESA] COMANDI...  → stampa le righe ricevute dal motore
 controllo() {
   python3 "$STRUMENTI/controllo.py" "$@"

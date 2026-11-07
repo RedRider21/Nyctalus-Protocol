@@ -20,17 +20,18 @@ leggi() { python3 -c "import base64,json,sys;c=sys.argv[1][6:];print(json.loads(
 RUB=$(leggi rubrica); CAS=$(leggi casella)
 [[ "$CAS" =~ ^[a-z2-7]{56}\.nyct$ ]] && [ "$CAS" != "$RUB" ] && pass "il codice di rete contiene la casella (indirizzo .nyct a sé, diverso dalla rubrica)" || { fail "casella non nel codice: $COD"; exit 1; }
 PUB=$(python3 -c "import json;print(json.load(open('$H/.nyctalus-rete/casa/autorita.json'))['pubblica'])")
+OBF=$(opz_camuffamento "$COD")    # la rete di casa nasce protetta (Tappa 4)
 for _ in $(seq 1 20); do curl -sf http://127.0.0.1:20620/directory.txt -o "$TMP/dir.txt" && [ -s "$TMP/dir.txt" ] && break; sleep 1; done
 [ -s "$TMP/dir.txt" ] || { fail "elenco dei nodi non scaricato dalla rete di casa: $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:20620/directory.txt) · $(tail -3 "$TMP/casa.log")"; exit 1; }
 D="$H/.nyctalus-rete/casa/rubrica/casella"
 
 utente() { # nome base segreto → rete + chat (con rubrica e casella) + servizio; indirizzo in $ADDR
   local n="$1" b="$2" seg="$3"; mkdir -p "$TMP/$n"
-  "$BIN" start --directory "$TMP/dir.txt" --authority "$PUB" --socks 127.0.0.1:$b --control 127.0.0.1:$((b+3)) > "$TMP/$n.rete.log" 2>&1 & PIDS+=($!); RETE_PID=$!
+  "$BIN" start --directory "$TMP/dir.txt" --authority "$PUB" $OBF --socks 127.0.0.1:$b --control 127.0.0.1:$((b+3)) > "$TMP/$n.rete.log" 2>&1 & PIDS+=($!); RETE_PID=$!
   NYCTALUS_CHAT_TOKEN="$seg" "$BIN" chat --data "$TMP/$n" --backend 127.0.0.1:$((b+1)) --control 127.0.0.1:$((b+2)) \
     --socks 127.0.0.1:$b --rubrica "$RUB" --casella "$CAS" > "$TMP/$n.chat.log" 2>&1 & PIDS+=($!); CHAT_PID=$!
   ADDR=$(attendi_regex "$TMP/$n.chat.log" '[a-z2-7]{56}\.nyct' 15)
-  "$BIN" site --backend 127.0.0.1:$((b+1)) --identity "$TMP/$n/identita" --directory "$TMP/dir.txt" --authority "$PUB" \
+  "$BIN" site --backend 127.0.0.1:$((b+1)) --identity "$TMP/$n/identita" --directory "$TMP/dir.txt" --authority "$PUB" $OBF \
     --hops 3 > "$TMP/$n.site.log" 2>&1 & PIDS+=($!); SITE_PID=$!
 }
 SA=annasegreto0123456789abcdef01; SB=brunosegreto0123456789abcdef0

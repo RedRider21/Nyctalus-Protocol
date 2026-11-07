@@ -20,6 +20,7 @@ avvia_casa() {
 avvia_casa 1
 grep -q "Rete di casa attiva" "$TMP/casa1.log" || { fail "rete di casa: $(tail -3 "$TMP/casa1.log")"; exit 1; }
 PUB=$(python3 -c "import json;print(json.load(open('$H/.nyctalus-rete/casa/autorita.json'))['pubblica'])")
+OBF=$(opz_camuffamento "$H/.nyctalus-rete/casa")    # la rete di casa nasce protetta (Tappa 4)
 curl -sf http://127.0.0.1:24620/directory.txt -o "$TMP/d0.txt"
 [ "$(grep -c '^v ' "$TMP/d0.txt")" = 4 ] && ! grep -q famiglia= "$TMP/d0.txt" \
   && pass "senza ospiti l'elenco è quello di sempre (4 nodi, nessuna famiglia: leggibile anche dai client vecchi)" || fail "elenco iniziale: $(cat "$TMP/d0.txt")"
@@ -27,7 +28,7 @@ curl -sf http://127.0.0.1:24620/directory.txt -o "$TMP/d0.txt"
 # i nodi degli amici (come li crea il loro installa.sh): ognuno stampa la sua riga d'elenco
 nodo_amico() { # porta → riga in $RIGA
   mkdir -p "$TMP/amico-$1"
-  "$BIN" node --listen 127.0.0.1:$1 --data "$TMP/amico-$1" --announce 127.0.0.1:$1 > "$TMP/amico-$1.log" 2>&1 & PIDS+=($!)
+  "$BIN" node --listen 127.0.0.1:$1 --data "$TMP/amico-$1" --announce 127.0.0.1:$1 $OBF > "$TMP/amico-$1.log" 2>&1 & PIDS+=($!)
   for _ in $(seq 1 100); do [ -s "$TMP/amico-$1/riga-elenco.txt" ] && break; sleep 0.1; done
   RIGA=$(cat "$TMP/amico-$1/riga-elenco.txt")
 }
@@ -62,7 +63,7 @@ done < <(grep "circuit [0-9]:" "$TMP/percorsi.txt")
   && pass "in $TOT percorsi (guardie diverse) sempre 3 gestori diversi, nessun avviso" || fail "percorsi: $BUONI/$TOT buoni $(grep -m1 WARNING "$TMP/percorsi.txt")"
 
 # il traffico passa davvero: si scarica l'elenco stesso attraverso la rete, con nodi ospiti nei percorsi
-"$BIN" start --directory "$TMP/d1.txt" --authority "$PUB" --socks 127.0.0.1:24670 --control 127.0.0.1:24671 --circuits 3 > "$TMP/start.log" 2>&1 & PIDS+=($!)
+"$BIN" start --directory "$TMP/d1.txt" --authority "$PUB" $OBF --socks 127.0.0.1:24670 --control 127.0.0.1:24671 --circuits 3 > "$TMP/start.log" 2>&1 & PIDS+=($!)
 for _ in $(seq 1 60); do grep -q "circuit 2:" "$TMP/start.log" && break; sleep 0.3; done
 sleep 3
 OK=0; for _ in $(seq 1 10); do curl -sf --max-time 20 --socks5-hostname 127.0.0.1:24670 http://127.0.0.1:24620/directory.txt -o "$TMP/via.txt" && cmp -s "$TMP/via.txt" "$TMP/d1.txt" && OK=1 && break; sleep 2; done

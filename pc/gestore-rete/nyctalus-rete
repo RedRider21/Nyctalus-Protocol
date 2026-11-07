@@ -25,6 +25,9 @@ Per il GESTORE della rete (chi la tiene in piedi):
                                          aggiunge alla rete di casa (o Internet) il NODO DI UN
                                          AMICO (righe dal suo «installa.sh»); vale subito
   nyctalus-rete ospite togli IP:PORTA [--internet] · ospite elenco [--internet]
+  nyctalus-rete protezione [si|no] [--rumore HZ] [--casa|--internet]
+                                         CAMUFFAMENTO (traffico simile a rumore) e RUMORE DI
+                                         FONDO per tutta la rete; nel codice per i client
   nyctalus-rete rubrica [--codice NYCT1:…] [--servizio [--togli|--stampa]]
                                          RUBRICA + CASELLA CIFRATA della rete, sempre accese
                                          (es. sul server); poi il codice le include
@@ -161,6 +164,34 @@ def ip_locale():
         s.close()
 
 
+# --- protezione della rete (PIANO-ANONIMATO, Tappa 4) -----------------------------------
+RUMORE_DI_SERIE = 0.2          # celle finte al secondo (circa 20 MB al giorno): leggero anche sul telefono
+
+
+def prot_da_codice(cfg):
+    """Camuffamento e rumore dal codice di rete (validati): {} se la rete non li usa."""
+    out = {}
+    if re.fullmatch(r"[0-9a-f]{64}", str(cfg.get("camuffamento", ""))):
+        out["camuffamento"] = cfg["camuffamento"]
+    try:
+        r = float(cfg.get("rumore", 0))
+        if 0 < r <= 10:
+            out["rumore"] = r
+    except (TypeError, ValueError):
+        pass
+    return out
+
+
+def opz_prot(prot, rumore=True):
+    """Opzioni del motore per camuffamento (e rumore) della rete."""
+    o = []
+    if prot.get("camuffamento"):
+        o += ["--obfuscation", prot["camuffamento"]]
+    if rumore and prot.get("rumore"):
+        o += ["--cover", "%g" % prot["rumore"]]
+    return o
+
+
 # --- la rete del gestore ---------------------------------------------------------------
 class Rete:
     def __init__(self, cartella):
@@ -170,6 +201,27 @@ class Rete:
         self.f_elenco = cartella / "directory.txt"
         self.f_codice = cartella / "codice.txt"
         self.f_ospiti = cartella / "ospiti.txt"     # nodi di altri inclusi nella rete di casa
+        self.f_prot = cartella / "protezione.json"   # camuffamento e rumore di fondo della rete
+
+    def _prot_file(self):
+        try:
+            return json.loads(self.f_prot.read_text())
+        except (OSError, ValueError):
+            return {}
+
+    def protezione(self):
+        d = self._prot_file()
+        if d.get("attiva") is False:
+            return {}                               # spenta (la chiave resta da parte)
+        return prot_da_codice(d)                    # reti nate prima della 0.3.4: nessun file = spenta
+
+    def imposta_protezione(self, accesa, rumore=RUMORE_DI_SERIE):
+        # la chiave si conserva anche da spenta: riaccendendo, i nodi già installati vanno ancora bene
+        vecchia = self._prot_file().get("camuffamento")
+        if not re.fullmatch(r"[0-9a-f]{64}", str(vecchia or "")):
+            vecchia = None
+        prot = {"attiva": bool(accesa), "camuffamento": vecchia or os.urandom(32).hex(), "rumore": rumore}
+        scrivi_privato(self.f_prot, json.dumps(prot, indent=1))
 
     def ospiti(self):
         if not self.f_ospiti.exists():
@@ -208,6 +260,7 @@ class Rete:
         privata(self.dir)
         scrivi_privato(self.f_aut, json.dumps({"nome": nome, "segreto": seg, "pubblica": pub,
                                                "creata": time.strftime("%Y-%m-%d %H:%M")}, indent=1))
+        self.imposta_protezione(True)               # reti nuove: camuffamento e rumore di serie
         if sostituisci:
             for f in (self.f_nodi, self.f_elenco, self.f_codice):
                 f.unlink(missing_ok=True)
@@ -276,6 +329,7 @@ class Rete:
             esci("URL non valido: deve iniziare con http:// o https://")
         a = self.autorita()
         cfg = {"v": 1, "nome": a["nome"], "directory_url": url, "authority": a["pubblica"]}
+        cfg.update(self.protezione())               # camuffamento e rumore: li usano anche i client
         for chiave, nome_file in (("rubrica", "indirizzo"), ("casella", "casella-indirizzo")):
             f = self.dir / "rubrica" / nome_file
             if f.exists():
@@ -308,6 +362,7 @@ def leggi_codice(testo):
     for k in ("rubrica", "casella"):                     # rubrica e casella della rete
         if re.fullmatch(r"[a-z2-7]{56}\.nyct", str(cfg.get(k, ""))):
             rete[k] = cfg[k]
+    rete.update(prot_da_codice(cfg))                     # camuffamento e rumore della rete
     return rete
 
 
@@ -315,12 +370,13 @@ def leggi_codice(testo):
 PORTE_RUBRICA = [int(x) for x in os.environ.get("NYCTALUS_RUBRICA_PORTE", "18810,18811,18812,18813,18814").split(",")]
 
 
-def avvia_rubrica(rete, autorita_pub, proc):
+def avvia_rubrica(rete, autorita_pub, proc, prot=None):
     """Accende la rubrica della rete: un motore della chat con la sua identità, il suo
     collegamento alla rete, il suo servizio .nyct e il programma rubrica.py. Restituisce
     l'indirizzo .nyct della rubrica (scritto anche in rubrica/indirizzo per il codice)."""
     b = binario()
     d = privata(rete.dir / "rubrica")
+    prot = prot if prot is not None else (rete.protezione() if hasattr(rete, "protezione") else {})
     backend, controllo, socks, monitor = PORTE_RUBRICA[:4]
     segreto = base64.b16encode(os.urandom(16)).decode().lower()
     env = dict(os.environ, NYCTALUS_CHAT_TOKEN=segreto)
@@ -340,10 +396,11 @@ def avvia_rubrica(rete, autorita_pub, proc):
         esci("la rubrica non parte (vedi %s)" % (d / "chat.log"))
     (d / "indirizzo").write_text(indirizzo + "\n")
     proc.append(subprocess.Popen([b, "start", "--directory", str(rete.f_elenco), "--authority", autorita_pub,
-                                  "--socks", "127.0.0.1:%d" % socks, "--control", "127.0.0.1:%d" % monitor],
+                                  "--socks", "127.0.0.1:%d" % socks, "--control", "127.0.0.1:%d" % monitor] + opz_prot(prot),
                                  stdout=log("rete"), stderr=subprocess.STDOUT, start_new_session=True))
     proc.append(subprocess.Popen([b, "site", "--backend", "127.0.0.1:%d" % backend, "--identity", str(d / "identita"),
-                                  "--directory", str(rete.f_elenco), "--authority", autorita_pub, "--hops", "3"],
+                                  "--directory", str(rete.f_elenco), "--authority", autorita_pub, "--hops", "3"]
+                                 + opz_prot(prot, rumore=False),
                                  stdout=log("servizio"), stderr=subprocess.STDOUT, start_new_session=True))
     # la casella cifrata: servizio di deposito con un SUO indirizzo .nyct (chi deposita arriva
     # dai circuiti senza presentarsi; la posta la ritira il destinatario dalla rubrica)
@@ -355,7 +412,7 @@ def avvia_rubrica(rete, autorita_pub, proc):
     f_cas.write_bytes(b"")
     proc.append(subprocess.Popen([b, "site", "--backend", "127.0.0.1:%d" % casella, "--identity",
                                   str(d / "casella-identita"), "--directory", str(rete.f_elenco),
-                                  "--authority", autorita_pub, "--hops", "3"],
+                                  "--authority", autorita_pub, "--hops", "3"] + opz_prot(prot, rumore=False),
                                  stdout=open(f_cas, "ab"), stderr=subprocess.STDOUT, start_new_session=True))
     for _ in range(240):                                  # finché il servizio non è in rete
         m = re.search(r"[a-z2-7]{56}\.nyct", f_cas.read_text(errors="replace"))
@@ -376,7 +433,7 @@ def importa(argomento):
         except Exception:     # noqa: BLE001
             cfg = {}
     if argomento == "--prova":
-        for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella"):
+        for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella", "camuffamento", "rumore"):
             cfg.pop(k, None)
         msg = "questo PC torna alla rete di prova locale"
     else:
@@ -391,7 +448,7 @@ def importa(argomento):
         except ValueError as e:
             esci(str(e))
         cfg.update({"directory_url": rete["directory_url"], "authority": rete["authority"], "nome_rete": rete["nome"]})
-        for k in ("rubrica", "casella"):          # rubrica e casella della rete (se ci sono)
+        for k in ("rubrica", "casella", "camuffamento", "rumore"):   # se la rete li ha
             cfg.pop(k, None)
             if rete.get(k):
                 cfg[k] = rete[k]
@@ -573,7 +630,8 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None):
             (d / "riga-elenco.txt").unlink(missing_ok=True)
             log = open(r.dir / ("nodo-%d.log" % porta), "ab")
             proc.append(subprocess.Popen([b, "node", "--listen", "0.0.0.0:%d" % porta, "--data", str(d),
-                                          "--announce", "%s:%d" % (ip, porta)], stdout=log, stderr=log,
+                                          "--announce", "%s:%d" % (ip, porta)] + opz_prot(r.protezione()),
+                                         stdout=log, stderr=log,
                                          start_new_session=True))
         for i in range(nodi):
             f = r.dir / ("nodo-%d" % (porta_base + i)) / "riga-elenco.txt"
@@ -613,7 +671,8 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None):
             print("  • TCP %d       (l'elenco dei nodi e la pagina del codice)" % porta_web)
             print("\nProva dei nodi attraverso il nome pubblico (da questo PC):")
             esito = subprocess.run([b, "nodes", "--directory", str(r.f_elenco), "--authority",
-                                    r.autorita()["pubblica"], "--probe"], capture_output=True, text=True, timeout=60)
+                                    r.autorita()["pubblica"], "--probe"] + opz_prot(r.protezione(), rumore=False),
+                                   capture_output=True, text=True, timeout=60)
             print("  " + (esito.stdout.strip() or esito.stderr.strip()).replace("\n", "\n  "))
             if esito.returncode != 0:
                 print("  ⚠️  Da qui i nodi non rispondono col nome pubblico. Cause tipiche:")
@@ -717,7 +776,7 @@ def rubrica(codice=None, servizio=False, togli=False, stampa=False):
     try:
         while not fermo.is_set():
             proc = []
-            rub = avvia_rubrica(r, aut, proc)
+            rub = avvia_rubrica(r, aut, proc, prot_da_codice(dati) if codice else None)
             f_cas = r.dir / "rubrica" / "casella-indirizzo"
             cas = f_cas.read_text().strip() if f_cas.exists() else "(non partita)"
             print("\n🦇 Rubrica e casella della rete «%s» accese" % nome)
@@ -776,6 +835,10 @@ def principale(args):
         pub = rete.crea(nome, "--sostituisci" in args)
         ok("rete «%s» creata. Chiave pubblica dell'autorità: %s" % (nome, pub))
         print("  La chiave segreta resta in %s (non darla a nessuno, fanne una copia di sicurezza)." % rete.f_aut)
+        p = rete.protezione()
+        print("  Camuffamento e rumore di fondo ACCESI (di serie). Chi installa i nodi usa:")
+        print("    ./installa.sh --camuffamento %s --rumore %g" % (p["camuffamento"], p["rumore"]))
+        print("  (oppure, dopo, --codice NYCT1:… ; per spegnerli: nyctalus-rete protezione no)")
         print("  Ora: aggiungi le righe dei nodi (nyctalus-rete aggiungi …), poi firma.")
     elif cmd == "aggiungi":
         famiglia = opzione(args, "--famiglia")
@@ -817,7 +880,7 @@ def principale(args):
         if not rete.f_elenco.exists():
             esci("prima firma l'elenco: nyctalus-rete firma")
         sys.exit(subprocess.run([binario(), "nodes", "--directory", str(rete.f_elenco), "--authority", a["pubblica"],
-                                 "--probe"]).returncode)
+                                 "--probe"] + opz_prot(rete.protezione(), rumore=False)).returncode)
     elif cmd == "codice":
         url = opzione(args, "--url")
         if not url:
@@ -853,6 +916,33 @@ def principale(args):
         casa(int(opzione(args, "--nodi", "4")), int(opzione(args, "--porta-base", "4701")),
              int(opzione(args, "--porta", "18800")), opzione(args, "--ip", ip_locale()),
              "--non-importare" not in args, internet)
+    elif cmd == "protezione":
+        quale = "casa" if "--casa" in args else "internet" if "--internet" in args else None
+        args = [a for a in args if a not in ("--casa", "--internet")]
+        rumore = opzione(args, "--rumore")
+        r = Rete(DATI / quale) if quale else Rete(DATI)
+        if not r.esiste():
+            esci("questa rete non esiste ancora" + (" (avvia prima: nyctalus-rete casa%s)" % (" --internet NOME" if quale == "internet" else "") if quale else ""))
+        if args and args[0] in ("si", "sì", "no"):
+            if rumore is not None:
+                try:
+                    rumore = float(rumore.replace(",", "."))
+                    assert 0 < rumore <= 10
+                except (ValueError, AssertionError):
+                    esci("--rumore: un numero fra 0,1 e 10 (celle finte al secondo)")
+            r.imposta_protezione(args[0] != "no", rumore if rumore is not None else RUMORE_DI_SERIE)
+            if r.f_codice.exists():
+                url = json.loads((r.dir / "nyctalus-rete.json").read_text()).get("directory_url") if (r.dir / "nyctalus-rete.json").exists() else None
+                if url:
+                    r.codice(url)
+            ok("protezione %s" % ("accesa" if args[0] != "no" else "spenta"))
+            print("  ⚠️  Il CODICE DI RETE è cambiato: ridallo a tutti (importatelo di nuovo) e riavvia la rete")
+            print("     e i nodi sui server (con la nuova chiave di camuffamento, vedi sotto).")
+        p = r.protezione()
+        print("Camuffamento: %s" % ("acceso · chiave %s" % p["camuffamento"] if p.get("camuffamento") else "spento"))
+        print("Rumore di fondo: %s" % ("%g celle finte al secondo" % p["rumore"] if p.get("rumore") else "spento"))
+        if p.get("camuffamento"):
+            print("Sui server dei nodi: ./installa.sh --camuffamento %s --rumore %g" % (p["camuffamento"], p.get("rumore", 0)))
     elif cmd == "ospite":
         internet = "--internet" in args
         if internet:

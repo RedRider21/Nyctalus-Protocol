@@ -42,7 +42,7 @@ Sui sistemi più vecchi `gir1.2-webkit2-4.0` al posto di `-4.1`.
 ### 1.2 Installare
 Nessun installatore: si estrae e si usa.
 ```sh
-tar xzf Nyctalus-PC-Linux.tar.gz        # crea la cartella Nyctalus/
+unzip Nyctalus-PC-Linux.zip             # crea la cartella Nyctalus/
 cd Nyctalus
 ```
 

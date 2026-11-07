@@ -2,6 +2,11 @@
 
 > Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
 
+## 07/11/2026 · Tappa 4, protezione di serie ✅ + GUIDA-COMPLETA
+- Suite completa 571 superate; corrette poi le 2 fallite (prova 27: nodi dell'amico senza chiave in una rete ora protetta → `$OBF`; test del motore: lo Stato di prova in chat.rs non aveva i campi della modalità riservata — ora 107 ok). Le prove con la rete di casa usano `opz_camuffamento` (lib.sh). `nyctalus-sito` passa la chiave a `site`. APK 0.49 (orchestratore protetto, stesso motore della 0.48).
+- Gestore: `protezione.json` (attiva, camuffamento, rumore; chiave conservata da spenta), reti NUOVE protette (rumore 0,2), vecchie spente finché `nyctalus-rete protezione si [--casa|--internet] [--rumore N]`; codice con `camuffamento`/`rumore`; casa: nodi e `nodes --probe` con la chiave; rubrica (`start`/`site`) con la chiave; `verifica` con la chiave; `crea` stampa la chiave per i server. Client: `importa` (PC) salva le chiavi, `avvia-chat.sh` e browser PC le passano a `start`/`site`; orchestratore (telefono/Windows) `prot_da_codice`/`opz_prot`. Installatore nodi `--codice NYCT1:…`. Prova 28 (13/13); prova 09 ora fa `protezione no` (nodi installati senza chiave). Nessun cambio al motore → APK 0.49 senza CI.
+- **GUIDA-COMPLETA.md** (richiesta utente: unico manuale chiaro e semplice): Parte 1 cosa scaricare, Parte 2 client/nodo/gestore passo passo, Parte 3 tutte le opzioni (a cosa servono, costo, passi PC/telefono/terminale). Nel sito subito dopo «Inizia qui».
+
 ## 07/11/2026 · Tappa 3, strumenti per i nodi di persone diverse ✅
 - `nyctalus-rete ospite aggiungi|togli|elenco [--internet]` (file `ospiti.txt` nella rete di casa/Internet, famiglia obbligatoria e ≠ «casa», elenco rifirmato e servito subito, ospiti inclusi a ogni avvio); con ospiti i nodi del PC = famiglia «casa» (senza ospiti nessuna famiglia → compatibile coi client < 0.3.3). Installatore del nodo: spiega come aggiungere con la famiglia. GUIDA-INTERNET Passo 8, MANUALE-GESTORE-RETE, PIANO (Tappa 3 🔧). Prova 27. Il resto della Tappa 3 è organizzativo (trovare chi ospita i nodi: servono ≥3 famiglie).
 - Prossimi dal piano: Tappa 4 (rumore di fondo + camuffamento di serie), J browser pubblico, K Shadow; per ULTIMO il piano di sicurezza.
