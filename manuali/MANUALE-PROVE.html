@@ -186,6 +186,14 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 <td><strong>programma File, motore</strong>: Alice → Bob sulla rete di prova (3 salti, canali paralleli): sotto soglia parte da solo, sopra soglia «Accetta», pausa/ripresa, motore di Bob spento a metà e riacceso (riprende dai pezzi già verificati), file sempre identico (SHA-256), non-contatto rifiutato senza proporglielo; nella chat il file compare all'ora d'arrivo con ✓✓ e diventa blu alla lettura; con «inchat 0» non compare in chat. Motore di Bob rallentato solo in prova (<code>NYCTALUS_PROVA_RALLENTA_MS</code>)</td>
 </tr>
 <tr>
+<td><code>26-riservata</code></td>
+<td><strong>modalità riservata</strong> sulla rete di casa con rubrica e casella (ritmo e ritiro accorciati solo in prova): RISERVATA 1 ricordata su disco, il messaggio va in coda e arriva dalla casella identico (riempitivo tolto) e autenticato, 📮 per chi scrive, coda svuotata; nessuna ricevuta mandata; buste finte spedite e tornate; la rubrica non consegna subito a chi è riservato; buste vere e finte tutte della stessa misura; testo troppo lungo rifiutato; RISERVATA 0; rete senza casella → non disponibile; <code>nyctalus-cli impostazioni riservata si/no</code></td>
+</tr>
+<tr>
+<td><code>25-percorsi</code></td>
+<td><strong>scelta dei percorsi</strong> (Tappa 2) con il motore vero e un elenco firmato con famiglie: in 25 avvii × 3 circuiti la guardia è sempre la stessa (file privato 600, cartella 700), l'uscita cambia, mai due nodi della stessa famiglia; famiglia tolta → firma rotta; regola impossibile → avviso «NON anonimo», con <code>NYCTALUS_PARENTELA=rigida</code> rifiuto; niente scritto in <code>~/.nyctalus</code></td>
+</tr>
+<tr>
 <td><code>24-cli</code></td>
 <td><strong>nyctalus-cli</strong> fra Alice e Bob sulla rete di prova, solo da comando: io, aggiungi, contatti, scrivi (nome abbreviato, accenti, emoji), <code>ascolta</code> in diretta, leggi, invia (file identico), file, impostazioni, file sopra soglia visto in <code>ascolta</code> e accettato, pulisci, errori chiari (contatto inesistente, segreto sbagliato, motore spento); <code>avvia</code> senza finestre in una rete isolata (user namespace, HOME finto): segreto in file 600, niente secondo motore, spegnimento pulito; ⌨ Terminale del PC (<code>avvia-terminale.sh --dentro</code>) che accende e rispegne il motore</td>
 </tr>

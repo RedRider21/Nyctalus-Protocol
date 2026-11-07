@@ -21,7 +21,7 @@
 <main class="wrap manuale-doc">
 <nav class="indice-manuali"><a href="index.html">Inizia qui</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html" class="qui">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
-<h1 id="piano-verso-una-rete-anonima">Piano verso una rete anonima</h1><nav class="sommario"><b>In questa pagina</b><a href="#in-breve">In breve</a><a href="#tappa-0-oggi-la-prova-di-funzionamento">Tappa 0 · Oggi: la prova di funzionamento</a><a href="#tappa-1-tre-piccoli-server-su-tre-fornitori-diversi">Tappa 1 · Tre piccoli server su tre fornitori diversi</a><a href="#tappa-2-percorsi-davvero-casuali-lavoro-sul-motore">Tappa 2 · Percorsi davvero casuali (lavoro sul motore)</a><a href="#tappa-3-nodi-di-persone-diverse">Tappa 3 · Nodi di persone diverse</a><a href="#tappa-4-piu-utenti-meno-ritmi-riconoscibili">Tappa 4 · Più utenti, meno ritmi riconoscibili</a><a href="#tappa-5-misure-e-browser-pubblico">Tappa 5 · Misure e browser pubblico</a><a href="#tappa-6-revisione-indipendente">Tappa 6 · Revisione indipendente</a><a href="#cosa-nessuna-tappa-puo-dare">Cosa nessuna tappa può dare</a><a href="#cosa-fare-adesso">Cosa fare adesso</a></nav>
+<h1 id="piano-verso-una-rete-anonima">Piano verso una rete anonima</h1><nav class="sommario"><b>In questa pagina</b><a href="#in-breve">In breve</a><a href="#tappa-0-oggi-la-prova-di-funzionamento">Tappa 0 · Oggi: la prova di funzionamento</a><a href="#tappa-1-tre-piccoli-server-su-tre-fornitori-diversi">Tappa 1 · Tre piccoli server su tre fornitori diversi</a><a href="#tappa-2-percorsi-davvero-casuali-lavoro-sul-motore-fatta-07112026">Tappa 2 · Percorsi davvero casuali (lavoro sul motore) ✅ fatta (07/11/2026)</a><a href="#tappa-2-bis-modalita-riservata-chat-fatta-07112026">Tappa 2-bis · Modalità riservata (chat) ✅ fatta (07/11/2026)</a><a href="#tappa-3-nodi-di-persone-diverse">Tappa 3 · Nodi di persone diverse</a><a href="#tappa-4-piu-utenti-meno-ritmi-riconoscibili">Tappa 4 · Più utenti, meno ritmi riconoscibili</a><a href="#tappa-5-misure-e-browser-pubblico">Tappa 5 · Misure e browser pubblico</a><a href="#tappa-6-revisione-indipendente">Tappa 6 · Revisione indipendente</a><a href="#cosa-nessuna-tappa-puo-dare">Cosa nessuna tappa può dare</a><a href="#cosa-fare-adesso">Cosa fare adesso</a></nav>
 <p>Nyctalus <strong>cifra</strong> già tutto da un capo all'altro. L'<strong>anonimato</strong>, cioè che nessuno sappia
 <em>chi parla con chi</em>, non dipende però solo dal programma. Dipende da <strong>dove stanno i nodi</strong>,
 da <strong>chi li gestisce</strong> e da <strong>quanta gente usa la rete</strong>. Questo piano dice, tappa per tappa,
@@ -50,10 +50,16 @@ cosa si ottiene e cosa manca ancora.</p>
 <td>i nodi sono tutti tuoi</td>
 </tr>
 <tr>
-<td>2</td>
+<td>2 ✅</td>
 <td>entrata e uscita scelte a caso, mai due nodi «parenti»</td>
 <td>nessun nodo è fisso per tutti</td>
 <td>i nodi sono ancora di una sola persona</td>
+</tr>
+<tr>
+<td>2-bis ✅</td>
+<td><strong>modalità riservata</strong> per la chat: messaggi solo tramite casella, a ritmo casuale, con buste finte e tutte uguali</td>
+<td>non si capisce <strong>quando</strong> né <strong>a chi</strong> scrivi, anche con pochi nodi</td>
+<td>chiamate e file restano diretti</td>
 </tr>
 <tr>
 <td>3</td>
@@ -112,9 +118,9 @@ Mario». Il tuo IP non è più quello della rete.</p>
 <p><strong>Cosa manca:</strong> i nodi sono <strong>tutti tuoi</strong>. Tu, o chi riuscisse a entrare nei tuoi server,
 potresti mettere insieme entrata e uscita. Ogni fornitore vede il traffico del proprio
 server (cifrato), e l'abbonamento ai VPS è intestato a qualcuno.</p>
-<h2 id="tappa-2-percorsi-davvero-casuali-lavoro-sul-motore">Tappa 2 · Percorsi davvero casuali (lavoro sul motore)</h2>
-<p>Oggi ogni circuito usa <strong>il primo nodo dell'elenco come entrata e il secondo come uscita</strong>;
-cambiano a caso solo quelli in mezzo. È una semplificazione del prototipo, da togliere:</p>
+<h2 id="tappa-2-percorsi-davvero-casuali-lavoro-sul-motore-fatta-07112026">Tappa 2 · Percorsi davvero casuali (lavoro sul motore) ✅ fatta (07/11/2026)</h2>
+<p>Prima ogni circuito usava <strong>il primo nodo dell'elenco come entrata e il secondo come
+uscita</strong>, e verso i siti <code>.nyct</code> (chat, file) l'entrata cambiava a ogni collegamento. Ora:</p>
 <ul>
 <li><strong>entrata scelta a caso</strong> e poi tenuta a lungo (come le «guardie» di Tor), così non si
   ricomincia ogni volta il rischio di pescare un'entrata malevola;</li>
@@ -125,8 +131,45 @@ cambiano a caso solo quelli in mezzo. È una semplificazione del prototipo, da t
 </ul>
 <p><strong>Cosa si ottiene:</strong> nessun nodo vede passare tutti, e un percorso non attraversa mai due
 volte lo stesso proprietario dichiarato.</p>
+<p><strong>Come si usa:</strong> il gestore dichiara le famiglie con <code>nyctalus-rete aggiungi --famiglia NOME</code>
+o <code>nyctalus-rete famiglia IP:PORTA NOME</code> (<a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a>). Se la regola non si può
+rispettare (per esempio nodi tutti sul PC di casa) il motore funziona ma scrive un <strong>avviso</strong>
+«cifrato ma NON anonimo»; con <code>NYCTALUS_PARENTELA=rigida</code> si rifiuta. La guardia sta in
+<code>~/.nyctalus/guardie/</code> (un file privato per rete). Verificato dai test del motore e dalla prova
+<code>25-percorsi</code>.</p>
+<h2 id="tappa-2-bis-modalita-riservata-chat-fatta-07112026">Tappa 2-bis · Modalità riservata (chat) ✅ fatta (07/11/2026)</h2>
+<p>Anche con pochi nodi e pochi utenti si può nascondere <strong>quando</strong> e <strong>a chi</strong> scrivi, con le
+tecniche delle «mixnet» (Loopix, Nym), al prezzo di qualche secondo di ritardo e di un po' di
+banda. È un interruttore nelle impostazioni della chat.</p>
+<ul>
+<li><strong>Mai in diretta:</strong> i messaggi non vanno al contatto, vanno nella <strong>casella cifrata</strong> della
+  rete; lui la ritira a intervalli fissi. Mittente e destinatario non sono mai collegati nello
+  stesso momento: guardare i tempi ai due capi non dice più niente.</li>
+<li><strong>Ritmo casuale, sempre uguale:</strong> il motore deposita una busta ogni ~30 secondi in media
+  (ritmo di Poisson), che tu scriva o no. Se c'è un tuo messaggio parte quello, altrimenti
+  una <strong>busta finta</strong> indirizzata a te stesso («giro a vuoto»). Chi osserva vede lo stesso
+  ritmo quando scrivi e quando non scrivi.</li>
+<li><strong>Buste tutte uguali:</strong> riempite alla stessa misura (4 KB), vere o finte.</li>
+<li><strong>Niente ricevute né «in linea»:</strong> in modalità riservata non mandi le spunte di consegna e
+  lettura e non sondi i contatti, perché sarebbero collegamenti diretti e rivelerebbero i
+  tempi. I tuoi messaggi arrivano a 📮 (nella casella).</li>
+<li><strong>I giri a vuoto</strong> servono anche da controllo: se le buste finte non tornano, la casella o
+  un nodo stanno perdendo posta.</li>
+</ul>
+<p><strong>Cosa NON copre:</strong> chiamate e file grandi (in tempo reale o troppo pesanti per la casella:
+restano diretti, con un avviso), e il fatto che sei collegato (il tuo servizio <code>.nyct</code> resta
+acceso per ricevere chiamate). Serve una rete <strong>con la casella</strong> (<code>nyctalus-rete rubrica</code>).
+I contatti devono avere la versione 0.3.3 o successiva.</p>
+<p><strong>Come si usa:</strong> <a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a> §3-ter·1. Verificato dalla prova <code>26-riservata</code>: messaggio
+arrivato identico, nessuna ricevuta, buste finte spedite e tornate, <strong>tutte le buste della
+stessa misura</strong> nella casella, rubrica che non consegna subito.</p>
+<p><strong>Più avanti:</strong> ritardi casuali anche <strong>nei nodi</strong> (mixing vero e proprio) e traffico di
+copertura a ritmo costante fra client e guardia, utile anche per le chiamate ma costoso in
+banda.</p>
 <h2 id="tappa-3-nodi-di-persone-diverse">Tappa 3 · Nodi di persone diverse</h2>
 <ul>
+<li><strong>I PC come nodi intermedi</strong> (scelta iniziale del progetto: ogni PC anche nodo): in una rete
+  piccola moltiplica i nodi senza comprare server. I telefoni restano solo client.</li>
 <li>Altri gestiscono <strong>i propri nodi</strong>: il tuo amico di Pavia (ha l'IP statico, è perfetto),
   altri amici, volontari. Ognuno con il suo server o il PC sempre acceso.</li>
 <li>Il gestore li aggiunge all'elenco con la loro «famiglia» (Tappa 2).</li>
@@ -180,8 +223,8 @@ da provare</strong>, non uno strumento da cui far dipendere la propria sicurezza
 <li><strong>Prova con il tuo amico</strong> così com'è (Tappa 0), per collegamento, velocità, chiamate e file.</li>
 <li><strong>Tappa 1:</strong> scegliete 3 fornitori di VPS diversi e installate i nodi. Il tuo amico può
    ospitarne uno.</li>
-<li><strong>Tappa 2:</strong> il lavoro sul motore (percorsi casuali e regola di parentela) si può fare in
-   parallelo, ed è la prossima cosa da sviluppare.</li>
+<li><strong>Tappa 2</strong> ✅ fatta: quando avrete i server, dichiarate le famiglie (un nome per
+   persona o fornitore) con <code>nyctalus-rete famiglia</code>.</li>
 </ol>
 </article>
 </main>

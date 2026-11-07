@@ -21,7 +21,7 @@
 <main class="wrap manuale-doc">
 <nav class="indice-manuali"><a href="index.html">Inizia qui</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html" class="qui">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
-<h1 id="manuale-della-chat-nyct">Manuale della chat <code>.nyct</code></h1><nav class="sommario"><b>In questa pagina</b><a href="#1-avviare-la-chat">1. Avviare la chat</a><a href="#2-il-tuo-contact-id-in-basso-a-sinistra">2. Il tuo Contact ID (in basso a sinistra)</a><a href="#3-aggiungere-un-contatto-e-scrivere">3. Aggiungere un contatto e scrivere</a><a href="#3-bis-la-rubrica-della-rete">3-bis. La rubrica della rete (👥)</a><a href="#3-bis1-le-spunte-come-telegram">3-bis·1. Le spunte (come Telegram)</a><a href="#3-ter-la-casella-cifrata-messaggi-a-chi-non-e-in-linea">3-ter. La casella cifrata (📮 messaggi a chi non è in linea)</a><a href="#3-quater-chiamate-e-videochiamate">3-quater. Chiamate e videochiamate (📞 📹)</a><a href="#4-allegati-file-foto-video-audio-documenti">4. Allegati: file, foto, video, audio, documenti</a><a href="#4-bis-notifiche">4-bis. Notifiche</a><a href="#5-aspetto-e-finestra">5. Aspetto e finestra</a><a href="#6-serve-la-stessa-rete">6. Serve la stessa rete</a><a href="#7-sicurezza-in-due-righe">7. Sicurezza in due righe</a><a href="#8-dove-stanno-i-tuoi-dati">8. Dove stanno i tuoi dati</a></nav>
+<h1 id="manuale-della-chat-nyct">Manuale della chat <code>.nyct</code></h1><nav class="sommario"><b>In questa pagina</b><a href="#1-avviare-la-chat">1. Avviare la chat</a><a href="#2-il-tuo-contact-id-in-basso-a-sinistra">2. Il tuo Contact ID (in basso a sinistra)</a><a href="#3-aggiungere-un-contatto-e-scrivere">3. Aggiungere un contatto e scrivere</a><a href="#3-bis-la-rubrica-della-rete">3-bis. La rubrica della rete (👥)</a><a href="#3-bis1-le-spunte-come-telegram">3-bis·1. Le spunte (come Telegram)</a><a href="#3-ter-la-casella-cifrata-messaggi-a-chi-non-e-in-linea">3-ter. La casella cifrata (📮 messaggi a chi non è in linea)</a><a href="#3-ter1-modalita-riservata">3-ter·1. Modalità riservata (🕶)</a><a href="#3-quater-chiamate-e-videochiamate">3-quater. Chiamate e videochiamate (📞 📹)</a><a href="#4-allegati-file-foto-video-audio-documenti">4. Allegati: file, foto, video, audio, documenti</a><a href="#4-bis-notifiche">4-bis. Notifiche</a><a href="#5-aspetto-e-finestra">5. Aspetto e finestra</a><a href="#6-serve-la-stessa-rete">6. Serve la stessa rete</a><a href="#7-sicurezza-in-due-righe">7. Sicurezza in due righe</a><a href="#8-dove-stanno-i-tuoi-dati">8. Dove stanno i tuoi dati</a></nav>
 <p>Una chat <strong>senza server e senza metadati</strong>: non esiste un'azienda in mezzo, nessun
 numero di telefono, nessuna rubrica globale (solo, se il gestore la accende, la piccola
 <strong>rubrica della rete</strong> a cui ci si iscrive se si vuole: §3-bis). Ogni persona <strong>è</strong> un indirizzo
@@ -161,6 +161,28 @@ con l'ora in cui l'hai scritto.</p>
 <li>Quello che la casella vede comunque: che qualcuno ha lasciato posta per quell'indirizzo, quando
   e quanto è grande, e quando il destinatario la ritira.</li>
 </ul>
+<h2 id="3-ter1-modalita-riservata">3-ter·1. Modalità riservata (🕶)</h2>
+<p>Per non far capire <strong>quando</strong> e <strong>a chi</strong> scrivi, anche in una rete piccola.</p>
+<ul>
+<li><strong>Dove si accende:</strong></li>
+<li>PC: menu <strong>Aspetto</strong> → «Modalità riservata»;</li>
+<li>telefono e Windows: <strong>Impostazioni</strong> → «Riservatezza» → 🕶 Modalità riservata;</li>
+<li>terminale: <code>impostazioni riservata si</code>.</li>
+</ul>
+<p>Prima di accendersi mostra cosa cambia e chiede conferma.
+- <strong>Cosa fa:</strong>
+  - i tuoi messaggi non vanno più in diretta: passano dalla <strong>casella cifrata</strong>;
+  - il motore deposita una busta ogni ~30 secondi in media, a ritmo casuale, che tu scriva o no. Se non hai niente da mandare parte una <strong>busta finta</strong> indirizzata a te stesso. Tutte le buste hanno la stessa misura;
+  - la posta la ritiri a intervalli fissi, e la rubrica non te la porta più appena arriva.
+- <strong>Cosa cambia per te:</strong>
+  - i messaggi arrivano con <strong>qualche decina di secondi</strong> di ritardo e restano a 📮 (nella casella);
+  - non mandi le spunte di consegna e lettura e non risulti «in linea» ai contatti;
+  - testo fino a 3800 caratteri.
+- <strong>Cosa non copre:</strong> chiamate, videochiamate, allegati e File restano diretti. Il tuo servizio
+  resta acceso, per poter ricevere le chiamate.
+- <strong>Serve:</strong> una rete con la casella (<code>nyctalus-rete rubrica</code>) aggiornata, e contatti con
+  Nyctalus 0.3.3 o successivo.
+- Perché funziona: <a href="PIANO-ANONIMATO.html"><code>PIANO-ANONIMATO.md</code></a>, Tappa 2-bis.</p>
 <h2 id="3-quater-chiamate-e-videochiamate">3-quater. Chiamate e videochiamate (📞 📹)</h2>
 <p>Nella conversazione apri il menu <strong>⋮</strong> in alto a destra (come in Telegram) e scegli
 <strong>Chiamata vocale</strong> o <strong>Videochiamata</strong>. L'altro vede la chiamata in arrivo (sul telefono anche

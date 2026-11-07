@@ -54,6 +54,19 @@ nyctalus-rete firma                              # SEMPRE dopo ogni cambio (mini
 </code></pre>
 <p>Una riga con lo stesso indirizzo <strong>sostituisce</strong> la vecchia. Le righe sbagliate vengono
 rifiutate.</p>
+<h3 id="famiglie-i-nodi-parenti">Famiglie: i nodi «parenti»</h3>
+<p>Se più nodi sono <strong>della stessa persona</strong> o <strong>dello stesso fornitore</strong>, dichiaralo: un
+percorso non userà mai due nodi della stessa famiglia, così nessuno controlla da solo entrata
+e uscita.</p>
+<pre><code class="language-sh">nyctalus-rete aggiungi --famiglia mario 'RIGA1' 'RIGA2'   # i due nodi di Mario
+nyctalus-rete famiglia 203.0.113.5:4601 vps-ovh           # mette un nodo esistente in una famiglia
+nyctalus-rete famiglia 203.0.113.5:4601 -                 # gliela toglie
+nyctalus-rete firma
+</code></pre>
+<p>Il nome è libero (lettere, cifre, <code>_ . -</code>, al massimo 32) ed è protetto dalla firma. Anche
+senza famiglie, due nodi con indirizzo pubblico nella stessa sottorete (/16) sono considerati
+parenti. Le famiglie vanno usate quando <strong>tutti</strong> i client sono aggiornati (0.3.3 o successive):
+i client più vecchi non leggono un elenco con le famiglie.</p>
 <h2 id="4-pubblicare-lelenco">4. Pubblicare l'elenco</h2>
 <p>I client scaricano <code>~/.nyctalus-rete/directory.txt</code> da un indirizzo web. Il file è
 firmato: anche se qualcuno lo alterasse, i client lo rifiuterebbero. Scegli tu dove:</p>
@@ -134,6 +147,10 @@ sei sicuro che nessuno sulla Wi-Fi ti abbia passato un codice diverso. La pagina
 <code>http</code> perché è solo nella rete locale e distribuisce dati pubblici; l'elenco dei nodi è
 firmato, e l'impronta protegge il codice.</p>
 <h2 id="6-bis-rubrica-e-casella-per-la-tua-rete">6-bis. Rubrica e casella per la tua rete</h2>
+<blockquote>
+<p>Dalla 0.3.3 la rubrica rispetta la <strong>modalità riservata</strong> dei client (posta consegnata solo
+quando la chiedono). Se la rubrica gira su un server, <strong>aggiornala</strong> insieme ai client.</p>
+</blockquote>
 <p>La rete di casa le accende da sola. Per una rete vera vanno tenute accese su una macchina
 sempre in rete:</p>
 <ul>
@@ -150,8 +167,9 @@ sempre in rete:</p>
 <li>La chiave <strong>segreta</strong> non esce mai da <code>~/.nyctalus-rete</code>: il codice e l'elenco
   contengono solo la pubblica.</li>
 <li>Chi ha il codice può <strong>usare</strong> la rete, non modificarla.</li>
-<li>Rete con tutti i nodi su un solo server: funziona, ma <strong>non è anonima</strong> verso quel
-  fornitore. Per l'anonimato servono nodi su server diversi (scenario D).</li>
+<li>Rete con tutti i nodi su un solo server o PC: funziona, ma <strong>non è anonima</strong> (i client
+  stampano un avviso). Per l'anonimato servono nodi su server di soggetti diversi, con le
+  famiglie dichiarate (<a href="PIANO-ANONIMATO.html"><code>PIANO-ANONIMATO.md</code></a>).</li>
 </ul>
 </article>
 </main>
