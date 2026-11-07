@@ -19,6 +19,7 @@
     <a href="#idea"><span class="it">Idea</span><span class="en">Idea</span></a>
     <a href="#aspetto"><span class="it">Come appare</span><span class="en">Screenshots</span></a>
     <a href="#caratteristiche"><span class="it">Caratteristiche</span><span class="en">Features</span></a>
+    <a href="#perche"><span class="it">Tor</span><span class="en">Tor</span></a>
     <a href="#traffico"><span class="it">Traffico</span><span class="en">Traffic</span></a>
     <a href="#stato"><span class="it">Stato</span><span class="en">Status</span></a>
     <a href="#installare"><span class="it">Installare</span><span class="en">Install</span></a>
@@ -84,37 +85,70 @@
 </div></section>
 
 <section id="perche"><div class="wrap">
-  <div class="occhiello"><span class="it">Perché</span><span class="en">Why</span></div>
-  <h2><span class="it">Se c'è già Tor</span><span class="en">If Tor already exists</span></h2>
+  <div class="occhiello"><span class="it">Nyctalus e Tor</span><span class="en">Nyctalus and Tor</span></div>
+  <h2><span class="it">A confronto, onestamente</span><span class="en">Side by side, honestly</span></h2>
   <p class="intro">
-    <span class="it">Tor funziona, ma è lento per ragioni strutturali. Nyctalus cambia le scelte di fondo per guadagnare velocità senza rinunciare all'anonimato.</span>
-    <span class="en">Tor works, but it is slow for structural reasons. Nyctalus changes the fundamental choices to gain speed without giving up anonymity.</span>
+    <span class="it">Tor è la rete anonima di riferimento: matura, studiata da vent'anni, con milioni di utenti. Nyctalus è un prototipo che prova scelte diverse. Qui sotto: prima quello che abbiamo <b>misurato</b> con i programmi veri, poi cosa c'è e cosa manca in ciascuno.</span><span class="en">Tor is the reference anonymity network: mature, studied for twenty years, with millions of users. Nyctalus is a prototype trying different choices. Below: first what we <b>measured</b> with the real programs, then what each one has and lacks.</span>
   </p>
+  <h3 style="margin-top:26px"><span class="it">Misurato</span><span class="en">Measured</span></h3>
+  <p class="intro" style="font-size:.9rem"><span class="it">Simulazione con <b>Shadow</b> (il simulatore usato nella ricerca su Tor): Tor 0.4.9 e Nyctalus veri sulla stessa Internet simulata (30 ms fra due computer, linee da 50/20 Mbit), stessi utenti, stesso attacco, 3 ripetizioni. Come rifarla: <a href="https://github.com/RedRider21/Nyctalus-Protocol/blob/main/simulazione/LEGGIMI.md">simulazione/LEGGIMI.md</a>.</span><span class="en">Simulation with <b>Shadow</b> (the simulator used in Tor research): real Tor 0.4.9 and Nyctalus on the same simulated Internet (30 ms between any two computers, 50/20 Mbit lines), same users, same attack, 3 runs. How to reproduce it: <a href="https://github.com/RedRider21/Nyctalus-Protocol/blob/main/simulazione/LEGGIMI.md">simulazione/LEGGIMI.md</a>.</span></p>
   <table>
-    <thead><tr>
-      <th></th><th>Tor</th><th>Nyctalus</th>
-    </tr></thead>
+    <thead><tr><th></th><th>Tor 0.4.9</th><th>Nyctalus</th></tr></thead>
     <tbody>
-      <tr><td><b><span class="it">Chi fa da nodo</span><span class="en">Who runs a node</span></b></td>
-        <td><span class="it">~7.000 volontari per milioni di utenti</span><span class="en">~7,000 volunteers for millions of users</span></td>
-        <td><span class="it">ogni PC è anche un nodo: più utenti, più capacità</span><span class="en">every PC is also a node: more users, more capacity</span></td></tr>
-      <tr><td><b><span class="it">Strade per i dati</span><span class="en">Paths for data</span></b></td>
-        <td><span class="it">un solo percorso per connessione</span><span class="en">a single path per connection</span></td>
-        <td><span class="it">ragnatela: più percorsi in parallelo</span><span class="en">spider's web: many parallel paths</span></td></tr>
-      <tr><td><b><span class="it">Trasporto</span><span class="en">Transport</span></b></td>
-        <td>TCP <span class="it">(un pacchetto perso blocca gli altri)</span><span class="en">(one lost packet stalls the rest)</span></td>
-        <td>QUIC/UDP <span class="it">(un pacchetto perso non ferma il resto)</span><span class="en">(one lost packet does not stop the rest)</span></td></tr>
-      <tr><td><b><span class="it">Camuffamento</span><span class="en">Camouflage</span></b></td>
-        <td><span class="it">opzionale (bridge)</span><span class="en">optional (bridges)</span></td>
-        <td><span class="it">sempre attivo, di serie</span><span class="en">always on, by default</span></td></tr>
-      <tr><td><b><span class="it">Siti interni</span><span class="en">Hidden sites</span></b></td>
-        <td><code class="in">.onion</code></td>
-        <td><code class="in">.nyct</code><span class="it">, con percorsi paralleli</span><span class="en">, with parallel paths</span></td></tr>
-      <tr><td><b><span class="it">Linguaggio</span><span class="en">Language</span></b></td>
-        <td>C</td>
-        <td>Rust <span class="it">(niente bug di memoria)</span><span class="en">(no memory bugs)</span></td></tr>
+      <tr><td><b><span class="it">Scaricare 500 KB (3 salti)</span><span class="en">Download 500 KB (3 hops)</span></b></td>
+        <td>1,10 s</td>
+        <td>1,16 s — <span class="it">alla pari</span><span class="en">on par</span></td></tr>
+      <tr><td><b><span class="it">Primo byte</span><span class="en">First byte</span></b></td>
+        <td>0,49 s</td>
+        <td>0,50 s — <span class="it">alla pari</span><span class="en">on par</span></td></tr>
+      <tr><td><b><span class="it">Avversario che vede tutte le linee: scaricamenti attribuiti a chi li ha fatti</span><span class="en">Adversary watching every line: downloads linked to who made them</span></b></td>
+        <td>91%</td>
+        <td>80% — <span class="it">alla pari: è il limite di <i>tutte</i> le reti in tempo reale</span><span class="en">on par: the limit of <i>every</i> real-time network</span></td></tr>
+      <tr><td><b><span class="it">Chat: lo stesso avversario scopre chi scrive a chi</span><span class="en">Chat: the same adversary finds who writes to whom</span></b></td>
+        <td><span class="it">— (Tor non ha una chat sua)</span><span class="en">— (Tor has no chat of its own)</span></td>
+        <td><span class="it">normale 100%; <b>modalità riservata: al livello del caso</b> (17-33%, a caso 20%)</span><span class="en">normal 100%; <b>private mode: at chance level</b> (17-33%, chance 20%)</span></td></tr>
+      <tr><td><b><span class="it">Un gestore di nodi disonesto collega entrata e uscita</span><span class="en">A dishonest node operator links entry and exit</span></b></td>
+        <td><span class="it">no (famiglie e guardie)</span><span class="en">no (families and guards)</span></td>
+        <td><span class="it">no: 0% (famiglie e guardie, dalla 0.3.3)</span><span class="en">no: 0% (families and guards, since 0.3.3)</span></td></tr>
     </tbody>
   </table>
+  <h3 style="margin-top:26px"><span class="it">Cosa c'è</span><span class="en">What is there</span></h3>
+  <table>
+    <thead><tr><th></th><th>Tor</th><th>Nyctalus</th></tr></thead>
+    <tbody>
+      <tr><td><b><span class="it">Maturità</span><span class="en">Maturity</span></b></td>
+        <td><span class="it"><b>20 anni</b>, revisioni indipendenti, milioni di utenti, migliaia di nodi</span><span class="en"><b>20 years</b>, independent audits, millions of users, thousands of nodes</span></td>
+        <td><span class="it">prototipo, <b>non ancora revisionato</b>; reti piccole</span><span class="en">prototype, <b>not yet audited</b>; small networks</span></td></tr>
+      <tr><td><b><span class="it">Trasporto</span><span class="en">Transport</span></b></td>
+        <td>TCP</td>
+        <td><span class="it">QUIC/UDP (un pacchetto perso non ferma gli altri)</span><span class="en">QUIC/UDP (a lost packet does not stall the others)</span></td></tr>
+      <tr><td><b><span class="it">Più strade insieme</span><span class="en">Several paths at once</span></b></td>
+        <td><span class="it">sì (conflux, dalla 0.4.8)</span><span class="en">yes (conflux, since 0.4.8)</span></td>
+        <td><span class="it">sì (2 circuiti di serie, fino a 8)</span><span class="en">yes (2 circuits by default, up to 8)</span></td></tr>
+      <tr><td><b><span class="it">Camuffamento del traffico</span><span class="en">Traffic camouflage</span></b></td>
+        <td><span class="it"><b>ponti</b> con obfs4, Snowflake, meek: collaudati contro la censura</span><span class="en"><b>bridges</b> with obfs4, Snowflake, meek: proven against censorship</span></td>
+        <td><span class="it">chiave della rete, di serie nelle reti nuove; ponti nascosti e trasporto mimetico in arrivo</span><span class="en">network key, on by default in new networks; hidden bridges and mimicry transport coming</span></td></tr>
+      <tr><td><b><span class="it">Rumore di fondo</span><span class="en">Cover traffic</span></b></td>
+        <td><span class="it">limitato</span><span class="en">limited</span></td>
+        <td><span class="it">regolabile per rete; buste finte nella modalità riservata</span><span class="en">adjustable per network; dummy envelopes in private mode</span></td></tr>
+      <tr><td><b><span class="it">Chat, chiamate, videochiamate</span><span class="en">Chat, calls, video calls</span></b></td>
+        <td><span class="it">con app esterne</span><span class="en">with external apps</span></td>
+        <td><span class="it">integrate, con <b>modalità riservata</b> contro chi vede tutto</span><span class="en">built in, with <b>private mode</b> against a global observer</span></td></tr>
+      <tr><td><b><span class="it">File grandi</span><span class="en">Large files</span></b></td>
+        <td><span class="it">con app esterne (OnionShare)</span><span class="en">with external apps (OnionShare)</span></td>
+        <td><span class="it">integrati: pezzi verificati, più strade, pausa e ripresa</span><span class="en">built in: verified pieces, several paths, pause and resume</span></td></tr>
+      <tr><td><b><span class="it">Browser</span><span class="en">Browser</span></b></td>
+        <td><span class="it"><b>Tor Browser</b>: impronta uniforme, il riferimento</span><span class="en"><b>Tor Browser</b>: uniform fingerprint, the reference</span></td>
+        <td><span class="it">browser con impronta uniforme fra gli utenti Nyctalus + Nyctalus Firefox (profilo sul modello di Tor Browser)</span><span class="en">browser with a fingerprint uniform among Nyctalus users + Nyctalus Firefox (profile modelled on Tor Browser)</span></td></tr>
+      <tr><td><b><span class="it">Siti interni</span><span class="en">Hidden sites</span></b></td>
+        <td><code class="in">.onion</code></td>
+        <td><code class="in">.nyct</code></td></tr>
+      <tr><td><b><span class="it">Linguaggio</span><span class="en">Language</span></b></td>
+        <td>C</td>
+        <td><span class="it">Rust (meno errori di memoria)</span><span class="en">Rust (fewer memory bugs)</span></td></tr>
+    </tbody>
+  </table>
+  <p class="intro" style="font-size:.9rem;margin-top:14px"><span class="it">In breve: sul <b>tempo reale</b> (navigare, scaricare) Nyctalus è alla pari con Tor; sulla <b>chat</b>, con la modalità riservata, va oltre. Tor resta avanti in maturità, numero di utenti e camuffamento collaudato. Dove siamo e le prossime tappe: <a href="manuali/PIANO-ANONIMATO.html">piano verso una rete anonima</a>.</span><span class="en">In short: on <b>real time</b> (browsing, downloading) Nyctalus is on par with Tor; on <b>chat</b>, with private mode, it goes further. Tor stays ahead in maturity, number of users and proven camouflage. Where we are and next steps: <a href="manuali/PIANO-ANONIMATO.html">plan towards an anonymous network</a> (Italian).</span></p>
 </div></section>
 
 <section id="viaggio"><div class="wrap">
