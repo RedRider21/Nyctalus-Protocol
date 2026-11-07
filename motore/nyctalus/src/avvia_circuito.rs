@@ -223,7 +223,8 @@ async fn schedulatore(mut rx_out: mpsc::Receiver<Vec<u8>>, inbox: Vec<mpsc::Send
     let mut seq: u64 = 0;
     while let Some(cella) = rx_out.recv().await {
         let unita = conflux::impacchetta(seq, &cella);
-        let i = (seq as usize) % inbox.len();
+        let liberi: Vec<usize> = inbox.iter().map(|t| t.capacity()).collect();
+        let i = conflux::scegli_strada(&liberi, seq as usize);
         if inbox[i].send(unita).await.is_err() {
             break;
         }

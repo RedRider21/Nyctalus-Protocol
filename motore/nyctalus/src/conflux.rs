@@ -45,6 +45,22 @@ pub fn spacchetta(byte: &[u8]) -> Option<(u64, Vec<u8>)> {
 }
 
 /// Ricompositore: riordina le unità arrivate da circuiti diversi.
+/// Sceglie la strada (circuito) per la prossima unità: quella con la **coda più libera**; a parità
+/// si ruota partendo da `giro`. Le strade veloci si svuotano prima e ricevono più dati, quelle lente
+/// meno: la ragnatela somma le bande invece di andare al passo della più lenta (prima era a turno
+/// rigido: N strade = N × la più lenta). `liberi[i]` = posti liberi nella coda della strada i.
+pub fn scegli_strada(liberi: &[usize], giro: usize) -> usize {
+    let n = liberi.len().max(1);
+    let mut migliore = giro % n;
+    for k in 1..n {
+        let i = (giro + k) % n;
+        if liberi[i] > liberi[migliore] {
+            migliore = i;
+        }
+    }
+    migliore
+}
+
 pub struct Riordina {
     prossimo: u64,
     buffer: BTreeMap<u64, Vec<u8>>,
@@ -98,6 +114,14 @@ mod test {
         // pacchetto di apertura Sphinx, così il 1º quadro non si distingue.
         assert_eq!(LUNGHEZZA_UNITA, nyctalus_core::circuito::TAGLIA_PACCHETTO);
         assert_eq!(quadro_link(&[0u8; 16]).len(), LUNGHEZZA_UNITA);
+    }
+
+    #[test]
+    fn strada_piu_libera() {
+        assert_eq!(scegli_strada(&[10, 200, 50], 0), 1);
+        assert_eq!(scegli_strada(&[100, 100, 100], 2), 2, "a parità si ruota");
+        assert_eq!(scegli_strada(&[100, 100, 100], 3), 0);
+        assert_eq!(scegli_strada(&[0, 0], 1), 1);
     }
 
     #[test]

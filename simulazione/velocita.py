@@ -121,7 +121,7 @@ def prepara_nyctalus(out, a):
               "    processes:", "    - path: %s" % BIN,
               "      args: %s" % lista("node", "--listen", "0.0.0.0:4600", "--data", str(out / ("nodo%d" % i)),
                                        "--announce", "11.%d.0.1:4600" % i),
-              '      environment: { NYCTALUS_CONGESTIONE: "%s" }' % a.congestione,
+              '      environment: { NYCTALUS_CONGESTIONE: "%s", NYCTALUS_FINESTRA_KB: "%s" }' % (a.congestione, a.finestra),
               "      start_time: 1s", "      expected_final_state: running"]
     y += sito(out)
     rnd = random.Random(a.seme)
@@ -130,7 +130,7 @@ def prepara_nyctalus(out, a):
               "    - path: %s" % BIN,
               "      args: %s" % lista("start", "--directory", str(out / "directory.txt"), "--authority", pub,
                                        "--socks", "127.0.0.1:1080", "--circuits", str(a.circuiti)),
-              '      environment: { NYCTALUS_GUARDIE: "%s", NYCTALUS_CONGESTIONE: "%s" }' % (out / ("guardie%d" % u), a.congestione),
+              '      environment: { NYCTALUS_GUARDIE: "%s", NYCTALUS_CONGESTIONE: "%s", NYCTALUS_FINESTRA_KB: "%s" }' % (out / ("guardie%d" % u), a.congestione, a.finestra),
               "      start_time: 5s", "      expected_final_state: running"]
         y += scaricamento(u, inizio + rnd.uniform(0, 1), "127.0.0.1:1080")
     (out / "shadow.yaml").write_text("\n".join(y) + "\n")
@@ -163,6 +163,7 @@ def main():
     ap.add_argument("--mb", type=float, default=5)
     ap.add_argument("--circuiti", type=int, default=2)
     ap.add_argument("--seme", type=int, default=1)
+    ap.add_argument("--finestra", default="", help="Nyctalus: finestra per flusso in KB (NYCTALUS_FINESTRA_KB)")
     ap.add_argument("--congestione", default="", help="Nyctalus: bbr (di serie)|cubic|newreno (NYCTALUS_CONGESTIONE)")
     a = ap.parse_args()
     out = Path(a.cartella).resolve()
@@ -177,9 +178,9 @@ def main():
     tempi, primi, falliti = risultati(out, byte)
     media = sum(tempi) / len(tempi) if tempi else 0.0
     vel = sum(byte / t for t in tempi) / len(tempi) * 8 / 1e6 if tempi else 0.0
-    print("RISULTATO congestione=%s sistema=%s perdita=%g banda_nodi=%s utenti=%d mb=%g circuiti=%s seme=%d riusciti=%d falliti=%d "
+    print("RISULTATO finestra=%s congestione=%s sistema=%s perdita=%g banda_nodi=%s utenti=%d mb=%g circuiti=%s seme=%d riusciti=%d falliti=%d "
           "tempo_medio=%.2f primo_byte=%.2f mbit_s=%.2f"
-          % (a.congestione or "bbr", a.sistema, a.perdita, (a.bande.replace(",", "/") if a.bande else (a.banda_nodi or "-")), a.utenti, a.mb, a.circuiti if a.sistema == "nyctalus" else "-",
+          % (a.finestra or "-", a.congestione or "bbr", a.sistema, a.perdita, (a.bande.replace(",", "/") if a.bande else (a.banda_nodi or "-")), a.utenti, a.mb, a.circuiti if a.sistema == "nyctalus" else "-",
              a.seme, len(tempi), falliti, media, sum(primi) / len(primi) if primi else 0.0, vel))
     # i file scaricati non servono più: si tiene solo il registro (il disco è quasi pieno)
     shutil.rmtree(out / "sito", ignore_errors=True)

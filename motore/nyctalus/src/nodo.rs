@@ -474,7 +474,9 @@ async fn schedulatore_ritorno(
             if c.is_empty() {
                 None
             } else {
-                Some(c[(seq as usize) % c.len()].1.clone())
+                // la strada con la coda più libera (non più a turno rigido)
+                let liberi: Vec<usize> = c.iter().map(|(_, t)| t.capacity()).collect();
+                Some(c[conflux::scegli_strada(&liberi, seq as usize)].1.clone())
             }
         };
         match destinatario {

@@ -137,6 +137,15 @@ fn trasporto_client() -> Arc<quinn::TransportConfig> {
     // caduta si propaga lungo il circuito fino al punto d'incontro.
     t.keep_alive_interval(Some(std::time::Duration::from_secs(5)));
     t.max_idle_timeout(Some(std::time::Duration::from_secs(15).try_into().expect("15s valido")));
+    // Finestra per flusso (= per circuito): di serie 256 KB (quinn: 1,25 MB). Con finestre grandi un
+    // nodo lento accumula secondi di coda prima che chi spedisce se ne accorga: il distributore
+    // della ragnatela non vede quale strada è lenta e i ritardi crescono. Misure (velocita.py, nodi
+    // da 5 a 50 Mbit): 1 utente 5,8 → 7,2 Mbit/s, 4 utenti 3,9 → 4,5, linea pulita 9,7 → 10,9.
+    // Limite: 256 KB per giro di andata e ritorno = ~20 Mbit/s per circuito a 100 ms fra due nodi.
+    // `NYCTALUS_FINESTRA_KB` (16-4096) per cambiarla.
+    let kb = std::env::var("NYCTALUS_FINESTRA_KB").ok().and_then(|v| v.parse::<u32>().ok())
+        .filter(|k| (16..=4096).contains(k)).unwrap_or(256);
+    t.stream_receive_window(quinn::VarInt::from_u32(kb * 1024));
     // Controllo di congestione: di serie **BBR** (dalla 0.3.8). Cubic, quello di serie di quinn,
     // scambia ogni pacchetto perso per congestione e dimezza la velocità: con l'1% di perdite
     // (Wi-Fi, rete mobile) eravamo a 1,3 Mbit/s contro i 2,3 di Tor; con BBR 2,2-2,4, e senza
