@@ -12,6 +12,9 @@
 # Opzioni: --ip IP  --nodi N (1-8)  --porta PRIMA_PORTA  --camuffamento HEX
 #          --rumore HZ  --utente  --si (nessuna domanda: valori indicati o predefiniti)
 #          --codice NYCT1:…  il codice della rete: ne prende camuffamento e rumore di fondo
+#          --http3 NOME  FORMA HTTP/3: i nodi sembrano il sito NOME (porta consigliata 443);
+#                    di solito arriva già dal --codice della rete
+#          --nuova-identita  rifà chiavi e certificato dei nodi (cambiano le righe: rimandale)
 #          --ponte   PONTE NASCOSTO: i nodi non vanno nell'elenco pubblico; ognuno ha una sua
 #                    chiave e stampa una RIGA DEL PONTE segreta, da dare solo a chi lo usa
 #
@@ -20,7 +23,7 @@
 set -euo pipefail
 QUI="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 R="${NYCTALUS_RADICE:-}"            # solo per le prove: radice finta al posto di /
-IP=""; NODI=""; PORTA=""; CAMUFFA=""; RUMORE="0"; UTENTE=0; SI=0; CODICE=""; PONTE=0
+IP=""; NODI=""; PORTA=""; CAMUFFA=""; RUMORE="0"; UTENTE=0; SI=0; CODICE=""; PONTE=0; FORMA=""; NOME_H3=""; NUOVA=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --ip) IP="$2"; shift ;;
@@ -31,6 +34,8 @@ while [ $# -gt 0 ]; do
     --codice) CODICE="$2"; shift ;;
     --utente) UTENTE=1 ;;
     --ponte) PONTE=1 ;;
+    --http3) FORMA=h3; NOME_H3="$2"; shift ;;
+    --nuova-identita) NUOVA=1 ;;
     --si) SI=1 ;;
     *) echo "opzione sconosciuta: $1"; exit 2 ;;
   esac
@@ -74,21 +79,28 @@ case "$IP" in 10.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[01].*)
 esac
 [ -n "$NODI" ] || NODI="$(chiedi "Quanti nodi su questo server (1 se hai più server; 3-4 se è l'unico)" 4)"
 [[ "$NODI" =~ ^[1-8]$ ]] || err "numero di nodi fra 1 e 8"
-[ -n "$PORTA" ] || PORTA="$(chiedi "Prima porta UDP (le altre a seguire)" 4601)"
-[[ "$PORTA" =~ ^[0-9]+$ ]] && [ "$PORTA" -ge 1024 ] && [ "$((PORTA + NODI - 1))" -le 65535 ] || err "porta non valida"
 # dal codice della rete: camuffamento e rumore di fondo (se la rete li usa)
 if [ -n "$CODICE" ]; then
-  read -r C_CAM C_RUM < <(python3 -c "import base64,json,sys,re
+  read -r C_CAM C_RUM C_FORMA C_NOME < <(python3 -c "import base64,json,sys,re
 c=sys.argv[1].strip()
-if not c.startswith('NYCT1:'): print('ERR -'); sys.exit()
+if not c.startswith('NYCT1:'): print('ERR - - -'); sys.exit()
 d=json.loads(base64.urlsafe_b64decode(c[6:]+'='*(-len(c[6:])%4)))
 cam=str(d.get('camuffamento','')); rum=d.get('rumore',0)
-print((cam if re.fullmatch('[0-9a-f]{64}',cam) else '-'), (rum if isinstance(rum,(int,float)) and 0<rum<=10 else 0))" "$CODICE" 2>/dev/null || echo "ERR -")
+nome=str(d.get('nome_h3',''))
+print((cam if re.fullmatch('[0-9a-f]{64}',cam) else '-'), (rum if isinstance(rum,(int,float)) and 0<rum<=10 else 0),
+      ('h3' if d.get('forma')=='h3' else '-'), (nome if re.fullmatch('[A-Za-z0-9.-]{1,253}',nome) else '-'))" "$CODICE" 2>/dev/null || echo "ERR - - -")
   [ "$C_CAM" = ERR ] && err "codice di rete non valido (deve iniziare con NYCT1:)"
   [ "$C_CAM" != "-" ] && CAMUFFA="$C_CAM" && RUMORE="$C_RUM"
+  if [ "$C_FORMA" = h3 ] && [ -z "$FORMA" ]; then FORMA=h3; [ "$C_NOME" != "-" ] && NOME_H3="$C_NOME"; ok "Dal codice della rete: forma HTTP/3${NOME_H3:+ (sito $NOME_H3)}"; fi
   [ "$C_CAM" != "-" ] && ok "Dal codice della rete: camuffamento acceso, rumore di fondo $RUMORE" || ok "La rete del codice non usa il camuffamento"
 fi
 [ -z "$CAMUFFA" ] || [[ "$CAMUFFA" =~ ^[0-9a-f]{64}$ ]] || err "chiave di camuffamento: 64 caratteri esadecimali"
+# la porta si chiede dopo aver letto il codice: nella forma HTTP/3 si propone la 443 dei siti
+PORTA_DI_SERIE=4601; [ "$FORMA" = h3 ] && PORTA_DI_SERIE=443
+[ -n "$PORTA" ] || PORTA="$(chiedi "Prima porta UDP (le altre a seguire)" $PORTA_DI_SERIE)"
+[[ "$PORTA" =~ ^[0-9]+$ ]] && [ "$PORTA" -ge 1 ] && [ "$((PORTA + NODI - 1))" -le 65535 ] || err "porta non valida: $PORTA"
+# sotto la 1024 (es. 443) solo come servizio di sistema: il servizio riceve il permesso di usarla
+[ "$PORTA" -ge 1024 ] || [ "$UTENTE" = 0 ] || err "porta $PORTA: sotto la 1024 serve l'installazione di sistema (sudo, senza --utente)"
 PORTE=(); for i in $(seq 0 $((NODI - 1))); do PORTE+=($((PORTA + i))); done
 
 # --- programma e utente di servizio -------------------------------------------------
@@ -110,6 +122,11 @@ fi
 OPZIONI="--cover $RUMORE"
 [ -n "$CAMUFFA" ] && OPZIONI="$OPZIONI --obfuscation $CAMUFFA"
 [ "$PONTE" = 1 ] && OPZIONI="$OPZIONI --hidden-bridge"
+if [ "$FORMA" = h3 ]; then
+  [ -n "$CAMUFFA" ] || err "la forma HTTP/3 usa la chiave della rete: indica --codice NYCT1:… (o --camuffamento)"
+  [ -z "$NOME_H3" ] || [[ "$NOME_H3" =~ ^[A-Za-z0-9.-]{1,253}$ ]] || err "--http3: un nome di sito (es. www.miosito.it)"
+  OPZIONI="$OPZIONI --mimic${NOME_H3:+ --mimic-name $NOME_H3}"
+fi
 RIGA_F="riga-elenco.txt"; [ "$PONTE" = 1 ] && RIGA_F="riga-ponte.txt"
 umask 077
 cat > "$CONF" <<EOF
@@ -128,9 +145,12 @@ umask 022
 say "Preparo l'identità di ${#PORTE[@]} nodi"
 for p in "${PORTE[@]}"; do
   D="$STATO/nodo-$p"; mkdir -p "$D"; chmod 700 "$D"
+  if [ "$NUOVA" = 1 ]; then rm -f "$D/segreto" "$D/tls-cert.der" "$D/tls-chiave.der" "$D/riga-elenco.txt" "$D/riga-ponte.txt" "$D/chiave-ponte"; fi
   if [ ! -s "$D/$RIGA_F" ] || ! grep -q "^$IP:$p," "$D/$RIGA_F"; then
     rm -f "$D/riga-elenco.txt" "$D/riga-ponte.txt"
     PARTE=(); [ "$PONTE" = 1 ] && PARTE=(--hidden-bridge)
+    # forma HTTP/3: il certificato nuovo nasce con il nome del sito (serve anche la chiave)
+    [ "$FORMA" = h3 ] && PARTE+=(--obfuscation "$CAMUFFA" --mimic ${NOME_H3:+--mimic-name "$NOME_H3"})
     "$BASE/bin/nyctalus" node --listen 127.0.0.1:0 --data "$D" --announce "$IP:$p" ${PARTE[@]+"${PARTE[@]}"} > /dev/null 2>&1 & NP=$!
     for _ in $(seq 1 50); do [ -s "$D/$RIGA_F" ] && break; sleep 0.1; done
     kill "$NP" 2>/dev/null || true; wait "$NP" 2>/dev/null || true
@@ -155,6 +175,7 @@ EnvironmentFile=${CONF#$R}
 ExecStart=${BASE#$R}/bin/nyctalus node --listen 0.0.0.0:%i --data \${NYCTALUS_STATO}/nodo-%i --announce \${NYCTALUS_IP}:%i \$NYCTALUS_OPZIONI
 Restart=always
 RestartSec=3
+$( [ "${PORTE[0]}" -lt 1024 ] && [ -n "$PROPRIETARIO" ] && printf 'AmbientCapabilities=CAP_NET_BIND_SERVICE\nCapabilityBoundingSet=CAP_NET_BIND_SERVICE\n' )
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true

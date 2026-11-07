@@ -25,8 +25,9 @@ Per il GESTORE della rete (chi la tiene in piedi):
                                          aggiunge alla rete di casa (o Internet) il NODO DI UN
                                          AMICO (righe dal suo «installa.sh»); vale subito
   nyctalus-rete ospite togli IP:PORTA [--internet] · ospite elenco [--internet]
-  nyctalus-rete protezione [si|no] [--rumore HZ] [--casa|--internet]
-                                         CAMUFFAMENTO (traffico simile a rumore) e RUMORE DI
+  nyctalus-rete protezione [si|no] [--rumore HZ] [--forma rumore|h3 [--nome SITO]] [--casa|--internet]
+                                         CAMUFFAMENTO (traffico simile a rumore, oppure con
+                                         --forma h3 simile a un sito HTTP/3) e RUMORE DI
                                          FONDO per tutta la rete; nel codice per i client
   nyctalus-rete rubrica [--codice NYCT1:…] [--servizio [--togli|--stampa]]
                                          RUBRICA + CASELLA CIFRATA della rete, sempre accese
@@ -182,14 +183,21 @@ def prot_da_codice(cfg):
             out["rumore"] = r
     except (TypeError, ValueError):
         pass
+    # forma HTTP/3 (trasporto mimetico): i nodi sembrano un sito HTTP/3 con questo nome
+    if out.get("camuffamento") and cfg.get("forma") == "h3":
+        out["forma"] = "h3"
+        if re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?", str(cfg.get("nome_h3", ""))):
+            out["nome_h3"] = cfg["nome_h3"]
     return out
 
 
 def opz_prot(prot, rumore=True):
-    """Opzioni del motore per camuffamento (e rumore) della rete."""
+    """Opzioni del motore per camuffamento (e rumore) della rete, e la forma HTTP/3."""
     o = []
     if prot.get("camuffamento"):
         o += ["--obfuscation", prot["camuffamento"]]
+    if prot.get("forma") == "h3":
+        o += ["--mimic"] + (["--mimic-name", prot["nome_h3"]] if prot.get("nome_h3") else [])
     if rumore and prot.get("rumore"):
         o += ["--cover", "%g" % prot["rumore"]]
     return o
@@ -218,12 +226,19 @@ class Rete:
             return {}                               # spenta (la chiave resta da parte)
         return prot_da_codice(d)                    # reti nate prima della 0.3.4: nessun file = spenta
 
-    def imposta_protezione(self, accesa, rumore=RUMORE_DI_SERIE):
+    def imposta_protezione(self, accesa, rumore=RUMORE_DI_SERIE, forma=None, nome=None):
         # la chiave si conserva anche da spenta: riaccendendo, i nodi già installati vanno ancora bene
-        vecchia = self._prot_file().get("camuffamento")
+        prima = self._prot_file()
+        vecchia = prima.get("camuffamento")
         if not re.fullmatch(r"[0-9a-f]{64}", str(vecchia or "")):
             vecchia = None
         prot = {"attiva": bool(accesa), "camuffamento": vecchia or os.urandom(32).hex(), "rumore": rumore}
+        # forma: «rumore» (di serie) o «h3» (sembra un sito HTTP/3); si conserva se non indicata
+        forma = forma or prima.get("forma") or "rumore"
+        prot["forma"] = forma
+        nome = prima.get("nome_h3", "") if nome is None else nome
+        if forma == "h3" and nome:
+            prot["nome_h3"] = nome
         scrivi_privato(self.f_prot, json.dumps(prot, indent=1))
 
     def ospiti(self):
@@ -436,7 +451,7 @@ def importa(argomento):
         except Exception:     # noqa: BLE001
             cfg = {}
     if argomento == "--prova":
-        for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella", "camuffamento", "rumore"):
+        for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3"):
             cfg.pop(k, None)
         msg = "questo PC torna alla rete di prova locale"
     else:
@@ -451,7 +466,7 @@ def importa(argomento):
         except ValueError as e:
             esci(str(e))
         cfg.update({"directory_url": rete["directory_url"], "authority": rete["authority"], "nome_rete": rete["nome"]})
-        for k in ("rubrica", "casella", "camuffamento", "rumore"):   # se la rete li ha
+        for k in ("rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3"):   # se la rete li ha
             cfg.pop(k, None)
             if rete.get(k):
                 cfg[k] = rete[k]
@@ -516,7 +531,7 @@ def usa_rete(n):
         esci("rete %d non trovata (nyctalus-rete reti per l'elenco)" % n)
     r = reti[n]
     cfg.update({"directory_url": r["directory_url"], "authority": r["authority"], "nome_rete": r["nome"], "reti": reti})
-    for k in ("rubrica", "casella", "camuffamento", "rumore"):   # della rete (se ci sono)
+    for k in ("rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3"):   # della rete (se ci sono)
         cfg.pop(k, None)
         if r.get(k):
             cfg[k] = r[k]
@@ -646,6 +661,13 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None):
             porta = porta_base + i
             d = r.dir / ("nodo-%d" % porta)
             (d / "riga-elenco.txt").unlink(missing_ok=True)
+            # forma HTTP/3: un certificato vecchio («rcgen self signed cert», valido dal 1975 al
+            # 4096) si riconoscerebbe sondando il nodo; i nodi di casa sono nostri e l'elenco si
+            # rifirma a ogni avvio, quindi si rifà l'identità del nodo con dati normali
+            cert = d / "tls-cert.der"
+            if r.protezione().get("forma") == "h3" and cert.exists() and b"rcgen self signed cert" in cert.read_bytes():
+                for f in ("tls-cert.der", "tls-chiave.der", "segreto"):
+                    (d / f).unlink(missing_ok=True)
             log = open(r.dir / ("nodo-%d.log" % porta), "ab")
             proc.append(subprocess.Popen([b, "node", "--listen", "0.0.0.0:%d" % porta, "--data", str(d),
                                           "--announce", "%s:%d" % (ip, porta)] + opz_prot(r.protezione()),
@@ -938,6 +960,12 @@ def principale(args):
         quale = "casa" if "--casa" in args else "internet" if "--internet" in args else None
         args = [a for a in args if a not in ("--casa", "--internet")]
         rumore = opzione(args, "--rumore")
+        forma = opzione(args, "--forma")
+        nome = opzione(args, "--nome")
+        if forma is not None and forma not in ("h3", "rumore"):
+            esci("--forma: «rumore» (traffico simile a rumore, di serie) oppure «h3» (sembra un sito HTTP/3)")
+        if nome is not None and not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?", nome):
+            esci("--nome: un nome di sito (lettere, numeri, punti, trattini), es. www.miosito.it")
         r = Rete(DATI / quale) if quale else Rete(DATI)
         if not r.esiste():
             esci("questa rete non esiste ancora" + (" (avvia prima: nyctalus-rete casa%s)" % (" --internet NOME" if quale == "internet" else "") if quale else ""))
@@ -948,7 +976,7 @@ def principale(args):
                     assert 0 < rumore <= 10
                 except (ValueError, AssertionError):
                     esci("--rumore: un numero fra 0,1 e 10 (celle finte al secondo)")
-            r.imposta_protezione(args[0] != "no", rumore if rumore is not None else RUMORE_DI_SERIE)
+            r.imposta_protezione(args[0] != "no", rumore if rumore is not None else RUMORE_DI_SERIE, forma, nome)
             if r.f_codice.exists():
                 url = json.loads((r.dir / "nyctalus-rete.json").read_text()).get("directory_url") if (r.dir / "nyctalus-rete.json").exists() else None
                 if url:
@@ -960,7 +988,9 @@ def principale(args):
         print("Camuffamento: %s" % ("acceso · chiave %s" % p["camuffamento"] if p.get("camuffamento") else "spento"))
         print("Rumore di fondo: %s" % ("%g celle finte al secondo" % p["rumore"] if p.get("rumore") else "spento"))
         if p.get("camuffamento"):
-            print("Sui server dei nodi: ./installa.sh --camuffamento %s --rumore %g" % (p["camuffamento"], p.get("rumore", 0)))
+            print("Forma: %s" % ("HTTP/3: i nodi sembrano il sito «%s» (porta consigliata 443)" % p.get("nome_h3", "senza nome")
+                                 if p.get("forma") == "h3" else "rumore (traffico simile a rumore)"))
+            print("Sui server dei nodi: ./installa.sh --codice NYCT1:…   (prende chiave, rumore e forma dal codice)")
     elif cmd == "ospite":
         internet = "--internet" in args
         if internet:

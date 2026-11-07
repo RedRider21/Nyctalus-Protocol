@@ -707,6 +707,10 @@ class Browser(FunzioniExtra, Gtk.Window):
                             prot += ["--cover", "%g" % float(rum)]
                     except (TypeError, ValueError):
                         pass
+                    if config.get("forma") == "h3":          # forma HTTP/3: sembra un sito
+                        prot += ["--mimic"]
+                        if re.fullmatch(r"[A-Za-z0-9.-]{1,253}", str(config.get("nome_h3", ""))):
+                            prot += ["--mimic-name", config["nome_h3"]]
                 # ponti nascosti della rete: per ambiente (la riga di comando la vede chiunque)
                 ponti = (config.get("ponti") or {}).get(auth, [])
                 ambiente = dict(os.environ, NYCTALUS_PONTI=";".join(ponti))

@@ -70,4 +70,36 @@ if command -v google-chrome > /dev/null && command -v openssl > /dev/null; then
 else
   salta "Chrome o openssl non installati: niente prova con il browser"
 fi
+
+# 6) gestore, codice di rete, PC, telefono, installatore dei server (HOME finte: mai i dati veri)
+unset NYCTALUS_MIMETICO NYCTALUS_NOME_MIMETICO
+G="$ROOT/pc/gestore-rete/nyctalus-rete"; HG="$TMP/gestore"; mkdir -p "$HG"
+HOME="$HG" NYCTALUS_BIN="$BIN" python3 "$G" crea --nome prova > /dev/null 2>&1
+HOME="$HG" NYCTALUS_BIN="$BIN" python3 "$G" protezione si --forma h3 --nome $NOME > "$TMP/prot.log" 2>&1
+HOME="$HG" NYCTALUS_BIN="$BIN" python3 "$G" codice --url http://127.0.0.1:9/directory.txt > "$TMP/cod.log" 2>&1
+COD=$(grep -oE 'NYCT1:[A-Za-z0-9_-]+' "$TMP/cod.log" | head -1)
+leggi() { python3 -c "import base64,json,sys;c=sys.argv[1][6:];print(json.loads(base64.urlsafe_b64decode(c+'='*(-len(c)%4))).get(sys.argv[2],''))" "$1" "$2"; }
+[ "$(leggi "$COD" forma)" = h3 ] && [ "$(leggi "$COD" nome_h3)" = $NOME ] && [ "$(leggi "$COD" nome)" = prova ] \
+  && pass "gestore: «protezione si --forma h3 --nome $NOME» finisce nel codice di rete (e il nome della rete resta)" || fail "codice: $(cat "$TMP/prot.log" "$TMP/cod.log" | tail -4)"
+HOME="$HG" NYCTALUS_BIN="$BIN" python3 "$G" protezione si --forma xyz 2>&1 | grep -q "rumore.*h3" && pass "forma sconosciuta rifiutata" || fail "forma xyz accettata"
+CAM=$(leggi "$COD" camuffamento)
+mkdir -p "$TMP/cliente"
+HOME="$TMP/cliente" python3 "$G" importa "$COD" > /dev/null 2>&1
+python3 -c "import json,sys;c=json.load(open(sys.argv[1]));sys.exit(0 if c.get('forma')=='h3' and c.get('nome_h3')==sys.argv[2] and c.get('nome_rete')=='prova' else 1)" \
+  "$TMP/cliente/.nyctalus-browser/config.json" $NOME && pass "PC: «importa» salva la forma HTTP/3 (chat, browser e Firefox la passano al motore)" || fail "importa: $(cat "$TMP/cliente/.nyctalus-browser/config.json")"
+O=$(cd "$TMP" && HOME="$TMP/cliente" python3 -c "import sys;sys.path.insert(0,sys.argv[1]);import nyctalus_mobile as m;print(' '.join(m.opz_prot(m.leggi_codice(sys.argv[2]))))" "$ROOT/mobile/orchestratore" "$COD" 2>&1)
+[ "$O" = "--obfuscation $CAM --mimic --mimic-name $NOME --cover 0.2" ] && pass "telefono/Windows: dal codice → --mimic --mimic-name $NOME" || fail "orchestratore: $O"
+RADICE="$TMP/radice"; F="$TMP/finti"; mkdir -p "$RADICE" "$F"
+printf '#!/bin/sh\nexit 0\n' > "$F/systemctl"; printf '#!/bin/sh\nexit 0\n' > "$F/useradd"; chmod +x "$F"/*
+PK="$TMP/Nyctalus-Server"; mkdir -p "$PK/bin"; cp "$BIN" "$PK/bin/nyctalus"
+cp "$ROOT/server/installa-nodo.sh" "$PK/installa.sh"; cp "$ROOT/server/nyctalus-server" "$ROOT/server/disinstalla.sh" "$PK/"
+env NYCTALUS_RADICE="$RADICE" PATH="$F:$PATH" bash "$PK/installa.sh" --ip 127.0.0.1 --nodi 1 --si --codice "$COD" > "$TMP/inst.log" 2>&1
+CONF="$RADICE/etc/nyctalus/server.conf"
+grep -q "NYCTALUS_OPZIONI=.*--mimic --mimic-name $NOME" "$CONF" && grep -q 'NYCTALUS_PORTE="443"' "$CONF" \
+  && pass "server: «installa.sh --codice» prende la forma HTTP/3 e propone la porta 443" || fail "installatore: $(grep -E 'OPZIONI|PORTE' "$CONF" 2>&1; tail -3 "$TMP/inst.log")"
+openssl x509 -inform der -in "$RADICE/var/lib/nyctalus/nodo-443/tls-cert.der" -noout -subject 2>/dev/null | grep -q "CN = $NOME" \
+  && pass "server: il certificato del nodo nasce con il nome del sito" || fail "certificato del server: $(ls "$RADICE/var/lib/nyctalus/nodo-443/" 2>&1)"
+R1=$(cat "$RADICE/var/lib/nyctalus/nodo-443/riga-elenco.txt")
+env NYCTALUS_RADICE="$RADICE" PATH="$F:$PATH" bash "$PK/installa.sh" --ip 127.0.0.1 --nodi 1 --si --codice "$COD" --nuova-identita > /dev/null 2>&1
+[ -n "$R1" ] && [ "$R1" != "$(cat "$RADICE/var/lib/nyctalus/nodo-443/riga-elenco.txt")" ] && pass "server: «--nuova-identita» rifà chiavi e certificato (riga nuova)" || fail "nuova identità"
 [ "$KO" -eq 0 ]

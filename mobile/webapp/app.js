@@ -1137,6 +1137,7 @@ function impostazioni(solo) {
     bp.classList.toggle("nascosto", !x.condivisa);
     bpo.classList.toggle("nascosto", !x.condivisa);
     pontiRete = x.ponti || [];
+    if (x.forma === "h3") quale.textContent += " Forma HTTP/3: per chi osserva sembri un visitatore del sito «" + (x.nome_h3 || "senza nome") + "».";
     if (pontiRete.length) quale.textContent += " Entri da " + pontiRete.length + (pontiRete.length === 1 ? " ponte nascosto." : " ponti nascosti.");
   }).catch(() => {});
   // PONTI NASCOSTI: entrate private fuori dall'elenco pubblico (righe segrete avute da chi le gestisce)

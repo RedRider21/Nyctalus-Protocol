@@ -65,6 +65,10 @@ PROT=(); PROT_SITO=()
 CAM="$(leggi_cfg camuffamento)"; RUM="$(leggi_cfg rumore)"
 [[ "$CAM" =~ ^[0-9a-f]{64}$ ]] && PROT+=(--obfuscation "$CAM") && PROT_SITO+=(--obfuscation "$CAM")
 [[ "$RUM" =~ ^[0-9]+(\.[0-9]+)?$ ]] && [ -n "${PROT[*]:-}" ] && PROT+=(--cover "$RUM")
+if [ -n "${PROT[*]:-}" ] && [ "$(leggi_cfg forma)" = h3 ]; then     # forma HTTP/3: sembra un sito
+  NOMEH3="$(leggi_cfg nome_h3)"; [[ "$NOMEH3" =~ ^[A-Za-z0-9.-]{1,253}$ ]] || NOMEH3=""
+  PROT+=(--mimic ${NOMEH3:+--mimic-name "$NOMEH3"}); PROT_SITO+=(--mimic ${NOMEH3:+--mimic-name "$NOMEH3"})
+fi
 # ponti nascosti della rete (righe segrete): al motore per variabile d'ambiente, non sulla riga
 # di comando, che tutti gli utenti del computer vedono con «ps»
 export NYCTALUS_PONTI="$(python3 -c "import json,sys

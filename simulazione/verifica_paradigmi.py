@@ -13,7 +13,7 @@ su TUTTE le macchine). Si controlla quello che il progetto promette:
   6. rumore di fondo: traffico anche quando l'utente è fermo;
   7. forma dei pacchetti fra utente ed entrata.
 
-uso: verifica_paradigmi.py CARTELLA [--camuffamento] [--rumore 0.2]
+uso: verifica_paradigmi.py CARTELLA [--camuffamento | --http3 NOME] [--rumore 0.2] [--porta 4600]
 """
 import argparse
 import collections
@@ -52,7 +52,7 @@ def prepara(out, a):
         d = out / ("nodo%d" % i)
         d.mkdir()
         p = subprocess.Popen([str(BIN), "node", "--listen", "127.0.0.1:0", "--data", str(d),
-                              "--announce", "%s:4600" % NODI[i - 1]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                              "--announce", "%s:%d" % (NODI[i - 1], a.porta)] + (["--mimic", "--mimic-name", a.http3] if a.http3 else []), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(50):
             if (d / "riga-elenco.txt").exists() and (d / "riga-elenco.txt").read_text().strip():
                 break
@@ -64,6 +64,8 @@ def prepara(out, a):
         capture_output=True, text=True).stdout)
     lista = lambda *x: "[" + ", ".join('"%s"' % v for v in x) + "]"
     prot = []
+    if a.http3:
+        prot += ["--obfuscation", os.urandom(32).hex(), "--mimic", "--mimic-name", a.http3]
     if a.camuffamento:
         prot += ["--obfuscation", os.urandom(32).hex()]
     if a.rumore > 0:
@@ -77,8 +79,8 @@ def prepara(out, a):
     for i in range(1, 5):
         y += ["  nodo%d:" % i, "    network_node_id: 0", "    ip_addr: %s" % NODI[i - 1], "    processes:",
               "    - path: %s" % BIN,
-              "      args: %s" % lista("node", "--listen", "0.0.0.0:4600", "--data", str(out / ("nodo%d" % i)),
-                                       "--announce", "%s:4600" % NODI[i - 1], *prot),
+              "      args: %s" % lista("node", "--listen", "0.0.0.0:%d" % a.porta, "--data", str(out / ("nodo%d" % i)),
+                                       "--announce", "%s:%d" % (NODI[i - 1], a.porta), *prot),
               "      start_time: 1s", "      expected_final_state: running"]
     y += ["  sito:", "    network_node_id: 0", "    ip_addr: %s" % SITO, "    processes:",
           "    - path: /usr/bin/python3",
@@ -282,13 +284,15 @@ def main():
     ap.add_argument("cartella")
     ap.add_argument("--camuffamento", action="store_true")
     ap.add_argument("--rumore", type=float, default=0.0)
+    ap.add_argument("--http3", default="", metavar="NOME", help="forma HTTP/3 con questo nome del server")
+    ap.add_argument("--porta", type=int, default=4600)
     a = ap.parse_args()
     out = Path(a.cartella).resolve()
     contenuto = prepara(out, a)
     subprocess.run([str(SHADOW), "--progress", "false", "shadow.yaml"], cwd=out,
                    stdout=open(out / "shadow.log", "w"), stderr=subprocess.STDOUT)
     r = analizza(out, contenuto)
-    print("== camuffamento %s · rumore %s/s ==" % ("SÌ" if a.camuffamento else "no", a.rumore))
+    print("== %s · rumore %s/s · porta %d ==" % ("forma HTTP/3 (%s)" % a.http3 if a.http3 else "camuffamento " + ("SÌ" if a.camuffamento else "no"), a.rumore, a.porta))
     print("scaricamento di %d KB arrivato intero: %s" % (FILE_KB, r["scaricato_ok"]))
     print("1. utente↔rete: UDP %d pacchetti, TCP %d · porte dei nodi %s" % (r["udp"], r["tcp"], r["porte"]))
     print("2. intestazioni QUIC v1 leggibili in uscita: %d · primo byte, chi² su 256 valori: %.0f (rumore puro ≈ 255)"

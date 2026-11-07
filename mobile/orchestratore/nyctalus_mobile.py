@@ -123,13 +123,20 @@ def prot_da_codice(cfg):
                 out["rumore"] = r
         except (TypeError, ValueError):
             pass
+    # forma HTTP/3 (trasporto mimetico): i nodi sembrano un sito HTTP/3 con questo nome
+    if out.get("camuffamento") and cfg.get("forma") == "h3":
+        out["forma"] = "h3"
+        if re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?", str(cfg.get("nome_h3", ""))):
+            out["nome_h3"] = cfg["nome_h3"]
     return out
 
 
 def opz_prot(cfg, rumore=True):
-    """Opzioni del motore per la rete configurata: --obfuscation (e --cover)."""
+    """Opzioni del motore per la rete configurata: --obfuscation (e --cover), forma HTTP/3."""
     p = prot_da_codice(cfg)
     o = ["--obfuscation", p["camuffamento"]] if p.get("camuffamento") else []
+    if p.get("forma") == "h3":
+        o += ["--mimic"] + (["--mimic-name", p["nome_h3"]] if p.get("nome_h3") else [])
     if rumore and p.get("rumore"):
         o += ["--cover", "%g" % p["rumore"]]
     return o
@@ -1098,6 +1105,8 @@ async def instrada(req, lettore, scrittore):
                                                "impronta": impronta_rete(cfg["authority"]) if condivisa else "",
                                                # solo gli indirizzi: le chiavi dei ponti non escono mai
                                                "ponti": [r.split(",")[0] for r in ponti_di(cfg)] if condivisa else [],
+                                               "forma": prot_da_codice(cfg).get("forma", "") if condivisa else "",
+                                               "nome_h3": prot_da_codice(cfg).get("nome_h3", "") if condivisa else "",
                                                "reti": reti})
     if p == "/api/servizi/avvia" and req.metodo == "POST":
         SERVIZI.avvia()
@@ -1228,13 +1237,13 @@ async def cambia_rete(lettore, scrittore, req):
             cfg["ponti"] = {k: v for k, v in tutti.items() if v}
             nome = cfg.get("nome_rete", "")
         elif dati.get("prova"):
-            for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella", "camuffamento", "rumore"):
+            for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3"):
                 cfg.pop(k, None)
             nome = ""
         elif "usa" in dati:
             rete = reti[int(dati["usa"])]
             cfg.update(directory_url=rete["directory_url"], authority=rete["authority"], nome_rete=rete["nome"])
-            for k in ("rubrica", "casella", "camuffamento", "rumore"):   # se la rete li ha
+            for k in ("rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3"):   # se la rete li ha
                 cfg.pop(k, None)
                 if rete.get(k):
                     cfg[k] = rete[k]
@@ -1244,7 +1253,7 @@ async def cambia_rete(lettore, scrittore, req):
         else:
             rete = leggi_codice(dati.get("codice", ""))
             cfg.update(directory_url=rete["directory_url"], authority=rete["authority"], nome_rete=rete["nome"])
-            for k in ("rubrica", "casella", "camuffamento", "rumore"):   # se la rete li ha
+            for k in ("rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3"):   # se la rete li ha
                 cfg.pop(k, None)
                 if rete.get(k):
                     cfg[k] = rete[k]
