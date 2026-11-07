@@ -36,13 +36,129 @@ use quinn::{
 
 use crate::Risultato;
 
+// --- forma «HTTP/3» (trasporto mimetico, PIANO-ANONIMATO invisibilità punto 2) ----------------
+//
+// Invece del rumore puro, il traffico ha l'aspetto di un normale sito HTTP/3: QUIC in chiaro
+// (niente offuscamento ChaCha20), stretta di mano con ALPN `h3`, nome del server scelto dal
+// gestore, porta di solito 443. La chiave della rete NON cifra più i pacchetti: diventa un
+// **contrassegno** di 16 byte che il client scrive all'inizio di ogni flusso, DENTRO la cifratura
+// TLS (un osservatore non lo vede). Chi si collega senza contrassegno, come un censore che sonda,
+// riceve una vera risposta HTTP/3 (404) e niente altro: sembra un sito web.
+
+static MIMETICO: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+
+/// Accende la forma HTTP/3 per tutto il processo (prima di creare endpoint e configurazioni).
+/// `nome`: il nome del server mandato nel primo pacchetto (vuoto = nessun nome).
+pub fn imposta_mimetico(nome: &str) {
+    let _ = MIMETICO.set(Some(nome.trim().to_string()));
+}
+
+/// La forma HTTP/3 è accesa?
+pub fn mimetico() -> bool {
+    MIMETICO.get().is_some_and(|m| m.is_some())
+}
+
+/// Il nome del server per la forma HTTP/3, se il gestore ne ha scelto uno.
+pub fn nome_mimetico() -> Option<String> {
+    MIMETICO.get().and_then(|m| m.clone()).filter(|n| !n.is_empty())
+}
+
+/// Lunghezza del contrassegno.
+pub const CONTRASSEGNO: usize = 16;
+
+/// Contrassegno della rete (o del ponte) ricavato dalla sua chiave.
+pub fn contrassegno(chiave: &[u8; 32]) -> [u8; CONTRASSEGNO] {
+    let k = blake3::derive_key("Nyctalus 2026-11-07 contrassegno della forma HTTP/3", chiave);
+    let mut c = [0u8; CONTRASSEGNO];
+    c.copy_from_slice(&k[..CONTRASSEGNO]);
+    c
+}
+
+/// Apre un flusso verso un nodo: nella forma HTTP/3 scrive per primo il contrassegno.
+pub async fn apri_flusso(
+    conn: &quinn::Connection,
+    chiave: Option<[u8; 32]>,
+) -> Risultato<(quinn::SendStream, quinn::RecvStream)> {
+    let (mut invio, ricezione) = conn.open_bi().await?;
+    if mimetico() {
+        let k = chiave.ok_or("HTTP/3 form needs the network key (--obfuscation)")?;
+        invio.write_all(&contrassegno(&k)).await?;
+    }
+    Ok((invio, ricezione))
+}
+
+/// Lato server, all'arrivo di un collegamento nella forma HTTP/3: come ogni server HTTP/3 apre il
+/// flusso di controllo con le impostazioni (SETTINGS vuote). I nostri client lo ignorano.
+pub fn apri_controllo_h3(conn: &quinn::Connection) {
+    if !mimetico() {
+        return;
+    }
+    let conn = conn.clone();
+    tokio::spawn(async move {
+        if let Ok(mut u) = conn.open_uni().await {
+            // tipo di flusso 0x00 = controllo; quadro SETTINGS (0x04) lungo 0
+            let _ = u.write_all(&[0x00, 0x04, 0x00]).await;
+            // il flusso di controllo resta aperto per tutta la vita del collegamento
+            std::mem::forget(u);
+        }
+    });
+}
+
+/// Lato server, su ogni flusso in arrivo: `true` se porta il contrassegno giusto (e allora i byte
+/// letti erano solo quelli); altrimenti risponde come un sito HTTP/3 (404) e chiude il flusso.
+pub async fn controlla_contrassegno(
+    invio: &mut quinn::SendStream,
+    ricezione: &mut quinn::RecvStream,
+    chiave: Option<[u8; 32]>,
+) -> bool {
+    if !mimetico() {
+        return true;
+    }
+    let atteso = chiave.map(|k| contrassegno(&k));
+    let mut letto = [0u8; CONTRASSEGNO];
+    let pieno = tokio::time::timeout(std::time::Duration::from_secs(5), ricezione.read_exact(&mut letto))
+        .await
+        .is_ok_and(|r| r.is_ok());
+    if pieno && atteso.is_some_and(|a| a == letto) {
+        return true;
+    }
+    // non è dei nostri: una normale risposta HTTP/3
+    let _ = invio.write_all(&risposta_h3()).await;
+    let _ = invio.finish();
+    let _ = ricezione.stop(quinn::VarInt::from_u32(0x100)); // H3_NO_ERROR
+    false
+}
+
+/// Una risposta HTTP/3 completa: HEADERS (:status 404, content-type text/html) + DATA.
+pub fn risposta_h3() -> Vec<u8> {
+    const CORPO: &[u8] = b"<!DOCTYPE html>\n<html><head><title>404 Not Found</title></head>\n<body><h1>Not Found</h1>\n<p>The requested URL was not found on this server.</p></body></html>\n";
+    // QPACK: Required Insert Count 0, Base 0, poi campi dalla tabella statica (RFC 9204, appendice A):
+    // 27 = ":status 404", 52 = "content-type text/html; charset=utf-8"
+    let intestazioni = [0x00u8, 0x00, 0xc0 | 27, 0xc0 | 52];
+    let mut v = vec![0x01, intestazioni.len() as u8];
+    v.extend_from_slice(&intestazioni);
+    v.push(0x00); // DATA
+    v.extend_from_slice(&varint(CORPO.len() as u64));
+    v.extend_from_slice(CORPO);
+    v
+}
+
+fn varint(n: u64) -> Vec<u8> {
+    match n {
+        0..=63 => vec![n as u8],
+        64..=16383 => ((n as u16) | 0x4000).to_be_bytes().to_vec(),
+        _ => ((n as u32) | 0x8000_0000).to_be_bytes().to_vec(),
+    }
+}
+
 /// Crea un endpoint server, con offuscamento se è data la chiave di rete.
 pub fn endpoint_server(
     server_config: ServerConfig,
     ascolta: SocketAddr,
     offusca: Option<[u8; 32]>,
 ) -> Risultato<Endpoint> {
-    match offusca {
+    // nella forma HTTP/3 i pacchetti restano QUIC in chiaro: la chiave fa da contrassegno
+    match offusca.filter(|_| !mimetico()) {
         None => Ok(Endpoint::server(server_config, ascolta)?),
         Some(segreto) => {
             let (socket, runtime) = socket_offuscato(ascolta, segreto, true)?;
@@ -53,7 +169,7 @@ pub fn endpoint_server(
 
 /// Crea un endpoint client, con offuscamento se è data la chiave di rete.
 pub fn endpoint_client(locale: SocketAddr, offusca: Option<[u8; 32]>) -> Risultato<Endpoint> {
-    match offusca {
+    match offusca.filter(|_| !mimetico()) {
         None => Ok(Endpoint::client(locale)?),
         Some(segreto) => {
             let (socket, runtime) = socket_offuscato(locale, segreto, false)?;
@@ -198,6 +314,17 @@ impl AsyncUdpSocket for SocketOffuscato {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn risposta_h3_ben_formata() {
+        let r = risposta_h3();
+        assert_eq!(&r[..6], &[0x01, 4, 0x00, 0x00, 0xdb, 0xf4], "HEADERS con :status 404 e content-type");
+        assert_eq!(r[6], 0x00, "poi DATA");
+        let (l, n) = if r[7] & 0xc0 == 0x40 { (u16::from_be_bytes([r[7] & 0x3f, r[8]]) as usize, 2) } else { (r[7] as usize, 1) };
+        assert_eq!(r.len(), 7 + n + l, "lunghezza del corpo coerente");
+        assert!(std::str::from_utf8(&r[7 + n..]).unwrap().contains("404 Not Found"));
+        assert_ne!(contrassegno(&[1; 32]), contrassegno(&[2; 32]));
+    }
 
     #[test]
     fn riconosce_solo_l_apertura_quic_v1() {

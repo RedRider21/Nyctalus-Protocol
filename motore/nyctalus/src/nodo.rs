@@ -103,7 +103,13 @@ pub async fn nodo(
     } else {
         println!("  downstream link authentication: off (prototype, unverified links)");
     }
-    if offusca.is_some() {
+    if crate::trasporto::mimetico() {
+        println!("  transport form: HTTP/3 (QUIC with ALPN h3, name {}); probers get a 404 page",
+                 crate::trasporto::nome_mimetico().unwrap_or_else(|| "none".into()));
+        if ingresso.is_none() {
+            return Err("HTTP/3 form needs the network key (--obfuscation) as access tag".into());
+        }
+    } else if ingresso.is_some() {
         println!("  transport camouflage: ON");
     }
     if copertura > 0.0 {
@@ -116,10 +122,15 @@ pub async fn nodo(
         let auth = auth.clone();
         tokio::spawn(async move {
             let Ok(connessione) = in_arrivo.await else { return };
-            while let Ok((invio, ricezione)) = connessione.accept_bi().await {
+            crate::trasporto::apri_controllo_h3(&connessione);
+            while let Ok((mut invio, mut ricezione)) = connessione.accept_bi().await {
                 let auth = auth.clone();
                 let connessione = connessione.clone();
                 tokio::spawn(async move {
+                    // forma HTTP/3: chi non porta il contrassegno riceve una pagina 404 e basta
+                    if !crate::trasporto::controlla_contrassegno(&mut invio, &mut ricezione, ingresso).await {
+                        return;
+                    }
                     if let Err(e) = gestisci_circuito(connessione, invio, ricezione, segreto, &auth, offusca).await {
                         eprintln!("circuit closed: {e}");
                     }
@@ -492,7 +503,7 @@ async fn collega_valle(
     };
     endpoint.set_default_client_config(config);
     let connessione = endpoint.connect(prossimo, &crate::tls::nome_per(&prossimo))?.await?;
-    let (mut invio, ricezione) = connessione.open_bi().await?;
+    let (mut invio, ricezione) = crate::trasporto::apri_flusso(&connessione, offusca).await?;
     scrivi_quadro(&mut invio, &pacchetto_apertura).await?;
     Ok((endpoint, invio, ricezione))
 }

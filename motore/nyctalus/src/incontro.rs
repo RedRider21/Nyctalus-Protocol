@@ -239,7 +239,7 @@ async fn canale_diretto(nodo: &NodoRete, offusca: Option<[u8; 32]>) -> Risultato
     let endpoint = crate::trasporto::endpoint_client(locale, offusca)?;
     let config = crate::tls::config_client(impronta)?;
     let conn = endpoint.connect_with(config, *indirizzo, &crate::tls::nome_per(indirizzo))?.await?;
-    let (invio, ricezione) = conn.open_bi().await?;
+    let (invio, ricezione) = crate::trasporto::apri_flusso(&conn, offusca).await?;
     Ok(Canale::Diretto { invio, ricezione, _conn: Some(conn), _endpoint: Some(endpoint) })
 }
 
@@ -255,13 +255,14 @@ async fn canale_onion(percorso: &[NodoRete], offusca: Option<[u8; 32]>) -> Risul
     let (guard, _, impronta_guard) = percorso[0];
     let locale: SocketAddr = if guard.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
     // all'entrata con la chiave del ponte, se è un ponte nascosto
-    let endpoint = crate::trasporto::endpoint_client(locale, crate::percorsi::chiave_entrata(&percorso[0], offusca))?;
+    let chiave_entrata = crate::percorsi::chiave_entrata(&percorso[0], offusca);
+    let endpoint = crate::trasporto::endpoint_client(locale, chiave_entrata)?;
     let config = match impronta_guard {
         Some(fp) => crate::tls::config_client(fp)?,
         None => crate::tls::config_client_insicuro()?,
     };
     let conn = endpoint.connect_with(config, guard, &crate::tls::nome_per(&guard))?.await?;
-    let (mut invio, ricezione) = conn.open_bi().await?;
+    let (mut invio, ricezione) = crate::trasporto::apri_flusso(&conn, chiave_entrata).await?;
     // 1º quadro = pacchetto di apertura Sphinx; poi i quadri onion (n da 0).
     scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
     Ok(Canale::Onion {

@@ -76,7 +76,8 @@ pub async fn avvia_circuito(
     let (guardiano, _, impronta_guard) = percorsi[0][0];
     let locale: SocketAddr = if guardiano.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
     // all'entrata con la chiave del ponte, se è un ponte nascosto
-    let mut endpoint = crate::trasporto::endpoint_client(locale, crate::percorsi::chiave_entrata(&percorsi[0][0], offusca))?;
+    let chiave_entrata = crate::percorsi::chiave_entrata(&percorsi[0][0], offusca);
+    let mut endpoint = crate::trasporto::endpoint_client(locale, chiave_entrata)?;
     endpoint.set_default_client_config(match impronta_guard {
         Some(fp) => crate::tls::config_client(fp)?,
         None => crate::tls::config_client_insicuro()?,
@@ -97,7 +98,7 @@ pub async fn avvia_circuito(
             .collect::<Risultato<_>>()?;
         let circuito = apri_circuito(&nodi_sphinx, b"nyctalus")?;
         let chiavi: Chiavi = Arc::new(circuito.chiavi_salto);
-        let (mut invio, ricezione) = connessione.open_bi().await?;
+        let (mut invio, ricezione) = crate::trasporto::apri_flusso(&connessione, chiave_entrata).await?;
         scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
 
         let (tx_unit, rx_unit) = mpsc::channel::<Vec<u8>>(256);

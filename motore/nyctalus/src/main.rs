@@ -74,6 +74,8 @@ Usage:
 'nodes': list the signed directory; with --probe, test which nodes are reachable now (and their RTT).
 'node'/'authority'/'directory': nodes and the signed directory.
 'circuit': like 'start' but with nodes given explicitly (testing).
+'--mimic [--mimic-name HOST]' (all, or env NYCTALUS_MIMETICO=1): HTTP/3 form: plain QUIC with ALPN h3 that looks like
+  a web site; the network key (--obfuscation) becomes a tag inside TLS; probers get an HTTP/3 404 page.
 '--hidden-bridge' (node): a private entry NOT in the directory, with its own camouflage key; it prints the
   bridge line. '--bridge LINE[;LINE]' (start/circuit/site/browse, or env NYCTALUS_PONTI, or 'bridge = ' in the config): always enter
   the network through those bridges.
@@ -101,6 +103,16 @@ async fn esegui() -> Risultato<()> {
         return esegui_exec(resto);
     }
     let (opzioni, posizionali) = leggi_opzioni(resto)?;
+    // forma HTTP/3 (trasporto mimetico): da opzione o da ambiente, prima di ogni collegamento
+    let mimic_amb = std::env::var("NYCTALUS_MIMETICO").is_ok_and(|v| v == "1" || v == "h3");
+    if opzione(&opzioni, "mimic").is_some() || mimic_amb {
+        let nome = opzione(&opzioni, "mimic-name").map(String::from)
+            .or_else(|| std::env::var("NYCTALUS_NOME_MIMETICO").ok()).unwrap_or_default();
+        if !nome.is_empty() && !nome.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-') {
+            return Err("--mimic-name: a host name (letters, digits, dots, hyphens)".into());
+        }
+        trasporto::imposta_mimetico(&nome);
+    }
     // ponti nascosti per entrare nella rete (start li legge anche dalla configurazione)
     // (meglio la variabile NYCTALUS_PONTI: la riga contiene una chiave e la riga di comando la
     // vedono tutti gli utenti del computer con `ps`, l'ambiente solo il proprietario)
@@ -335,7 +347,7 @@ async fn esegui() -> Risultato<()> {
 type Opzioni = HashMap<String, String>;
 
 /// Opzioni senza valore (flag sì/no): se presenti valgono "true".
-const FLAG_BOOLEANI: &[&str] = &["probe", "hidden-bridge"];
+const FLAG_BOOLEANI: &[&str] = &["probe", "hidden-bridge", "mimic"];
 
 fn leggi_opzioni(argomenti: &[String]) -> Risultato<(Opzioni, Vec<String>)> {
     let mut opzioni = HashMap::new();

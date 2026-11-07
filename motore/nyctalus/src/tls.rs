@@ -17,16 +17,32 @@ use rustls::{DigitallySignedStruct, SignatureScheme};
 
 use crate::Risultato;
 
-/// Nome del server nel certificato (non viene verificato: conta l'impronta). Il certificato
-/// viaggia cifrato (TLS 1.3): un osservatore non lo vede.
-pub const NOME_SERVER: &str = "nyctalus.invalid";
 
 /// Nome da usare collegandosi a `indirizzo`: il suo IP. Così il primo pacchetto QUIC **non porta
 /// nessun nome** (con un IP il client TLS non manda l'SNI). Prima c'era `nyctalus.invalid`, che
 /// chiunque poteva leggere nel primo pacchetto (le sue chiavi sono pubbliche per standard) se il
 /// camuffamento era spento: verificato in Shadow con `simulazione/verifica_paradigmi.py`.
 pub fn nome_per(indirizzo: &std::net::SocketAddr) -> String {
-    indirizzo.ip().to_string()
+    // forma HTTP/3: il nome scelto dal gestore, come un normale sito (se non c'è, nessun nome)
+    crate::trasporto::nome_mimetico().unwrap_or_else(|| indirizzo.ip().to_string())
+}
+
+/// ALPN della forma HTTP/3.
+const ALPN_H3: &[u8] = b"h3";
+
+/// Certificato nuovo con dati normali: il predefinito della libreria si chiamava «rcgen self signed
+/// cert» e valeva dal 1975 al 4096, riconoscibile da chiunque si colleghi (un censore che sonda).
+fn certificato_nuovo() -> Risultato<rcgen::CertifiedKey<rcgen::KeyPair>> {
+    let nome = crate::trasporto::nome_mimetico().unwrap_or_else(|| "localhost".to_string());
+    let mut p = rcgen::CertificateParams::new(vec![nome.clone()])?;
+    p.distinguished_name = rcgen::DistinguishedName::new();
+    p.distinguished_name.push(rcgen::DnType::CommonName, nome);
+    let oggi = std::time::SystemTime::now();
+    p.not_before = (oggi - std::time::Duration::from_secs(86_400)).into();
+    p.not_after = (oggi + std::time::Duration::from_secs(10 * 365 * 86_400)).into();
+    let chiave = rcgen::KeyPair::generate()?;
+    let cert = p.self_signed(&chiave)?;
+    Ok(rcgen::CertifiedKey { cert, signing_key: chiave })
 }
 
 pub struct IdentitaServer {
@@ -46,7 +62,7 @@ pub fn identita_server_in(cartella: Option<&std::path::Path>) -> Risultato<Ident
     let (der, chiave_der) = match salvati {
         Some((cert, chiave)) => (CertificateDer::from(cert), chiave),
         None => {
-            let certificato = rcgen::generate_simple_self_signed(vec![NOME_SERVER.to_string()])?;
+            let certificato = certificato_nuovo()?;
             let der = certificato.cert.der().clone();
             let chiave = certificato.signing_key.serialize_der();
             if let Some(c) = cartella {
@@ -59,7 +75,19 @@ pub fn identita_server_in(cartella: Option<&std::path::Path>) -> Risultato<Ident
     };
     let impronta = *blake3::hash(&der).as_bytes();
     let chiave = PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(chiave_der));
-    let mut config = quinn::ServerConfig::with_single_cert(vec![der], chiave)?;
+    if crate::trasporto::mimetico() && der.windows(22).any(|w| w == b"rcgen self signed cert") {
+        eprintln!("WARNING: HTTP/3 form with an old, recognisable certificate: create a new node identity \
+                   (new --data folder, or installa.sh --nuova-identita) and send the new line to the network manager");
+    }
+    let mut tls = rustls::ServerConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
+        .with_protocol_versions(&[&rustls::version::TLS13])?
+        .with_no_client_auth()
+        .with_single_cert(vec![der], chiave)?;
+    tls.max_early_data_size = u32::MAX;
+    if crate::trasporto::mimetico() {
+        tls.alpn_protocols = vec![ALPN_H3.to_vec()];
+    }
+    let mut config = quinn::ServerConfig::with_crypto(Arc::new(quinn::crypto::rustls::QuicServerConfig::try_from(tls)?));
     config.transport_config(trasporto_client());   // stessi tempi: chi sparisce si scopre presto
     Ok(IdentitaServer { config, impronta })
 }
@@ -89,6 +117,10 @@ pub fn config_client(impronta_attesa: [u8; 32]) -> Risultato<quinn::ClientConfig
         .dangerous()
         .with_custom_certificate_verifier(verificatore)
         .with_no_client_auth();
+    let mut tls = tls;
+    if crate::trasporto::mimetico() {
+        tls.alpn_protocols = vec![ALPN_H3.to_vec()];
+    }
     let quic = quinn::crypto::rustls::QuicClientConfig::try_from(tls)?;
     let mut config = quinn::ClientConfig::new(Arc::new(quic));
     config.transport_config(trasporto_client());
@@ -136,6 +168,10 @@ pub fn config_client_insicuro() -> Risultato<quinn::ClientConfig> {
         .dangerous()
         .with_custom_certificate_verifier(verificatore)
         .with_no_client_auth();
+    let mut tls = tls;
+    if crate::trasporto::mimetico() {
+        tls.alpn_protocols = vec![ALPN_H3.to_vec()];
+    }
     let quic = quinn::crypto::rustls::QuicClientConfig::try_from(tls)?;
     let mut config = quinn::ClientConfig::new(Arc::new(quic));
     config.transport_config(trasporto_client());
