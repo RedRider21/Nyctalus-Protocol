@@ -239,7 +239,7 @@ collega, senza no. Resta da fare la parte «più utenti», che è organizzativa.
 <h2 id="nyctalus-e-tor-a-confronto">Nyctalus e Tor, a confronto</h2>
 <p><strong>Misurato</strong> con Shadow (il simulatore usato nella ricerca su Tor): Tor 0.4.9 e Nyctalus veri
 sulla stessa Internet simulata (30 ms fra due computer, linee 50/20 Mbit), stessi utenti e
-stesso attacco, 3 ripetizioni. Come rifarla: <a href="https://github.com/RedRider21/Nyctalus-Protocol/blob/main/simulazione/LEGGIMI.md">simulazione/LEGGIMI.md</a>.</p>
+stesso attacco, 3 ripetizioni (velocità: <code>simulazione/velocita.py</code>, file da 5 MB). Come rifarla: <a href="https://github.com/RedRider21/Nyctalus-Protocol/blob/main/simulazione/LEGGIMI.md">simulazione/LEGGIMI.md</a>.</p>
 <table>
 <thead>
 <tr>
@@ -250,9 +250,29 @@ stesso attacco, 3 ripetizioni. Come rifarla: <a href="https://github.com/RedRide
 </thead>
 <tbody>
 <tr>
-<td>Scaricare 500 KB attraverso 3 salti</td>
-<td>1,10 s</td>
-<td>1,16 s · alla pari</td>
+<td>Scaricare 5 MB, linea pulita</td>
+<td>6,4 Mbit/s</td>
+<td><strong>~10 Mbit/s · +55%</strong></td>
+</tr>
+<tr>
+<td>… con l'1% di pacchetti persi (Wi-Fi, rete mobile)</td>
+<td>2,3 Mbit/s</td>
+<td>2,2-2,4 · alla pari (prima della 0.3.8: 1,3)</td>
+</tr>
+<tr>
+<td>… con il 2% di pacchetti persi</td>
+<td>0,47 Mbit/s</td>
+<td><strong>0,98 · ×2</strong></td>
+</tr>
+<tr>
+<td>… nodi carichi (4 utenti insieme su nodi da 10 Mbit)</td>
+<td><strong>2,9 Mbit/s</strong></td>
+<td>2,0-2,5 · Tor avanti</td>
+</tr>
+<tr>
+<td>… nodi carichi e 1% di perdite</td>
+<td>1,4 Mbit/s</td>
+<td><strong>1,8 · +25%</strong></td>
 </tr>
 <tr>
 <td>Primo byte</td>
@@ -338,7 +358,8 @@ stesso attacco, 3 ripetizioni. Come rifarla: <a href="https://github.com/RedRide
 </tr>
 </tbody>
 </table>
-<p>In breve: sul <strong>tempo reale</strong> (navigare, scaricare) Nyctalus è alla pari con Tor; sulla
+<p>In breve: <strong>velocità</strong>: su linea pulita Nyctalus è più veloce di Tor, con perdite alla pari o
+meglio; con nodi carichi Tor è ancora avanti. <strong>Anonimato</strong> sul tempo reale alla pari; sulla
 <strong>chat</strong>, con la modalità riservata, va oltre. Tor resta avanti in maturità, numero di utenti e
 camuffamento collaudato.</p>
 <h2 id="oltre-lanonimato-invisibilita">Oltre l'anonimato: invisibilità</h2>
@@ -346,11 +367,17 @@ camuffamento collaudato.</p>
 nemmeno <strong>che</strong> stai usando una rete anonima, né <strong>quando</strong> e <strong>quanto</strong> comunichi. Qui Tor è
 debole, e le misure del punto K lo confermano anche per noi. I passi, in ordine:</p>
 <ol>
-<li><strong>Ponti nascosti.</strong> Entrate private, non nell'elenco pubblico, date a mano a chi serve: chi
-   ti osserva non vede «un nodo Nyctalus», vede un indirizzo qualunque.</li>
+<li>✅ <strong>Ponti nascosti</strong> (fatto il 07/11/2026, 0.3.8). Entrate private, non nell'elenco
+   pubblico, date a mano a chi serve: chi ti osserva non vede «un nodo Nyctalus», vede un
+   indirizzo qualunque. Ogni ponte ha una chiave sua, e chi lo sonda senza chiave <strong>non riceve
+   risposta</strong> (lo stesso ora vale per tutti i nodi camuffati: prima uno su ~300 tentativi
+   otteneva risposta). Nel primo pacchetto non c'è più nessun nome. Come si usa:
+   <a href="GUIDA-COMPLETA.html"><code>GUIDA-COMPLETA.md</code></a> §13; prova <code>32-ponte-nascosto</code>.</li>
 <li><strong>Trasporto mimetico.</strong> Oggi il camuffamento rende il traffico simile a rumore, e il rumore
    puro è sospetto (in alcuni paesi viene bloccato proprio così). Meglio farlo sembrare
-   <strong>traffico comune</strong>: una normale videochiamata (WebRTC) o un normale sito HTTPS.</li>
+   <strong>traffico comune</strong>: una normale videochiamata (WebRTC) o un normale sito HTTPS/HTTP-3
+   (con ALPN <code>h3</code>, porta 443, dimensioni dei pacchetti come i browser), più il ripiego su TCP 443
+   dove UDP è bloccato. Cambia la stretta di mano: va con un salto di versione del protocollo.</li>
 <li><strong>Chat da mixnet.</strong> La modalità riservata è il primo passo. Il prossimo: i nodi trattengono
    e <strong>rimescolano</strong> le buste con ritardi casuali, e si aggiungono buste finte calcolate apposta
    (privacy differenziale, come Vuvuzela/Karaoke e Loopix). Così nemmeno chi vede <strong>tutta

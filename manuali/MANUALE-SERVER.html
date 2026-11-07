@@ -119,6 +119,13 @@ nyctalus-server log         # ultimi messaggi (log 4601 = solo quel nodo)
   caratteri esadecimali deve essere <strong>uguale su tutti i nodi e sui client</strong>: la decide
   il gestore.</li>
 <li><code>--rumore HZ</code>: celle finte di copertura verso i client (es. <code>5</code>). Consuma banda.</li>
+<li><code>--ponte</code>: <strong>ponte nascosto</strong>. I nodi non vanno nell'elenco pubblico: ognuno ha una chiave
+  propria e l'installatore stampa una <strong>riga del ponte segreta</strong> (<code>nyctalus-server righe</code> la
+  ristampa). Non mandarla al gestore: dalla solo a chi deve entrare da qui (sul PC:
+  <code>nyctalus-rete ponte aggiungi 'RIGA'</code>; telefono: Impostazioni → Rete condivisa → 🌉 Ponti
+  nascosti). Insieme a <code>--codice NYCT1:…</code> (il ponte parla con la rete con la sua chiave). Chi
+  sonda il ponte senza la sua chiave non riceve risposta.</li>
+<li><code>--porta 443</code>: la porta di HTTP/3, la più comune per il traffico UDP cifrato.</li>
 <li>Per cambiare IP o opzioni: modifica <code>/etc/nyctalus/server.conf</code>, poi
   <code>nyctalus-server riavvia</code>. Se cambia l'IP, rimanda le righe al gestore (con un nome, §6, non serve).</li>
 </ul>

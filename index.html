@@ -91,13 +91,25 @@
     <span class="it">Tor è la rete anonima di riferimento: matura, studiata da vent'anni, con milioni di utenti. Nyctalus è un prototipo che prova scelte diverse. Qui sotto: prima quello che abbiamo <b>misurato</b> con i programmi veri, poi cosa c'è e cosa manca in ciascuno.</span><span class="en">Tor is the reference anonymity network: mature, studied for twenty years, with millions of users. Nyctalus is a prototype trying different choices. Below: first what we <b>measured</b> with the real programs, then what each one has and lacks.</span>
   </p>
   <h3 style="margin-top:26px"><span class="it">Misurato</span><span class="en">Measured</span></h3>
-  <p class="intro" style="font-size:.9rem"><span class="it">Simulazione con <b>Shadow</b> (il simulatore usato nella ricerca su Tor): Tor 0.4.9 e Nyctalus veri sulla stessa Internet simulata (30 ms fra due computer, linee da 50/20 Mbit), stessi utenti, stesso attacco, 3 ripetizioni. Come rifarla: <a href="https://github.com/RedRider21/Nyctalus-Protocol/blob/main/simulazione/LEGGIMI.md">simulazione/LEGGIMI.md</a>.</span><span class="en">Simulation with <b>Shadow</b> (the simulator used in Tor research): real Tor 0.4.9 and Nyctalus on the same simulated Internet (30 ms between any two computers, 50/20 Mbit lines), same users, same attack, 3 runs. How to reproduce it: <a href="https://github.com/RedRider21/Nyctalus-Protocol/blob/main/simulazione/LEGGIMI.md">simulazione/LEGGIMI.md</a>.</span></p>
+  <p class="intro" style="font-size:.9rem"><span class="it">Simulazione con <b>Shadow</b> (il simulatore usato nella ricerca su Tor): Tor 0.4.9 e Nyctalus veri sulla stessa Internet simulata (30 ms fra due computer, linee da 50/20 Mbit), stessi utenti, stesso attacco, 3 ripetizioni; velocità con file da 5 MB. Come rifarla: <a href="https://github.com/RedRider21/Nyctalus-Protocol/blob/main/simulazione/LEGGIMI.md">simulazione/LEGGIMI.md</a>.</span><span class="en">Simulation with <b>Shadow</b> (the simulator used in Tor research): real Tor 0.4.9 and Nyctalus on the same simulated Internet (30 ms between any two computers, 50/20 Mbit lines), same users, same attack, 3 runs; speed with 5 MB files. How to reproduce it: <a href="https://github.com/RedRider21/Nyctalus-Protocol/blob/main/simulazione/LEGGIMI.md">simulazione/LEGGIMI.md</a>.</span></p>
   <table>
     <thead><tr><th></th><th>Tor 0.4.9</th><th>Nyctalus</th></tr></thead>
     <tbody>
-      <tr><td><b><span class="it">Scaricare 500 KB (3 salti)</span><span class="en">Download 500 KB (3 hops)</span></b></td>
-        <td>1,10 s</td>
-        <td>1,16 s — <span class="it">alla pari</span><span class="en">on par</span></td></tr>
+      <tr><td><b><span class="it">Scaricare 5 MB, linea pulita</span><span class="en">Download 5 MB, clean line</span></b></td>
+        <td>6,4 Mbit/s</td>
+        <td><b>~10 Mbit/s · +55%</b></td></tr>
+      <tr><td><b><span class="it">… con l'1% di pacchetti persi (Wi-Fi, rete mobile)</span><span class="en">… with 1% packet loss (Wi-Fi, mobile)</span></b></td>
+        <td>2,3 Mbit/s</td>
+        <td><span class="it">2,2-2,4 · alla pari</span><span class="en">2.2-2.4 · on par</span></td></tr>
+      <tr><td><b><span class="it">… con il 2% di pacchetti persi</span><span class="en">… with 2% packet loss</span></b></td>
+        <td>0,47 Mbit/s</td>
+        <td><b>0,98 · ×2</b></td></tr>
+      <tr><td><b><span class="it">… nodi carichi (4 utenti insieme, nodi da 10 Mbit)</span><span class="en">… loaded nodes (4 users at once, 10 Mbit nodes)</span></b></td>
+        <td><b>2,9 Mbit/s</b></td>
+        <td><span class="it">2,0-2,5 · Tor avanti</span><span class="en">2.0-2.5 · Tor ahead</span></td></tr>
+      <tr><td><b><span class="it">… nodi carichi e 1% di perdite</span><span class="en">… loaded nodes and 1% loss</span></b></td>
+        <td>1,4 Mbit/s</td>
+        <td><b>1,8 · +25%</b></td></tr>
       <tr><td><b><span class="it">Primo byte</span><span class="en">First byte</span></b></td>
         <td>0,49 s</td>
         <td>0,50 s — <span class="it">alla pari</span><span class="en">on par</span></td></tr>
@@ -148,7 +160,7 @@
         <td><span class="it">Rust (meno errori di memoria)</span><span class="en">Rust (fewer memory bugs)</span></td></tr>
     </tbody>
   </table>
-  <p class="intro" style="font-size:.9rem;margin-top:14px"><span class="it">In breve: sul <b>tempo reale</b> (navigare, scaricare) Nyctalus è alla pari con Tor; sulla <b>chat</b>, con la modalità riservata, va oltre. Tor resta avanti in maturità, numero di utenti e camuffamento collaudato. Dove siamo e le prossime tappe: <a href="manuali/PIANO-ANONIMATO.html">piano verso una rete anonima</a>.</span><span class="en">In short: on <b>real time</b> (browsing, downloading) Nyctalus is on par with Tor; on <b>chat</b>, with private mode, it goes further. Tor stays ahead in maturity, number of users and proven camouflage. Where we are and next steps: <a href="manuali/PIANO-ANONIMATO.html">plan towards an anonymous network</a> (Italian).</span></p>
+  <p class="intro" style="font-size:.9rem;margin-top:14px"><span class="it">In breve: in <b>velocità</b> su linea pulita Nyctalus è più veloce di Tor, con perdite alla pari o meglio; con nodi carichi Tor è ancora avanti. In <b>anonimato</b> sul tempo reale alla pari; sulla <b>chat</b>, con la modalità riservata, va oltre. Tor resta avanti in maturità, numero di utenti e camuffamento collaudato. Dove siamo e le prossime tappe: <a href="manuali/PIANO-ANONIMATO.html">piano verso una rete anonima</a>.</span><span class="en">In short: in <b>speed</b> Nyctalus is faster than Tor on a clean line, on par or better with packet loss; with loaded nodes Tor is still ahead. In <b>anonymity</b> on par for real time; on <b>chat</b>, with private mode, it goes further. Tor stays ahead in maturity, number of users and proven camouflage. Where we are and next steps: <a href="manuali/PIANO-ANONIMATO.html">plan towards an anonymous network</a> (Italian).</span></p>
 </div></section>
 
 <section id="viaggio"><div class="wrap">

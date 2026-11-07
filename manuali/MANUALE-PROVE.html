@@ -186,6 +186,10 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 <td><strong>programma File, motore</strong>: Alice → Bob sulla rete di prova (3 salti, canali paralleli): sotto soglia parte da solo, sopra soglia «Accetta», pausa/ripresa, motore di Bob spento a metà e riacceso (riprende dai pezzi già verificati), file sempre identico (SHA-256), non-contatto rifiutato senza proporglielo; nella chat il file compare all'ora d'arrivo con ✓✓ e diventa blu alla lettura; con «inchat 0» non compare in chat. Motore di Bob rallentato solo in prova (<code>NYCTALUS_PROVA_RALLENTA_MS</code>)</td>
 </tr>
 <tr>
+<td><code>32-ponte-nascosto</code></td>
+<td><strong>ponti nascosti</strong>: si entra solo dal ponte (anche per i siti <code>.nyct</code>), il ponte non è nell'elenco e non entra chi non ha la sua chiave; <strong>sonde</strong>: un nodo senza camuffamento risponde, nodi camuffati e ponte mai; gestore del PC (<code>ponte aggiungi/elenco/togli</code>, file 600) e API del telefono (mai le chiavi alla pagina)</td>
+</tr>
+<tr>
 <td><code>31-servizio-molti-client</code></td>
 <td>un servizio <code>.nyct</code> serve <strong>8 client collegati insieme e a lungo</strong> (come la rubrica con le sessioni della chat): prima il limite era 4 (controprova: con il motore vecchio 4 su 8)</td>
 </tr>

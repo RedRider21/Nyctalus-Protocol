@@ -142,7 +142,7 @@ codice di rete.</p>
    nyctalus-rete crea --nome "La nostra rete"</code>
    Nasce <strong>protetta</strong> (camuffamento e rumore di fondo, <a href="#12-protezione-camuffamento-e-rumore-di-fondo">§12</a>): il comando stampa la chiave per i
    nodi. Fai una copia di sicurezza di <code>~/.nyctalus-rete</code>.</li>
-<li><strong>Aggiungi i nodi</strong> con le righe ricevute, ognuno con la <strong>famiglia</strong> del suo gestore (<a href="#13-famiglie-e-nodi-di-amici">§13</a>):
+<li><strong>Aggiungi i nodi</strong> con le righe ricevute, ognuno con la <strong>famiglia</strong> del suo gestore (<a href="#14-famiglie-e-nodi-di-amici">§13</a>):
    <code>sh
    nyctalus-rete aggiungi --famiglia mario 'RIGA1' 'RIGA2'
    nyctalus-rete firma
@@ -235,17 +235,22 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi <strong>ge
 <td>accesa nelle reti nuove</td>
 </tr>
 <tr>
-<td><a href="#13-famiglie-e-nodi-di-amici">Famiglie e nodi di amici</a></td>
+<td><a href="#13-ponti-nascosti">Ponti nascosti</a></td>
+<td>entrare da un indirizzo privato, fuori dall'elenco; invisibile alle sonde</td>
+<td>nessuno</td>
+</tr>
+<tr>
+<td><a href="#14-famiglie-e-nodi-di-amici">Famiglie e nodi di amici</a></td>
 <td>mai due nodi dello stesso gestore in un percorso</td>
 <td>—</td>
 </tr>
 <tr>
-<td><a href="#14-modalita-rigida">Modalità rigida</a></td>
+<td><a href="#15-modalita-rigida">Modalità rigida</a></td>
 <td>rifiutare i percorsi non anonimi</td>
 <td>spenta</td>
 </tr>
 <tr>
-<td><a href="#15-opzioni-avanzate-del-motore">Opzioni del motore</a></td>
+<td><a href="#16-opzioni-avanzate-del-motore">Opzioni del motore</a></td>
 <td>salti, strade parallele (per esperti)</td>
 <td>3 · 2</td>
 </tr>
@@ -380,7 +385,9 @@ nyctalus-rete codice --url URL           # poi il codice le include
 <p><strong>A cosa serve:</strong></p>
 <ul>
 <li><strong>camuffamento</strong>: ogni pacchetto è reso simile a rumore con una chiave della rete. Chi
-  guarda il traffico non riconosce Nyctalus, e chi non ha la chiave non riesce a collegarsi;</li>
+  guarda il traffico non riconosce Nyctalus, e chi non ha la chiave non riesce a collegarsi.
+  Dalla 0.3.8 un nodo camuffato <strong>non risponde a nessuna sonda</strong> (prima rispondeva circa una
+  volta ogni 300 tentativi, e così si faceva scoprire);</li>
 <li><strong>rumore di fondo</strong>: celle finte a ritmo casuale, così i momenti in cui usi davvero la
   rete si notano meno.</li>
 </ul>
@@ -396,7 +403,37 @@ nyctalus-rete protezione no                    # spegne (la chiave resta da part
 <p>Dopo il cambio: riavvia la rete (o la rete di casa), ridai il codice e reinstalla i nodi dei
 server con <code>./installa.sh --codice NYCT1:…</code> (oppure <code>--camuffamento CHIAVE --rumore N</code>). Client
 PC, telefono e Windows prendono tutto dal codice, da soli.</p>
-<h3 id="13-famiglie-e-nodi-di-amici">13. Famiglie e nodi di amici</h3>
+<h3 id="13-ponti-nascosti">13. Ponti nascosti</h3>
+<p><strong>A cosa serve:</strong> di solito si entra nella rete da un nodo dell'<strong>elenco pubblico</strong>: chi osserva
+la tua linea (il fornitore Internet, la rete dell'ufficio, un paese che censura) può confrontare
+l'indirizzo con l'elenco e capire che usi Nyctalus. Un <strong>ponte</strong> è un'entrata <strong>privata</strong>:</p>
+<ul>
+<li>non è nell'elenco, quindi il suo indirizzo non dice niente;</li>
+<li>ha una <strong>chiave tutta sua</strong>: chi lo sonda senza la chiave (anche chi ha il codice della rete)
+  non riceve <strong>nessuna risposta</strong>, come se l'indirizzo fosse spento;</li>
+<li>con almeno un ponte si entra <strong>sempre</strong> da lì, mai dai nodi dell'elenco.</li>
+</ul>
+<p><strong>Costo:</strong> nessuno in velocità (il ponte prende il posto della guardia). Serve qualcuno che
+tenga acceso il ponte. La <strong>riga del ponte è segreta</strong>: chi la ha può trovarlo.
+<strong>Di serie:</strong> nessun ponte.</p>
+<p><strong>1) Chi ospita il ponte</strong> (un server o un PC sempre acceso, anche di un amico):</p>
+<pre><code class="language-sh">sudo ./installa.sh --ponte --codice NYCT1:…      # pacchetto server; stampa la RIGA DEL PONTE
+nyctalus-server righe                             # la ristampa
+</code></pre>
+<p>La riga (<code>IP:PORTA,chiave,impronta,chiave-del-ponte</code>) <strong>non</strong> va al gestore della rete: va
+solo, a mano, a chi deve entrare da lì.</p>
+<p><strong>2) Chi usa il ponte:</strong></p>
+<ul>
+<li><strong>PC:</strong> <code>nyctalus-rete ponte aggiungi 'RIGA'</code> · <code>nyctalus-rete ponte elenco</code> ·
+  <code>nyctalus-rete ponte togli IP:PORTA</code> (o <code>tutti</code>). Poi chiudi e riapri chat e browser.</li>
+<li><strong>Telefono / Windows:</strong> ⚙️ Impostazioni → <strong>Rete condivisa</strong> → <strong>🌉 Ponti nascosti</strong> →
+  incolla la riga → <strong>Aggiungi</strong> (la rete riparte da sola).</li>
+</ul>
+<p>I ponti valgono <strong>per la rete</strong> a cui li hai aggiunti: cambiando rete restano da parte. Il
+motore li riceve per variabile d'ambiente, mai sulla riga di comando (che altri utenti del
+computer potrebbero leggere). A mano: <code>NYCTALUS_PONTI='RIGA' nyctalus start …</code> oppure
+<code>--bridge 'RIGA'</code>; un nodo diventa ponte con <code>nyctalus node … --hidden-bridge</code>.</p>
+<h3 id="14-famiglie-e-nodi-di-amici">14. Famiglie e nodi di amici</h3>
 <p><strong>A cosa serve:</strong> un percorso fa 3 salti. Se due salti sono <strong>dello stesso gestore</strong>, lui
 vede entrata e uscita. Con le <strong>famiglie</strong> dichiari quali nodi sono della stessa persona o
 dello stesso fornitore: un percorso non ne userà mai due insieme. Servono <strong>almeno 3
@@ -411,13 +448,13 @@ nyctalus-rete ospite elenco [--internet]
 </code></pre>
 <p>Le righe dei nodi le stampa l'installatore sulla macchina dell'amico. Le famiglie vanno
 usate quando <strong>tutti</strong> hanno la 0.3.3 o successiva. Dettagli: <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a>.</p>
-<h3 id="14-modalita-rigida">14. Modalità rigida</h3>
+<h3 id="15-modalita-rigida">15. Modalità rigida</h3>
 <p><strong>A cosa serve:</strong> se la regola delle famiglie non si può rispettare (per esempio nodi tutti
 su un PC), di solito il motore <strong>funziona lo stesso</strong> e avvisa «cifrato ma NON anonimo». In
 modalità rigida invece <strong>si rifiuta</strong>: meglio niente che un percorso non anonimo.</p>
 <pre><code class="language-sh">NYCTALUS_PARENTELA=rigida nyctalus-chat          # o davanti a qualunque comando del motore
 </code></pre>
-<h3 id="15-opzioni-avanzate-del-motore">15. Opzioni avanzate del motore</h3>
+<h3 id="16-opzioni-avanzate-del-motore">16. Opzioni avanzate del motore</h3>
 <p>Per chi usa il motore a mano (<code>nyctalus start</code>, <code>nyctalus circuit</code>…). Tutte in <a href="DEPLOY.html"><code>DEPLOY.md</code></a>.</p>
 <table>
 <thead>
@@ -447,6 +484,16 @@ modalità rigida invece <strong>si rifiuta</strong>: meglio niente che un percor
 <td><code>--obfuscation HEX</code></td>
 <td>camuffamento con la chiave della rete</td>
 <td>quella del codice</td>
+</tr>
+<tr>
+<td><code>--bridge RIGA</code> / <code>NYCTALUS_PONTI</code></td>
+<td>entrare da un ponte nascosto</td>
+<td>nessuno</td>
+</tr>
+<tr>
+<td><code>--hidden-bridge</code> (nodo)</td>
+<td>il nodo fa da ponte nascosto</td>
+<td>spento</td>
 </tr>
 </tbody>
 </table>
