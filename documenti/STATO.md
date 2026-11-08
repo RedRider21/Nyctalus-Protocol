@@ -6,7 +6,7 @@
 1. **Guida passo per passo per il caso dell'utente**: installazione sul **telefono**, sul **PC di casa** e su
    **un altro PC di casa come nodo/server raggiungibile da Internet**; ogni comando spiegato e nell'ordine giusto.
 2. **Glossario** di termini e comandi con il loro significato/funzione.
-3. **Riordino organico di tutta la documentazione** (manuali, guide, sito).
+3. **Riordino organico di tutta la documentazione** (manuali, guide, sito). In particolare (segnalato dall'utente 08/11): la riga «In arrivo — gestore file grafico, motore precompilato per il telefono, taratura del rumore di fondo su rete reale, confronto con Tor (Shadow), una rete di nodi pubblica» in README e home di Pages è SUPERATA (File, motore Android e confronto con Tor fatti): riscrivere «A che punto siamo / In arrivo» per intero.
 4. **Ricontrollo completo di cybersecurity** di tutto il sistema (richiesto 08/11/2026), insieme al piano sicurezza.
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
 
