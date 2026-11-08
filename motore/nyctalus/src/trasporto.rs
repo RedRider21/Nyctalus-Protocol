@@ -31,7 +31,7 @@ use std::task::{Context, Poll};
 use nyctalus_core::offuscamento::{self, LUNGHEZZA_NONCE};
 use quinn::udp::{RecvMeta, Transmit};
 use quinn::{
-    AsyncUdpSocket, Endpoint, EndpointConfig, Runtime, ServerConfig, UdpPoller, default_runtime,
+    AsyncUdpSocket, Endpoint, EndpointConfig, ServerConfig, UdpPoller, default_runtime,
 };
 
 use crate::Risultato;
@@ -157,14 +157,54 @@ pub fn endpoint_server(
     ascolta: SocketAddr,
     offusca: Option<[u8; 32]>,
 ) -> Risultato<Endpoint> {
+    // UDP come sempre, più il ripiego su TCP sulla stessa porta (crate::tcp): un unico socket
+    let runtime = default_runtime().ok_or("nessun runtime asincrono disponibile")?;
+    let udp = UdpSocket::bind(ascolta)?;
+    udp.set_nonblocking(true)?;
+    let ibrido: Arc<dyn AsyncUdpSocket> = crate::tcp::SocketTcp::nodo(runtime.wrap_udp_socket(udp)?, ascolta, offusca);
     // nella forma HTTP/3 i pacchetti restano QUIC in chiaro: la chiave fa da contrassegno
-    match offusca.filter(|_| !mimetico()) {
-        None => Ok(Endpoint::server(server_config, ascolta)?),
-        Some(segreto) => {
-            let (socket, runtime) = socket_offuscato(ascolta, segreto, true)?;
-            Ok(Endpoint::new_with_abstract_socket(EndpointConfig::default(), Some(server_config), socket, runtime)?)
+    let socket: Arc<dyn AsyncUdpSocket> = match offusca.filter(|_| !mimetico()) {
+        None => ibrido,
+        Some(segreto) => avvolgi(ibrido, segreto, true),
+    };
+    Ok(Endpoint::new_with_abstract_socket(EndpointConfig::default(), Some(server_config), socket, runtime)?)
+}
+
+/// Endpoint client **su TCP** verso `destinazione` (ripiego dove UDP è bloccato).
+pub async fn endpoint_client_tcp(destinazione: SocketAddr, offusca: Option<[u8; 32]>) -> Risultato<Endpoint> {
+    let runtime = default_runtime().ok_or("nessun runtime asincrono disponibile")?;
+    let tcp: Arc<dyn AsyncUdpSocket> = crate::tcp::SocketTcp::client(destinazione, offusca).await?;
+    let socket: Arc<dyn AsyncUdpSocket> = match offusca.filter(|_| !mimetico()) {
+        None => tcp,
+        Some(segreto) => avvolgi(tcp, segreto, false),
+    };
+    Ok(Endpoint::new_with_abstract_socket(EndpointConfig::default(), None, socket, runtime)?)
+}
+
+/// Collegamento all'ENTRATA della rete: UDP; se in 6 secondi non risponde nessuno (UDP bloccato),
+/// lo stesso collegamento su **TCP** alla stessa porta. `NYCTALUS_TCP=1` sempre TCP, `=0` mai.
+pub async fn collega_entrata(
+    destinazione: SocketAddr,
+    offusca: Option<[u8; 32]>,
+    config: quinn::ClientConfig,
+) -> Risultato<(Endpoint, quinn::Connection)> {
+    let modo = std::env::var("NYCTALUS_TCP").unwrap_or_default();
+    let nome = crate::tls::nome_per(&destinazione);
+    if modo != "1" {
+        let locale: SocketAddr = if destinazione.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
+        let endpoint = endpoint_client(locale, offusca)?;
+        let tentativo = endpoint.connect_with(config.clone(), destinazione, &nome)?;
+        match tokio::time::timeout(std::time::Duration::from_secs(6), tentativo).await {
+            Ok(Ok(c)) => return Ok((endpoint, c)),
+            Ok(Err(e)) if modo == "0" => return Err(e.into()),
+            Err(_) if modo == "0" => return Err("entry did not answer over UDP".into()),
+            _ => eprintln!("UDP to {destinazione} did not answer: trying TCP"),
         }
     }
+    let endpoint = endpoint_client_tcp(destinazione, offusca).await?;
+    let c = endpoint.connect_with(config, destinazione, &nome)?.await?;
+    println!("  entry over TCP (UDP blocked or NYCTALUS_TCP=1)");
+    Ok((endpoint, c))
 }
 
 /// Crea un endpoint client, con offuscamento se è data la chiave di rete.
@@ -172,24 +212,20 @@ pub fn endpoint_client(locale: SocketAddr, offusca: Option<[u8; 32]>) -> Risulta
     match offusca.filter(|_| !mimetico()) {
         None => Ok(Endpoint::client(locale)?),
         Some(segreto) => {
-            let (socket, runtime) = socket_offuscato(locale, segreto, false)?;
+            let runtime = default_runtime().ok_or("nessun runtime asincrono disponibile")?;
+            let udp = UdpSocket::bind(locale)?;
+            udp.set_nonblocking(true)?;
+            let socket = avvolgi(runtime.wrap_udp_socket(udp)?, segreto, false);
             Ok(Endpoint::new_with_abstract_socket(EndpointConfig::default(), None, socket, runtime)?)
         }
     }
 }
 
-fn socket_offuscato(
-    indirizzo: SocketAddr,
-    segreto_rete: [u8; 32],
-    server: bool,
-) -> Risultato<(Arc<SocketOffuscato>, Arc<dyn Runtime>)> {
-    let runtime = default_runtime().ok_or("nessun runtime asincrono disponibile")?;
-    let udp = UdpSocket::bind(indirizzo)?;
-    udp.set_nonblocking(true)?;
-    let inner = runtime.wrap_udp_socket(udp)?;
+/// Avvolge un socket (UDP, o UDP+TCP) con il camuffamento della rete.
+fn avvolgi(inner: Arc<dyn AsyncUdpSocket>, segreto_rete: [u8; 32], server: bool) -> Arc<SocketOffuscato> {
     let chiave = offuscamento::chiave_offuscamento(&segreto_rete);
     let ammessi = server.then(|| Mutex::new(HashMap::new()));
-    Ok((Arc::new(SocketOffuscato { inner, chiave, ammessi }), runtime))
+    Arc::new(SocketOffuscato { inner, chiave, ammessi })
 }
 
 /// Socket UDP che offusca ogni datagramma. Il GSO è disabilitato

@@ -74,15 +74,14 @@ pub async fn avvia_circuito(
 
     // Un solo collegamento QUIC verso il guard condiviso.
     let (guardiano, _, impronta_guard) = percorsi[0][0];
-    let locale: SocketAddr = if guardiano.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
     // all'entrata con la chiave del ponte, se è un ponte nascosto
     let chiave_entrata = crate::percorsi::chiave_entrata(&percorsi[0][0], offusca);
-    let mut endpoint = crate::trasporto::endpoint_client(locale, chiave_entrata)?;
-    endpoint.set_default_client_config(match impronta_guard {
+    let config = match impronta_guard {
         Some(fp) => crate::tls::config_client(fp)?,
         None => crate::tls::config_client_insicuro()?,
-    });
-    let connessione = endpoint.connect(guardiano, &crate::tls::nome_per(&guardiano))?.await?;
+    };
+    // UDP, oppure (se UDP è bloccato) TCP alla stessa porta
+    let (_endpoint, connessione) = crate::trasporto::collega_entrata(guardiano, chiave_entrata, config).await?;
 
     // Canali condivisi: scrittore(i) in andata, ritorno riordinato.
     let flussi: MappaFlussi = Arc::new(Mutex::new(HashMap::new()));

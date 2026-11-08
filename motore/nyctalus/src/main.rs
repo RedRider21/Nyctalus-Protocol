@@ -37,6 +37,7 @@ mod ponte;
 mod prova_circuito;
 mod ricevi;
 mod tls;
+mod tcp;
 mod trasporto;
 mod travaso;
 mod uscita;

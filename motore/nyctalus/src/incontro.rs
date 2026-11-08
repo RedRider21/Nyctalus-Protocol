@@ -253,15 +253,13 @@ async fn canale_onion(percorso: &[NodoRete], offusca: Option<[u8; 32]>) -> Risul
     let circuito = apri_circuito(&nodi, b"nyctalus rendezvous")?;
 
     let (guard, _, impronta_guard) = percorso[0];
-    let locale: SocketAddr = if guard.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
-    // all'entrata con la chiave del ponte, se è un ponte nascosto
+    // all'entrata con la chiave del ponte, se è un ponte nascosto; UDP o, se bloccato, TCP
     let chiave_entrata = crate::percorsi::chiave_entrata(&percorso[0], offusca);
-    let endpoint = crate::trasporto::endpoint_client(locale, chiave_entrata)?;
     let config = match impronta_guard {
         Some(fp) => crate::tls::config_client(fp)?,
         None => crate::tls::config_client_insicuro()?,
     };
-    let conn = endpoint.connect_with(config, guard, &crate::tls::nome_per(&guard))?.await?;
+    let (endpoint, conn) = crate::trasporto::collega_entrata(guard, chiave_entrata, config).await?;
     let (mut invio, ricezione) = crate::trasporto::apri_flusso(&conn, chiave_entrata).await?;
     // 1º quadro = pacchetto di apertura Sphinx; poi i quadri onion (n da 0).
     scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
