@@ -22,6 +22,11 @@ Tocca **🔗 Rete** e incolla il **codice di rete** (`NYCT1:…`) che ti dà chi
 `nyctalus-rete casa` su un PC Linux, `GUIDA-RETE-DI-CASA.md`). Controlla che l'**impronta**
 sia uguale a quella del gestore. Senza codice usi una rete di prova solo su questo PC.
 
+Dalle impostazioni (☰ della chat) si aggiungono anche i **🌉 ponti nascosti**, come sul telefono
+(`GUIDA-COMPLETA.md` §13). Se la rete dove sei blocca UDP (ufficio, Wi-Fi pubblico), Nyctalus
+passa **da solo** a TCP sulla stessa porta dopo qualche secondo: non devi fare niente. Se la rete
+usa la **forma HTTP/3**, le impostazioni lo dicono («per chi osserva sembri un visitatore del sito…»).
+
 ## 3. Usare
 
 **📦 File** apre il programma per mandare file grandi ai contatti e gestire quelli ricevuti (`MANUALE-FILE.md`).

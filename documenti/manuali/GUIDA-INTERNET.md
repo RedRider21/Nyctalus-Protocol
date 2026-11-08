@@ -79,6 +79,10 @@ l'indirizzo del PC:
 
 Nient'altro va aperto: le porte della rubrica e della casella restano solo dentro il PC.
 
+**Facoltativo (dalla 0.3.13):** inoltra **anche in TCP** le porte 4701-4704. Serve a chi si
+collega da una rete che blocca UDP (ufficio, Wi-Fi di un albergo): il suo Nyctalus, se UDP non
+risponde, passa da solo a TCP sulla stessa porta.
+
 ## Passo 5 · Accendi la rete raggiungibile da Internet
 
 Se è accesa la rete di casa (`nyctalus-rete casa`), fermala con **Ctrl-C**: usa le stesse
@@ -146,7 +150,7 @@ Il tuo amico con l'IP statico è il candidato ideale.
    L'installatore chiede l'IP pubblico (il suo IP statico) e alla fine **stampa delle righe**:
    te le manda (non sono segrete).
 2. **Lui** inoltra sul suo router le porte **UDP** dei nodi (quelle che dice l'installatore)
-   verso quel PC.
+   verso quel PC, e se vuole anche le stesse in **TCP** (per chi ha UDP bloccato).
 3. **Tu**, con la rete di casa accesa:
    ```sh
    nyctalus-rete ospite aggiungi --internet 'RIGA1' 'RIGA2' --famiglia mario

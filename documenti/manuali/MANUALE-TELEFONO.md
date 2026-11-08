@@ -169,6 +169,10 @@ Note:
 - **Tema**: Notte, Ardesia (stile Telegram), Viola, Chiaro, Menta, Cielo, oppure **🎨 Personalizzato** (selettore di colore o codice `#rrggbb`, più Scuro/Chiaro). Vale per tutta l'app;
 - **Sfondo della chat**: pipistrelli, velo di colore, tinta unita;
 - **Foto senza metadati**;
+- **Forma della rete**: se chi gestisce la rete ha scelto la **forma HTTP/3**, sotto «Rete
+  condivisa» compare «per chi osserva sembri un visitatore del sito …» (`GUIDA-COMPLETA.md` §12).
+- **UDP bloccato**: se la rete dove sei (ufficio, Wi-Fi di un albergo) blocca UDP, l'app passa
+  **da sola** a TCP sulla stessa porta dopo qualche secondo (`GUIDA-COMPLETA.md` §13-bis).
 - **🌉 Ponti nascosti** (in Rete condivisa, quando sei su una rete condivisa): incolla la
   riga segreta di un ponte, cioè un'entrata privata fuori dall'elenco. Da quel momento si entra
   sempre da lì. Spiegazione: `GUIDA-COMPLETA.md` §13.
