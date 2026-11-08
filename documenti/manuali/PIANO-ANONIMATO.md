@@ -263,8 +263,9 @@ debole, e le misure del punto K lo confermano anche per noi. I passi, in ordine:
 2. 🔧 **Trasporto mimetico** — ✅ **forma HTTP/3 fatta** (0.3.9): i nodi sembrano un sito HTTP/3
    sulla porta 443 con il nome scelto dal gestore, e chi li sonda (anche un vero Chrome) riceve una
    pagina 404. ✅ **Ripiego su TCP** (0.3.13): dove UDP è bloccato si entra in TCP sulla stessa
-   porta, da soli; nella forma HTTP/3 quel TCP è un vero HTTPS (0.3.14). Restano: impronta
-   identica a un browser, forma «videochiamata».
+   porta, da soli; nella forma HTTP/3 quel TCP è un vero HTTPS (0.3.14), con un'impronta TLS
+   comune e non più propria (0.3.15). Restano: impronta identica a Chrome (serve BoringSSL),
+   forma «videochiamata».
    Il camuffamento di serie rende il traffico simile a rumore, e il rumore
    puro è sospetto (in alcuni paesi viene bloccato proprio così). Meglio farlo sembrare
    **traffico comune**: una normale videochiamata (WebRTC) o un normale sito HTTPS/HTTP-3

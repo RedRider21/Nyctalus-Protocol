@@ -103,6 +103,25 @@ camuffato e un ponte nascosto **non rispondono mai**. Misura su 20.000 sonde a r
 | rumore di fondo | ✅ traffico anche da fermi (1,3 contro 0,9 pacchetti/s a 0,2 celle/s) |
 | celle fisse | ✅ dentro il circuito; i datagrammi QUIC sul filo hanno lunghezze diverse |
 
+### 1.1-quater Impronta della stretta di mano TLS (JA4)
+
+```sh
+python3 simulazione/impronta_tls.py PORTA      # registra il ClientHello di chi si collega e ne dà l'impronta JA4
+```
+
+Chi filtra la rete riconosce i programmi dal primo messaggio TLS. Misure (08/11/2026):
+
+| Programma | Impronta JA4 (prima parte) | cifrari | estensioni | GREASE / ECH |
+|---|---|---|---|---|
+| Chrome | `t13d1517h2` | 15 | 17 (ordine casuale) | sì / sì |
+| curl (OpenSSL) | `t13d3113h2` | 31 | 13 | no / no |
+| Nyctalus 0.3.14 | `t13d0310h1` | 3 (solo TLS 1.3) | 10 | no / no — **insolita** |
+| **Nyctalus 0.3.15** | **`t13d1011h2`** | 10 (TLS 1.3 e 1.2) | 11 | no / no — quella **comune** dei programmi rustls |
+
+Uguale a Chrome non si può con rustls (mancano GREASE, ECH, ALPS, compressione dei certificati e i
+cifrari vecchi): servirebbe la libreria TLS di Chrome (BoringSSL), pesante da portare. Obiettivo
+raggiunto: non avere un'impronta *propria* che identifichi Nyctalus.
+
 ### 1.1-bis Impronta del browser del PC (schede 🦇)
 Le schede Stealth hanno un'**impronta uniforme**: identità Safari/macOS, lingua en-US (anche
 nell'intestazione), ora UTC, schermo arrotondato, 2 processori, niente WebGL, Web Audio e

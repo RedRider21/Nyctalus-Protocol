@@ -273,8 +273,10 @@ catturati in Shadow su tutte le macchine):
 - ✅ **TCP come HTTPS nella forma HTTP/3** (0.3.14): il ripiego è un vero TLS (rustls guidato a
   mano in `tcp::tubo_tls`, stesso certificato del nodo, ALPN http/1.1); dentro TLS il contrassegno;
   chi non lo ha riceve `HTTP/1.1 404 Not Found` e la chiusura, come da un sito.
-- 📐 **Da fare:** impronta TLS/QUIC identica a un browser (oggi si vede rustls/quinn); forma
-  «videochiamata» (WebRTC).
+- ✅ **Impronta TLS comune** (0.3.15): TLS 1.2 attivo (rustls `tls12`) e ALPN `h2, http/1.1` sul
+  TCP: JA4 `t13d1011h2`, quella dei comuni programmi rustls, non più un'impronta propria
+  (`t13d0310h1`). Misura: `simulazione/impronta_tls.py`.
+- 📐 **Da fare:** impronta identica a Chrome (richiede BoringSSL); forma «videochiamata» (WebRTC).
 - Dimensioni sul filo: le celle sono fisse **dentro** il circuito; i datagrammi QUIC invece hanno
   lunghezze diverse (pieni ~1200-1420 byte, più conferme e code più corte).
 

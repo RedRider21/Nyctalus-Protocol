@@ -115,7 +115,8 @@ pub fn config_tls_tcp(impronta: Option<[u8; 32]>) -> Risultato<Arc<rustls::Clien
         .dangerous()
         .with_custom_certificate_verifier(verificatore)
         .with_no_client_auth();
-    tls.alpn_protocols = vec![b"http/1.1".to_vec()];
+    // come i browser: h2 e http/1.1 (il nodo sceglie http/1.1, come molti siti)
+    tls.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
     Ok(Arc::new(tls))
 }
 

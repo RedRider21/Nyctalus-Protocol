@@ -41,6 +41,9 @@ Misure dell'anonimato con il **codice vero** di Nyctalus. Sono due tipi di misur
      velocità** in condizioni realistiche (pacchetti persi, nodi carichi, più utenti insieme). Tor:
      rete di prova di Shadow (7 relè); Nyctalus: 7 nodi. Ogni corsa dura pochi secondi.
 
+   - `impronta_tls.py PORTA [--volte N]`: registra il ClientHello TLS di chi si collega e ne calcola
+     l'impronta **JA4** (confronto Nyctalus / Chrome / curl: `documenti/SICUREZZA.md` §1.1-quater).
+
 ## Installare Shadow (una volta)
 
 Servono compilatori, CMake, Rust e GLib (su Mint/Ubuntu già presenti con gli strumenti di
