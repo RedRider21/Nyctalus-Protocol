@@ -446,7 +446,7 @@ async fn uscita_conflux(
 /// Collettore del gruppo: ricompone le unità in andata e, in ordine, apre le
 /// connessioni TCP (`APRI`), vi scrive (`DATI`), le chiude (`CHIUDI`).
 async fn collettore_uscita(mut rx: mpsc::Receiver<(u64, Vec<u8>)>, tx_return: mpsc::Sender<Vec<u8>>) {
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::io::AsyncWriteExt;
     let mut riordina = Riordina::nuovo();
     let mut verso_tcp: HashMap<u16, mpsc::Sender<Vec<u8>>> = HashMap::new();
     while let Some((seq, cella_bytes)) = rx.recv().await {
@@ -466,7 +466,7 @@ async fn collettore_uscita(mut rx: mpsc::Receiver<(u64, Vec<u8>)>, tx_return: mp
                             tokio::spawn(async move {
                                 let mut buffer = vec![0u8; crate::cella::CAPACITA];
                                 loop {
-                                    match lettura.read(&mut buffer).await {
+                                    match crate::cella::leggi_per_cella(&mut lettura, &mut buffer).await {
                                         Ok(0) | Err(_) => break,
                                         Ok(k) => {
                                             let c = Cella::nuova(flusso, cmd::DATI, buffer[..k].to_vec());

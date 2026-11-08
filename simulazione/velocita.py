@@ -90,7 +90,11 @@ def prepara_tor(out, a):
                                        "--defaults-torrc", "torrc-defaults", "-f", "torrc"),
               "      start_time: 900s", "      expected_final_state: running"]
         y += scaricamento(u, inizio + rnd.uniform(0, 1), "127.0.0.1:9000")
-    (out / "shadow.yaml").write_text("\n".join(y) + "\n")
+    testo = "\n".join(y) + "\n"
+    if a.pcap:
+        for h in RELE_TOR:
+            testo = testo.replace("  %s:\n    network_node_id: 0\n" % h, "  %s:\n    network_node_id: 0\n    host_options:\n      pcap_enabled: true\n      pcap_capture_size: 64 B\n" % h)
+    (out / "shadow.yaml").write_text(testo)
     return ["--template-directory", str(out / "modello")]
 
 
@@ -183,6 +187,8 @@ def prepara_nyctalus(out, a):
                   "      start_time: 1s", "      expected_final_state: running"]
         y += scaricamento(u, inizio + rnd.uniform(0, 1), "127.0.0.1:1080")
     testo = "\n".join(y) + "\n"
+    if a.pcap:          # catture dei pacchetti sui nodi (intestazioni), per misurare quanto lavorano
+        testo = testo.replace('    network_node_id: 0\n    ip_addr: 11.', '    network_node_id: 0\n    host_options:\n      pcap_enabled: true\n      pcap_capture_size: 64 B\n    ip_addr: 11.')
     if a.diagnosi:      # registri dettagliati del motore (NYCTALUS_DIAGNOSI) su nodi e utenti
         testo = testo.replace("environment: { ", 'environment: { NYCTALUS_DIAGNOSI: "1", ')
     (out / "shadow.yaml").write_text(testo)
@@ -216,6 +222,7 @@ def main():
     ap.add_argument("--mb", type=float, default=5)
     ap.add_argument("--circuiti", type=int, default=2)
     ap.add_argument("--seme", type=int, default=1)
+    ap.add_argument("--pcap", action="store_true", help="catture dei pacchetti sui nodi (la cartella resta)")
     ap.add_argument("--diagnosi", action="store_true", help="Nyctalus: registri dettagliati (e la cartella resta)")
     ap.add_argument("--senza-riuso", action="store_true", help="Nyctalus: un collegamento per circuito (come fino alla 0.3.10)")
     ap.add_argument("--aiuto", type=int, default=0, help="Nyctalus: ogni utente fa anche da nodo solo intermedio con questo tetto (Mbit/s)")

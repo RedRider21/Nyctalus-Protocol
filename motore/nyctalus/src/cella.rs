@@ -40,6 +40,22 @@ const PREFISSO_SEQ: usize = 8;
 /// che l'**unità dati** sul filo (seq + cella) abbia la stessa taglia del
 /// **pacchetto di apertura Sphinx**: nemmeno il primo quadro del circuito si
 /// distingue per dimensione (punto H2).
+/// Legge in `buffer` (una cella) quanto arriva; se la prima lettura riempie la cella solo in
+/// parte, aspetta **al massimo 2 ms** il resto. Le celle hanno tutte la stessa lunghezza (stealth):
+/// mandarne una mezza vuota spreca banda. Misurato (Shadow, nodi saturi): i nodi spedivano il 13%
+/// di byte in più di Tor per gli stessi dati, molti per celle quasi vuote. 0 = fine del flusso.
+pub async fn leggi_per_cella<R: tokio::io::AsyncRead + Unpin>(sorgente: &mut R, buffer: &mut [u8]) -> std::io::Result<usize> {
+    use tokio::io::AsyncReadExt;
+    let mut n = sorgente.read(buffer).await?;
+    while n > 0 && n < buffer.len() {
+        match tokio::time::timeout(std::time::Duration::from_millis(2), sorgente.read(&mut buffer[n..])).await {
+            Ok(Ok(k)) if k > 0 => n += k,
+            _ => break, // pausa, fine del flusso o errore: si spedisce quello che c'è
+        }
+    }
+    Ok(n)
+}
+
 pub const CAPACITA: usize =
     nyctalus_core::circuito::TAGLIA_PACCHETTO - PREFISSO_SEQ - INTESTAZIONE;
 /// Lunghezza fissa di una cella serializzata (uguale per tutte).

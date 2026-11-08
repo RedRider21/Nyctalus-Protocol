@@ -373,7 +373,7 @@ async fn gestisci_flusso(
     let andata = async {
         let mut buffer = vec![0u8; crate::cella::CAPACITA];
         loop {
-            let letti = app_lettura.read(&mut buffer).await?;
+            let letti = crate::cella::leggi_per_cella(&mut app_lettura, &mut buffer).await?;
             if letti == 0 {
                 break;
             }
