@@ -196,7 +196,7 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 
 ## A che punto siamo
 
-**Fatto e testato** (95 test automatici):
+**Fatto e testato** (119 test automatici del motore, 658 verifiche di funzionamento e sicurezza con `test/esegui-tutti.sh`):
 - **L2 — nucleo del protocollo:** frammentazione, etichette segrete rotanti (BLAKE3), cifratura end-to-end (ChaCha20-Poly1305) con pacchetti di lunghezza fissa, ricomposizione con limiti anti-DoS.
 - **Stretta di mano Noise NK:** i due estremi si accordano sul segreto senza farlo mai viaggiare; forward secrecy; il mittente resta anonimo.
 - **Indirizzi `.nyct`:** la chiave pubblica di un servizio in base32, con controllo anti-errori di battitura.
@@ -228,7 +228,19 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 - **Windows (anteprima)**: `Nyctalus-Windows.zip`, doppio clic su `Nyctalus.cmd` (Python incluso): la finestra è come l'app del telefono, chat e rubrica nelle loro finestre, Firefox per navigare. Guida: [MANUALE-WINDOWS.md](documenti/manuali/MANUALE-WINDOWS.md).
 - **Mini-launcher da desktop**: pannello senza bordi, trascinabile, con bottoni quadrati (orizzontale/verticale), **dimensione regolabile** e **tasti rapidi configurabili**, per lanciare Browser, Chat e Rubrica. Client grafici (browser, launcher, chat) in **Python+GTK3**; il motore resta in **Rust**.
 
-**In arrivo** (vedi [STATO.md](documenti/STATO.md)): taratura del rumore di fondo su rete reale, rotazione dei guard e ripresa dai circuiti caduti, descrittore firmato dei servizi, simulazione contro Tor con **Shadow**, gestore file grafico, **versione mobile** (PWA servita dal motore in Termux, browser mobile dal clone Chrome di NovaOS).
+- **Più veloce di Tor, misurato**: in simulazione (Shadow, contro Tor 0.4.9) più veloce in tutti gli scenari misurati, da +25% (nodi saturi) a +119% (nodi di velocità diverse): BBR, scelta dei nodi pesata per banda, ragnatela con distributore intelligente, celle piene, collegamenti riusati. Tabella sopra e in [PIANO-ANONIMATO.md](documenti/manuali/PIANO-ANONIMATO.md).
+- **Impronta TLS comune** (0.3.15): la stretta di mano TLS sul TCP ha l'impronta comune dei programmi rustls (JA4 `t13d1011h2`), non una propria; misura con `simulazione/impronta_tls.py`.
+
+**In arrivo** (scaletta, dettagli in [STATO.md](documenti/STATO.md)):
+1. **prove su rete vera** (Internet, più persone): velocità, chiamate, file;
+2. invisibilità: forma «videochiamata» (WebRTC); impronta identica a Chrome (valutare BoringSSL);
+3. capacità: promuovere a entrata i PC stabili che aiutano la rete; uscite diverse per gli scaricamenti grandi;
+4. chat da mixnet (ritardi e rimescolamento nei nodi) e copertura costante;
+5. rumore di fondo tarato su rete reale, ripresa dai circuiti caduti, descrittore firmato dei servizi;
+6. Mullvad Browser come «Nyctalus Browser (Firefox)»;
+7. piano di sicurezza e ricontrollo completo (firma delle release, audit delle dipendenze, fuzzing, dati locali cifrati, hardening);
+8. revisione indipendente;
+9. alla fine: guida passo per passo (telefono, PC, nodo), glossario, riordino della documentazione.
 
 ## Come è organizzato il progetto
 

@@ -1,12 +1,24 @@
 # Nyctalus Protocol — Stato dei lavori
 
-> Aggiornato al 27 settembre 2026, fine della prima sessione di sviluppo.
+> Aggiornato all'8 novembre 2026 (versione 0.3.15). Cronologia sotto, dalla più recente.
+
+
+## 🗂 SCALETTA (aggiornata 08/11/2026, dopo la 0.3.15)
+1. **Prove su rete vera** (Internet, amico a Pavia, più persone): velocità, chiamate, file; confronto con le misure in Shadow.
+2. **Invisibilità**: forma «videochiamata» (WebRTC); impronta identica a Chrome (BoringSSL, pesante: da valutare).
+3. **Capacità**: promuovere a entrata i PC stabili che aiutano la rete (come le guardie di Tor); uscite diverse per gli scaricamenti grandi (pesare l'anonimato).
+4. **Chat da mixnet** (ritardi e rimescolamento nei nodi, buste finte DP) e copertura costante opzionale.
+5. Rumore di fondo tarato su rete reale; ripresa dai circuiti caduti; descrittore firmato dei servizi.
+6. **Mullvad Browser** come «Nyctalus Browser (Firefox)» (download ~105 MB da approvare).
+7. **Piano di sicurezza + ricontrollo cybersecurity completo**: firma delle release, cargo audit/deny, forbid unsafe, fuzzing, dati locali cifrati, hardening systemd, autocontrollo d'integrità.
+8. Revisione indipendente (NLnet/NGI Zero).
+9. **Alla fine**: guida passo-passo (telefono, PC di casa, PC nodo su Internet), glossario dei termini e comandi, riordino organico della documentazione.
 
 ## ⚠️ DA FARE ALLA FINE DI TUTTO (richiesta dell'utente, 07/11/2026)
 1. **Guida passo per passo per il caso dell'utente**: installazione sul **telefono**, sul **PC di casa** e su
    **un altro PC di casa come nodo/server raggiungibile da Internet**; ogni comando spiegato e nell'ordine giusto.
 2. **Glossario** di termini e comandi con il loro significato/funzione.
-3. **Riordino organico di tutta la documentazione** (manuali, guide, sito). In particolare (segnalato dall'utente 08/11): la riga «In arrivo — gestore file grafico, motore precompilato per il telefono, taratura del rumore di fondo su rete reale, confronto con Tor (Shadow), una rete di nodi pubblica» in README e home di Pages è SUPERATA (File, motore Android e confronto con Tor fatti): riscrivere «A che punto siamo / In arrivo» per intero.
+3. **Riordino organico di tutta la documentazione** (manuali, guide, sito). In particolare (segnalato dall'utente 08/11): la riga «In arrivo — gestore file grafico, motore precompilato per il telefono, taratura del rumore di fondo su rete reale, confronto con Tor (Shadow), una rete di nodi pubblica» in README e home di Pages era SUPERATA → ✅ riscritta l'08/11 (stato, numeri delle prove, novità, scaletta come «In arrivo»).
 4. **Ricontrollo completo di cybersecurity** di tutto il sistema (richiesto 08/11/2026), insieme al piano sicurezza.
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
 
