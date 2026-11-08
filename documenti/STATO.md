@@ -16,7 +16,7 @@ L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisi
 - Riuso dei collegamenti fra nodi FATTO (un collegamento QUIC per coppia di nodi, i circuiti sono corsie; max 4096 corsie; `NYCTALUS_RIUSO=0` per spegnerlo): misurato, effetto piccolo (+1-3%, primo byte con 8 utenti 1,15→1,04 s); utile per stealth (meno collegamenti nuovi sul filo). Ipotesi del divario NON confermata: a nodi saturi con 4 utenti Tor resta avanti (3,05 vs 2,4) per un motivo ancora da capire.
 - ⚠️ DIFETTO APERTO: blocco intermittente di uno scaricamento a nodi saturi (3 su ~330 in Shadow, anche senza riuso): il download si ferma a metà e non riprende, nessun errore nei registri. Non riprodotto con NYCTALUS_DIAGNOSI=1 (riordino, circuiti, unità perse ora tracciati). Da riprendere con identità deterministiche in simulazione (ricontrollo finale di affidabilità/sicurezza).
 - Interfaccia «🦇 Aiuta la rete» FATTA: `nyctalus-rete aiuta si|no|stato`, `aggiungi --intermedio --banda`, voce nel launcher ⚙ (5 lingue), documenti aggiornati. Prova 35: 11/11.
-- ▶ RIPARTIRE DA QUI (sessione interrotta 08/11/2026): 1) suite completa (`test/esegui-tutti.sh`), 2) `git push` (3 commit locali in avanti), 3) CI motori (`gh workflow run release.yml`), scaricare motori android/arm/windows, `versionCode 54 / '0.54'`, `compila-apk.sh` + `crea-installazioni.sh` con ANDROID_HOME, 4) release **v0.3.11** + Pages (manuali), 5) avvisare l'utente per l'APK 0.54.
+- ✅ Release **v0.3.11** (APK 0.54) pubblicata l'08/11/2026; suite 649/649.
 
 ## 08/11/2026 · Release v0.3.10 (APK 0.53) ✅
 
