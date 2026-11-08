@@ -87,6 +87,8 @@ Le righe **non cambiano** tra un riavvio e l'altro: ogni nodo conserva la sua id
   `nyctalus-rete ponte aggiungi 'RIGA'`; telefono: Impostazioni → Rete condivisa → 🌉 Ponti
   nascosti). Insieme a `--codice NYCT1:…` (il ponte parla con la rete con la sua chiave). Chi
   sonda il ponte senza la sua chiave non riceve risposta.
+- I nodi ascoltano anche in **TCP** sulla stessa porta (ripiego per chi ha UDP bloccato): il
+  firewall va aperto in UDP **e** TCP (l'installatore lo fa con ufw/firewalld).
 - `--porta 443`: la porta di HTTP/3, la più comune per il traffico UDP cifrato (solo installazione
   di sistema: il servizio riceve il permesso di usare le porte basse senza essere root).
 - `--http3 SITO`: **forma HTTP/3**, i nodi sembrano il sito SITO (di solito arriva già dal

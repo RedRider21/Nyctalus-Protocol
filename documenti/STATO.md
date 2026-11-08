@@ -10,6 +10,9 @@
 4. **Ricontrollo completo di cybersecurity** di tutto il sistema (richiesto 08/11/2026), insieme al piano sicurezza.
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
 
+## 08/11/2026 · Invisibilità punto 2b: ripiego su TCP ✅ (release 0.3.13 da fare)
+- `tcp.rs`: socket ibrido UDP+TCP nei nodi, client UDP→TCP dopo 6 s (`trasporto::collega_entrata`, usato da circuiti e siti .nyct), lunghezze cifrate, sonde ignorate senza chiudere (60 s, 1024 connessioni); installatore apre UDP+TCP. Prova 36 (5/5).
+
 ## 08/11/2026 · Punto 1 chiuso: blocco non più riproducibile, divario con Tor trovato e superato ✅
 - Simulazioni ripetibili (identità per seme): ~1.700 scaricamenti senza blocchi.
 - Con 20 semi a nodi saturi era un pareggio (2,57 vs 2,66); le catture (velocita.py --pcap) mostravano 107 MB spediti dai nodi contro 94 di Tor: celle quasi vuote. Correzione `cella::leggi_per_cella` (attesa max 2 ms): 79 MB, **3,32 vs 2,66 (+25%)**; 8 utenti 2,08 vs 1,47; linea pulita 12,6; nodi diversi 4 utenti 5,7. Tabelle aggiornate (README, PIANO, LEGGIMI, Pages, simulazione).

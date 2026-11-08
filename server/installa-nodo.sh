@@ -193,11 +193,11 @@ ok "Servizi avviati: ${PORTE[*]/#/nyctalus-nodo@}"
 
 # --- firewall ---------------------------------------------------------------------------
 if command -v ufw >/dev/null && ufw status 2>/dev/null | grep -q "Status: active"; then
-  for p in "${PORTE[@]}"; do ufw allow "$p/udp" >/dev/null; done; ok "Firewall (ufw): aperte le porte UDP ${PORTE[*]}"
+  for p in "${PORTE[@]}"; do ufw allow "$p/udp" >/dev/null; ufw allow "$p/tcp" >/dev/null; done; ok "Firewall (ufw): aperte le porte ${PORTE[*]} (UDP, e TCP per chi ha UDP bloccato)"
 elif command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1; then
-  for p in "${PORTE[@]}"; do firewall-cmd --permanent --add-port="$p/udp" >/dev/null; done; firewall-cmd --reload >/dev/null; ok "Firewall (firewalld): aperte le porte UDP ${PORTE[*]}"
+  for p in "${PORTE[@]}"; do firewall-cmd --permanent --add-port="$p/udp" >/dev/null; firewall-cmd --permanent --add-port="$p/tcp" >/dev/null; done; firewall-cmd --reload >/dev/null; ok "Firewall (firewalld): aperte le porte ${PORTE[*]} (UDP e TCP)"
 else
-  avv "Nessun firewall attivo rilevato. Se il fornitore ha un firewall nel pannello, apri lì le porte UDP ${PORTE[*]}."
+  avv "Nessun firewall attivo rilevato. Se il fornitore ha un firewall nel pannello, apri lì le porte UDP ${PORTE[*]} (e le stesse in TCP: servono a chi ha UDP bloccato)."
 fi
 
 # --- ponte nascosto: le righe sono SEGRETE ------------------------------------------------

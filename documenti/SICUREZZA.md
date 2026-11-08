@@ -97,6 +97,7 @@ camuffato e un ponte nascosto **non rispondono mai**. Misura su 20.000 sonde a r
 | cipolla | ✅ il contenuto è in chiaro **solo** fra uscita e sito, mai su entrata, intermedi, linea dell'utente |
 | camuffamento | ✅ nessuna intestazione QUIC visibile, primo byte distribuito come rumore |
 | senza camuffamento | ⚠️ si riconosce QUIC; il **nome** nel primo pacchetto (`nyctalus.invalid`) è stato **tolto** nella 0.3.8 |
+| ripiego TCP (0.3.13) | ✅ entrata in TCP dove UDP è bloccato, lunghezze dei quadri cifrate; sonda con byte a caso: nessuna risposta e nessuna chiusura (prova `36-ripiego-tcp`) |
 | forma HTTP/3 (0.3.9) | ✅ porta 443, QUIC v1 con nome `www.esempio.it` e ALPN `h3`: un sito HTTP/3; ragnatela e cipolla intatte. Chrome che visita il nodo riceve una pagina 404 (prova `33-forma-http3`) |
 | rumore di fondo | ✅ traffico anche da fermi (1,3 contro 0,9 pacchetti/s a 0,2 celle/s) |
 | celle fisse | ✅ dentro il circuito; i datagrammi QUIC sul filo hanno lunghezze diverse |

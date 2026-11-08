@@ -265,8 +265,13 @@ catturati in Shadow su tutte le macchine):
   HTML). Certificati nuovi con nome e validità normali (il predefinito di rcgen era riconoscibile).
   Non mescolabile con i nodi in forma «rumore»: è una scelta di tutta la rete (rustls rifiuta
   ALPN diversi, `server/hs.rs`).
+- ✅ **Ripiego su TCP** (0.3.13, `tcp.rs`): i nodi ascoltano anche in TCP sulla stessa porta (un
+  socket ibrido per quinn); il client prova UDP e dopo 6 s passa a TCP (`NYCTALUS_TCP`). Quadri
+  «lunghezza (2 byte, cifrata con flusso di chiave BLAKE3 per direzione) + datagramma»; davanti a
+  dati senza senso il nodo legge e butta in silenzio (max 60 s) invece di chiudere; max 1024
+  connessioni TCP per nodo.
 - 📐 **Da fare:** impronta TLS/QUIC identica a un browser (oggi si vede rustls/quinn); forma
-  «videochiamata» (WebRTC); ripiego su **TCP 443** dove UDP è bloccato.
+  «videochiamata» (WebRTC); TCP che sembri TLS/HTTPS (oggi: byte a caso).
 - Dimensioni sul filo: le celle sono fisse **dentro** il circuito; i datagrammi QUIC invece hanno
   lunghezze diverse (pieni ~1200-1420 byte, più conferme e code più corte).
 

@@ -147,6 +147,7 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi **gestisce
 | [Rete di casa / via Internet](#10-rete-di-casa-e-via-internet) | provare senza server | — |
 | [Rubrica e casella](#11-rubrica-e-casella) | posta per chi è spento, elenco di chi c'è | accese nella rete di casa |
 | [Protezione: camuffamento e rumore](#12-protezione-camuffamento-e-rumore-di-fondo) | traffico simile a rumore (o a un sito HTTP/3), ritmi nascosti | accesa nelle reti nuove |
+| [UDP bloccato: ripiego su TCP](#13-bis-reti-con-udp-bloccato-ripiego-su-tcp) | collegarsi anche dove UDP non passa | automatico |
 | [Ponti nascosti](#13-ponti-nascosti) | entrare da un indirizzo privato, fuori dall'elenco; invisibile alle sonde | nessuno |
 | [Banda dei nodi](#14-famiglie-e-nodi-di-amici) | i nodi più veloci si usano di più (molto più veloce con nodi diversi) | non indicata |
 | [Famiglie e nodi di amici](#14-famiglie-e-nodi-di-amici) | mai due nodi dello stesso gestore in un percorso | — |
@@ -386,6 +387,17 @@ motore li riceve per variabile d'ambiente, mai sulla riga di comando (che altri 
 computer potrebbero leggere). A mano: `NYCTALUS_PONTI='RIGA' nyctalus start …` oppure
 `--bridge 'RIGA'`; un nodo diventa ponte con `nyctalus node … --hidden-bridge`.
 
+### 13-bis. Reti con UDP bloccato (ripiego su TCP)
+**A cosa serve:** Nyctalus viaggia su UDP (QUIC). Alcune reti (aziendali, Wi-Fi pubblici, alcuni
+paesi) bloccano UDP: lì il client, se l'entrata non risponde in **6 secondi**, passa **da solo** a
+**TCP sulla stessa porta**. Sopra non cambia niente: cipolla, ragnatela, camuffamento.
+**Costo:** su TCP un pacchetto perso ferma tutto il collegamento (come in Tor): più lento con
+reti instabili. È un ripiego, non la strada normale.
+**Di serie:** acceso (automatico). `NYCTALUS_TCP=1` per usare sempre TCP, `NYCTALUS_TCP=0` per non
+usarlo mai. I nodi ascoltano sempre anche in TCP; sui server l'installatore apre le porte in UDP
+e TCP (nella rete di casa, sul router inoltra anche la porta TCP se vuoi il ripiego).
+Chi sonda la porta TCP con dati a caso non riceve niente e il nodo non chiude: nessuna impronta.
+
 ### 14. Famiglie e nodi di amici
 **A cosa serve:** un percorso fa 3 salti. Se due salti sono **dello stesso gestore**, lui
 vede entrata e uscita. Con le **famiglie** dichiari quali nodi sono della stessa persona o
@@ -437,6 +449,7 @@ Per chi usa il motore a mano (`nyctalus start`, `nyctalus circuit`…). Tutte in
 | `--hidden-bridge` (nodo) | il nodo fa da ponte nascosto | spento |
 | `--middle-only` (nodo) | solo intermedio: mai uscita («Aiuta la rete») | spento |
 | `--max-rate MBIT` (nodo) | tetto della banda inoltrata | nessuno |
+| `NYCTALUS_TCP=1` / `=0` | entrata sempre in TCP / mai (di serie: TCP solo se UDP non risponde) | automatico |
 | `NYCTALUS_RIUSO=0` (nodo) | un collegamento per circuito invece di uno per coppia di nodi | riuso acceso |
 | `NYCTALUS_FINESTRA_KB` | finestra per circuito (KB): più piccola = la ragnatela sente prima le strade lente | 256 |
 | `NYCTALUS_CONGESTIONE` | controllo di congestione: `bbr`, `cubic`, `newreno` | bbr |
