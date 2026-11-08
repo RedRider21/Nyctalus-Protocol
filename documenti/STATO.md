@@ -7,7 +7,13 @@
    **un altro PC di casa come nodo/server raggiungibile da Internet**; ogni comando spiegato e nell'ordine giusto.
 2. **Glossario** di termini e comandi con il loro significato/funzione.
 3. **Riordino organico di tutta la documentazione** (manuali, guide, sito).
+4. **Ricontrollo completo di cybersecurity** di tutto il sistema (richiesto 08/11/2026), insieme al piano sicurezza.
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
+
+## 08/11/2026 · «🦇 Aiuta la rete», parte motore ✅ (non ancora rilasciata)
+- Nodo `--middle-only` (rifiuta il passo Finale: mai uscita né punto d'incontro) + `--max-rate MBIT` (secchiello di gettoni); elenco `ruolo=intermedio` (entries `…,famiglia,mbit,middle`); i client lo usano solo come intermedio (`percorsi::pieni`). Prova 35 (6/6).
+- Misura (velocita.py --aiuto): nodi saturi 4 utenti 2,47→2,61 (Tor 3,05); 8 utenti 1,56→1,62 (Tor 1,47). Poco: il collo di bottiglia sono entrata e uscita, non gli intermedi. BBR/Cubic e 1/2 circuiti indifferenti.
+- Ipotesi per il divario a nodi saturi: un collegamento QUIC NUOVO per ogni circuito e ogni tratta (Tor: uno per coppia di nodi). Prossimo: riuso dei collegamenti fra nodi; poi interfaccia «Aiuta la rete» e gestore.
 
 ## 08/11/2026 · Release v0.3.10 (APK 0.53) ✅
 

@@ -142,7 +142,7 @@ pub async fn avvia_circuito(
     // Nodi utilizzabili come punto d'incontro (e come tappe del circuito verso
     // di esso) per i siti `.nyct`: lo stesso elenco firmato che alimenta i
     // circuiti d'uscita.
-    let punti_incontro: Arc<Vec<crate::incontro::Punto>> = Arc::new(nodi.clone());
+    let punti_incontro: Arc<Vec<crate::incontro::Punto>> = Arc::new(crate::percorsi::pieni(&nodi));
 
     let mut prossimo_flusso: u16 = 0;
     loop {
@@ -278,7 +278,8 @@ fn seleziona_conflux(nodi: &[NodoRete], circuiti: usize, salti: usize) -> Risult
         // Guard = uscita: nessun anonimato, ma valido.
         return Ok(vec![vec![guard]; circuiti]);
     }
-    let (uscita, _) = crate::percorsi::scegli(nodi, &[guard], 1)?;
+    // uscita: mai un nodo «solo intermedio»
+    let (uscita, _) = crate::percorsi::scegli(&crate::percorsi::pieni(nodi), &[guard], 1)?;
     let Some(&uscita) = uscita.first() else {
         return Err("need at least 2 nodes in the directory".into());
     };

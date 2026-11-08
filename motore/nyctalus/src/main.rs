@@ -57,7 +57,7 @@ Usage:
   nyctalus nodes   [--config FILE] [--directory FILE] [--authority HEX] [--probe] [--timeout 3] [--obfuscation HEX]
   nyctalus exec    [--socks ADDR] [--config FILE] -- PROGRAM [ARG...]
   nyctalus monitor [--control 127.0.0.1:1090]
-  nyctalus node    --listen 0.0.0.0:4601 [--data DIR] [--announce PUBLIC_IP:PORT] [--secret HEX] [--directory FILE --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0] [--hidden-bridge]
+  nyctalus node    --listen 0.0.0.0:4601 [--data DIR] [--announce PUBLIC_IP:PORT] [--secret HEX] [--directory FILE --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0] [--hidden-bridge] [--middle-only] [--max-rate MBIT]
   nyctalus authority
   nyctalus directory --authority-secret HEX --entries 'addr,x,fp;addr,x,fp'
   nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)] [--cover 0]
@@ -239,7 +239,12 @@ async fn esegui() -> Risultato<()> {
                 dati,
                 annuncia: opzione(&opzioni, "announce").map(String::from),
                 ponte: opzione(&opzioni, "hidden-bridge").is_some(),
+                solo_intermedio: opzione(&opzioni, "middle-only").is_some(),
+                tetto_mbit: opzione(&opzioni, "max-rate").map(str::parse::<f64>).transpose()?.unwrap_or(0.0),
             };
+            if !(0.0..=100_000.0).contains(&contorno.tetto_mbit) {
+                return Err("--max-rate: Mbit/s between 0 (no cap) and 100000".into());
+            }
             let auth = match (opzione(&opzioni, "directory"), opzione(&opzioni, "authority")) {
                 (Some(e), Some(a)) => {
                     Some(nodo::Autenticazione { elenco: PathBuf::from(e), autorita: da_esadecimale(a)? })
@@ -348,7 +353,7 @@ async fn esegui() -> Risultato<()> {
 type Opzioni = HashMap<String, String>;
 
 /// Opzioni senza valore (flag sì/no): se presenti valgono "true".
-const FLAG_BOOLEANI: &[&str] = &["probe", "hidden-bridge", "mimic"];
+const FLAG_BOOLEANI: &[&str] = &["probe", "hidden-bridge", "mimic", "middle-only"];
 
 fn leggi_opzioni(argomenti: &[String]) -> Risultato<(Opzioni, Vec<String>)> {
     let mut opzioni = HashMap::new();
@@ -402,6 +407,7 @@ fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_cir
     let mut nodi = Vec::new();
     let mut famiglie = Vec::new();
     let mut bande = Vec::new();
+    let mut intermedi = Vec::new();
     for v in voci {
         match circuito_rete::risolvi_voce(&v.indirizzo, &v.x25519) {
             Ok(a) => {
@@ -411,6 +417,9 @@ fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_cir
                 }
                 if let Some(b) = v.banda {
                     bande.push((v.x25519, b));
+                }
+                if v.intermedio {
+                    intermedi.push(v.x25519);
                 }
             }
             Err(e) => eprintln!("nodo saltato: {e}"),
@@ -422,6 +431,7 @@ fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_cir
     // la rete (per ricordare la guardia di ciascuna) e le famiglie dichiarate dal gestore
     percorsi::imposta_rete(&autorita, famiglie);
     percorsi::imposta_bande(bande);
+    percorsi::imposta_intermedi(intermedi);
     Ok(nodi)
 }
 
@@ -447,7 +457,8 @@ fn carica_punti_incontro(opzioni: &Opzioni) -> Risultato<Vec<incontro::Punto>> {
     let val = |k: &str| opzione(opzioni, k).map(String::from).or_else(|| file.get(k).cloned());
     let elenco = val("directory").ok_or("missing 'directory' (in config or --directory)")?;
     let autorita = da_esadecimale(&val("authority").ok_or("missing 'authority' (in config or --authority)")?)?;
-    nodi_da_elenco(&elenco, autorita)
+    // punti d'incontro: mai i nodi «solo intermedi» (PC degli utenti, che si spengono)
+    Ok(percorsi::pieni(&nodi_da_elenco(&elenco, autorita)?))
 }
 
 /// Numero di salti del circuito verso il punto d'incontro (`--hops`, default 3).
@@ -624,12 +635,16 @@ fn leggi_voci_elenco(testo: &str) -> Risultato<Vec<nyctalus_core::elenco::VoceEl
         .filter(|v| !v.trim().is_empty())
         .map(|voce| {
             let campi: Vec<&str> = voce.split(',').map(str::trim).collect();
-            let (addr, x, fp, fam, banda) = match campi.as_slice() {
-                [a, x, f] => (a, x, f, "", ""),
-                [a, x, f, fam] => (a, x, f, *fam, ""),
-                [a, x, f, fam, b] => (a, x, f, *fam, *b),
-                _ => return Err("entry in the form address,x25519hex,fingerprinthex[,family[,mbit]]".into()),
+            let (addr, x, fp, fam, banda, ruolo) = match campi.as_slice() {
+                [a, x, f] => (a, x, f, "", "", ""),
+                [a, x, f, fam] => (a, x, f, *fam, "", ""),
+                [a, x, f, fam, b] => (a, x, f, *fam, *b, ""),
+                [a, x, f, fam, b, r] => (a, x, f, *fam, *b, *r),
+                _ => return Err("entry in the form address,x25519hex,fingerprinthex[,family[,mbit[,middle]]]".into()),
             };
+            if !matches!(ruolo, "" | "middle" | "intermedio") {
+                return Err(format!("role: «middle» or empty, not {ruolo}").into());
+            }
             let famiglia = if fam.is_empty() {
                 None
             } else if nyctalus_core::elenco::famiglia_valida(fam) {
@@ -648,6 +663,7 @@ fn leggi_voci_elenco(testo: &str) -> Risultato<Vec<nyctalus_core::elenco::VoceEl
                 impronta_tls: da_esadecimale(fp)?,
                 famiglia,
                 banda,
+                intermedio: !ruolo.is_empty(),
             })
         })
         .collect()

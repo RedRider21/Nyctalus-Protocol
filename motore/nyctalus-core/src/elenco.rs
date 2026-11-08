@@ -41,6 +41,9 @@ pub struct VoceElenco {
     /// Banda del nodo in Mbit/s dichiarata (o misurata) dal gestore, se c'è: i percorsi scelgono
     /// più spesso i nodi più capaci (dalla 0.3.10).
     pub banda: Option<u32>,
+    /// **Solo intermedio** (es. il PC di un utente che «aiuta la rete»): mai guardia, uscita o
+    /// punto d'incontro (dalla 0.3.11; i motori 0.3.10 ignorano il campo).
+    pub intermedio: bool,
 }
 
 /// Nome di famiglia valido: 1-32 caratteri fra lettere, cifre, `_`, `.` e `-`.
@@ -130,6 +133,9 @@ fn righe_voci(voci: &[VoceElenco]) -> String {
         if let Some(b) = v.banda {
             s.push_str(&format!(" banda={b}"));
         }
+        if v.intermedio {
+            s.push_str(" ruolo=intermedio");
+        }
         s.push('\n');
     }
     s
@@ -142,7 +148,7 @@ fn analizza_voce(resto: &str) -> Result<VoceElenco, ErroreElenco> {
     };
     // campi facoltativi «nome=valore»: quelli che non conosciamo si IGNORANO (sono comunque coperti
     // dalla firma), così un elenco con campi nuovi resta leggibile dai motori più vecchi
-    let (mut famiglia, mut banda) = (None, None);
+    let (mut famiglia, mut banda, mut intermedio) = (None, None, false);
     for c in extra {
         let Some((k, v)) = c.split_once('=') else {
             return Err(ErroreElenco::Malformato(format!("campo non valido: {c}")));
@@ -151,6 +157,7 @@ fn analizza_voce(resto: &str) -> Result<VoceElenco, ErroreElenco> {
             "famiglia" if famiglia_valida(v) => famiglia = Some(v.to_string()),
             "famiglia" => return Err(ErroreElenco::Malformato(format!("famiglia non valida: {v}"))),
             "banda" => banda = v.parse::<u32>().ok().filter(|b| (1..=1_000_000).contains(b)),
+            "ruolo" => intermedio = v == "intermedio",
             _ => {}
         }
     }
@@ -159,7 +166,7 @@ fn analizza_voce(resto: &str) -> Result<VoceElenco, ErroreElenco> {
             .and_then(|b| b.try_into().ok())
             .ok_or_else(|| ErroreElenco::Malformato("chiave esadecimale non a 32 byte".into()))
     };
-    Ok(VoceElenco { indirizzo: (*indirizzo).to_string(), x25519: a_32(x25519)?, impronta_tls: a_32(impronta)?, famiglia, banda })
+    Ok(VoceElenco { indirizzo: (*indirizzo).to_string(), x25519: a_32(x25519)?, impronta_tls: a_32(impronta)?, famiglia, banda, intermedio })
 }
 
 fn esadecimale(byte: &[u8]) -> String {
@@ -179,8 +186,8 @@ mod test {
 
     fn voci() -> Vec<VoceElenco> {
         vec![
-            VoceElenco { indirizzo: "127.0.0.1:4601".into(), x25519: [1; 32], impronta_tls: [2; 32], famiglia: None, banda: None },
-            VoceElenco { indirizzo: "127.0.0.1:4602".into(), x25519: [3; 32], impronta_tls: [4; 32], famiglia: None, banda: None },
+            VoceElenco { indirizzo: "127.0.0.1:4601".into(), x25519: [1; 32], impronta_tls: [2; 32], famiglia: None, banda: None, intermedio: false },
+            VoceElenco { indirizzo: "127.0.0.1:4602".into(), x25519: [3; 32], impronta_tls: [4; 32], famiglia: None, banda: None, intermedio: false },
         ]
     }
 
@@ -245,6 +252,10 @@ mod test {
         assert!(testo.contains(" banda=100\n"));
         assert_eq!(verifica_elenco(&testo, &pubblica).unwrap()[0].banda, Some(100));
         assert!(verifica_elenco(&testo.replace("banda=100", "banda=900"), &pubblica).is_err(), "la banda è firmata");
+        v[1].intermedio = true;
+        let testo = firma_elenco(&v, &segreto);
+        let lette = verifica_elenco(&testo, &pubblica).unwrap();
+        assert!(!lette[0].intermedio && lette[1].intermedio, "ruolo=intermedio letto e firmato");
         // un campo che questo motore non conosce non rompe la lettura
         assert!(analizza_voce("127.0.0.1:1 0101010101010101010101010101010101010101010101010101010101010101 0202020202020202020202020202020202020202020202020202020202020202 futuro=1").is_ok());
     }

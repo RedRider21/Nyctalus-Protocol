@@ -42,6 +42,34 @@ pub struct Contorno {
     /// **ponte nascosto**: non va nell'elenco pubblico; chi entra usa una chiave di camuffamento
     /// tutta sua (salvata in `chiave-ponte`), verso i nodi successivi si usa quella della rete
     pub ponte: bool,
+    /// **solo intermedio** («🦇 Aiuta la rete»): rifiuta di fare da uscita (verso Internet o verso
+    /// un punto d'incontro); il traffico degli altri non esce MAI dal suo indirizzo
+    pub solo_intermedio: bool,
+    /// tetto della banda inoltrata (Mbit/s), 0 = nessuno
+    pub tetto_mbit: f64,
+}
+
+/// Tetto di banda del nodo: secchiello di gettoni condiviso da tutti i circuiti.
+struct Tetto {
+    byte_al_secondo: f64,
+    stato: tokio::sync::Mutex<(f64, std::time::Instant)>,
+}
+
+static TETTO: OnceLock<Tetto> = OnceLock::new();
+static SOLO_INTERMEDIO: OnceLock<bool> = OnceLock::new();
+
+/// Aspetta, se serve, per restare sotto il tetto di banda del nodo.
+async fn rispetta_tetto(byte: usize) {
+    let Some(t) = TETTO.get() else { return };
+    let mut s = t.stato.lock().await;
+    let ora = std::time::Instant::now();
+    let riserva = t.byte_al_secondo * 0.25;       // 250 ms di raffica al massimo
+    s.0 = (s.0 + ora.duration_since(s.1).as_secs_f64() * t.byte_al_secondo).min(riserva);
+    s.1 = ora;
+    s.0 -= byte as f64;
+    if s.0 < 0.0 {
+        tokio::time::sleep(std::time::Duration::from_secs_f64(-s.0 / t.byte_al_secondo)).await;
+    }
 }
 
 /// La chiave di camuffamento del ponte: letta da `DATI/chiave-ponte` o creata la prima volta.
@@ -73,6 +101,11 @@ pub async fn nodo(
     contorno: Contorno,
 ) -> Risultato<()> {
     let _ = COPERTURA_NODO.set(copertura);
+    let _ = SOLO_INTERMEDIO.set(contorno.solo_intermedio);
+    if contorno.tetto_mbit > 0.0 {
+        let b = contorno.tetto_mbit * 1_000_000.0 / 8.0;
+        let _ = TETTO.set(Tetto { byte_al_secondo: b, stato: tokio::sync::Mutex::new((b * 0.25, std::time::Instant::now())) });
+    }
     let pubblica = circuito::chiave_pubblica(&segreto);
     let identita = crate::tls::identita_server_in(contorno.dati.as_deref())?;
     let annunciato = contorno.annuncia.clone().unwrap_or_else(|| ascolta.to_string());
@@ -114,6 +147,12 @@ pub async fn nodo(
     }
     if copertura > 0.0 {
         println!("  cover traffic (downstream): ~{copertura:.1} dummy cells/s");
+    }
+    if contorno.solo_intermedio {
+        println!("  MIDDLE ONLY: never an exit (others' traffic never leaves from this address)");
+    }
+    if contorno.tetto_mbit > 0.0 {
+        println!("  bandwidth cap: {} Mbit/s", contorno.tetto_mbit);
     }
 
     let endpoint = crate::trasporto::endpoint_server(identita.config, ascolta, ingresso)?;
@@ -217,6 +256,7 @@ async fn gestisci_circuito(
                     match leggi_quadro(&mut ricezione_monte).await {
                         Ok(Some(mut payload)) => {
                             cipolla::sbuccia(n, &chiave, &mut payload);
+                            rispetta_tetto(payload.len()).await;
                             if let Err(e) = scrivi_quadro(&mut invio_valle, &payload).await {
                                 let _ = ricezione_monte.stop(quinn::VarInt::from_u32(0));
                                 return Err(e);
@@ -241,6 +281,7 @@ async fn gestisci_circuito(
                     match leggi_quadro(&mut ricezione_valle).await {
                         Ok(Some(mut payload)) => {
                             cipolla::sbuccia(BIT_RISPOSTA | n, &chiave, &mut payload);
+                            rispetta_tetto(payload.len()).await;
                             if let Err(e) = scrivi_quadro(&mut invio_monte, &payload).await {
                                 let _ = ricezione_valle.stop(quinn::VarInt::from_u32(0));
                                 return Err(e);
@@ -261,6 +302,10 @@ async fn gestisci_circuito(
             let (a, b) = tokio::join!(andata, ritorno);
             a?;
             b?;
+        }
+        PassoNodo::Finale if *SOLO_INTERMEDIO.get().unwrap_or(&false) => {
+            // nodo «solo intermedio»: mai uscita, né verso Internet né verso un punto d'incontro
+            return Err("middle-only node: refusing to act as exit".into());
         }
         PassoNodo::Finale => {
             // 1º quadro onion dell'uscita: tolto il nostro strato, è il controllo

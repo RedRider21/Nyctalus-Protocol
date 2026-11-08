@@ -49,6 +49,21 @@ struct Contesto {
     ponti: Vec<(NodoRete, [u8; 32])>,
     /// banda dichiarata nell'elenco firmato (Mbit/s), per chiave X25519
     bande: HashMap<[u8; 32], u32>,
+    /// nodi solo intermedi (mai guardia, uscita, punto d'incontro)
+    intermedi: std::collections::HashSet<[u8; 32]>,
+}
+
+/// Imposta i nodi **solo intermedi** (dall'elenco firmato: `ruolo=intermedio`).
+pub fn imposta_intermedi(nodi: Vec<[u8; 32]>) {
+    contesto().lock().unwrap().intermedi = nodi.into_iter().collect();
+}
+
+/// I nodi che possono fare da guardia, uscita e punto d'incontro (tutti tranne i «solo intermedi»;
+/// se fossero tutti intermedi, per non bloccare la rete, tutti).
+pub fn pieni(nodi: &[NodoRete]) -> Vec<NodoRete> {
+    let c = contesto().lock().unwrap();
+    let v: Vec<NodoRete> = nodi.iter().copied().filter(|n| !c.intermedi.contains(&n.1)).collect();
+    if v.is_empty() { nodi.to_vec() } else { v }
 }
 
 /// Imposta le bande dei nodi (dall'elenco firmato): i nodi più capaci si scelgono più spesso.
@@ -306,7 +321,7 @@ pub fn guardia(nodi: &[NodoRete]) -> NodoRete {
         (c.guardia, rete, c.ponti.iter().map(|p| p.0).collect::<Vec<_>>())
     };
     // con i ponti la guardia è uno dei ponti (ricordato a parte), mai un nodo dell'elenco
-    let (nodi, rete) = if ponti.is_empty() { (nodi.to_vec(), rete) } else { (ponti, rete + "-ponte") };
+    let (nodi, rete) = if ponti.is_empty() { (pieni(nodi), rete) } else { (ponti, rete + "-ponte") };
     let nodi = nodi.as_slice();
     if let Some(n) = gia.and_then(|k| nodi.iter().find(|n| n.1 == k)) {
         return *n;
@@ -338,7 +353,8 @@ pub fn percorso_verso(nodi: &[NodoRete], ultimo: NodoRete, salti: usize) -> Risu
     let g = guardia(nodi);
     let ponti = ponti();
     // se la guardia è parente del punto d'incontro si entra da un'altra (fra i ponti, se ci sono)
-    let candidati: &[NodoRete] = if ponti.is_empty() { nodi } else { &ponti };
+    let pieni_nodi = pieni(nodi);
+    let candidati: &[NodoRete] = if ponti.is_empty() { &pieni_nodi } else { &ponti };
     let entrata = if parenti(&g, &ultimo) {
         scegli(candidati, &[ultimo], 1)?.0.into_iter().next().or(Some(g))
     } else {
@@ -463,6 +479,7 @@ pub(crate) mod test {
         c.rigida_prova = Some(false);
         c.ponti.clear();
         c.bande.clear();
+        c.intermedi.clear();
     }
 
     fn cartella(nome: &str) -> std::path::PathBuf {

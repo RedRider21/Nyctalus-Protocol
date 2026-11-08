@@ -114,6 +114,19 @@ def prepara_nyctalus(out, a):
         if a.bande and not a.senza_pesi:       # la banda di ogni nodo nell'elenco firmato
             riga += ",%s" % a.bande.split(",")[(i - 1) % len(a.bande.split(","))]
         righe.append(riga)
+    # «Aiuta la rete»: ogni utente fa anche da nodo SOLO INTERMEDIO, con un tetto di banda
+    for u in range(a.utenti if a.aiuto else 0):
+        d = out / ("aiuto%d" % u)
+        d.mkdir()
+        p = subprocess.Popen([str(BIN), "node", "--listen", "127.0.0.1:0", "--data", str(d),
+                              "--announce", "13.0.0.%d:4700" % (10 + u)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(50):
+            f = d / "riga-elenco.txt"
+            if f.exists() and f.read_text().strip():
+                break
+            time.sleep(0.1)
+        p.kill()
+        righe.append((d / "riga-elenco.txt").read_text().strip() + ",utente%d,%d,middle" % (u, a.aiuto))
     (out / "directory.txt").write_text(subprocess.run(
         [str(BIN), "directory", "--authority-secret", sec, "--entries", ";".join(righe)],
         capture_output=True, text=True).stdout)
@@ -135,6 +148,11 @@ def prepara_nyctalus(out, a):
                                        "--socks", "127.0.0.1:1080", "--circuits", str(a.circuiti)),
               '      environment: { NYCTALUS_GUARDIE: "%s", NYCTALUS_CONGESTIONE: "%s", NYCTALUS_FINESTRA_KB: "%s", NYCTALUS_CODIFICA: "%s" }' % (out / ("guardie%d" % u), a.congestione, a.finestra, a.codifica),
               "      start_time: 5s", "      expected_final_state: running"]
+        if a.aiuto:
+            y += ["    - path: %s" % BIN,
+                  "      args: %s" % lista("node", "--listen", "0.0.0.0:4700", "--data", str(out / ("aiuto%d" % u)),
+                                           "--announce", "13.0.0.%d:4700" % (10 + u), "--middle-only", "--max-rate", str(a.aiuto)),
+                  "      start_time: 1s", "      expected_final_state: running"]
         y += scaricamento(u, inizio + rnd.uniform(0, 1), "127.0.0.1:1080")
     (out / "shadow.yaml").write_text("\n".join(y) + "\n")
     return []
@@ -167,6 +185,7 @@ def main():
     ap.add_argument("--mb", type=float, default=5)
     ap.add_argument("--circuiti", type=int, default=2)
     ap.add_argument("--seme", type=int, default=1)
+    ap.add_argument("--aiuto", type=int, default=0, help="Nyctalus: ogni utente fa anche da nodo solo intermedio con questo tetto (Mbit/s)")
     ap.add_argument("--codifica", default="", help="Nyctalus: ragnatela codificata k,r (es. 8,2)")
     ap.add_argument("--finestra", default="", help="Nyctalus: finestra per flusso in KB (NYCTALUS_FINESTRA_KB)")
     ap.add_argument("--congestione", default="", help="Nyctalus: bbr (di serie)|cubic|newreno (NYCTALUS_CONGESTIONE)")
@@ -183,9 +202,9 @@ def main():
     tempi, primi, falliti = risultati(out, byte)
     media = sum(tempi) / len(tempi) if tempi else 0.0
     vel = sum(byte / t for t in tempi) / len(tempi) * 8 / 1e6 if tempi else 0.0
-    print("RISULTATO codifica=%s pesi=%s finestra=%s congestione=%s sistema=%s perdita=%g banda_nodi=%s utenti=%d mb=%g circuiti=%s seme=%d riusciti=%d falliti=%d "
+    print("RISULTATO aiuto=%s codifica=%s pesi=%s finestra=%s congestione=%s sistema=%s perdita=%g banda_nodi=%s utenti=%d mb=%g circuiti=%s seme=%d riusciti=%d falliti=%d "
           "tempo_medio=%.2f primo_byte=%.2f mbit_s=%.2f"
-          % (a.codifica.replace(",", "+") or "no", "no" if a.senza_pesi or not a.bande else "si", a.finestra or "-", a.congestione or "bbr", a.sistema, a.perdita, (a.bande.replace(",", "/") if a.bande else (a.banda_nodi or "-")), a.utenti, a.mb, a.circuiti if a.sistema == "nyctalus" else "-",
+          % (a.aiuto or "no", a.codifica.replace(",", "+") or "no", "no" if a.senza_pesi or not a.bande else "si", a.finestra or "-", a.congestione or "bbr", a.sistema, a.perdita, (a.bande.replace(",", "/") if a.bande else (a.banda_nodi or "-")), a.utenti, a.mb, a.circuiti if a.sistema == "nyctalus" else "-",
              a.seme, len(tempi), falliti, media, sum(primi) / len(primi) if primi else 0.0, vel))
     # i file scaricati non servono più: si tiene solo il registro (il disco è quasi pieno)
     shutil.rmtree(out / "sito", ignore_errors=True)
