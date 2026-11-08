@@ -10,7 +10,7 @@
 4. **Ricontrollo completo di cybersecurity** di tutto il sistema (richiesto 08/11/2026), insieme al piano sicurezza.
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
 
-## 08/11/2026 · Invisibilità punto 2b: ripiego su TCP ✅ (release 0.3.13 da fare)
+## 08/11/2026 · Invisibilità punto 2b: ripiego su TCP ✅ — release v0.3.13 (APK 0.56)
 - `tcp.rs`: socket ibrido UDP+TCP nei nodi, client UDP→TCP dopo 6 s (`trasporto::collega_entrata`, usato da circuiti e siti .nyct), lunghezze cifrate, sonde ignorate senza chiudere (60 s, 1024 connessioni); installatore apre UDP+TCP. Prova 36 (5/5).
 
 ## 08/11/2026 · Punto 1 chiuso: blocco non più riproducibile, divario con Tor trovato e superato ✅
