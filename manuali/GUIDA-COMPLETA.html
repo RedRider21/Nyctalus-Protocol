@@ -215,6 +215,11 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi <strong>ge
 <td>—</td>
 </tr>
 <tr>
+<td><a href="#9-bis-aiuta-la-rete-pc">🦇 Aiuta la rete</a></td>
+<td>il tuo PC fa anche da nodo intermedio: rete più capace, i tuoi ritmi più coperti</td>
+<td>spento</td>
+</tr>
+<tr>
 <td><strong>Per chi gestisce la rete</strong></td>
 <td></td>
 <td></td>
@@ -368,6 +373,26 @@ il browser riconoscibile.</p>
 </ul>
 <p>Dettagli: <a href="MANUALE-TERMINALE.html"><code>MANUALE-TERMINALE.md</code></a>.</p>
 <hr />
+<h3 id="9-bis-aiuta-la-rete-pc">9-bis. Aiuta la rete (PC)</h3>
+<p><strong>A cosa serve:</strong> il tuo PC fa anche da <strong>nodo intermedio</strong> della rete: passa il traffico cifrato
+degli altri. Più utenti aiutano, più la rete è capace; e il traffico degli altri copre in parte i
+tuoi ritmi.</p>
+<p><strong>Regole fisse:</strong> solo <strong>intermedio</strong>, mai uscita (il traffico degli altri non esce <strong>mai</strong> su
+Internet dal tuo indirizzo: il nodo rifiuta anche se un client glielo chiede), mai guardia né
+punto d'incontro (un PC si spegne). Un <strong>tetto di banda</strong> che scegli tu.</p>
+<p><strong>Costo:</strong> un po' di banda in upload (fino al tetto) e una porta UDP da aprire sul router.</p>
+<p><strong>Passi:</strong></p>
+<ul>
+<li><strong>PC:</strong> launcher → ⚙ → <strong>🦇 Aiuta la rete</strong> → indirizzo pubblico (il nome No-IP/DuckDNS o l'IP di
+  casa), porta (4800), tetto (es. 10 Mbit/s) → <strong>Accendi</strong>. Oppure da terminale:
+  <code>nyctalus-rete aiuta si --indirizzo miacasa.ddns.net --tetto 10</code> · <code>aiuta stato</code> · <code>aiuta no</code>.</li>
+<li><strong>Router:</strong> inoltra la porta UDP scelta verso il PC.</li>
+<li><strong>Gestore:</strong> riceve la riga che il PC mostra e la aggiunge con
+  <code>nyctalus-rete aggiungi 'RIGA' --intermedio --banda 10 --famiglia NOME</code>, poi <code>firma</code>
+  (serve che i client abbiano la 0.3.11).</li>
+</ul>
+<p>Misurato in simulazione: con i nodi della rete saturi l'aiuto come soli intermedi accelera poco
+(+5%), perché la strettoia sono entrata e uscita; conta quando gli utenti sono molti.</p>
 <h3 id="per-chi-gestisce-la-rete">Per chi gestisce la rete</h3>
 <p>I comandi sono di <code>nyctalus-rete</code>, sul PC del gestore. Dopo ogni cambio che tocca il
 <strong>codice di rete</strong>, va ridato a chi si collega (importandolo di nuovo).</p>
@@ -545,6 +570,21 @@ modalità rigida invece <strong>si rifiuta</strong>: meglio niente che un percor
 <td><code>--hidden-bridge</code> (nodo)</td>
 <td>il nodo fa da ponte nascosto</td>
 <td>spento</td>
+</tr>
+<tr>
+<td><code>--middle-only</code> (nodo)</td>
+<td>solo intermedio: mai uscita («Aiuta la rete»)</td>
+<td>spento</td>
+</tr>
+<tr>
+<td><code>--max-rate MBIT</code> (nodo)</td>
+<td>tetto della banda inoltrata</td>
+<td>nessuno</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_RIUSO=0</code> (nodo)</td>
+<td>un collegamento per circuito invece di uno per coppia di nodi</td>
+<td>riuso acceso</td>
 </tr>
 <tr>
 <td><code>NYCTALUS_FINESTRA_KB</code></td>
