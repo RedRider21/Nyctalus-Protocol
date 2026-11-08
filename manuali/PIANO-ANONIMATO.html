@@ -407,7 +407,9 @@ debole, e le misure del punto K lo confermano anche per noi. I passi, in ordine:
    <a href="GUIDA-COMPLETA.html"><code>GUIDA-COMPLETA.md</code></a> §13; prova <code>32-ponte-nascosto</code>.</li>
 <li>🔧 <strong>Trasporto mimetico</strong> — ✅ <strong>forma HTTP/3 fatta</strong> (0.3.9): i nodi sembrano un sito HTTP/3
    sulla porta 443 con il nome scelto dal gestore, e chi li sonda (anche un vero Chrome) riceve una
-   pagina 404. Restano: impronta identica a un browser, forma «videochiamata», ripiego su TCP 443.
+   pagina 404. ✅ <strong>Ripiego su TCP</strong> (0.3.13): dove UDP è bloccato si entra in TCP sulla stessa
+   porta, da soli. Restano: impronta identica a un browser, forma «videochiamata», TCP che sembri
+   TLS.
    Il camuffamento di serie rende il traffico simile a rumore, e il rumore
    puro è sospetto (in alcuni paesi viene bloccato proprio così). Meglio farlo sembrare
    <strong>traffico comune</strong>: una normale videochiamata (WebRTC) o un normale sito HTTPS/HTTP-3

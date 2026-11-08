@@ -240,6 +240,11 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi <strong>ge
 <td>accesa nelle reti nuove</td>
 </tr>
 <tr>
+<td><a href="#13-bis-reti-con-udp-bloccato-ripiego-su-tcp">UDP bloccato: ripiego su TCP</a></td>
+<td>collegarsi anche dove UDP non passa</td>
+<td>automatico</td>
+</tr>
+<tr>
 <td><a href="#13-ponti-nascosti">Ponti nascosti</a></td>
 <td>entrare da un indirizzo privato, fuori dall'elenco; invisibile alle sonde</td>
 <td>nessuno</td>
@@ -496,6 +501,16 @@ solo, a mano, a chi deve entrare da lì.</p>
 motore li riceve per variabile d'ambiente, mai sulla riga di comando (che altri utenti del
 computer potrebbero leggere). A mano: <code>NYCTALUS_PONTI='RIGA' nyctalus start …</code> oppure
 <code>--bridge 'RIGA'</code>; un nodo diventa ponte con <code>nyctalus node … --hidden-bridge</code>.</p>
+<h3 id="13-bis-reti-con-udp-bloccato-ripiego-su-tcp">13-bis. Reti con UDP bloccato (ripiego su TCP)</h3>
+<p><strong>A cosa serve:</strong> Nyctalus viaggia su UDP (QUIC). Alcune reti (aziendali, Wi-Fi pubblici, alcuni
+paesi) bloccano UDP: lì il client, se l'entrata non risponde in <strong>6 secondi</strong>, passa <strong>da solo</strong> a
+<strong>TCP sulla stessa porta</strong>. Sopra non cambia niente: cipolla, ragnatela, camuffamento.
+<strong>Costo:</strong> su TCP un pacchetto perso ferma tutto il collegamento (come in Tor): più lento con
+reti instabili. È un ripiego, non la strada normale.
+<strong>Di serie:</strong> acceso (automatico). <code>NYCTALUS_TCP=1</code> per usare sempre TCP, <code>NYCTALUS_TCP=0</code> per non
+usarlo mai. I nodi ascoltano sempre anche in TCP; sui server l'installatore apre le porte in UDP
+e TCP (nella rete di casa, sul router inoltra anche la porta TCP se vuoi il ripiego).
+Chi sonda la porta TCP con dati a caso non riceve niente e il nodo non chiude: nessuna impronta.</p>
 <h3 id="14-famiglie-e-nodi-di-amici">14. Famiglie e nodi di amici</h3>
 <p><strong>A cosa serve:</strong> un percorso fa 3 salti. Se due salti sono <strong>dello stesso gestore</strong>, lui
 vede entrata e uscita. Con le <strong>famiglie</strong> dichiari quali nodi sono della stessa persona o
@@ -580,6 +595,11 @@ modalità rigida invece <strong>si rifiuta</strong>: meglio niente che un percor
 <td><code>--max-rate MBIT</code> (nodo)</td>
 <td>tetto della banda inoltrata</td>
 <td>nessuno</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_TCP=1</code> / <code>=0</code></td>
+<td>entrata sempre in TCP / mai (di serie: TCP solo se UDP non risponde)</td>
+<td>automatico</td>
 </tr>
 <tr>
 <td><code>NYCTALUS_RIUSO=0</code> (nodo)</td>

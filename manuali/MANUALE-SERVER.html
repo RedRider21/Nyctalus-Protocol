@@ -125,6 +125,8 @@ nyctalus-server log         # ultimi messaggi (log 4601 = solo quel nodo)
   <code>nyctalus-rete ponte aggiungi 'RIGA'</code>; telefono: Impostazioni → Rete condivisa → 🌉 Ponti
   nascosti). Insieme a <code>--codice NYCT1:…</code> (il ponte parla con la rete con la sua chiave). Chi
   sonda il ponte senza la sua chiave non riceve risposta.</li>
+<li>I nodi ascoltano anche in <strong>TCP</strong> sulla stessa porta (ripiego per chi ha UDP bloccato): il
+  firewall va aperto in UDP <strong>e</strong> TCP (l'installatore lo fa con ufw/firewalld).</li>
 <li><code>--porta 443</code>: la porta di HTTP/3, la più comune per il traffico UDP cifrato (solo installazione
   di sistema: il servizio riceve il permesso di usare le porte basse senza essere root).</li>
 <li><code>--http3 SITO</code>: <strong>forma HTTP/3</strong>, i nodi sembrano il sito SITO (di solito arriva già dal

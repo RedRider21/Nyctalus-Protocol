@@ -153,6 +153,10 @@ camuffato e un ponte nascosto <strong>non rispondono mai</strong>. Misura su 20.
 <td>⚠️ si riconosce QUIC; il <strong>nome</strong> nel primo pacchetto (<code>nyctalus.invalid</code>) è stato <strong>tolto</strong> nella 0.3.8</td>
 </tr>
 <tr>
+<td>ripiego TCP (0.3.13)</td>
+<td>✅ entrata in TCP dove UDP è bloccato, lunghezze dei quadri cifrate; sonda con byte a caso: nessuna risposta e nessuna chiusura (prova <code>36-ripiego-tcp</code>)</td>
+</tr>
+<tr>
 <td>forma HTTP/3 (0.3.9)</td>
 <td>✅ porta 443, QUIC v1 con nome <code>www.esempio.it</code> e ALPN <code>h3</code>: un sito HTTP/3; ragnatela e cipolla intatte. Chrome che visita il nodo riceve una pagina 404 (prova <code>33-forma-http3</code>)</td>
 </tr>
