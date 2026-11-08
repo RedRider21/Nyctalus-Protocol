@@ -3,7 +3,7 @@
 > Aggiornato all'8 novembre 2026 (versione 0.3.15). Cronologia sotto, dalla più recente.
 
 
-## 🗂 SCALETTA (aggiornata 08/11/2026, dopo la 0.3.15)
+## 🗂 SCALETTA (aggiornata 08/11/2026, dopo la 0.3.15) — ▶ alla ripresa: chiedere all'utente da quale punto partire (consigliato il 1)
 1. **Prove su rete vera** (Internet, amico a Pavia, più persone): velocità, chiamate, file; confronto con le misure in Shadow.
 2. **Invisibilità**: forma «videochiamata» (WebRTC); impronta identica a Chrome (BoringSSL, pesante: da valutare).
 3. **Capacità**: promuovere a entrata i PC stabili che aiutano la rete (come le guardie di Tor); uscite diverse per gli scaricamenti grandi (pesare l'anonimato).
@@ -22,7 +22,7 @@
 4. **Ricontrollo completo di cybersecurity** di tutto il sistema (richiesto 08/11/2026), insieme al piano sicurezza.
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
 
-## 08/11/2026 · Impronta TLS comune ✅ (release 0.3.15 da fare)
+## 08/11/2026 · Impronta TLS comune ✅ — release v0.3.15 (APK 0.58), documentazione allineata (README, Pages, manuali)
 - `simulazione/impronta_tls.py` (JA4). Chrome t13d1517h2, curl t13d3113h2, Nyctalus t13d0310h1 (insolita) → t13d1011h2 (rustls con tls12 + ALPN h2,http/1.1: impronta comune). Uguale a Chrome solo con BoringSSL (da valutare, pesante).
 
 ## 08/11/2026 · TCP come HTTPS nella forma HTTP/3 ✅ — release v0.3.14 (APK 0.57)
