@@ -153,6 +153,10 @@ camuffato e un ponte nascosto <strong>non rispondono mai</strong>. Misura su 20.
 <td>⚠️ si riconosce QUIC; il <strong>nome</strong> nel primo pacchetto (<code>nyctalus.invalid</code>) è stato <strong>tolto</strong> nella 0.3.8</td>
 </tr>
 <tr>
+<td>TCP come HTTPS (0.3.14, forma HTTP/3)</td>
+<td>✅ openssl, curl e Chrome vedono un sito HTTPS (certificato col nome del sito, ALPN http/1.1) e ricevono «404 Not Found»; con il contrassegno si naviga (prova <code>33-forma-http3</code>)</td>
+</tr>
+<tr>
 <td>ripiego TCP (0.3.13)</td>
 <td>✅ entrata in TCP dove UDP è bloccato, lunghezze dei quadri cifrate; sonda con byte a caso: nessuna risposta e nessuna chiusura (prova <code>36-ripiego-tcp</code>)</td>
 </tr>
