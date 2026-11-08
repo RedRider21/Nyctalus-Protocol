@@ -270,8 +270,11 @@ catturati in Shadow su tutte le macchine):
   «lunghezza (2 byte, cifrata con flusso di chiave BLAKE3 per direzione) + datagramma»; davanti a
   dati senza senso il nodo legge e butta in silenzio (max 60 s) invece di chiudere; max 1024
   connessioni TCP per nodo.
+- ✅ **TCP come HTTPS nella forma HTTP/3** (0.3.14): il ripiego è un vero TLS (rustls guidato a
+  mano in `tcp::tubo_tls`, stesso certificato del nodo, ALPN http/1.1); dentro TLS il contrassegno;
+  chi non lo ha riceve `HTTP/1.1 404 Not Found` e la chiusura, come da un sito.
 - 📐 **Da fare:** impronta TLS/QUIC identica a un browser (oggi si vede rustls/quinn); forma
-  «videochiamata» (WebRTC); TCP che sembri TLS/HTTPS (oggi: byte a caso).
+  «videochiamata» (WebRTC).
 - Dimensioni sul filo: le celle sono fisse **dentro** il circuito; i datagrammi QUIC invece hanno
   lunghezze diverse (pieni ~1200-1420 byte, più conferme e code più corte).
 

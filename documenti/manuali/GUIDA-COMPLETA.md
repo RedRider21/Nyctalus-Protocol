@@ -397,6 +397,8 @@ reti instabili. È un ripiego, non la strada normale.
 usarlo mai. I nodi ascoltano sempre anche in TCP; sui server l'installatore apre le porte in UDP
 e TCP (nella rete di casa, sul router inoltra anche la porta TCP se vuoi il ripiego).
 Chi sonda la porta TCP con dati a caso non riceve niente e il nodo non chiude: nessuna impronta.
+Nella **forma HTTP/3** (§12) anche il TCP sembra un sito: è un vero **HTTPS** (TLS, nome del sito
+scelto dal gestore); chi lo visita senza contrassegno, anche con un browser, vede «404 Not Found».
 
 ### 14. Famiglie e nodi di amici
 **A cosa serve:** un percorso fa 3 salti. Se due salti sono **dello stesso gestore**, lui

@@ -10,6 +10,9 @@
 4. **Ricontrollo completo di cybersecurity** di tutto il sistema (richiesto 08/11/2026), insieme al piano sicurezza.
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
 
+## 08/11/2026 · TCP come HTTPS nella forma HTTP/3 ✅ (release 0.3.14 da fare)
+- `tcp::tubo_tls` (rustls a mano, nessuna libreria nuova), contrassegno dentro TLS, 404 HTTP/1.1 di facciata; corretto: dati arrivati con la fine della stretta (curl) non andavano persi. Prova 33 estesa (openssl, curl, Chrome).
+
 ## 08/11/2026 · Invisibilità punto 2b: ripiego su TCP ✅ — release v0.3.13 (APK 0.56)
 - `tcp.rs`: socket ibrido UDP+TCP nei nodi, client UDP→TCP dopo 6 s (`trasporto::collega_entrata`, usato da circuiti e siti .nyct), lunghezze cifrate, sonde ignorate senza chiudere (60 s, 1024 connessioni); installatore apre UDP+TCP. Prova 36 (5/5).
 
