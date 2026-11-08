@@ -136,6 +136,8 @@ fn trasporto_client() -> Arc<quinn::TransportConfig> {
     // servizio spento di colpo (senza salutare) si scopre così in pochi secondi, e la
     // caduta si propaga lungo il circuito fino al punto d'incontro.
     t.keep_alive_interval(Some(std::time::Duration::from_secs(5)));
+    // molte corsie (circuiti) per collegamento: fra due nodi il collegamento è condiviso
+    t.max_concurrent_bidi_streams(quinn::VarInt::from_u32(4096));
     t.max_idle_timeout(Some(std::time::Duration::from_secs(15).try_into().expect("15s valido")));
     // Finestra per flusso (= per circuito): di serie 256 KB (quinn: 1,25 MB). Con finestre grandi un
     // nodo lento accumula secondi di coda prima che chi spedisce se ne accorga: il distributore

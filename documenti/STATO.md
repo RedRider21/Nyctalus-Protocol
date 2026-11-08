@@ -13,7 +13,9 @@ L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisi
 ## 08/11/2026 · «🦇 Aiuta la rete», parte motore ✅ (non ancora rilasciata)
 - Nodo `--middle-only` (rifiuta il passo Finale: mai uscita né punto d'incontro) + `--max-rate MBIT` (secchiello di gettoni); elenco `ruolo=intermedio` (entries `…,famiglia,mbit,middle`); i client lo usano solo come intermedio (`percorsi::pieni`). Prova 35 (6/6).
 - Misura (velocita.py --aiuto): nodi saturi 4 utenti 2,47→2,61 (Tor 3,05); 8 utenti 1,56→1,62 (Tor 1,47). Poco: il collo di bottiglia sono entrata e uscita, non gli intermedi. BBR/Cubic e 1/2 circuiti indifferenti.
-- Ipotesi per il divario a nodi saturi: un collegamento QUIC NUOVO per ogni circuito e ogni tratta (Tor: uno per coppia di nodi). Prossimo: riuso dei collegamenti fra nodi; poi interfaccia «Aiuta la rete» e gestore.
+- Riuso dei collegamenti fra nodi FATTO (un collegamento QUIC per coppia di nodi, i circuiti sono corsie; max 4096 corsie; `NYCTALUS_RIUSO=0` per spegnerlo): misurato, effetto piccolo (+1-3%, primo byte con 8 utenti 1,15→1,04 s); utile per stealth (meno collegamenti nuovi sul filo). Ipotesi del divario NON confermata: a nodi saturi con 4 utenti Tor resta avanti (3,05 vs 2,4) per un motivo ancora da capire.
+- ⚠️ DIFETTO APERTO: blocco intermittente di uno scaricamento a nodi saturi (3 su ~330 in Shadow, anche senza riuso): il download si ferma a metà e non riprende, nessun errore nei registri. Non riprodotto con NYCTALUS_DIAGNOSI=1 (riordino, circuiti, unità perse ora tracciati). Da riprendere con identità deterministiche in simulazione (ricontrollo finale di affidabilità/sicurezza).
+- Prossimo: interfaccia «🦇 Aiuta la rete» (launcher PC) e gestore (`aggiungi --intermedio`), poi release.
 
 ## 08/11/2026 · Release v0.3.10 (APK 0.53) ✅
 

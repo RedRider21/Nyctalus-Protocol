@@ -675,9 +675,13 @@ fn da_esadecimale_opt(hex: Option<&str>) -> Risultato<Option<[u8; 32]>> {
 }
 
 /// Diagnosi accendibile con NYCTALUS_DIAGNOSI=1 (spenta di serie): righe su stderr con l'ora.
-pub(crate) fn diagnosi(testo: impl FnOnce() -> String) {
+pub(crate) fn diagnosi_accesa() -> bool {
     static ACCESA: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    if *ACCESA.get_or_init(|| std::env::var("NYCTALUS_DIAGNOSI").is_ok_and(|v| v == "1")) {
+    *ACCESA.get_or_init(|| std::env::var("NYCTALUS_DIAGNOSI").is_ok_and(|v| v == "1"))
+}
+
+pub(crate) fn diagnosi(testo: impl FnOnce() -> String) {
+    if diagnosi_accesa() {
         let t = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs_f64()).unwrap_or(0.0);
         eprintln!("[diagnosi {t:.1}] {}", testo());
     }

@@ -207,7 +207,12 @@ async fn scrittore_circuito(mut invio: quinn::SendStream, chiavi: Chiavi, set_id
 /// Lettore di un circuito: toglie gli strati e passa (seq, cella) al collettore.
 async fn lettore_circuito(mut ricezione: quinn::RecvStream, chiavi: Chiavi, tx_ret: mpsc::Sender<(u64, Vec<u8>)>) {
     let mut n: u64 = 0;
-    while let Ok(Some(mut payload)) = leggi_quadro(&mut ricezione).await {
+    loop {
+        let letto = leggi_quadro(&mut ricezione).await;
+        let Ok(Some(mut payload)) = letto else {
+            crate::diagnosi(|| format!("client: circuito di ritorno finito dopo {n} unità: {:?}", letto.map(|o| o.is_some())));
+            break;
+        };
         svolgi(BIT_RISPOSTA | n, &chiavi, &mut payload);
         n += 1;
         if let Some((seq, cella)) = conflux::spacchetta(&payload)
@@ -239,6 +244,15 @@ async fn collettore_ritorno(mut rx_ret: mpsc::Receiver<(u64, Vec<u8>)>, flussi: 
     let mut decodifica = crate::codifica::richiesta_configurata()
         .map(|(k, _)| crate::codifica::Decodificatore::nuovo(k));
     while let Some((seq, cella_bytes)) = rx_ret.recv().await {
+        if crate::diagnosi_accesa() {
+            static ULTIMA: std::sync::Mutex<Option<std::time::Instant>> = std::sync::Mutex::new(None);
+            let mut u = ULTIMA.lock().unwrap();
+            if u.is_none_or(|t| t.elapsed().as_secs_f64() > 2.0) {
+                *u = Some(std::time::Instant::now());
+                let (p, n, primo) = riordina.stato();
+                crate::diagnosi(|| format!("client: riordino atteso {p}, in attesa {n} (prima {primo:?}), arrivata {seq}"));
+            }
+        }
         let pronte = match decodifica.as_mut() {
             Some(d) if seq & crate::codifica::CODIFICATA != 0 => d.inserisci(seq, cella_bytes),
             _ => riordina.inserisci(seq, cella_bytes),

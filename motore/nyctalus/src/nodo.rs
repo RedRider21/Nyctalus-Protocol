@@ -420,7 +420,8 @@ async fn uscita_conflux(
         while let Some(mut unita) = rx_unit.recv().await {
             cipolla::sbuccia(BIT_RISPOSTA | n, &chiave, &mut unita);
             n += 1;
-            if scrivi_quadro(&mut invio_monte, &unita).await.is_err() {
+            if let Err(e) = scrivi_quadro(&mut invio_monte, &unita).await {
+                crate::diagnosi(|| format!("uscita: scrittura di ritorno fallita dopo {n} unità: {e}"));
                 break;
             }
         }
@@ -534,8 +535,16 @@ async fn schedulatore_ritorno(
         };
         match destinatario {
             Some(tx) => {
-                let _ = tx.send(unita).await;
+                if tx.send(unita).await.is_err() {
+                    crate::diagnosi(|| format!("uscita: UNITÀ {seq} PERSA (circuito di ritorno chiuso)"));
+                }
                 seq += 1;
+                if seq % 500 == 0 {
+                    crate::diagnosi(|| {
+                        let c = circuiti.lock().unwrap();
+                        format!("uscita: {seq} unità, code libere {:?}", c.iter().map(|(_, t)| t.capacity()).collect::<Vec<_>>())
+                    });
+                }
             }
             None => break,
         }
@@ -596,12 +605,26 @@ async fn schedulatore_ritorno_codificato(
     registro().lock().unwrap().remove(&set_id);
 }
 
-async fn collega_valle(
+/// Chiave di un collegamento riusabile verso il nodo successivo: indirizzo, impronta attesa,
+/// chiave di camuffamento (o contrassegno).
+type ChiaveCollegamento = (SocketAddr, Option<[u8; 32]>, Option<[u8; 32]>);
+
+/// **Collegamenti riusati fra nodi** (0.3.11): fra due nodi vicini c'è UN collegamento QUIC e ogni
+/// circuito che passa di lì è una sua **corsia** (flusso). Prima ogni circuito apriva un
+/// collegamento nuovo: sotto carico decine di collegamenti si contendevano la banda, ognuno con
+/// la sua stretta di mano e la sua partenza lenta. Le corsie QUIC restano indipendenti: un
+/// pacchetto perso ferma solo la sua (in Tor, su TCP, si ferma tutto il collegamento).
+/// `NYCTALUS_RIUSO=0` torna al vecchio comportamento (per le misure).
+fn collegamenti() -> &'static tokio::sync::Mutex<HashMap<ChiaveCollegamento, (quinn::Endpoint, quinn::Connection)>> {
+    static C: OnceLock<tokio::sync::Mutex<HashMap<ChiaveCollegamento, (quinn::Endpoint, quinn::Connection)>>> = OnceLock::new();
+    C.get_or_init(|| tokio::sync::Mutex::new(HashMap::new()))
+}
+
+async fn nuovo_collegamento(
     prossimo: SocketAddr,
-    pacchetto_apertura: Vec<u8>,
     impronta: Option<[u8; 32]>,
     offusca: Option<[u8; 32]>,
-) -> Risultato<(quinn::Endpoint, quinn::SendStream, quinn::RecvStream)> {
+) -> Risultato<(quinn::Endpoint, quinn::Connection)> {
     let locale: SocketAddr = if prossimo.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
     let mut endpoint = crate::trasporto::endpoint_client(locale, offusca)?;
     let config = match impronta {
@@ -610,6 +633,53 @@ async fn collega_valle(
     };
     endpoint.set_default_client_config(config);
     let connessione = endpoint.connect(prossimo, &crate::tls::nome_per(&prossimo))?.await?;
+    Ok((endpoint, connessione))
+}
+
+async fn collega_valle(
+    prossimo: SocketAddr,
+    pacchetto_apertura: Vec<u8>,
+    impronta: Option<[u8; 32]>,
+    offusca: Option<[u8; 32]>,
+) -> Risultato<(quinn::Endpoint, quinn::SendStream, quinn::RecvStream)> {
+    let riuso = std::env::var("NYCTALUS_RIUSO").map(|v| v != "0").unwrap_or(true);
+    let chiave: ChiaveCollegamento = (prossimo, impronta, offusca);
+    // un collegamento vivo verso quel nodo: una corsia nuova; altrimenti un collegamento nuovo
+    let esistente = if riuso {
+        let mut c = collegamenti().lock().await;
+        match c.get(&chiave) {
+            Some((e, conn)) if conn.close_reason().is_none() => Some((e.clone(), conn.clone())),
+            Some(_) => {
+                c.remove(&chiave);
+                None
+            }
+            None => None,
+        }
+    } else {
+        None
+    };
+    let (endpoint, connessione) = match esistente {
+        Some(x) => x,
+        None => {
+            let (e, conn) = nuovo_collegamento(prossimo, impronta, offusca).await?;
+            if riuso {
+                let mut c = collegamenti().lock().await;
+                // se nel frattempo un altro circuito ne ha aperto uno, si usa il suo
+                match c.get(&chiave) {
+                    Some((e2, c2)) if c2.close_reason().is_none() => {
+                        conn.close(0u32.into(), b"doppio");
+                        (e2.clone(), c2.clone())
+                    }
+                    _ => {
+                        c.insert(chiave, (e.clone(), conn.clone()));
+                        (e, conn)
+                    }
+                }
+            } else {
+                (e, conn)
+            }
+        }
+    };
     let (mut invio, ricezione) = crate::trasporto::apri_flusso(&connessione, offusca).await?;
     scrivi_quadro(&mut invio, &pacchetto_apertura).await?;
     Ok((endpoint, invio, ricezione))

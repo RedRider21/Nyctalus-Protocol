@@ -137,7 +137,7 @@ def prepara_nyctalus(out, a):
               "    processes:", "    - path: %s" % BIN,
               "      args: %s" % lista("node", "--listen", "0.0.0.0:4600", "--data", str(out / ("nodo%d" % i)),
                                        "--announce", "11.%d.0.1:4600" % i),
-              '      environment: { NYCTALUS_CONGESTIONE: "%s", NYCTALUS_FINESTRA_KB: "%s" }' % (a.congestione, a.finestra),
+              '      environment: { NYCTALUS_CONGESTIONE: "%s", NYCTALUS_FINESTRA_KB: "%s", NYCTALUS_RIUSO: "%s" }' % (a.congestione, a.finestra, "0" if a.senza_riuso else "1"),
               "      start_time: 1s", "      expected_final_state: running"]
     y += sito(out)
     rnd = random.Random(a.seme)
@@ -154,7 +154,10 @@ def prepara_nyctalus(out, a):
                                            "--announce", "13.0.0.%d:4700" % (10 + u), "--middle-only", "--max-rate", str(a.aiuto)),
                   "      start_time: 1s", "      expected_final_state: running"]
         y += scaricamento(u, inizio + rnd.uniform(0, 1), "127.0.0.1:1080")
-    (out / "shadow.yaml").write_text("\n".join(y) + "\n")
+    testo = "\n".join(y) + "\n"
+    if a.diagnosi:      # registri dettagliati del motore (NYCTALUS_DIAGNOSI) su nodi e utenti
+        testo = testo.replace("environment: { ", 'environment: { NYCTALUS_DIAGNOSI: "1", ')
+    (out / "shadow.yaml").write_text(testo)
     return []
 
 
@@ -185,6 +188,8 @@ def main():
     ap.add_argument("--mb", type=float, default=5)
     ap.add_argument("--circuiti", type=int, default=2)
     ap.add_argument("--seme", type=int, default=1)
+    ap.add_argument("--diagnosi", action="store_true", help="Nyctalus: registri dettagliati (e la cartella resta)")
+    ap.add_argument("--senza-riuso", action="store_true", help="Nyctalus: un collegamento per circuito (come fino alla 0.3.10)")
     ap.add_argument("--aiuto", type=int, default=0, help="Nyctalus: ogni utente fa anche da nodo solo intermedio con questo tetto (Mbit/s)")
     ap.add_argument("--codifica", default="", help="Nyctalus: ragnatela codificata k,r (es. 8,2)")
     ap.add_argument("--finestra", default="", help="Nyctalus: finestra per flusso in KB (NYCTALUS_FINESTRA_KB)")
@@ -202,12 +207,14 @@ def main():
     tempi, primi, falliti = risultati(out, byte)
     media = sum(tempi) / len(tempi) if tempi else 0.0
     vel = sum(byte / t for t in tempi) / len(tempi) * 8 / 1e6 if tempi else 0.0
-    print("RISULTATO aiuto=%s codifica=%s pesi=%s finestra=%s congestione=%s sistema=%s perdita=%g banda_nodi=%s utenti=%d mb=%g circuiti=%s seme=%d riusciti=%d falliti=%d "
+    print("RISULTATO riuso=%s aiuto=%s codifica=%s pesi=%s finestra=%s congestione=%s sistema=%s perdita=%g banda_nodi=%s utenti=%d mb=%g circuiti=%s seme=%d riusciti=%d falliti=%d "
           "tempo_medio=%.2f primo_byte=%.2f mbit_s=%.2f"
-          % (a.aiuto or "no", a.codifica.replace(",", "+") or "no", "no" if a.senza_pesi or not a.bande else "si", a.finestra or "-", a.congestione or "bbr", a.sistema, a.perdita, (a.bande.replace(",", "/") if a.bande else (a.banda_nodi or "-")), a.utenti, a.mb, a.circuiti if a.sistema == "nyctalus" else "-",
+          % ("no" if a.senza_riuso else "si", a.aiuto or "no", a.codifica.replace(",", "+") or "no", "no" if a.senza_pesi or not a.bande else "si", a.finestra or "-", a.congestione or "bbr", a.sistema, a.perdita, (a.bande.replace(",", "/") if a.bande else (a.banda_nodi or "-")), a.utenti, a.mb, a.circuiti if a.sistema == "nyctalus" else "-",
              a.seme, len(tempi), falliti, media, sum(primi) / len(primi) if primi else 0.0, vel))
     # i file scaricati non servono più: si tiene solo il registro (il disco è quasi pieno)
     shutil.rmtree(out / "sito", ignore_errors=True)
+    if falliti and a.diagnosi:
+        print("FALLITA: registri in", out)
 
 
 if __name__ == "__main__":

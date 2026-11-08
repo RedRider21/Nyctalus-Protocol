@@ -81,6 +81,11 @@ impl Riordina {
         Self { prossimo: 0, buffer: BTreeMap::new() }
     }
 
+    /// (diagnosi) prossimo numero atteso, unità in attesa, la prima in attesa
+    pub fn stato(&self) -> (u64, usize, Option<u64>) {
+        (self.prossimo, self.buffer.len(), self.buffer.keys().next().copied())
+    }
+
     /// Inserisce un'unità e restituisce le celle diventate consegnabili, in
     /// ordine. Scarta i duplicati/arretrati e, se il buffer è pieno, le unità
     /// troppo in avanti.
