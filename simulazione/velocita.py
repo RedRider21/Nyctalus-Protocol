@@ -94,39 +94,67 @@ def prepara_tor(out, a):
     return ["--template-directory", str(out / "modello")]
 
 
-def prepara_nyctalus(out, a):
-    aut = subprocess.run([str(BIN), "authority"], capture_output=True, text=True).stdout
-    sec = re.search(r"secret:\s+([0-9a-f]+)", aut).group(1)
-    pub = re.search(r"public:\s+([0-9a-f]+)", aut).group(1)
-    righe = []
-    for i in range(1, NODI_NYCT + 1):
-        d = out / ("nodo%d" % i)
-        d.mkdir()
-        p = subprocess.Popen([str(BIN), "node", "--listen", "127.0.0.1:0", "--data", str(d),
-                              "--announce", "11.%d.0.1:4600" % i], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+# Identità RIPETIBILI: chiavi dei nodi e dell'autorità si creano una volta per seme e si riusano.
+# Dentro Shadow tutto il resto è già deterministico (anche i numeri casuali), quindi stesso seme =
+# stessa simulazione: un caso fallito si può rifare identico (anche con le catture dei pacchetti).
+CACHE = SIM / "identita"
+
+
+def lucchetto(a):
+    """Un lucchetto per seme: due corse dello stesso seme insieme non creano la stessa identità."""
+    import fcntl
+    (CACHE / ("seme-%d" % a.seme)).mkdir(parents=True, exist_ok=True)
+    f = open(CACHE / ("seme-%d" % a.seme) / ".lucchetto", "w")
+    fcntl.flock(f, fcntl.LOCK_EX)
+    return f
+
+
+def identita_nodo(a, d, nome, annuncio):
+    """Copia in `d` l'identità del nodo `nome` per questo seme (creandola la prima volta)."""
+    with lucchetto(a):
+        return _identita_nodo(a, d, nome, annuncio)
+
+
+def _identita_nodo(a, d, nome, annuncio):
+    c = CACHE / ("seme-%d" % a.seme) / nome
+    f = c / "riga-elenco.txt"
+    if not (f.exists() and f.read_text().startswith(annuncio + ",")):
+        shutil.rmtree(c, ignore_errors=True)
+        c.mkdir(parents=True)
+        p = subprocess.Popen([str(BIN), "node", "--listen", "127.0.0.1:0", "--data", str(c), "--announce", annuncio],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(50):
-            f = d / "riga-elenco.txt"
             if f.exists() and f.read_text().strip():
                 break
             time.sleep(0.1)
         p.kill()
-        riga = (d / "riga-elenco.txt").read_text().strip() + ",gestore%d" % i
+        p.wait()
+    shutil.copytree(c, d)
+    return (d / "riga-elenco.txt").read_text().strip()
+
+
+def autorita(a):
+    f = CACHE / ("seme-%d" % a.seme) / "autorita.txt"
+    with lucchetto(a):
+        if not f.exists() or "public:" not in f.read_text():
+            f.write_text(subprocess.run([str(BIN), "authority"], capture_output=True, text=True).stdout)
+        return f.read_text()
+
+
+def prepara_nyctalus(out, a):
+    aut = autorita(a)
+    sec = re.search(r"secret:\s+([0-9a-f]+)", aut).group(1)
+    pub = re.search(r"public:\s+([0-9a-f]+)", aut).group(1)
+    righe = []
+    for i in range(1, NODI_NYCT + 1):
+        riga = identita_nodo(a, out / ("nodo%d" % i), "nodo%d" % i, "11.%d.0.1:4600" % i) + ",gestore%d" % i
         if a.bande and not a.senza_pesi:       # la banda di ogni nodo nell'elenco firmato
             riga += ",%s" % a.bande.split(",")[(i - 1) % len(a.bande.split(","))]
         righe.append(riga)
     # «Aiuta la rete»: ogni utente fa anche da nodo SOLO INTERMEDIO, con un tetto di banda
     for u in range(a.utenti if a.aiuto else 0):
-        d = out / ("aiuto%d" % u)
-        d.mkdir()
-        p = subprocess.Popen([str(BIN), "node", "--listen", "127.0.0.1:0", "--data", str(d),
-                              "--announce", "13.0.0.%d:4700" % (10 + u)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        for _ in range(50):
-            f = d / "riga-elenco.txt"
-            if f.exists() and f.read_text().strip():
-                break
-            time.sleep(0.1)
-        p.kill()
-        righe.append((d / "riga-elenco.txt").read_text().strip() + ",utente%d,%d,middle" % (u, a.aiuto))
+        riga = identita_nodo(a, out / ("aiuto%d" % u), "aiuto%d" % u, "13.0.0.%d:4700" % (10 + u))
+        righe.append(riga + ",utente%d,%d,middle" % (u, a.aiuto))
     (out / "directory.txt").write_text(subprocess.run(
         [str(BIN), "directory", "--authority-secret", sec, "--entries", ";".join(righe)],
         capture_output=True, text=True).stdout)
@@ -200,7 +228,7 @@ def main():
         shutil.rmtree(out)
     (out / "sito").mkdir(parents=True)
     byte = int(a.mb * 1024 * 1024)
-    (out / "sito" / "file.bin").write_bytes(os.urandom(byte))
+    (out / "sito" / "file.bin").write_bytes(random.Random(a.seme).randbytes(byte))
     extra = prepara_tor(out, a) if a.sistema == "tor" else prepara_nyctalus(out, a)
     subprocess.run([str(SHADOW), "--progress", "false", *extra, "shadow.yaml"], cwd=out,
                    stdout=open(out / "shadow.log", "w"), stderr=subprocess.STDOUT)
