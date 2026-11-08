@@ -148,6 +148,12 @@ banda; `--bande 50,30,20,10,5,30,10` = nodi di velocità diverse; 3-5 ripetizion
 | nodi tutti da 10 Mbit, 4 utenti | **2,9** | 2,4 |
 | idem + 1% di perdite | 1,4 | **1,8** |
 
+**Velocità 0.3.12** (celle piene: una cella parte quando è piena o dopo 2 ms; simulazioni
+ripetibili per seme). Nodi saturi, 4 utenti, 20 semi: **Nyctalus 3,32** contro Tor 2,66 (prima
+2,57); le catture mostrano 79 MB spediti dai nodi contro 94 di Tor per gli stessi 21 MB di dati
+(prima 107: celle quasi vuote). Linea pulita 12,6; 1% di perdite 2,4; 2% 1,24; nodi diversi 10,0
+(1 utente) e 5,7 (4 utenti); 8 utenti saturi 2,08 (Tor 1,47).
+
 **Ragnatela codificata** (`--codifica 8,2`, `8,4`): non accelera (-5..-25%): ogni tratta QUIC recupera
 già i pacchetti persi e le strade condividono entrata e uscita; spenta di serie.
 

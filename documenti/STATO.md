@@ -10,6 +10,11 @@
 4. **Ricontrollo completo di cybersecurity** di tutto il sistema (richiesto 08/11/2026), insieme al piano sicurezza.
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
 
+## 08/11/2026 · Punto 1 chiuso: blocco non più riproducibile, divario con Tor trovato e superato ✅
+- Simulazioni ripetibili (identità per seme): ~1.700 scaricamenti senza blocchi.
+- Con 20 semi a nodi saturi era un pareggio (2,57 vs 2,66); le catture (velocita.py --pcap) mostravano 107 MB spediti dai nodi contro 94 di Tor: celle quasi vuote. Correzione `cella::leggi_per_cella` (attesa max 2 ms): 79 MB, **3,32 vs 2,66 (+25%)**; 8 utenti 2,08 vs 1,47; linea pulita 12,6; nodi diversi 4 utenti 5,7. Tabelle aggiornate (README, PIANO, LEGGIMI, Pages, simulazione).
+- Release v0.3.12 (APK 0.55) da fare dopo la suite.
+
 ## 08/11/2026 · «🦇 Aiuta la rete», parte motore ✅ (non ancora rilasciata)
 - Nodo `--middle-only` (rifiuta il passo Finale: mai uscita né punto d'incontro) + `--max-rate MBIT` (secchiello di gettoni); elenco `ruolo=intermedio` (entries `…,famiglia,mbit,middle`); i client lo usano solo come intermedio (`percorsi::pieni`). Prova 35 (6/6).
 - Misura (velocita.py --aiuto): nodi saturi 4 utenti 2,47→2,61 (Tor 3,05); 8 utenti 1,56→1,62 (Tor 1,47). Poco: il collo di bottiglia sono entrata e uscita, non gli intermedi. BBR/Cubic e 1/2 circuiti indifferenti.
