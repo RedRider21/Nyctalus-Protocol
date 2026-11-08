@@ -5,7 +5,7 @@
 
 Per il GESTORE della rete (chi la tiene in piedi):
   nyctalus-rete crea [--nome NOME]       crea l'autorità (chiavi che firmano l'elenco)
-  nyctalus-rete aggiungi RIGA… | --file F [--famiglia NOME]
+  nyctalus-rete aggiungi RIGA… | --file F [--famiglia NOME] [--banda MBIT] [--intermedio]
                                          aggiunge i nodi (righe «IP:PORTA,chiave,impronta»);
                                          --famiglia = stesso gestore/fornitore (mai due nello
                                          stesso percorso)
@@ -41,6 +41,9 @@ Per i CLIENT (chi usa la rete):
   nyctalus-rete importa CODICE|FILE      collega questo PC alla rete del codice
   nyctalus-rete importa --prova          torna alla rete di prova locale
   nyctalus-rete reti                     le reti salvate (● quella in uso)
+  nyctalus-rete aiuta si --indirizzo NOME|IP [--porta 4800] [--tetto 10] · aiuta no · aiuta stato
+                                         «🦇 AIUTA LA RETE»: questo PC fa anche da nodo SOLO
+                                         INTERMEDIO (mai uscita), con un tetto di banda
   nyctalus-rete ponte aggiungi RIGA…     PONTI NASCOSTI della rete in uso: si entra sempre da lì
                                          (righe SEGRETE avute da chi gestisce il ponte)
   nyctalus-rete ponte togli IP:PORTA|tutti · ponte elenco
@@ -56,6 +59,7 @@ import json
 import os
 import re
 import shutil
+import shlex
 import signal
 import socket
 import subprocess
@@ -71,12 +75,15 @@ from pathlib import Path
 DATI = Path(os.environ.get("NYCTALUS_RETE_DATI", Path.home() / ".nyctalus-rete"))
 CONFIG_CLIENT = Path.home() / ".nyctalus-browser" / "config.json"     # lo leggono chat e browser del PC
 PREFISSO = "NYCT1:"
-RIGA = re.compile(r"^(\[?[0-9A-Za-z.:-]+\]?):(\d{1,5}),([0-9a-f]{64}),([0-9a-f]{64})(,[A-Za-z0-9_.-]{0,32}(,[1-9][0-9]{0,6})?)?$")
+RIGA = re.compile(r"^(\[?[0-9A-Za-z.:-]+\]?):(\d{1,5}),([0-9a-f]{64}),([0-9a-f]{64})(,[A-Za-z0-9_.-]{0,32}(,([1-9][0-9]{0,6})?(,middle)?)?)?$")
 
 
-def componi_riga(campi, famiglia, banda):
-    """Riga del nodo «indirizzo,x25519,impronta[,famiglia[,banda]]» (vuoti in fondo tolti)."""
-    r = list(campi[:3]) + [famiglia or "", str(banda) if banda else ""]
+def componi_riga(campi, famiglia, banda, ruolo=None):
+    """Riga del nodo «indirizzo,x25519,impronta[,famiglia[,banda[,middle]]]» (vuoti in fondo tolti).
+    Senza `ruolo` si conserva quello che la riga aveva già."""
+    if ruolo is None:
+        ruolo = campi[5] if len(campi) > 5 else ""
+    r = list(campi[:3]) + [famiglia or "", str(banda) if banda else "", ruolo]
     while len(r) > 3 and not r[-1]:
         r.pop()
     return ",".join(r)
@@ -302,7 +309,7 @@ class Rete:
     def salva_nodi(self, righe):
         scrivi_privato(self.f_nodi, "".join(r + "\n" for r in righe))
 
-    def aggiungi(self, righe, famiglia=None):
+    def aggiungi(self, righe, famiglia=None, intermedio=False, banda=None):
         if famiglia is not None and not FAMIGLIA.match(famiglia):
             esci("nome di famiglia non valido: lettere, cifre, _ . - (al massimo 32)")
         attuali = self.nodi()
@@ -314,9 +321,10 @@ class Rete:
             r = r.split()[-1] if " " in r else r          # accetta anche «directory entry:   …»
             if not RIGA.match(r):
                 esci("riga non valida: %r (atteso IP:PORTA,chiave,impronta)" % r)
-            if famiglia:
+            if famiglia or intermedio or banda:
                 c = r.split(",")
-                r = componi_riga(c, famiglia, c[4] if len(c) > 4 else None)
+                r = componi_riga(c, famiglia or (c[3] if len(c) > 3 else None), banda or (c[4] if len(c) > 4 and c[4] else None),
+                                 "middle" if intermedio else None)
             indirizzo = r.split(",")[0]
             attuali = [a for a in attuali if a.split(",")[0] != indirizzo] + [r]
             nuove += 1
@@ -628,6 +636,85 @@ def servitore(rete, porta, ip):
     return srv, "http://%s:%d/directory.txt" % (ip, porta)
 
 
+# --- «🦇 Aiuta la rete»: questo PC fa anche da nodo SOLO INTERMEDIO ---------------------------
+UNITA_AIUTO = Path.home() / ".config" / "systemd" / "user" / "nyctalus-aiuta.service"
+
+
+def aiuta(args):
+    """nyctalus-rete aiuta si --indirizzo NOME|IP [--porta 4800] [--tetto 10] [--stampa] · aiuta no · aiuta stato"""
+    sotto = args.pop(0) if args else "stato"
+    if sotto == "no":
+        subprocess.run(["systemctl", "--user", "disable", "--now", UNITA_AIUTO.name], capture_output=True)
+        UNITA_AIUTO.unlink(missing_ok=True)
+        subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True)
+        return ok("questo PC non fa più da nodo. Chiedi al gestore di toglierlo: nyctalus-rete togli IP:PORTA")
+    if sotto == "stato":
+        if not UNITA_AIUTO.exists():
+            return print("Questo PC non aiuta la rete. Per farlo: nyctalus-rete aiuta si --indirizzo NOME-O-IP-PUBBLICO")
+        attivo = subprocess.run(["systemctl", "--user", "is-active", UNITA_AIUTO.name], capture_output=True, text=True).stdout.strip()
+        riga = (DATI / "aiuto" / "riga-elenco.txt")
+        print("🦇 Aiuta la rete: %s" % ("ACCESO" if attivo == "active" else "spento (%s)" % (attivo or "?")))
+        if riga.exists():
+            print("   riga del nodo: %s" % riga.read_text().strip())
+        return
+    if sotto != "si":
+        esci("uso: nyctalus-rete aiuta si --indirizzo NOME|IP [--porta 4800] [--tetto 10] · aiuta no · aiuta stato")
+    indirizzo = opzione(args, "--indirizzo")
+    porta = opzione(args, "--porta", "4800")
+    tetto = opzione(args, "--tetto", "10")
+    stampa = "--stampa" in args
+    if not indirizzo or not re.fullmatch(r"[A-Za-z0-9.:-]{3,253}", indirizzo):
+        esci("indica --indirizzo: il nome (No-IP/DuckDNS) o l'IP PUBBLICO con cui gli altri nodi raggiungono questo PC")
+    if not re.fullmatch(r"\d{4,5}", porta) or not 1024 <= int(porta) <= 65535:
+        esci("--porta: fra 1024 e 65535 (porta UDP da aprire sul router)")
+    if not re.fullmatch(r"\d{1,5}(\.\d+)?", tetto) or not 0.5 <= float(tetto) <= 10000:
+        esci("--tetto: Mbit/s che il PC regala alla rete (es. 10; meno della tua velocità in upload)")
+    cfg = leggi_config_client()
+    if not cfg.get("authority"):
+        esci("prima collega questo PC a una rete: nyctalus-rete importa CODICE")
+    prot = prot_da_codice(cfg)
+    dati = privata(DATI / "aiuto")
+    b = binario()
+    # identità del nodo (stabile) e la sua riga
+    riga_f = dati / "riga-elenco.txt"
+    if not riga_f.exists() or not riga_f.read_text().startswith("%s:%s," % (indirizzo, porta)):
+        riga_f.unlink(missing_ok=True)
+        p = subprocess.Popen([b, "node", "--listen", "127.0.0.1:0", "--data", str(dati), "--announce", "%s:%s" % (indirizzo, porta)]
+                             + opz_prot(prot, rumore=False), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(50):
+            if riga_f.exists() and riga_f.read_text().strip():
+                break
+            time.sleep(0.1)
+        p.kill()
+    if not riga_f.exists():
+        esci("non riesco a creare l'identità del nodo")
+    riga = riga_f.read_text().strip()
+    comando = [b, "node", "--listen", "0.0.0.0:%s" % porta, "--data", str(dati), "--announce", "%s:%s" % (indirizzo, porta),
+               "--middle-only", "--max-rate", tetto] + opz_prot(prot, rumore=False)
+    testo = ("# Creato da nyctalus-rete: «Aiuta la rete», questo PC è un nodo SOLO INTERMEDIO\n"
+             "# (mai uscita: il traffico degli altri non esce mai dal tuo indirizzo).\n"
+             "[Unit]\nDescription=Nyctalus, aiuta la rete (nodo solo intermedio)\nWants=network-online.target\nAfter=network-online.target\n\n"
+             "[Service]\nExecStart=%s\nRestart=always\nRestartSec=10\nNice=10\n\n[Install]\nWantedBy=default.target\n"
+             % " ".join(shlex.quote(c) for c in comando))
+    if stampa:
+        return print(testo, end="")
+    if not shutil.which("systemctl"):
+        esci("qui non c'è systemd: avvialo a mano: " + " ".join(shlex.quote(c) for c in comando))
+    UNITA_AIUTO.parent.mkdir(parents=True, exist_ok=True)
+    UNITA_AIUTO.write_text(testo)
+    os.chmod(UNITA_AIUTO, 0o600)
+    subprocess.run(["systemctl", "--user", "daemon-reload"], check=False)
+    r = subprocess.run(["systemctl", "--user", "enable", "--now", UNITA_AIUTO.name], capture_output=True, text=True)
+    if r.returncode != 0:
+        esci("systemd non lo ha avviato: %s" % r.stderr.strip())
+    ok("🦇 questo PC aiuta la rete: nodo SOLO INTERMEDIO, al massimo %s Mbit/s, porta UDP %s" % (tetto, porta))
+    print("   1) Sul router apri (inoltra) la porta UDP %s verso questo PC (%s)." % (porta, ip_locale()))
+    print("   2) Manda questa riga a chi gestisce la rete (non è segreta):")
+    print("        %s" % riga)
+    print("      lui la aggiunge con:  nyctalus-rete aggiungi '%s' --intermedio --banda %d --famiglia TUONOME" % (riga, max(1, int(float(tetto)))))
+    print("   Spegnere: nyctalus-rete aiuta no   ·   stato: nyctalus-rete aiuta stato")
+
+
 def aspetta_ctrl_c():
     fermo = threading.Event()
     signal.signal(signal.SIGTERM, lambda *a: fermo.set())
@@ -907,10 +994,18 @@ def principale(args):
     elif cmd == "aggiungi":
         famiglia = opzione(args, "--famiglia")
         f = opzione(args, "--file")
+        banda = opzione(args, "--banda")
+        if banda is not None and not re.fullmatch(r"[1-9][0-9]{0,6}", banda):
+            esci("--banda: Mbit/s (es. 10)")
+        intermedio = "--intermedio" in args
+        args = [a for a in args if a != "--intermedio"]
         righe = (Path(f).read_text().splitlines() if f else []) + args
         if not righe:
             esci("indica le righe dei nodi o --file FILE")
-        n, tot = rete.aggiungi(righe, famiglia)
+        n, tot = rete.aggiungi(righe, famiglia, intermedio, int(banda) if banda else None)
+        if intermedio:
+            print("  Nodi SOLO INTERMEDI (PC che aiutano la rete): mai guardia, uscita o punto d'incontro.")
+            print("  ⚠️  Il ruolo lo capiscono i motori dalla 0.3.11: aggiorna prima tutti i client.")
         ok("%d nodi aggiunti/aggiornati (%d in tutto). Ricordati di firmare: nyctalus-rete firma" % (n, tot))
     elif cmd == "famiglia":
         if len(args) != 2:
@@ -936,7 +1031,8 @@ def principale(args):
         for n in nodi:
             campi = n.split(",")
             print("    " + campi[0] + ("   famiglia: " + campi[3] if len(campi) > 3 and campi[3] else "")
-                  + ("   banda: %s Mbit/s" % campi[4] if len(campi) > 4 else ""))
+                  + ("   banda: %s Mbit/s" % campi[4] if len(campi) > 4 and campi[4] else "")
+                  + ("   SOLO INTERMEDIO (aiuta la rete)" if len(campi) > 5 else ""))
         firmato = rete.f_elenco.exists() and rete.f_elenco.stat().st_mtime >= (rete.f_nodi.stat().st_mtime if rete.f_nodi.exists() else 0)
         print("  elenco firmato: %s" % (str(rete.f_elenco) if firmato else "DA FIRMARE (nyctalus-rete firma)"))
         if rete.f_codice.exists():
@@ -1117,6 +1213,8 @@ def principale(args):
                 print("  🌉 %s" % r.split(",")[0])
         else:
             esci("uso: nyctalus-rete ponte aggiungi|togli|elenco")
+    elif cmd == "aiuta":
+        aiuta(args)
     elif cmd == "reti":
         elenca_reti()
     elif cmd == "usa":

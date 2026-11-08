@@ -102,6 +102,7 @@ nyctalus-rete importa --prova     # torna alla rete di prova
 nyctalus-rete reti                # le reti salvate (● quella in uso)
 nyctalus-rete usa N               # passa alla rete salvata N
 nyctalus-rete ponte aggiungi 'RIGA'   # PONTE NASCOSTO: si entra sempre da lì (GUIDA-COMPLETA §13)
+nyctalus-rete aiuta si --indirizzo NOME --tetto 10   # 🦇 AIUTA LA RETE: il PC fa da nodo intermedio (anche dal launcher ⚙)
 nyctalus-rete ponte elenco | togli IP:PORTA | togli tutti
 nyctalus-rete casa                # rete di casa su questo PC (prova telefono ↔ PC)
 ```

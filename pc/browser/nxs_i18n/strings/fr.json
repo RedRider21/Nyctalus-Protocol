@@ -1749,5 +1749,12 @@
   "file.st.eliminato": "Supprimé du dossier",
   "file.togli": "Retirer de la liste (le fichier, s'il existe encore, reste)",
   "file.pulisci": "Retirer les transferts terminés de la liste",
-  "file.in_chat": "Afficher aussi les fichiers dans la conversation"
+  "file.in_chat": "Afficher aussi les fichiers dans la conversation",
+  "lau.aiuta": "Aider le réseau",
+  "lau.aiuta.spiega": "Ce PC sert aussi de nœud INTERMÉDIAIRE du réseau : il relaie le trafic chiffré des autres, qui ne sort JAMAIS sur Internet depuis ton adresse. Plus il y a d'utilisateurs qui aident, plus le réseau est rapide. Coûts : un peu de débit montant (jusqu'au plafond choisi) et un port UDP à ouvrir sur le routeur.",
+  "lau.aiuta.indirizzo": "Adresse publique",
+  "lau.aiuta.porta": "Port UDP",
+  "lau.aiuta.tetto": "Plafond (Mbit/s)",
+  "lau.aiuta.accendi": "Activer",
+  "lau.aiuta.spegni": "Désactiver"
 }

@@ -1749,5 +1749,12 @@
   "file.st.eliminato": "Eliminato dalla cartella",
   "file.togli": "Togli dall'elenco (il file, se c'è ancora, resta)",
   "file.pulisci": "Pulisci l'elenco dai trasferimenti conclusi",
-  "file.in_chat": "Mostra i file anche nella conversazione della chat"
+  "file.in_chat": "Mostra i file anche nella conversazione della chat",
+  "lau.aiuta": "Aiuta la rete",
+  "lau.aiuta.spiega": "Questo PC fa anche da nodo INTERMEDIO della rete: passa il traffico cifrato degli altri, che non esce MAI su Internet dal tuo indirizzo. Più utenti aiutano, più la rete è veloce; e il traffico degli altri copre in parte i tuoi ritmi. Costi: un po' di banda in upload (fino al tetto che scegli) e una porta UDP da aprire sul router. Indirizzo = il nome (No-IP, DuckDNS) o l'IP pubblico di casa.",
+  "lau.aiuta.indirizzo": "Indirizzo pubblico",
+  "lau.aiuta.porta": "Porta UDP",
+  "lau.aiuta.tetto": "Tetto (Mbit/s)",
+  "lau.aiuta.accendi": "Accendi",
+  "lau.aiuta.spegni": "Spegni"
 }

@@ -415,6 +415,59 @@ class Launcher(Gtk.Window):
                 return
         self._avviso(_t("lau.firefox"), _t("lau.in_arrivo_corpo"))
 
+    def _aiuta_la_rete(self):
+        """🦇 Aiuta la rete: questo PC fa anche da nodo SOLO INTERMEDIO (mai uscita), con un tetto."""
+        rete = RADICE / "gestore-rete" / "nyctalus-rete"
+        if not rete.exists():
+            return self._avviso(_t("lau.aiuta"), _t("lau.in_arrivo_corpo"))
+        stato = subprocess.run([sys.executable, str(rete), "aiuta", "stato"], capture_output=True, text=True).stdout
+        d = Gtk.Dialog(title=_t("lau.aiuta"), transient_for=self, modal=True)
+        box = d.get_content_area()
+        box.set_spacing(8)
+        box.set_border_width(14)
+        spiega = Gtk.Label(label=_t("lau.aiuta.spiega"))
+        spiega.set_line_wrap(True)
+        spiega.set_max_width_chars(60)
+        spiega.set_xalign(0)
+        box.add(spiega)
+        st = Gtk.Label(label=stato.strip())
+        st.set_selectable(True)
+        st.set_line_wrap(True)
+        st.set_max_width_chars(60)
+        st.set_xalign(0)
+        box.add(st)
+        griglia = Gtk.Grid(column_spacing=8, row_spacing=6)
+        campi = {}
+        for i, (k, pred) in enumerate((("indirizzo", ""), ("porta", "4800"), ("tetto", "10"))):
+            griglia.attach(Gtk.Label(label=_t("lau.aiuta." + k), xalign=0), 0, i, 1, 1)
+            e = Gtk.Entry(text=pred)
+            e.set_hexpand(True)
+            griglia.attach(e, 1, i, 1, 1)
+            campi[k] = e
+        box.add(griglia)
+        d.add_button(_t("lau.aiuta.spegni"), 2)
+        d.add_button(_t("lau.aiuta.accendi"), 1)
+        d.show_all()
+        risposta = d.run()
+        valori = {k: e.get_text().strip() for k, e in campi.items()}
+        d.destroy()
+        if risposta == 2:
+            r = subprocess.run([sys.executable, str(rete), "aiuta", "no"], capture_output=True, text=True)
+        elif risposta == 1:
+            r = subprocess.run([sys.executable, str(rete), "aiuta", "si", "--indirizzo", valori["indirizzo"],
+                                "--porta", valori["porta"], "--tetto", valori["tetto"]], capture_output=True, text=True)
+        else:
+            return
+        testo = (r.stdout + r.stderr).strip()
+        f = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.INFO,
+                              buttons=Gtk.ButtonsType.OK, text=_t("lau.aiuta"))
+        f.format_secondary_text(testo)
+        for w in f.get_message_area().get_children():      # la riga del nodo si deve poter copiare
+            if isinstance(w, Gtk.Label):
+                w.set_selectable(True)
+        f.run()
+        f.destroy()
+
     def _apri_terminale(self):
         """⌨ Terminale: il terminale del sistema pronto per nyctalus-cli (chat e file da riga di comando)."""
         for candidato in (RADICE / "avvia-terminale.sh", RADICE.parent / "strumenti" / "avvia-terminale.sh"):
@@ -433,6 +486,7 @@ class Launcher(Gtk.Window):
             menu.append(mi)
 
         voce("🦊 " + _t("lau.firefox"), self._apri_firefox)    # navigazione anonima con Firefox
+        voce("🦇 " + _t("lau.aiuta"), self._aiuta_la_rete)      # questo PC come nodo solo intermedio
         menu.append(Gtk.SeparatorMenuItem())
         voce(_t("lau.orizzontale") if verticale else _t("lau.verticale"), self._cambia_orientamento)
         menu.append(Gtk.SeparatorMenuItem())

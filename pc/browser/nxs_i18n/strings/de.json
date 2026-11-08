@@ -1749,5 +1749,12 @@
   "file.st.eliminato": "Aus dem Ordner gelöscht",
   "file.togli": "Aus der Liste entfernen (die Datei, falls noch da, bleibt)",
   "file.pulisci": "Abgeschlossene Übertragungen aus der Liste entfernen",
-  "file.in_chat": "Dateien auch im Chatverlauf anzeigen"
+  "file.in_chat": "Dateien auch im Chatverlauf anzeigen",
+  "lau.aiuta": "Dem Netz helfen",
+  "lau.aiuta.spiega": "Dieser PC arbeitet auch als MITTEL-Knoten des Netzes: er leitet verschlüsselten Verkehr anderer weiter, der NIE von deiner Adresse ins Internet geht. Je mehr Nutzer helfen, desto schneller das Netz. Kosten: etwas Upload-Bandbreite (bis zur gewählten Grenze) und ein UDP-Port am Router.",
+  "lau.aiuta.indirizzo": "Öffentliche Adresse",
+  "lau.aiuta.porta": "UDP-Port",
+  "lau.aiuta.tetto": "Grenze (Mbit/s)",
+  "lau.aiuta.accendi": "Einschalten",
+  "lau.aiuta.spegni": "Ausschalten"
 }

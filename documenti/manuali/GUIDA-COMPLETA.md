@@ -142,6 +142,7 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi **gestisce
 | [Rubrica della rete](#7-rubrica-della-rete) | farsi trovare dagli altri della rete | non iscritto |
 | [Browser 🦇 e Nyctalus Firefox](#8-browser-modalita-nyctalus) | navigare attraverso la rete; con Firefox anche con impronta uniforme | da scegliere |
 | [Terminale](#9-terminale) | chat e file scrivendo comandi | — |
+| [🦇 Aiuta la rete](#9-bis-aiuta-la-rete-pc) | il tuo PC fa anche da nodo intermedio: rete più capace, i tuoi ritmi più coperti | spento |
 | **Per chi gestisce la rete** | | |
 | [Rete di casa / via Internet](#10-rete-di-casa-e-via-internet) | provare senza server | — |
 | [Rubrica e casella](#11-rubrica-e-casella) | posta per chi è spento, elenco di chi c'è | accese nella rete di casa |
@@ -258,6 +259,29 @@ il browser riconoscibile.
 Dettagli: `MANUALE-TERMINALE.md`.
 
 ---
+
+### 9-bis. Aiuta la rete (PC)
+**A cosa serve:** il tuo PC fa anche da **nodo intermedio** della rete: passa il traffico cifrato
+degli altri. Più utenti aiutano, più la rete è capace; e il traffico degli altri copre in parte i
+tuoi ritmi.
+
+**Regole fisse:** solo **intermedio**, mai uscita (il traffico degli altri non esce **mai** su
+Internet dal tuo indirizzo: il nodo rifiuta anche se un client glielo chiede), mai guardia né
+punto d'incontro (un PC si spegne). Un **tetto di banda** che scegli tu.
+
+**Costo:** un po' di banda in upload (fino al tetto) e una porta UDP da aprire sul router.
+
+**Passi:**
+- **PC:** launcher → ⚙ → **🦇 Aiuta la rete** → indirizzo pubblico (il nome No-IP/DuckDNS o l'IP di
+  casa), porta (4800), tetto (es. 10 Mbit/s) → **Accendi**. Oppure da terminale:
+  `nyctalus-rete aiuta si --indirizzo miacasa.ddns.net --tetto 10` · `aiuta stato` · `aiuta no`.
+- **Router:** inoltra la porta UDP scelta verso il PC.
+- **Gestore:** riceve la riga che il PC mostra e la aggiunge con
+  `nyctalus-rete aggiungi 'RIGA' --intermedio --banda 10 --famiglia NOME`, poi `firma`
+  (serve che i client abbiano la 0.3.11).
+
+Misurato in simulazione: con i nodi della rete saturi l'aiuto come soli intermedi accelera poco
+(+5%), perché la strettoia sono entrata e uscita; conta quando gli utenti sono molti.
 
 ### Per chi gestisce la rete
 
@@ -411,6 +435,9 @@ Per chi usa il motore a mano (`nyctalus start`, `nyctalus circuit`…). Tutte in
 | `--bridge RIGA` / `NYCTALUS_PONTI` | entrare da un ponte nascosto | nessuno |
 | `--mimic [--mimic-name SITO]` / `NYCTALUS_MIMETICO=1` | forma HTTP/3 (con `--obfuscation`) | spenta |
 | `--hidden-bridge` (nodo) | il nodo fa da ponte nascosto | spento |
+| `--middle-only` (nodo) | solo intermedio: mai uscita («Aiuta la rete») | spento |
+| `--max-rate MBIT` (nodo) | tetto della banda inoltrata | nessuno |
+| `NYCTALUS_RIUSO=0` (nodo) | un collegamento per circuito invece di uno per coppia di nodi | riuso acceso |
 | `NYCTALUS_FINESTRA_KB` | finestra per circuito (KB): più piccola = la ragnatela sente prima le strade lente | 256 |
 | `NYCTALUS_CONGESTIONE` | controllo di congestione: `bbr`, `cubic`, `newreno` | bbr |
 | `NYCTALUS_CODIFICA=8,2` | ragnatela codificata **sperimentale** (k celle + r riserve); misurata: non accelera | spenta |

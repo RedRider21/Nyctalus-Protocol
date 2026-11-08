@@ -55,4 +55,21 @@ python3 -m http.server $((B+20)) --bind 127.0.0.1 --directory "$TMP/www" > /dev/
 attendi_regex "$TMP/c.log" "SOCKS5 proxy" 20 > /dev/null
 R=$(curl -s -m 20 --socks5-hostname 127.0.0.1:$((B+10)) http://127.0.0.1:$((B+20))/ 2>&1)
 [ "$R" = "ciao dal sito" ] && pass "si naviga con i nodi degli utenti come intermedi" || fail "navigazione: $R"
+
+# 4) PC dell'utente e gestore (HOME finte: mai i dati veri)
+G="$ROOT/pc/gestore-rete/nyctalus-rete"; HU="$TMP/utente"; HG="$TMP/gestore"; mkdir -p "$HU" "$HG"
+COD=$(python3 -c "import base64,json,sys;print('NYCT1:'+base64.urlsafe_b64encode(json.dumps({'nome':'prova','directory_url':'http://127.0.0.1:9/d.txt','authority':sys.argv[1]}).encode()).decode().rstrip('='))" "$PUB")
+HOME="$HU" NYCTALUS_BIN="$BIN" python3 "$G" importa "$COD" > /dev/null 2>&1
+HOME="$HU" NYCTALUS_BIN="$BIN" python3 "$G" aiuta si --indirizzo miacasa.ddns.net --porta 4800 --tetto 8 --stampa > "$TMP/unita.txt" 2>&1
+grep -q -- "--middle-only --max-rate 8" "$TMP/unita.txt" && grep -q -- "--announce miacasa.ddns.net:4800" "$TMP/unita.txt" \
+  && pass "PC: «aiuta si» prepara il servizio con il nodo SOLO intermedio e il tetto di banda" || fail "servizio aiuta: $(cat "$TMP/unita.txt")"
+RIGA=$(cat "$HU/.nyctalus-rete/aiuto/riga-elenco.txt" 2>/dev/null)
+[[ "$RIGA" == miacasa.ddns.net:4800,* ]] && pass "PC: identità del nodo creata (riga da dare al gestore)" || fail "riga: $RIGA"
+HOME="$HU" python3 "$G" aiuta si --indirizzo "x y" 2>&1 | grep -q "indirizzo" && pass "indirizzo non valido rifiutato" || fail "indirizzo non valido accettato"
+HOME="$HG" NYCTALUS_BIN="$BIN" python3 "$G" crea --nome g > /dev/null 2>&1
+HOME="$HG" NYCTALUS_BIN="$BIN" python3 "$G" aggiungi "$RIGA" --intermedio --banda 8 --famiglia anna > "$TMP/agg.log" 2>&1
+grep -q "^miacasa.ddns.net:4800,[0-9a-f]*,[0-9a-f]*,anna,8,middle$" "$HG/.nyctalus-rete/nodi.txt" \
+  && pass "gestore: «aggiungi --intermedio --banda 8 --famiglia anna»" || fail "nodi.txt: $(cat "$HG/.nyctalus-rete/nodi.txt"; cat "$TMP/agg.log")"
+HOME="$HG" NYCTALUS_BIN="$BIN" python3 "$G" famiglia miacasa.ddns.net:4800 bea > /dev/null 2>&1
+grep -q ",bea,8,middle$" "$HG/.nyctalus-rete/nodi.txt" && pass "cambiare la famiglia non toglie banda e ruolo" || fail "ruolo perso: $(cat "$HG/.nyctalus-rete/nodi.txt")"
 [ "$KO" -eq 0 ]

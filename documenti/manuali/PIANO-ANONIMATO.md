@@ -237,9 +237,14 @@ Misure in Shadow con `simulazione/velocita.py` (dettagli in `simulazione/LEGGIMI
 4. ❌ **Ragnatela codificata** (riserve con codice MDS): provata e misurata, **non accelera**
    (-5..-25%) perché ogni tratta QUIC recupera già i pacchetti persi e le strade condividono entrata
    e uscita. Resta sperimentale; da riprovare con uscite diverse per strada.
-5. **«🦇 Aiuta la rete»** (prossimo): i PC degli utenti, se vogliono, fanno da **nodo intermedio**
-   (mai uscita), con un tetto di banda. Più utenti, più capacità: la differenza vera con Tor nel
-   mondo reale. In più il traffico degli altri copre in parte i tuoi ritmi (da misurare).
+5. ✅ **«🦇 Aiuta la rete»** (0.3.11): i PC degli utenti, se vogliono, fanno da **nodo intermedio**
+   (mai uscita, verificato anche contro un client che lo forza), con un tetto di banda. Misurato:
+   con nodi saturi accelera poco (+5%) perché la strettoia sono entrata e uscita; conta con molti
+   utenti. Da misurare: quanto il traffico degli altri copre i tuoi ritmi. Poi: promuovere a
+   «entrata» i PC più stabili, come le guardie di Tor.
+5-bis. ✅ **Riuso dei collegamenti fra nodi** (0.3.11): +1-3% e primo byte più rapido sotto carico,
+   meno collegamenti nuovi sul filo. A nodi tutti saturi con 4 utenti Tor resta avanti (3,05 contro
+   2,4): causa ancora da capire.
 6. Uscite diverse per strada, per gli scaricamenti grandi (da pesare contro l'anonimato).
 
 ## Oltre l'anonimato: invisibilità

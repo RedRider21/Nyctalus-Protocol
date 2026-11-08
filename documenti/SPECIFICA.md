@@ -91,6 +91,8 @@ Un **solo circuito** trasporta più connessioni dell'applicazione. Dentro gli st
 ### 3.3-quater Conflux: splitting su più strade (punto E2) ✅
 Più circuiti che condividono **guard e uscita** (intermedi diversi) formano un *gruppo* identificato da un `set_id` da 16 byte, comunicato all'uscita nel primo quadro (LINK, dentro l'onion). Ogni cella riceve una **sequenza end-to-end** a 8 byte (dentro l'onion, invisibile ai relè) e viene spezzata sui circuiti; il ricevitore la **ricompone** nell'ordine originale (`motore/nyctalus/src/conflux.rs`, `Riordina`). Limiti del prototipo: guard/uscita fissi per la sessione, nessuna gestione della morte di un circuito.
 
+**Collegamenti fra nodi (0.3.11):** fra due nodi vicini un solo collegamento QUIC riusato da tutti i circuiti (una corsia ciascuno; le corsie QUIC sono indipendenti, a differenza del TCP di Tor). **Nodi solo intermedi** (`--middle-only`, `ruolo=intermedio`): mai uscita, guardia o punto d'incontro.
+
 **Distributore (0.3.10):** ogni cella va al circuito con la **coda più libera** (`scegli_strada`), non più a rotazione rigida, che rendeva la ragnatela lenta come «N × la strada più lenta»; la finestra QUIC per flusso è di 256 KB (quinn: 1,25 MB) così una strada lenta si sente subito. **Scelta dei nodi pesata per banda** (`banda=` nell'elenco firmato). **Ragnatela codificata** sperimentale (`codifica.rs`: k originali + r riserve MDS di Cauchy su GF(2^8), chiesta nel riempimento del LINK con la marca `NYCTCOD1`, le uscite vecchie la ignorano; rumore di fondo dell'uscita come riserve utili): misurata, non accelera perché ogni tratta QUIC recupera già i pacchetti persi e le strade condividono entrata e uscita. Misure: `simulazione/LEGGIMI.md`.
 
 ### 3.4 Formato del pacchetto ✅

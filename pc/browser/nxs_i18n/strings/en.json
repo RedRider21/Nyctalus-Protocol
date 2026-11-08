@@ -1749,5 +1749,12 @@
   "file.st.eliminato": "Deleted from the folder",
   "file.togli": "Remove from the list (the file, if still there, stays)",
   "file.pulisci": "Clear finished transfers from the list",
-  "file.in_chat": "Also show the files in the chat conversation"
+  "file.in_chat": "Also show the files in the chat conversation",
+  "lau.aiuta": "Help the network",
+  "lau.aiuta.spiega": "This PC also works as a MIDDLE node of the network: it relays other people's encrypted traffic, which NEVER leaves to the Internet from your address. The more users help, the faster the network; and others' traffic partly covers your own patterns. Costs: some upload bandwidth (up to the cap you choose) and a UDP port to open on your router. Address = your home name (No-IP, DuckDNS) or public IP.",
+  "lau.aiuta.indirizzo": "Public address",
+  "lau.aiuta.porta": "UDP port",
+  "lau.aiuta.tetto": "Cap (Mbit/s)",
+  "lau.aiuta.accendi": "Turn on",
+  "lau.aiuta.spegni": "Turn off"
 }

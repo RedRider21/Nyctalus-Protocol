@@ -58,6 +58,11 @@ senza famiglie, due nodi con indirizzo pubblico nella stessa sottorete (/16) son
 parenti. Le famiglie vanno usate quando **tutti** i client sono aggiornati (0.3.3 o successive):
 i client più vecchi non leggono un elenco con le famiglie.
 
+### Nodi «solo intermedi» (PC che aiutano la rete)
+Un utente che attiva «🦇 Aiuta la rete» ti manda la riga del suo PC. Aggiungila con
+`nyctalus-rete aggiungi 'RIGA' --intermedio --banda MBIT --famiglia NOME`: quel nodo sarà usato
+solo come intermedio (mai guardia, uscita o punto d'incontro). Serve la 0.3.11 su tutti i client.
+
 ### Banda dei nodi
 `nyctalus-rete banda IP:PORTA MBIT` (es. 100, oppure `-` per toglierla) mette nell'elenco firmato
 la banda del nodo: i percorsi scelgono più spesso i nodi più capaci. Indica la banda **in upload**
