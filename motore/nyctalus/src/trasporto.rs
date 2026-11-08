@@ -156,12 +156,15 @@ pub fn endpoint_server(
     server_config: ServerConfig,
     ascolta: SocketAddr,
     offusca: Option<[u8; 32]>,
+    tls_tcp: Option<Arc<rustls::ServerConfig>>,
 ) -> Risultato<Endpoint> {
-    // UDP come sempre, più il ripiego su TCP sulla stessa porta (crate::tcp): un unico socket
+    // UDP come sempre, più il ripiego su TCP sulla stessa porta (crate::tcp): un unico socket.
+    // Nella forma HTTP/3 il TCP è un vero TLS (sembra HTTPS), altrimenti byte camuffati.
     let runtime = default_runtime().ok_or("nessun runtime asincrono disponibile")?;
     let udp = UdpSocket::bind(ascolta)?;
     udp.set_nonblocking(true)?;
-    let ibrido: Arc<dyn AsyncUdpSocket> = crate::tcp::SocketTcp::nodo(runtime.wrap_udp_socket(udp)?, ascolta, offusca);
+    let ibrido: Arc<dyn AsyncUdpSocket> =
+        crate::tcp::SocketTcp::nodo(runtime.wrap_udp_socket(udp)?, ascolta, offusca, tls_tcp.filter(|_| mimetico()));
     // nella forma HTTP/3 i pacchetti restano QUIC in chiaro: la chiave fa da contrassegno
     let socket: Arc<dyn AsyncUdpSocket> = match offusca.filter(|_| !mimetico()) {
         None => ibrido,
@@ -171,9 +174,20 @@ pub fn endpoint_server(
 }
 
 /// Endpoint client **su TCP** verso `destinazione` (ripiego dove UDP è bloccato).
-pub async fn endpoint_client_tcp(destinazione: SocketAddr, offusca: Option<[u8; 32]>) -> Risultato<Endpoint> {
+pub async fn endpoint_client_tcp(
+    destinazione: SocketAddr,
+    offusca: Option<[u8; 32]>,
+    impronta: Option<[u8; 32]>,
+) -> Risultato<Endpoint> {
     let runtime = default_runtime().ok_or("nessun runtime asincrono disponibile")?;
-    let tcp: Arc<dyn AsyncUdpSocket> = crate::tcp::SocketTcp::client(destinazione, offusca).await?;
+    // forma HTTP/3: il TCP è un vero TLS verso il «sito» (nome del gestore), con l'impronta del nodo
+    let tls = if mimetico() {
+        let nome = rustls::pki_types::ServerName::try_from(crate::tls::nome_per(&destinazione))?.to_owned();
+        Some((crate::tls::config_tls_tcp(impronta)?, nome))
+    } else {
+        None
+    };
+    let tcp: Arc<dyn AsyncUdpSocket> = crate::tcp::SocketTcp::client(destinazione, offusca, tls).await?;
     let socket: Arc<dyn AsyncUdpSocket> = match offusca.filter(|_| !mimetico()) {
         None => tcp,
         Some(segreto) => avvolgi(tcp, segreto, false),
@@ -187,6 +201,7 @@ pub async fn collega_entrata(
     destinazione: SocketAddr,
     offusca: Option<[u8; 32]>,
     config: quinn::ClientConfig,
+    impronta: Option<[u8; 32]>,
 ) -> Risultato<(Endpoint, quinn::Connection)> {
     let modo = std::env::var("NYCTALUS_TCP").unwrap_or_default();
     let nome = crate::tls::nome_per(&destinazione);
@@ -201,7 +216,7 @@ pub async fn collega_entrata(
             _ => eprintln!("UDP to {destinazione} did not answer: trying TCP"),
         }
     }
-    let endpoint = endpoint_client_tcp(destinazione, offusca).await?;
+    let endpoint = endpoint_client_tcp(destinazione, offusca, impronta).await?;
     let c = endpoint.connect_with(config, destinazione, &nome)?.await?;
     println!("  entry over TCP (UDP blocked or NYCTALUS_TCP=1)");
     Ok((endpoint, c))

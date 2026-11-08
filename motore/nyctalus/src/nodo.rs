@@ -155,7 +155,7 @@ pub async fn nodo(
         println!("  bandwidth cap: {} Mbit/s", contorno.tetto_mbit);
     }
 
-    let endpoint = crate::trasporto::endpoint_server(identita.config, ascolta, ingresso)?;
+    let endpoint = crate::trasporto::endpoint_server(identita.config, ascolta, ingresso, Some(identita.tls_tcp.clone()))?;
     let auth = Arc::new(auth);
     while let Some(in_arrivo) = endpoint.accept().await {
         let auth = auth.clone();

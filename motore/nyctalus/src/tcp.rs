@@ -10,6 +10,12 @@
 //!   ogni connessione TCP è un indirizzo come un altro.
 //! - **Client**: socket solo TCP verso l'entrata (quando UDP non risponde, o se forzato).
 //!
+//! **Forma HTTP/3** della rete: il TCP è un **vero TLS** (sembra un normale sito HTTPS, ALPN
+//! http/1.1, nome scelto dal gestore). Dentro TLS il client manda per primo il contrassegno della
+//! rete; chi non lo ha (un censore che sonda, o un browser) riceve una normale risposta HTTP «404
+//! Not Found» e la connessione si chiude, come da un sito qualunque. TLS è rustls guidato a mano
+//! (`tubo_tls`): nessuna libreria in più.
+//!
 //! Ogni datagramma va in un quadro «lunghezza (2 byte) + dati». Con la chiave della rete la
 //! **lunghezza è cifrata** (flusso di chiave BLAKE3 per direzione): sul filo non si vede una
 //! sequenza regolare di lunghezze, solo byte a caso. Costo onesto: su TCP un pacchetto perso
@@ -24,7 +30,10 @@ use std::task::{Context, Poll};
 
 use quinn::udp::{RecvMeta, Transmit};
 use quinn::{AsyncUdpSocket, UdpPoller};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use std::io::{Read, Write};
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 
@@ -62,16 +71,15 @@ impl Lunghezze {
 
 /// Avvia lettura e scrittura su una connessione TCP: i datagrammi letti vanno in `entrata` con
 /// l'indirizzo `chi`; restituisce la coda per scriverci.
-fn servi_connessione(
-    tcp: TcpStream,
+fn servi_connessione<S: AsyncRead + AsyncWrite + Send + 'static>(
+    flusso: S,
     chi: SocketAddr,
     chiave: Option<[u8; 32]>,
     lato_nodo: bool,
     entrata: mpsc::UnboundedSender<(SocketAddr, Vec<u8>)>,
     uscite: Option<Arc<Mutex<HashMap<SocketAddr, mpsc::Sender<Vec<u8>>>>>>,
 ) -> mpsc::Sender<Vec<u8>> {
-    let _ = tcp.set_nodelay(true);
-    let (mut lettura, mut scrittura) = tcp.into_split();
+    let (mut lettura, mut scrittura) = tokio::io::split(flusso);
     let (tx, mut rx) = mpsc::channel::<Vec<u8>>(CODA);
     let (verso_nodo, verso_client) = ("client→nodo", "nodo→client");
     let (dir_in, dir_out) = if lato_nodo { (verso_nodo, verso_client) } else { (verso_client, verso_nodo) };
@@ -120,6 +128,162 @@ fn servi_connessione(
     tx
 }
 
+/// Risposta di facciata a chi entra in TLS senza contrassegno: quella di un sito qualunque.
+const RISPOSTA_404: &[u8] = b"HTTP/1.1 404 Not Found\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: 153\r\nConnection: close\r\n\r\n<!DOCTYPE html>\n<html><head><title>404 Not Found</title></head>\n<body><h1>Not Found</h1>\n<p>The requested URL was not found on this server.</p></body></html>\n";
+
+/// TLS guidato a mano sopra il TCP: fa la stretta di mano, poi restituisce un canale interno
+/// in chiaro (il resto del ripiego lo usa come se fosse il TCP).
+async fn tubo_tls(tcp: TcpStream, mut conn: rustls::Connection) -> io::Result<tokio::io::DuplexStream> {
+    let _ = tcp.set_nodelay(true);
+    let (mut r, mut w) = tcp.into_split();
+    let mut buf = vec![0u8; 16384];
+    let scrivi_tls = |c: &mut rustls::Connection| {
+        let mut o = Vec::new();
+        while c.wants_write() {
+            if c.write_tls(&mut o).is_err() {
+                break;
+            }
+        }
+        o
+    };
+    while conn.is_handshaking() {
+        let o = scrivi_tls(&mut conn);
+        if !o.is_empty() {
+            w.write_all(&o).await?;
+        }
+        if !conn.is_handshaking() {
+            break;
+        }
+        if conn.wants_read() {
+            let n = r.read(&mut buf).await?;
+            if n == 0 {
+                return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "TLS closed during handshake"));
+            }
+            conn.read_tls(&mut &buf[..n])?;
+            conn.process_new_packets().map_err(io::Error::other)?;
+        }
+    }
+    let o = scrivi_tls(&mut conn);
+    if !o.is_empty() {
+        w.write_all(&o).await?;
+    }
+    // dati arrivati insieme alla fine della stretta di mano (es. curl manda la richiesta nello
+    // stesso pacchetto): rustls li ha già decifrati, vanno consegnati subito
+    let mut gia_arrivati = Vec::new();
+    let mut tmp = [0u8; 4096];
+    while let Ok(k) = conn.reader().read(&mut tmp) {
+        if k == 0 {
+            break;
+        }
+        gia_arrivati.extend_from_slice(&tmp[..k]);
+    }
+    let (interno, esterno) = tokio::io::duplex(1 << 16);
+    let (mut er, mut ew) = tokio::io::split(esterno);
+    if !gia_arrivati.is_empty() {
+        ew.write_all(&gia_arrivati).await?;
+    }
+    let conn = Arc::new(Mutex::new(conn));
+    let (tx_tls, mut rx_tls) = mpsc::unbounded_channel::<Vec<u8>>();
+    // in arrivo: TCP → TLS → chiaro
+    let c1 = conn.clone();
+    tokio::spawn(async move {
+        let mut buf = vec![0u8; 16384];
+        let mut chiaro = vec![0u8; 16384];
+        loop {
+            let n = match r.read(&mut buf).await {
+                Ok(0) | Err(_) => break,
+                Ok(n) => n,
+            };
+            let (dati, uscita) = {
+                let mut c = c1.lock().unwrap();
+                if c.read_tls(&mut &buf[..n]).is_err() || c.process_new_packets().is_err() {
+                    break;
+                }
+                let mut d = Vec::new();
+                while let Ok(k) = c.reader().read(&mut chiaro) {
+                    if k == 0 {
+                        break;
+                    }
+                    d.extend_from_slice(&chiaro[..k]);
+                }
+                (d, scrivi_tls(&mut c))
+            };
+            if !uscita.is_empty() {
+                let _ = tx_tls.send(uscita);
+            }
+            if !dati.is_empty() && ew.write_all(&dati).await.is_err() {
+                break;
+            }
+        }
+        let _ = ew.shutdown().await;
+    });
+    // in partenza: chiaro → TLS → TCP
+    tokio::spawn(async move {
+        let mut buf = vec![0u8; 16384];
+        loop {
+            tokio::select! {
+                letto = er.read(&mut buf) => {
+                    let n = match letto { Ok(0) | Err(_) => break, Ok(n) => n };
+                    let o = {
+                        let mut c = conn.lock().unwrap();
+                        if c.writer().write_all(&buf[..n]).is_err() {
+                            break;
+                        }
+                        scrivi_tls(&mut c)
+                    };
+                    if w.write_all(&o).await.is_err() {
+                        break;
+                    }
+                }
+                Some(o) = rx_tls.recv() => {
+                    if w.write_all(&o).await.is_err() {
+                        break;
+                    }
+                }
+            }
+        }
+        let o = {
+            let mut c = conn.lock().unwrap();
+            c.send_close_notify();
+            scrivi_tls(&mut c)
+        };
+        let _ = w.write_all(&o).await;
+        let _ = w.shutdown().await;
+    });
+    Ok(interno)
+}
+
+/// Lato nodo, forma HTTP/3: stretta TLS, contrassegno; senza contrassegno, la pagina 404.
+async fn accogli_tls(
+    tcp: TcpStream,
+    tls: Arc<rustls::ServerConfig>,
+    chiave: Option<[u8; 32]>,
+) -> Option<tokio::io::DuplexStream> {
+    let conn = rustls::Connection::Server(rustls::ServerConnection::new(tls).ok()?);
+    let mut interno = tokio::time::timeout(std::time::Duration::from_secs(15), tubo_tls(tcp, conn)).await.ok()?.ok()?;
+    let atteso = chiave.map(|k| crate::trasporto::contrassegno(&k));
+    let mut letto = [0u8; crate::trasporto::CONTRASSEGNO];
+    let pieno = tokio::time::timeout(std::time::Duration::from_secs(5), interno.read_exact(&mut letto)).await.is_ok_and(|r| r.is_ok());
+    if pieno && atteso.is_some_and(|a| a == letto) {
+        return Some(interno);
+    }
+    // non è dei nostri: si legge la sua richiesta e si risponde come un sito qualunque
+    let mut richiesta = letto.to_vec();
+    let _ = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        let mut b = [0u8; 2048];
+        while !richiesta.windows(4).any(|w| w == b"\r\n\r\n") && richiesta.len() < 16384 {
+            match interno.read(&mut b).await {
+                Ok(0) | Err(_) => break,
+                Ok(k) => richiesta.extend_from_slice(&b[..k]),
+            }
+        }
+    })
+    .await;
+    let _ = interno.write_all(RISPOSTA_404).await;
+    let _ = interno.shutdown().await;
+    None
+}
+
 /// Socket per quinn: UDP (se c'è) più datagrammi su TCP.
 #[derive(Debug)]
 pub struct SocketTcp {
@@ -137,7 +301,12 @@ impl std::fmt::Debug for Lunghezze {
 
 impl SocketTcp {
     /// Lato nodo: `udp` più un ascolto TCP sulla stessa porta.
-    pub fn nodo(udp: Arc<dyn AsyncUdpSocket>, ascolta: SocketAddr, chiave: Option<[u8; 32]>) -> Arc<Self> {
+    pub fn nodo(
+        udp: Arc<dyn AsyncUdpSocket>,
+        ascolta: SocketAddr,
+        chiave: Option<[u8; 32]>,
+        tls: Option<Arc<rustls::ServerConfig>>,
+    ) -> Arc<Self> {
         let (tx, rx) = mpsc::unbounded_channel();
         let uscite: Arc<Mutex<HashMap<SocketAddr, mpsc::Sender<Vec<u8>>>>> = Arc::new(Mutex::new(HashMap::new()));
         let locale = udp.local_addr().unwrap_or(ascolta);
@@ -147,13 +316,32 @@ impl SocketTcp {
         }) {
             Ok(ascolto) => {
                 let u = uscite.clone();
+                let in_corso = Arc::new(AtomicUsize::new(0));
                 tokio::spawn(async move {
                     while let Ok((tcp, chi)) = ascolto.accept().await {
-                        if u.lock().unwrap().len() >= CONNESSIONI_MAX {
+                        if u.lock().unwrap().len() + in_corso.load(Ordering::Relaxed) >= CONNESSIONI_MAX {
                             continue; // troppe: questa si lascia cadere
                         }
-                        let scrittore = servi_connessione(tcp, chi, chiave, true, tx.clone(), Some(u.clone()));
-                        u.lock().unwrap().insert(chi, scrittore);
+                        let _ = tcp.set_nodelay(true);
+                        match tls.clone() {
+                            None => {
+                                let scrittore = servi_connessione(tcp, chi, chiave, true, tx.clone(), Some(u.clone()));
+                                u.lock().unwrap().insert(chi, scrittore);
+                            }
+                            Some(tls) => {
+                                // forma HTTP/3: TLS e contrassegno (dentro TLS le lunghezze non servono cifrate)
+                                let (u, tx, in_corso) = (u.clone(), tx.clone(), in_corso.clone());
+                                in_corso.fetch_add(1, Ordering::Relaxed);
+                                tokio::spawn(async move {
+                                    let interno = accogli_tls(tcp, tls, chiave).await;
+                                    in_corso.fetch_sub(1, Ordering::Relaxed);
+                                    if let Some(interno) = interno {
+                                        let scrittore = servi_connessione(interno, chi, None, true, tx, Some(u.clone()));
+                                        u.lock().unwrap().insert(chi, scrittore);
+                                    }
+                                });
+                            }
+                        }
                     }
                 });
             }
@@ -163,13 +351,28 @@ impl SocketTcp {
     }
 
     /// Lato client: solo TCP, verso `destinazione`.
-    pub async fn client(destinazione: SocketAddr, chiave: Option<[u8; 32]>) -> io::Result<Arc<Self>> {
+    pub async fn client(
+        destinazione: SocketAddr,
+        chiave: Option<[u8; 32]>,
+        tls: Option<(Arc<rustls::ClientConfig>, rustls::pki_types::ServerName<'static>)>,
+    ) -> io::Result<Arc<Self>> {
         let tcp = tokio::time::timeout(std::time::Duration::from_secs(10), TcpStream::connect(destinazione))
             .await
             .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "TCP connect timeout"))??;
+        let _ = tcp.set_nodelay(true);
         let locale = tcp.local_addr()?;
         let (tx, rx) = mpsc::unbounded_channel();
-        let scrittore = servi_connessione(tcp, destinazione, chiave, false, tx, None);
+        let scrittore = match tls {
+            None => servi_connessione(tcp, destinazione, chiave, false, tx, None),
+            Some((cfg, nome)) => {
+                // forma HTTP/3: un vero TLS verso il «sito», poi il contrassegno della rete
+                let conn = rustls::Connection::Client(rustls::ClientConnection::new(cfg, nome).map_err(io::Error::other)?);
+                let mut interno = tubo_tls(tcp, conn).await?;
+                let k = chiave.ok_or_else(|| io::Error::other("HTTP/3 form needs the network key"))?;
+                interno.write_all(&crate::trasporto::contrassegno(&k)).await?;
+                servi_connessione(interno, destinazione, None, false, tx, None)
+            }
+        };
         let uscite = Arc::new(Mutex::new(HashMap::from([(destinazione, scrittore)])));
         Ok(Arc::new(Self { udp: None, locale, arrivi: Mutex::new(rx), uscite }))
     }

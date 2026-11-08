@@ -81,7 +81,7 @@ pub async fn avvia_circuito(
         None => crate::tls::config_client_insicuro()?,
     };
     // UDP, oppure (se UDP è bloccato) TCP alla stessa porta
-    let (_endpoint, connessione) = crate::trasporto::collega_entrata(guardiano, chiave_entrata, config).await?;
+    let (_endpoint, connessione) = crate::trasporto::collega_entrata(guardiano, chiave_entrata, config, impronta_guard).await?;
 
     // Canali condivisi: scrittore(i) in andata, ritorno riordinato.
     let flussi: MappaFlussi = Arc::new(Mutex::new(HashMap::new()));

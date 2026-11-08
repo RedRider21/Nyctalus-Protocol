@@ -71,6 +71,23 @@ else
   salta "Chrome o openssl non installati: niente prova con il browser"
 fi
 
+# 5-bis) ripiego su TCP nella forma HTTP/3: un vero HTTPS (TLS, ALPN http/1.1) con il contrassegno dentro
+NYCTALUS_TCP=1 "$BIN" circuit --directory "$DIR" --authority "$PUB" --obfuscation "$K" --socks 127.0.0.1:$((B+16)) --control 127.0.0.1:$((B+17)) --hops 3 > "$TMP/ct.log" 2>&1 & PIDS+=($!)
+attendi_regex "$TMP/ct.log" "SOCKS5 proxy" 30 > /dev/null
+R=$(curl -s -m 20 --socks5-hostname 127.0.0.1:$((B+16)) http://127.0.0.1:$((B+20))/ 2>&1)
+[ "$R" = "ciao dal sito" ] && grep -q "entry over TCP" "$TMP/ct.log" && pass "ripiego su TCP nella forma HTTP/3: si naviga dentro un vero TLS" || fail "TCP+TLS: $R $(tail -3 "$TMP/ct.log")"
+S=$(echo | timeout 10 openssl s_client -connect 127.0.0.1:$B -servername $NOME -alpn http/1.1 2>/dev/null)
+echo "$S" | grep -q "CN *= *$NOME" && echo "$S" | grep -q "ALPN protocol: http/1.1" \
+  && pass "openssl sulla porta TCP: stretta TLS normale, certificato «$NOME», ALPN http/1.1" || fail "openssl: $(echo "$S" | grep -E 'subject|ALPN|error' | head -3)"
+R=$(curl -sk -m 10 --resolve $NOME:$B:127.0.0.1 "https://$NOME:$B/" -w " %{http_code}")
+echo "$R" | grep -q "404 Not Found" && echo "$R" | grep -q " 404$" && pass "curl in HTTPS sulla porta TCP del nodo: «404 Not Found», come un sito" || fail "curl https: $R"
+if command -v google-chrome > /dev/null; then
+  PAG=$(timeout 40 google-chrome --headless=new --user-data-dir="$TMP/chrome2" --no-first-run --mute-audio --disable-gpu \
+      --disable-background-networking --disable-component-update --disable-sync --no-default-browser-check \
+      --host-resolver-rules="MAP $NOME 127.0.0.1" --ignore-certificate-errors --dump-dom "https://$NOME:$B/" 2>/dev/null)
+  echo "$PAG" | grep -q "404 Not Found" && pass "Chrome in HTTPS (TCP) sul nodo: una normale pagina 404" || fail "Chrome https: $(echo "$PAG" | head -2)"
+fi
+
 # 6) gestore, codice di rete, PC, telefono, installatore dei server (HOME finte: mai i dati veri)
 unset NYCTALUS_MIMETICO NYCTALUS_NOME_MIMETICO
 G="$ROOT/pc/gestore-rete/nyctalus-rete"; HG="$TMP/gestore"; mkdir -p "$HG"

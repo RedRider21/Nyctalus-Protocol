@@ -259,7 +259,7 @@ async fn canale_onion(percorso: &[NodoRete], offusca: Option<[u8; 32]>) -> Risul
         Some(fp) => crate::tls::config_client(fp)?,
         None => crate::tls::config_client_insicuro()?,
     };
-    let (endpoint, conn) = crate::trasporto::collega_entrata(guard, chiave_entrata, config).await?;
+    let (endpoint, conn) = crate::trasporto::collega_entrata(guard, chiave_entrata, config, impronta_guard).await?;
     let (mut invio, ricezione) = crate::trasporto::apri_flusso(&conn, chiave_entrata).await?;
     // 1º quadro = pacchetto di apertura Sphinx; poi i quadri onion (n da 0).
     scrivi_quadro(&mut invio, &circuito.pacchetto).await?;

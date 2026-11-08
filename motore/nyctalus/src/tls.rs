@@ -48,6 +48,8 @@ fn certificato_nuovo() -> Risultato<rcgen::CertifiedKey<rcgen::KeyPair>> {
 pub struct IdentitaServer {
     pub config: quinn::ServerConfig,
     pub impronta: [u8; 32],
+    /// TLS per il ripiego su TCP nella forma HTTP/3 (stesso certificato, ALPN http/1.1)
+    pub tls_tcp: Arc<rustls::ServerConfig>,
 }
 
 pub fn identita_server() -> Risultato<IdentitaServer> {
@@ -79,6 +81,13 @@ pub fn identita_server_in(cartella: Option<&std::path::Path>) -> Risultato<Ident
         eprintln!("WARNING: HTTP/3 form with an old, recognisable certificate: create a new node identity \
                    (new --data folder, or installa.sh --nuova-identita) and send the new line to the network manager");
     }
+    // TLS su TCP (ripiego nella forma HTTP/3): come un normale sito HTTPS
+    let mut tls_tcp = rustls::ServerConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
+        .with_safe_default_protocol_versions()?
+        .with_no_client_auth()
+        .with_single_cert(vec![der.clone()], chiave.clone_key())?;
+    tls_tcp.alpn_protocols = vec![b"http/1.1".to_vec()];
+    let tls_tcp = Arc::new(tls_tcp);
     let mut tls = rustls::ServerConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
         .with_protocol_versions(&[&rustls::version::TLS13])?
         .with_no_client_auth()
@@ -89,7 +98,25 @@ pub fn identita_server_in(cartella: Option<&std::path::Path>) -> Risultato<Ident
     }
     let mut config = quinn::ServerConfig::with_crypto(Arc::new(quinn::crypto::rustls::QuicServerConfig::try_from(tls)?));
     config.transport_config(trasporto_client());   // stessi tempi: chi sparisce si scopre presto
-    Ok(IdentitaServer { config, impronta })
+    Ok(IdentitaServer { config, impronta, tls_tcp })
+}
+
+/// TLS del client per il ripiego su TCP nella forma HTTP/3: verifica l'impronta del certificato
+/// (se nota), ALPN http/1.1 come un browser.
+pub fn config_tls_tcp(impronta: Option<[u8; 32]>) -> Risultato<Arc<rustls::ClientConfig>> {
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let algoritmi = provider.signature_verification_algorithms;
+    let verificatore: Arc<dyn ServerCertVerifier> = match impronta {
+        Some(impronta_attesa) => Arc::new(VerificaImpronta { impronta_attesa, algoritmi }),
+        None => Arc::new(AccettaTutto { algoritmi }),
+    };
+    let mut tls = rustls::ClientConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()?
+        .dangerous()
+        .with_custom_certificate_verifier(verificatore)
+        .with_no_client_auth();
+    tls.alpn_protocols = vec![b"http/1.1".to_vec()];
+    Ok(Arc::new(tls))
 }
 
 /// Scrive un file leggibile solo dal proprietario (chiavi private).
