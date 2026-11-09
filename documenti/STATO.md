@@ -22,6 +22,10 @@
 4. **Ricontrollo completo di cybersecurity** di tutto il sistema (richiesto 08/11/2026), insieme al piano sicurezza.
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
 
+## 09/11/2026 · Motore Android per ogni processore ✅ — release v0.3.17 (APK 0.60)
+- Prova dell'utente su Samsung Galaxy Tab A: «il motore non parte» → Android a 32 bit, motore solo aarch64. Ora CI compila anche armv7-linux-androideabi, x86_64-linux-android, i686-linux-android; pacchetto Termux con bin/<bersaglio>/; installa.sh sceglie per `dpkg --print-architecture` e se il motore non parte stampa processore, API ed errore. APK ~10 MB.
+- Notifiche «Plugin Execution Command Error / allow-external-apps» prima dell'incolla: normali (prova silenziosa), spariscono dopo.
+
 ## 09/11/2026 · App Android: «⚡ Prepara Nyctalus» e aggiornamenti da GitHub ✅ — release v0.3.16 (APK 0.59)
 - Richiesta dell'utente: su un tablet vuoto l'installazione non riusciva (Termux nuovo: allow-external-apps spento → RUN_COMMAND ignorato; Python da pacchetti vecchi; nessun comando d'installazione da incollare).
 - Ora un pulsante guidato: scarica Termux dalla release ufficiale (ABI giusta) e apre l'installatore (REQUEST_INSTALL_PACKAGES, permesso «app sconosciute» gestito); chiede RUN_COMMAND; prova silenziosa (/ping al servitore del pacchetto); se Termux non accetta, comando unico GIÀ COPIATO (allow-external-apps + pkg upgrade se nuovo + installazione + avvio) da incollare una volta. Pulsante visibile solo quando serve. Aggiornamenti da GitHub funzionanti (release latest → Nyctalus-Android.zip → APK più nuovo → installatore; poi propone l'aggiornamento in Termux).

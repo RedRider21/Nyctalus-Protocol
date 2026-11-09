@@ -90,6 +90,11 @@ mostra la chat (stile Telegram), il browser e la rubrica.
 
 Se usi già Termux per altro va bene quello: «⚡ Prepara Nyctalus» lo trova e salta il passo.
 
+**Ogni processore** (dalla 0.3.17): l'app porta il motore per ARM a 64 e a 32 bit (molti tablet,
+per esempio diversi Samsung Galaxy Tab A, hanno Android a 32 bit) e per Intel/AMD a 64 e 32 bit;
+l'installatore sceglie da solo quello giusto. Se il motore non parte, Termux mostra processore,
+versione di Android ed errore: mandali a chi sviluppa Nyctalus.
+
 **Per aggiornare:** **Strumenti ▾ → ☁ Aggiornamenti da GitHub**: l'app controlla l'ultima
 release, scarica la nuova app e apre l'installazione (tocchi «Aggiorna»). Riaprendola, propone da
 sola di aggiornare anche Nyctalus in Termux (un tocco).
