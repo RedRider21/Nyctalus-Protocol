@@ -745,6 +745,9 @@ public class MainActivity extends Activity {
         imposta("● Nyctalus è pronto — scegli cosa aprire");
         getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("preparazione", false).apply();
         serveLaPreparazione = false;
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove("installazione_lanciata").apply();
+        ServitorePacchetto spento = ServizioPacchetto.attivo;     // pronto: il pacchetto non serve più
+        if (spento != null) { spento.interrupt(); ServizioPacchetto.attivo = null; }
         runOnUiThread(() -> { if (pulsantePrepara != null) pulsantePrepara.setVisibility(View.GONE); });
         offriAggiornamentoTermux();
         runOnUiThread(() -> { if (pulsanteEntra != null) pulsanteEntra.animate().alpha(1f).setDuration(300).start(); });
@@ -784,6 +787,11 @@ public class MainActivity extends Activity {
             File f = apkInAttesa;
             apkInAttesa = null;
             installaApk(f);
+        } else if (!pronto && !avviando && termuxInstallato()
+                && getSharedPreferences(PREFS, MODE_PRIVATE).getLong("installazione_lanciata", 0) > 0
+                && !getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("attesa_termux", false)) {
+            // di ritorno dallo script d'installazione: l'app avvia il servizio con il suo segreto
+            new Thread(this::avvia).start();
         } else if (!pronto && termuxInstallato() && getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("preparazione", false)
                 && getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("attesa_termux", false)) {
             getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("attesa_termux", false).apply();
@@ -880,11 +888,14 @@ public class MainActivity extends Activity {
 
     private ServitorePacchetto avviaServitore() {
         try {
-            ServitorePacchetto vecchio = ServizioPacchetto.attivo;
-            if (vecchio != null) vecchio.interrupt();
-            ServitorePacchetto sp = new ServitorePacchetto(this);
-            sp.start();
-            ServizioPacchetto.attivo = sp;
+            // UN solo servitore, sempre lo stesso: ritoccando il pulsante non si spegne quello di
+            // prima (le sessioni di Termux già partite lo cercano ancora sulla sua porta)
+            ServitorePacchetto sp = ServizioPacchetto.attivo;
+            if (sp == null || !sp.isAlive()) {
+                sp = new ServitorePacchetto(this);
+                sp.start();
+                ServizioPacchetto.attivo = sp;
+            }
             Intent i = new Intent(this, ServizioPacchetto.class);
             if (Build.VERSION.SDK_INT >= 26) startForegroundService(i);
             else startService(i);
@@ -897,18 +908,26 @@ public class MainActivity extends Activity {
 
     /** Scarica dall'app il pacchetto, ne verifica l'impronta, installa, avvia e riapre l'app. */
     private String comandoInstallazione(ServitorePacchetto sp) {
-        String cmd = "D=$(mktemp -d) && cd \"$D\" && "
+        return comandoScarica(sp) + " && " + comandoInstallaScaricato();
+    }
+
+    /** Scarica dall'app il pacchetto e ne verifica l'impronta (resta nella cartella $D). */
+    private String comandoScarica(ServitorePacchetto sp) {
+        return "D=$(mktemp -d) && cd \"$D\" && "
                 + "{ command -v curl >/dev/null 2>&1 || pkg install -y curl; } && "
                 + "echo '» Scarico Nyctalus dall app…' && "
                 + "curl -fsS --retry 5 --retry-connrefused --retry-delay 1 --connect-timeout 5 --max-time 300 "
                 + sp.indirizzo() + " -o n.tar.gz && "
-                + "echo '" + sp.impronta + "  n.tar.gz' | sha256sum -c --quiet && "
-                + "tar xzf n.tar.gz && bash nyctalus-termux/installa.sh && cd ~ && rm -rf \"$D\" && "
+                + "echo '" + sp.impronta + "  n.tar.gz' | sha256sum -c --quiet";
+    }
+
+    /** Installa il pacchetto già scaricato in $D, avvia il servizio e riapre l'app. */
+    private String comandoInstallaScaricato() {
+        return "tar xzf n.tar.gz && bash nyctalus-termux/installa.sh && cd ~ && rm -rf \"$D\" && "
                 + comandoAvvio() + " && "
                 + "echo && echo '✓ Fatto: torno nell app Nyctalus…' && sleep 2 && "
                 + "(am start -n org.nyctalus.mobile/.MainActivity >/dev/null 2>&1 || true)"
                 + " || { echo; echo '✗ Installazione non riuscita: leggi i messaggi qui sopra.'; cd ~; rm -rf \"$D\"; }";
-        return cmd;
     }
 
     /** Un pulsante del menu: piatto, tutti dello stesso colore, icona sopra e nome sotto. */
@@ -1160,12 +1179,26 @@ public class MainActivity extends Activity {
      *    se no (Termux appena installato: «allow-external-apps» spento, e lo si può accendere solo
      *    da dentro Termux) il comando unico è GIÀ COPIATO: tieni premuto → Incolla → Invio, una volta.
      */
+    private boolean ripartiComunque = false;
+
     private void mostraPrepara() {
         serveLaPreparazione = true;
         runOnUiThread(() -> { if (pulsantePrepara != null && !pronto) pulsantePrepara.setVisibility(View.VISIBLE); });
     }
 
     private void preparaTutto() {
+        long da = System.currentTimeMillis() - getSharedPreferences(PREFS, MODE_PRIVATE).getLong("installazione_lanciata", 0);
+        if (!pronto && da < 4 * 60 * 1000 && !ripartiComunque) {
+            new android.app.AlertDialog.Builder(this)
+                    .setTitle("Installazione già in corso")
+                    .setMessage("Termux sta già installando Nyctalus (" + (da / 60000) + " min fa): aspetta che finisca, "
+                            + "l'app torna qui da sola. Vuoi ricominciare comunque?")
+                    .setPositiveButton("Ricomincia", (d, w) -> { ripartiComunque = true; preparaTutto(); })
+                    .setNegativeButton("Aspetto", (d, w) -> apriTermux())
+                    .show();
+            return;
+        }
+        ripartiComunque = false;
         getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("preparazione", true).apply();
         if (!termuxInstallato()) { scaricaTermux(); return; }
         if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(PERMESSO_TERMUX) != PackageManager.PERMISSION_GRANTED) {
@@ -1188,6 +1221,7 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 ricaricaChat = true;
                 provatoInPrimoPiano = true;
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putLong("installazione_lanciata", System.currentTimeMillis()).apply();
                 if (accetta) {
                     eseguiInTermux(comandoPreparazione(sp), false, null);
                     imposta("Installazione in corso in Termux…\nAlla fine l'app torna qui da sola.");
@@ -1219,19 +1253,30 @@ public class MainActivity extends Activity {
      * comanda Termux da sola), aggiorna Termux se è appena installato (senza, l'installazione di
      * Python può fallire), installa e avvia Nyctalus, torna nell'app.
      */
+    /**
+     * IL comando unico (lo stesso dei manuali): scarica da GitHub installa-termux.sh, che fa tutto
+     * da solo (permesso all'app, aggiornamento di Termux se nuovo, pacchetto verificato con SHA-256,
+     * installazione, ritorno all'app). Non dipende dall'app: niente porte, niente app da tenere sveglia.
+     */
+    static final String URL_SCRIPT = "https://github.com/RedRider21/Nyctalus-Protocol/releases/latest/download/installa-termux.sh";
+    static final String COMANDO_UNICO = "command -v curl >/dev/null 2>&1 || pkg install -y curl; curl -fsSL " + URL_SCRIPT + " | bash";
+
+    /** Lanciato dall'app: lo script da GitHub; senza Internet, il pacchetto che l'app porta con sé. */
     private String comandoPreparazione(ServitorePacchetto sp) {
-        return "mkdir -p ~/.termux && P=~/.termux/termux.properties && "
+        return "{ command -v curl >/dev/null 2>&1 || pkg install -y curl; } && S=\"$(curl -fsSL " + URL_SCRIPT + ")\" && bash -c \"$S\" "
+             + "|| { echo; echo '» GitHub non raggiungibile: installo il pacchetto che porta l app'; "
+             + "mkdir -p ~/.termux && P=~/.termux/termux.properties && "
              + "{ grep -Eq '^[[:space:]]*allow-external-apps[[:space:]]*=[[:space:]]*true' \"$P\" 2>/dev/null "
              + "|| printf '\\n# aggiunto da Nyctalus\\nallow-external-apps = true\\n' >> \"$P\"; } && "
              + "{ termux-reload-settings 2>/dev/null; true; } && "
-             + "{ command -v python >/dev/null 2>&1 || { echo '» Preparo Termux la prima volta (qualche minuto)…'; "
-             + "export DEBIAN_FRONTEND=noninteractive; yes | pkg upgrade -y -o Dpkg::Options::=--force-confnew; }; } && "
-             + comandoInstallazione(sp);
+             + comandoScarica(sp) + " && "
+             + "{ command -v python >/dev/null 2>&1 || { export DEBIAN_FRONTEND=noninteractive; yes | pkg upgrade -y -o Dpkg::Options::=--force-confnew; }; } && "
+             + comandoInstallaScaricato() + "; }";
     }
 
     /** Ultimo passo, una sola volta: il comando è già negli appunti, in Termux si incolla e basta. */
     private void incollaInTermux(ServitorePacchetto sp) {
-        copiaNegliAppunti(comandoPreparazione(sp));
+        copiaNegliAppunti(COMANDO_UNICO);
         imposta("Ultimo passo, una volta sola: incolla il comando in Termux (è già copiato).");
         new android.app.AlertDialog.Builder(this)
                 .setTitle("Ultimo passo (una volta sola)")

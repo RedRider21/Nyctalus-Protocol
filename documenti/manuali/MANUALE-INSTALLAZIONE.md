@@ -83,7 +83,13 @@ mostra la chat (stile Telegram), il browser e la rubrica.
    - **«Consenti»** al permesso «Esegui comandi in Termux»;
    - **una volta sola**, se Termux è appena installato: si apre Termux, aspetti che si prepari
      (compare `$`), **tieni premuto → Incolla → Invio**. Il comando è **già copiato**: non scrivi
-     niente. Prepara Termux (aggiornandolo se è nuovo), installa e avvia Nyctalus e torna all'app.
+     niente. È sempre lo stesso, una riga sola:
+     ```
+     curl -fsSL https://github.com/RedRider21/Nyctalus-Protocol/releases/latest/download/installa-termux.sh | bash
+     ```
+     Lo script scaricato fa tutto da solo: permesso all'app, aggiornamento di Termux se è nuovo,
+     pacchetto di Nyctalus da GitHub **verificato con l'impronta SHA-256**, motore giusto per il
+     processore, installazione, ritorno all'app (che avvia il servizio).
      È l'unica cosa che l'app non può fare al posto tuo: Termux, per sicurezza, vuole che sia tu a
      dargli il permesso di ricevere comandi da altre app.
 3. Collegati a una rete: `MANUALE-TELEFONO.md` §1 (a casa: `GUIDA-RETE-DI-CASA.md`).
@@ -105,6 +111,9 @@ non aggiorna mai quelli presenti, in `termux.properties` aggiunge una sola riga.
 
 Come arriva il pacchetto: l'app lo offre per qualche minuto su `127.0.0.1` a un indirizzo
 casuale; Termux lo scarica e ne **verifica l'impronta SHA-256** prima di installarlo.
+
+**Senza l'app, o per riparare:** in Termux incolla la stessa riga qui sopra: installa o aggiorna
+Nyctalus da sola (serve Internet).
 
 ### 2.2 A mano, senza l'app (facoltativo)
 Serve `nyctalus-termux.tar.gz` (nel pacchetto Android). Poi si apre la chat nel browser del

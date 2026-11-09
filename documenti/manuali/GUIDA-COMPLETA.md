@@ -61,7 +61,8 @@ Per **provare** basta un PC: fa da gestore, da nodi e da client insieme (rete di
 **Telefono Android**
 1. Installa `Nyctalus.apk` e aprila.
 2. Tocca **⚡ Prepara Nyctalus**: scarica e installa Termux, chiede «Consenti», e solo la prima
-   volta ti fa incollare in Termux un comando **già copiato** (tieni premuto → Incolla → Invio).
+   volta ti fa incollare in Termux un comando **già copiato** (tieni premuto → Incolla → Invio):
+   `curl -fsSL https://github.com/RedRider21/Nyctalus-Protocol/releases/latest/download/installa-termux.sh | bash` — fa tutto da solo.
 3. Aggiornamenti: **Strumenti ▾ → ☁ Aggiornamenti da GitHub**.
 4. **🔗 Rete** → incolla il codice `NYCT1:…` (oppure apri nel browser l'indirizzo della rete
    e tocca **📲 Collega l'app Nyctalus**). Controlla l'impronta.

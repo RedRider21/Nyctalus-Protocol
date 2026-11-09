@@ -27,7 +27,7 @@ import java.security.SecureRandom;
 class ServitorePacchetto extends Thread {
 
     static final String NOME = "nyctalus-termux.tar.gz";
-    private static final long DURATA_MS = 30 * 60 * 1000;   // il tempo di incollare il comando la prima volta
+    private static final long DURATA_MS = 60 * 60 * 1000;   // il tempo di incollare il comando e di riprovare
 
     private final Context ctx;
     private final ServerSocket server;
@@ -75,10 +75,15 @@ class ServitorePacchetto extends Thread {
             while (System.currentTimeMillis() < fine && !isInterrupted()) {
                 try (Socket s = server.accept()) {
                     s.setSoTimeout(5000);
-                    if (servi(s)) {
-                        dormi(3000);    // lascia a curl il tempo di chiudere
-                        return;         // consegnato: missione compiuta
-                    }
+                    servi(s);   // resta acceso anche dopo una consegna: un nuovo tentativo lo ritrova
+                                // (si spegne quando Nyctalus è pronto, o dopo un'ora)
+                    // chiusura ordinata: si chiude la NOSTRA metà e si aspetta che il client finisca
+                    // (chiudere con dati non letti manda un reset che può troncare il file ricevuto)
+                    s.shutdownOutput();
+                    s.setSoTimeout(3000);
+                    InputStream resto = s.getInputStream();
+                    byte[] scarto = new byte[4096];
+                    while (resto.read(scarto) >= 0) { /* fino alla chiusura del client */ }
                 } catch (SocketTimeoutException attesa) {
                     // nessuno: si ricontrolla la scadenza
                 } catch (Exception ignorata) { }

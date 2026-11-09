@@ -22,6 +22,11 @@
 4. **Ricontrollo completo di cybersecurity** di tutto il sistema (richiesto 08/11/2026), insieme al piano sicurezza.
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
 
+## 09/11/2026 · Script unico per Termux ✅ — release v0.3.18 (APK 0.61)
+- Sul Tab A «curl failed to connect to 127.0.0.1:…»: tocchi ripetuti spegnevano il servitore dell'app (porta nuova a ogni tocco) e l'aggiornamento lungo di Termux veniva PRIMA dello scaricamento (app chiusa da Android in sottofondo).
+- Ora: `installa-termux.sh` nella release (una riga: `curl -fsSL …/releases/latest/download/installa-termux.sh | bash`): permesso, aggiornamento se nuovo, pacchetto da GitHub con SHA-256, installazione, ritorno all'app; l'app copia QUELLA riga. Servitore locale solo ripiego: unico e riusato, non si spegne dopo la consegna, chiusura ordinata (prima rischiava file troncati), scaricamento prima dell'aggiornamento, niente installazioni doppie. Prove 08 (30) e 37 (7).
+- Intoppo di GitHub alle 18:12 (lavori non creati): rilanciati, riusciti.
+
 ## 09/11/2026 · Motore Android per ogni processore ✅ — release v0.3.17 (APK 0.60)
 - Prova dell'utente su Samsung Galaxy Tab A: «il motore non parte» → Android a 32 bit, motore solo aarch64. Ora CI compila anche armv7-linux-androideabi, x86_64-linux-android, i686-linux-android; pacchetto Termux con bin/<bersaglio>/; installa.sh sceglie per `dpkg --print-architecture` e se il motore non parte stampa processore, API ed errore. APK ~10 MB.
 - Notifiche «Plugin Execution Command Error / allow-external-apps» prima dell'incolla: normali (prova silenziosa), spariscono dopo.

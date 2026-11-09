@@ -81,7 +81,9 @@ assicura_binario
 python3 - "$J" > "$TMP/inst.tpl" <<'PY'
 import re, sys
 s = open(sys.argv[1]).read()
-corpo = re.search(r'private String comandoInstallazione\(ServitorePacchetto sp\) \{\s*String cmd = (.*?);\n', s, re.S).group(1)
+# il comando dell'app è in due parti: scarica (porta, impronta) + installa quello scaricato
+scarica = re.search(r'private String comandoScarica\(ServitorePacchetto sp\) \{\s*return (.*?);\n', s, re.S).group(1)
+installa = re.search(r'private String comandoInstallaScaricato\(\) \{\s*return (.*?);\n', s, re.S).group(1)
 avvio = re.search(r'static String comandoAvvio\(String segreto\) \{(.*?);\n    \}', s, re.S).group(1)
 def unisci(c):
     out = []
@@ -92,7 +94,7 @@ def unisci(c):
         elif ident == "comandoAvvio()": out.append(unisci(avvio.split("return", 1)[1]))
         elif ident == "segreto": out.append("@SEGRETO@")
     return "".join(out)
-print(unisci(corpo))
+print(unisci(scarica) + " && " + unisci(installa))
 PY
 grep -q "installa.sh" "$TMP/inst.tpl" && pass "comando d'installazione estratto" || fail "comando d'installazione non trovato"
 PK="$TMP/pk"; mkdir -p "$PK/nyctalus-termux/bin"
@@ -141,8 +143,10 @@ if java --list-modules 2>/dev/null | grep -q '^jdk.compiler'; then
     [ "$(curl -s -o /dev/null -w '%{http_code}' "${JURL%/*}/indovino")" = 404 ] && pass "servitore dell'app: indirizzo sbagliato → 404" || fail "servitore: indirizzo sbagliato servito"
     curl -fsS --retry 5 --retry-connrefused --max-time 60 "$JURL" -o "$JV/n.tar.gz" && [ "$JH" = "$HASH" ] && echo "$JH  $JV/n.tar.gz" | sha256sum -c --quiet \
       && pass "servitore dell'app: pacchetto consegnato integro (SHA-256)" || fail "servitore: consegna o impronta"
-    for i in $(seq 1 40); do grep -q FINITO "$JV/log" && break; sleep 0.2; done
-    grep -q FINITO "$JV/log" && pass "servitore dell'app: si spegne da solo dopo la consegna" || fail "servitore ancora acceso dopo la consegna"
+    # dalla 0.3.17 il servitore NON si spegne dopo la consegna (un nuovo tentativo deve ritrovarlo
+    # sulla stessa porta: sul Galaxy Tab A le sessioni ripetute cercavano porte già spente)
+    curl -fsS --max-time 30 "$JURL" -o "$JV/n2.tar.gz" && cmp -s "$JV/n.tar.gz" "$JV/n2.tar.gz" \
+      && pass "servitore dell'app: resta acceso e ridà il pacchetto a un secondo tentativo" || fail "servitore: secondo tentativo non servito"
   else
     fail "servitore dell'app non compila: $(head -3 "$JV/err")"
   fi
