@@ -127,7 +127,11 @@ mostra la chat (stile Telegram), il browser e la rubrica.</p>
    - <strong>«Consenti»</strong> al permesso «Esegui comandi in Termux»;
    - <strong>una volta sola</strong>, se Termux è appena installato: si apre Termux, aspetti che si prepari
      (compare <code>$</code>), <strong>tieni premuto → Incolla → Invio</strong>. Il comando è <strong>già copiato</strong>: non scrivi
-     niente. Prepara Termux (aggiornandolo se è nuovo), installa e avvia Nyctalus e torna all'app.
+     niente. È sempre lo stesso, una riga sola:
+     <code>curl -fsSL https://github.com/RedRider21/Nyctalus-Protocol/releases/latest/download/installa-termux.sh | bash</code>
+     Lo script scaricato fa tutto da solo: permesso all'app, aggiornamento di Termux se è nuovo,
+     pacchetto di Nyctalus da GitHub <strong>verificato con l'impronta SHA-256</strong>, motore giusto per il
+     processore, installazione, ritorno all'app (che avvia il servizio).
      È l'unica cosa che l'app non può fare al posto tuo: Termux, per sicurezza, vuole che sia tu a
      dargli il permesso di ricevere comandi da altre app.</li>
 <li>Collegati a una rete: <a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a> §1 (a casa: <a href="GUIDA-RETE-DI-CASA.html"><code>GUIDA-RETE-DI-CASA.md</code></a>).</li>
@@ -145,6 +149,8 @@ sola di aggiornare anche Nyctalus in Termux (un tocco).</p>
 non aggiorna mai quelli presenti, in <code>termux.properties</code> aggiunge una sola riga.</p>
 <p>Come arriva il pacchetto: l'app lo offre per qualche minuto su <code>127.0.0.1</code> a un indirizzo
 casuale; Termux lo scarica e ne <strong>verifica l'impronta SHA-256</strong> prima di installarlo.</p>
+<p><strong>Senza l'app, o per riparare:</strong> in Termux incolla la stessa riga qui sopra: installa o aggiorna
+Nyctalus da sola (serve Internet).</p>
 <h3 id="22-a-mano-senza-lapp-facoltativo">2.2 A mano, senza l'app (facoltativo)</h3>
 <p>Serve <code>nyctalus-termux.tar.gz</code> (nel pacchetto Android). Poi si apre la chat nel browser del
 telefono all'indirizzo che stampa <code>nyctalus-mobile</code>.</p>
