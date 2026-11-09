@@ -27,13 +27,15 @@ import java.security.SecureRandom;
 class ServitorePacchetto extends Thread {
 
     static final String NOME = "nyctalus-termux.tar.gz";
-    private static final long DURATA_MS = 15 * 60 * 1000;
+    private static final long DURATA_MS = 30 * 60 * 1000;   // il tempo di incollare il comando la prima volta
 
     private final Context ctx;
     private final ServerSocket server;
     final String percorso, impronta;
     final int porta;
     private long dimensione;
+    /** La prova silenziosa: Termux ha eseguito il comando dell'app (quindi accetta i comandi). */
+    volatile boolean pingRicevuto;
 
     ServitorePacchetto(Context ctx) throws Exception {
         this.ctx = ctx.getApplicationContext();
@@ -97,6 +99,11 @@ class ServitorePacchetto extends Thread {
         int c;
         while ((c = in.read()) != -1 && c != '\n' && riga.length() < 512) riga.append((char) c);
         OutputStream out = s.getOutputStream();
+        if (riga.toString().startsWith("GET /ping-" + percorso + " ")) {
+            pingRicevuto = true;
+            out.write("HTTP/1.0 200 OK\r\nContent-Length: 0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+            return false;
+        }
         if (!riga.toString().startsWith("GET /" + percorso + " ")) {
             out.write("HTTP/1.0 404 Not Found\r\nContent-Length: 0\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
             return false;

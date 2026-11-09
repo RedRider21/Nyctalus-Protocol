@@ -29,8 +29,8 @@ Usate **la stessa versione** su tutti gli apparecchi.
 | Raspberry Pi, server ARM | `Nyctalus-Server-Linux-arm64.zip` | nodo |
 | Solo il motore | `nyctalus-<sistema>` (Linux, Android, Windows, macOS) | uso da riga di comando, per esperti |
 
-Sul telefono serve anche **Termux**, da F-Droid o da GitHub (non dal Play Store):
-`MANUALE-INSTALLAZIONE.md` §2.
+Sul telefono serve anche **Termux**: non devi cercarlo, lo scarica l'app stessa con
+**⚡ Prepara Nyctalus** (`MANUALE-INSTALLAZIONE.md` §2).
 
 ---
 
@@ -59,9 +59,10 @@ Per **provare** basta un PC: fa da gestore, da nodi e da client insieme (rete di
    farti riconoscere fra una visita e l'altra, **Nyctalus Firefox** ([§8](#8-browser-modalita-nyctalus)).
 
 **Telefono Android**
-1. Installa **Termux** e aprilo una volta.
-2. Installa `Nyctalus.apk` e aprila; consenti «Esegui comandi in Termux».
-3. **Strumenti ▾ → 🦇 Installa / aggiorna Nyctalus in Termux**.
+1. Installa `Nyctalus.apk` e aprila.
+2. Tocca **⚡ Prepara Nyctalus**: scarica e installa Termux, chiede «Consenti», e solo la prima
+   volta ti fa incollare in Termux un comando **già copiato** (tieni premuto → Incolla → Invio).
+3. Aggiornamenti: **Strumenti ▾ → ☁ Aggiornamenti da GitHub**.
 4. **🔗 Rete** → incolla il codice `NYCT1:…` (oppure apri nel browser l'indirizzo della rete
    e tocca **📲 Collega l'app Nyctalus**). Controlla l'impronta.
 5. **Chat**.

@@ -26,6 +26,9 @@
          Va abbinato a "allow-external-apps = true" in ~/.termux/termux.properties,
          riga che l'installatore di Nyctalus aggiunge da solo. -->
     <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
+    <!-- «⚡ Prepara Nyctalus» e «Aggiornamenti da GitHub»: aprire l'installatore di Android per
+         Termux (dalla release ufficiale) e per la nuova versione dell'app. Android chiede sempre conferma. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Android 11+: rende visibili Termux e le app fotocamera/selettore file. -->
     <queries>

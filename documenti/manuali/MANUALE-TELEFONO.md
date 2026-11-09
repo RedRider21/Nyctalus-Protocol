@@ -15,6 +15,8 @@ gestisce gli allegati. Installazione: **`MANUALE-INSTALLAZIONE.md`**, capitolo 2
 ## 1. Avvio
 
 Tocca l'icona **Nyctalus**: compare la schermata di benvenuto e l'app avvia Nyctalus in Termux.
+La prima volta (o se qualcosa non va) sotto la riga di stato compare **⚡ Prepara Nyctalus**: fa
+tutto da solo, Termux compreso (`MANUALE-INSTALLAZIONE.md` §2.1); sparisce appena Nyctalus è pronto.
 Sotto il logo, due file di pulsanti quadrati con la sola icona, come il mini menu del PC
 (tenendo premuto un pulsante compare il suo nome):
 
@@ -44,9 +46,9 @@ all'accensione del telefono. **←** (o il tasto indietro) torna alla schermata 
 Il **tema** vale per tutta l'app: schermata iniziale, chat, chiamate, anche al volo.
 Se Nyctalus non è ancora pronto si apre una finestra ridotta (tema, notifiche, accensione).
 
-**Strumenti ▾**: Termux (installa/aggiorna), **🦇 Installa/aggiorna Nyctalus in Termux** (da
-ritoccare **dopo ogni APK nuova**: aggiorna chat, motore e servizio in pochi secondi),
-comando di avvio.
+**Strumenti ▾**: **⚡ Prepara tutto**, Termux (installa/aggiorna), **🦇 Installa/aggiorna Nyctalus
+in Termux** (dopo ogni APK nuova l'app lo propone da sola), comando di avvio, **☁ Aggiornamenti da
+GitHub** (controlla l'ultima release, scarica e installa la nuova app).
 
 Il **tasto indietro** riporta sempre indietro di un passo fino a questa schermata; la chat resta
 aperta dietro. Se Android ferma Nyctalus mentre sei in un'altra app, l'app lo riaccende da sola

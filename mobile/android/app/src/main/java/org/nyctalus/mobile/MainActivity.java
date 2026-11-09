@@ -65,7 +65,8 @@ public class MainActivity extends Activity {
     private static final String TERMUX = "com.termux";
     private static final String PERMESSO_TERMUX = "com.termux.permission.RUN_COMMAND";
     static final String PREFS = "nyctalus";
-    private static final int RICHIESTA_PERMESSO = 1, RICHIESTA_FILE = 2, RICHIESTA_NOTIFICHE = 3, RICHIESTA_MICROFONO = 4, RICHIESTA_SCATTO = 6;
+    private static final int RICHIESTA_PERMESSO = 1, RICHIESTA_FILE = 2, RICHIESTA_NOTIFICHE = 3, RICHIESTA_MICROFONO = 4, RICHIESTA_SCATTO = 6,
+            RICHIESTA_PREPARA = 7;
     /** La pagina della chat chiede il microfono (chiamata): si concede dopo il permesso di Android. */
     private android.webkit.PermissionRequest attesaMicrofono;
     /** Scatto con la fotocamera di sistema in attesa del permesso CAMERA (dichiarato per le videochiamate). */
@@ -80,6 +81,10 @@ public class MainActivity extends Activity {
 
     private WebView web;
     private TextView stato;
+    /** «⚡ Prepara Nyctalus»: visibile finché Nyctalus non è pronto. */
+    private Button pulsantePrepara;
+    /** Diventa vero solo quando serve (Termux mancante, Nyctalus che non risponde): niente lampi del pulsante. */
+    private volatile boolean serveLaPreparazione = false;
     private String segreto;
     private boolean caricata = false, pronto = false, entraAppenaPronto = false, inPausa = false;
     private boolean apriRubrica = false;   // entrando, si apre la sola rubrica della rete
@@ -203,6 +208,7 @@ public class MainActivity extends Activity {
     public void onRequestPermissionsResult(int richiesta, String[] permessi, int[] esiti) {
         super.onRequestPermissionsResult(richiesta, permessi, esiti);
         if (richiesta == RICHIESTA_PERMESSO) new Thread(this::avvia).start();
+        if (richiesta == RICHIESTA_PREPARA) preparaTutto();
         if (richiesta == RICHIESTA_NOTIFICHE) ServizioNotifiche.avvia(this);
         if (richiesta == RICHIESTA_MICROFONO && attesaMicrofono != null) {
             boolean ok = esiti.length > 0;
@@ -527,6 +533,12 @@ public class MainActivity extends Activity {
         sp.topMargin = dp(26);
         stato.setLayoutParams(sp);
         r.addView(stato);
+        pulsantePrepara = cella("⚡  Prepara Nyctalus", v -> preparaTutto());
+        LinearLayout.LayoutParams pp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pp.topMargin = dp(12);
+        pulsantePrepara.setLayoutParams(pp);
+        pulsantePrepara.setVisibility(serveLaPreparazione && !pronto ? View.VISIBLE : View.GONE);
+        r.addView(pulsantePrepara);
 
         // la rete è una sola per tutto il corredo: si sceglie qui, non dentro la chat
         rigaRete = testo("🔗 Rete: …", C_ACCENTO, 13);
@@ -579,14 +591,13 @@ public class MainActivity extends Activity {
         strumenti.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
         LinearLayout riga1 = riga(), riga2 = riga(), riga3 = riga(), riga4 = riga();
+        riga1.addView(cella("⚡  Prepara tutto", v -> preparaTutto()));
         riga1.addView(cella("⬇  Installa Termux", v -> installaTermux()));
         riga1.addView(cella("↻  Aggiorna Termux", v -> aggiornaTermux()));
         riga2.addView(cella("🦇  Installa / aggiorna Nyctalus in Termux", v -> installaNyctalus()));
         riga3.addView(cella("⌨  Apri Termux", v -> apriTermux()));
         riga3.addView(cella("📋  Comando di avvio", v -> copiaComando()));
-        Button gh = cella("☁  Aggiornamenti da GitHub (presto)", v -> aggiornamentiGithub());
-        gh.setAlpha(0.45f);
-        riga4.addView(gh);
+        riga4.addView(cella("☁  Aggiornamenti da GitHub", v -> aggiornamentiGithub()));
         for (LinearLayout x : new LinearLayout[]{riga1, riga2, riga3, riga4}) {
             ((LinearLayout.LayoutParams) x.getLayoutParams()).topMargin = dp(8);
             strumenti.addView(x);
@@ -643,7 +654,8 @@ public class MainActivity extends Activity {
         avviando = true;
         try {
             if (!termuxInstallato()) {
-                imposta("Termux non è installato.\nTocca «Installa Termux», poi installa Nyctalus dentro Termux.");
+                imposta("Benvenuto! Tocca «⚡ Prepara Nyctalus»: l'app scarica e prepara tutto da sola.");
+                mostraPrepara();
                 return;
             }
             // Si avvia sempre il comando: scrive il segreto di QUESTA app anche se il
@@ -658,9 +670,8 @@ public class MainActivity extends Activity {
                 avviaInTermux();
                 if (attendi(ATTESA_MAX_MS)) { riportaDavanti(); servizioPronto(); return; }
             } else if (attendi(ATTESA_MAX_MS)) { servizioPronto(); return; }
-            imposta("Nyctalus non risponde.\n"
-                  + "Se Nyctalus non è ancora installato in Termux tocca «Installa / aggiorna Nyctalus».\n"
-                  + "Altrimenti: «Comando di avvio», incollalo in Termux e torna qui.");
+            imposta("Nyctalus non risponde.\nTocca «⚡ Prepara Nyctalus»: controlla e sistema tutto da solo.");
+            mostraPrepara();
         } finally {
             avviando = false;
         }
@@ -732,6 +743,10 @@ public class MainActivity extends Activity {
         aggiornaRete();
         avviaNotifiche();
         imposta("● Nyctalus è pronto — scegli cosa aprire");
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("preparazione", false).apply();
+        serveLaPreparazione = false;
+        runOnUiThread(() -> { if (pulsantePrepara != null) pulsantePrepara.setVisibility(View.GONE); });
+        offriAggiornamentoTermux();
         runOnUiThread(() -> { if (pulsanteEntra != null) pulsanteEntra.animate().alpha(1f).setDuration(300).start(); });
         if (entraAppenaPronto) mostraWeb();
     }
@@ -764,6 +779,16 @@ public class MainActivity extends Activity {
         }
         ServizioNotifiche.appInPrimoPiano = true;
         ServizioNotifiche.azzera(this);              // i messaggi ora si vedono nell'app
+        // di ritorno dall'installazione di Termux (o dalle impostazioni): la preparazione continua da sola
+        if (apkInAttesa != null && (Build.VERSION.SDK_INT < 26 || getPackageManager().canRequestPackageInstalls())) {
+            File f = apkInAttesa;
+            apkInAttesa = null;
+            installaApk(f);
+        } else if (!pronto && termuxInstallato() && getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("preparazione", false)
+                && getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("attesa_termux", false)) {
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("attesa_termux", false).apply();
+            preparaTutto();
+        }
         mostraErroreBrowser();
         if (inPausa && !caricata && !avviando) {
             inPausa = false;
@@ -808,7 +833,8 @@ public class MainActivity extends Activity {
 
     /** Termux non sta sul Play Store (versione vecchia e ferma): F-Droid o GitHub. */
     private void installaTermux() {
-        scegli(termuxInstallato() ? "Termux è già installato. Reinstallarlo da:" : "Scarica e installa Termux da:",
+        if (!termuxInstallato()) { scaricaTermux(); return; }
+        scegli("Termux è già installato. Reinstallarlo da:",
                 new String[]{"F-Droid (consigliato)", "GitHub (file …arm64-v8a.apk)"},
                 k -> apriPagina(k == 0 ? "https://f-droid.org/packages/com.termux/"
                                       : "https://github.com/termux/termux-app/releases/latest"),
@@ -1122,10 +1148,287 @@ public class MainActivity extends Activity {
         startActivity(i);
     }
 
-    /** Gli aggiornamenti dal repository arriveranno quando il progetto sarà pubblicato. */
+    // ------------------------------------------------------------ ⚡ Prepara Nyctalus (tutto da solo)
+    /** APK scaricato che aspetta il permesso «installa app sconosciute» (si riprende tornando qui). */
+    private File apkInAttesa;
+
+    /**
+     * La preparazione completa, un passo alla volta e da dove si è arrivati:
+     * 1) Termux mancante → l'app lo scarica dalla release ufficiale (GitHub) e apre l'installazione;
+     * 2) permesso «esegui comandi in Termux» → un tocco su «Consenti»;
+     * 3) prova silenziosa: Termux accetta i comandi dell'app? Se sì installa e avvia tutto da solo;
+     *    se no (Termux appena installato: «allow-external-apps» spento, e lo si può accendere solo
+     *    da dentro Termux) il comando unico è GIÀ COPIATO: tieni premuto → Incolla → Invio, una volta.
+     */
+    private void mostraPrepara() {
+        serveLaPreparazione = true;
+        runOnUiThread(() -> { if (pulsantePrepara != null && !pronto) pulsantePrepara.setVisibility(View.VISIBLE); });
+    }
+
+    private void preparaTutto() {
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("preparazione", true).apply();
+        if (!termuxInstallato()) { scaricaTermux(); return; }
+        if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(PERMESSO_TERMUX) != PackageManager.PERMISSION_GRANTED) {
+            imposta("Passo 2 di 3: tocca «Consenti» per far avviare Nyctalus a Termux.");
+            requestPermissions(new String[]{PERMESSO_TERMUX}, RICHIESTA_PREPARA);
+            return;
+        }
+        if (!ServitorePacchetto.presente(this)) {
+            avviso("Questa versione dell'app non contiene il pacchetto di Nyctalus: scarica l'app dalla release.");
+            return;
+        }
+        ServitorePacchetto sp = avviaServitore();
+        if (sp == null) return;
+        imposta("Passo 3 di 3: controllo se Termux accetta i comandi dell'app…");
+        new Thread(() -> {
+            provaInTermux(sp);
+            long fine = SystemClock.elapsedRealtime() + 9000;
+            while (!sp.pingRicevuto && SystemClock.elapsedRealtime() < fine) SystemClock.sleep(300);
+            boolean accetta = sp.pingRicevuto;
+            runOnUiThread(() -> {
+                ricaricaChat = true;
+                provatoInPrimoPiano = true;
+                if (accetta) {
+                    eseguiInTermux(comandoPreparazione(sp), false, null);
+                    imposta("Installazione in corso in Termux…\nAlla fine l'app torna qui da sola.");
+                } else {
+                    incollaInTermux(sp);
+                }
+            });
+        }).start();
+    }
+
+    /** Un comando minimo, in sottofondo, che «bussa» al servitore dell'app: se arriva, Termux accetta i comandi. */
+    private void provaInTermux(ServitorePacchetto sp) {
+        try {
+            String c = "exec 3<>/dev/tcp/127.0.0.1/" + sp.porta + " && printf 'GET /ping-" + sp.percorso
+                    + " HTTP/1.0\\r\\n\\r\\n' >&3 && cat <&3 >/dev/null";
+            Intent i = new Intent();
+            i.setComponent(new ComponentName(TERMUX, "com.termux.app.RunCommandService"));
+            i.setAction("com.termux.RUN_COMMAND");
+            i.putExtra("com.termux.RUN_COMMAND_PATH", "/data/data/com.termux/files/usr/bin/bash");
+            i.putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-c", c});
+            i.putExtra("com.termux.RUN_COMMAND_BACKGROUND", true);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(i);
+            else startService(i);
+        } catch (Exception ignorata) { /* Termux non accetta: si passa all'incolla */ }
+    }
+
+    /**
+     * Il comando unico della prima volta: accende «allow-external-apps» (così da qui in poi l'app
+     * comanda Termux da sola), aggiorna Termux se è appena installato (senza, l'installazione di
+     * Python può fallire), installa e avvia Nyctalus, torna nell'app.
+     */
+    private String comandoPreparazione(ServitorePacchetto sp) {
+        return "mkdir -p ~/.termux && P=~/.termux/termux.properties && "
+             + "{ grep -Eq '^[[:space:]]*allow-external-apps[[:space:]]*=[[:space:]]*true' \"$P\" 2>/dev/null "
+             + "|| printf '\\n# aggiunto da Nyctalus\\nallow-external-apps = true\\n' >> \"$P\"; } && "
+             + "{ termux-reload-settings 2>/dev/null; true; } && "
+             + "{ command -v python >/dev/null 2>&1 || { echo '» Preparo Termux la prima volta (qualche minuto)…'; "
+             + "export DEBIAN_FRONTEND=noninteractive; yes | pkg upgrade -y -o Dpkg::Options::=--force-confnew; }; } && "
+             + comandoInstallazione(sp);
+    }
+
+    /** Ultimo passo, una sola volta: il comando è già negli appunti, in Termux si incolla e basta. */
+    private void incollaInTermux(ServitorePacchetto sp) {
+        copiaNegliAppunti(comandoPreparazione(sp));
+        imposta("Ultimo passo, una volta sola: incolla il comando in Termux (è già copiato).");
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Ultimo passo (una volta sola)")
+                .setMessage("Il comando è GIÀ COPIATO: non devi scrivere niente.\n\n"
+                        + "1. Tocca «Apri Termux».\n"
+                        + "2. Se è la prima volta, aspetta che Termux finisca di prepararsi (compare il simbolo $).\n"
+                        + "3. Tieni premuto sullo schermo nero → «Incolla» → tasto Invio.\n\n"
+                        + "Termux installa e avvia tutto (qualche minuto la prima volta) e alla fine torni qui da solo. "
+                        + "Da quel momento l'app comanda Termux senza più chiederti nulla.")
+                .setPositiveButton("Apri Termux", (d, w) -> apriTermux())
+                .setNegativeButton("Più tardi", null)
+                .show();
+    }
+
+    /** Termux dalla release ufficiale (GitHub), la versione giusta per questo dispositivo. */
+    private void scaricaTermux() {
+        imposta("Passo 1 di 3: cerco Termux…");
+        new Thread(() -> {
+            try {
+                org.json.JSONObject rel = new org.json.JSONObject(scaricaTesto("https://api.github.com/repos/termux/termux-app/releases/latest"));
+                org.json.JSONArray assets = rel.getJSONArray("assets");
+                String url = null;
+                for (String abi : Build.SUPPORTED_ABIS) {
+                    for (int k = 0; k < assets.length() && url == null; k++) {
+                        String n = assets.getJSONObject(k).getString("name");
+                        if (n.endsWith(".apk") && n.contains(abi)) url = assets.getJSONObject(k).getString("browser_download_url");
+                    }
+                    if (url != null) break;
+                }
+                for (int k = 0; k < assets.length() && url == null; k++) {
+                    String n = assets.getJSONObject(k).getString("name");
+                    if (n.endsWith(".apk") && n.contains("universal")) url = assets.getJSONObject(k).getString("browser_download_url");
+                }
+                if (url == null) throw new IOException("nessun APK di Termux per questo dispositivo");
+                File f = new File(FotoProvider.cartellaAperti(this), "termux.apk");
+                scaricaFile(url, f, "Passo 1 di 3: scarico Termux (" + rel.optString("tag_name") + ")");
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("attesa_termux", true).apply();
+                runOnUiThread(() -> {
+                    imposta("Passo 1 di 3: tocca «Installa» e poi torna qui (tasto Indietro).");
+                    installaApk(f);
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    imposta("Non riesco a scaricare Termux: " + e.getMessage());
+                    scegli("Scarica Termux a mano da:", new String[]{"F-Droid", "GitHub (release ufficiali)"},
+                            k -> apriPagina(k == 0 ? "https://f-droid.org/packages/com.termux/"
+                                                  : "https://github.com/termux/termux-app/releases/latest"),
+                            "Poi torna qui e tocca di nuovo «⚡ Prepara Nyctalus».");
+                });
+            }
+        }).start();
+    }
+
+    /** Apre l'installatore di Android per un APK scaricato (serve il permesso «app sconosciute»). */
+    private void installaApk(File f) {
+        if (Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) {
+            apkInAttesa = f;
+            avviso("Android chiede il permesso di installare app da Nyctalus: attiva «Consenti da questa fonte», poi torna indietro.");
+            try {
+                startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:" + getPackageName())));
+            } catch (Exception ignorata) { }
+            return;
+        }
+        Intent i = new Intent(Intent.ACTION_VIEW);
+        i.setDataAndType(FotoProvider.indirizzoAperto(f.getName()), "application/vnd.android.package-archive");
+        i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(i);
+        } catch (Exception e) {
+            avviso("Non riesco ad aprire l'installatore: " + e.getMessage());
+        }
+    }
+
+    private static String scaricaTesto(String url) throws IOException {
+        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        c.setConnectTimeout(15000);
+        c.setReadTimeout(30000);
+        c.setRequestProperty("Accept", "application/vnd.github+json");
+        try (java.io.InputStream in = c.getInputStream()) {
+            java.io.ByteArrayOutputStream o = new java.io.ByteArrayOutputStream();
+            byte[] b = new byte[16384];
+            int n;
+            while ((n = in.read(b)) > 0) o.write(b, 0, n);
+            return o.toString("UTF-8");
+        } finally {
+            c.disconnect();
+        }
+    }
+
+    /** Scarica un file mostrando la percentuale (segue i reindirizzamenti di GitHub). */
+    private void scaricaFile(String url, File dest, String cosa) throws IOException {
+        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        c.setConnectTimeout(15000);
+        c.setReadTimeout(60000);
+        c.setInstanceFollowRedirects(true);
+        long tot = c.getContentLengthLong(), letti = 0;
+        File tmp = new File(dest.getPath() + ".parte");
+        try (java.io.InputStream in = c.getInputStream(); java.io.OutputStream out = new java.io.FileOutputStream(tmp)) {
+            byte[] b = new byte[65536];
+            int n, ultima = -1;
+            while ((n = in.read(b)) > 0) {
+                out.write(b, 0, n);
+                letti += n;
+                int pc = tot > 0 ? (int) (letti * 100 / tot) : -1;
+                if (pc != ultima) {
+                    ultima = pc;
+                    imposta(cosa + (pc >= 0 ? ": " + pc + "%" : ": " + (letti >> 20) + " MB"));
+                }
+            }
+        } finally {
+            c.disconnect();
+        }
+        if (!tmp.renameTo(dest)) throw new IOException("salvataggio non riuscito");
+    }
+
+    // ------------------------------------------------------------ aggiornamenti da GitHub
+    private static final String API_RELEASE = "https://api.github.com/repos/RedRider21/Nyctalus-Protocol/releases/latest";
+
+    /**
+     * Controlla l'ultima release su GitHub: se ha un'app più nuova la scarica (pacchetto Android),
+     * ne legge la versione e apre l'installatore di Android. Riaprendo l'app aggiornata, questa
+     * propone da sola di aggiornare anche Nyctalus in Termux (il pacchetto è dentro l'app).
+     */
     private void aggiornamentiGithub() {
-        avviso("In arrivo: gli aggiornamenti da GitHub si attivano quando il progetto sarà pubblicato. "
-             + "Per ora aggiorna installando la nuova APK e poi «Installa / aggiorna Nyctalus».");
+        imposta("Controllo gli aggiornamenti su GitHub…");
+        new Thread(() -> {
+            try {
+                org.json.JSONObject rel = new org.json.JSONObject(scaricaTesto(API_RELEASE));
+                String tag = rel.optString("tag_name");
+                org.json.JSONArray assets = rel.getJSONArray("assets");
+                String url = null;
+                for (int k = 0; k < assets.length(); k++) {
+                    if ("Nyctalus-Android.zip".equals(assets.getJSONObject(k).getString("name"))) {
+                        url = assets.getJSONObject(k).getString("browser_download_url");
+                    }
+                }
+                if (url == null) throw new IOException("la release " + tag + " non ha il pacchetto Android");
+                File zip = new File(getCacheDir(), "aggiornamento.zip");
+                scaricaFile(url, zip, "Scarico Nyctalus " + tag);
+                File apk = new File(FotoProvider.cartellaAperti(this), "nyctalus-aggiornamento.apk");
+                try (java.util.zip.ZipInputStream z = new java.util.zip.ZipInputStream(new java.io.FileInputStream(zip))) {
+                    java.util.zip.ZipEntry e;
+                    boolean trovato = false;
+                    while ((e = z.getNextEntry()) != null) {
+                        if (e.getName().endsWith("Nyctalus.apk")) {
+                            try (java.io.OutputStream o = new java.io.FileOutputStream(apk)) {
+                                byte[] b = new byte[65536];
+                                int n;
+                                while ((n = z.read(b)) > 0) o.write(b, 0, n);
+                            }
+                            trovato = true;
+                            break;
+                        }
+                    }
+                    if (!trovato) throw new IOException("Nyctalus.apk non trovato nel pacchetto");
+                }
+                zip.delete();
+                android.content.pm.PackageInfo nuovo = getPackageManager().getPackageArchiveInfo(apk.getPath(), 0);
+                android.content.pm.PackageInfo mio = getPackageManager().getPackageInfo(getPackageName(), 0);
+                long vNuova = nuovo == null ? 0 : (Build.VERSION.SDK_INT >= 28 ? nuovo.getLongVersionCode() : nuovo.versionCode);
+                long vMia = Build.VERSION.SDK_INT >= 28 ? mio.getLongVersionCode() : mio.versionCode;
+                runOnUiThread(() -> {
+                    imposta(pronto ? "● Nyctalus è pronto — scegli cosa aprire" : "Controllo finito.");
+                    if (vNuova > vMia) {
+                        conferma("Aggiornamento disponibile",
+                                "Nyctalus " + tag + " (app " + nuovo.versionName + "; ora hai " + mio.versionName + ").\n"
+                              + "Installo la nuova app? Riaprendola, aggiornerà da sola anche Nyctalus in Termux.",
+                                () -> installaApk(apk));
+                    } else {
+                        apk.delete();
+                        avviso("Hai già l'ultima versione (" + mio.versionName + ", " + tag + ").");
+                    }
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> imposta("Aggiornamento non riuscito: " + e.getMessage()));
+            }
+        }).start();
+    }
+
+    /**
+     * Dopo un aggiornamento dell'app il pacchetto di Nyctalus che porta con sé è più nuovo di
+     * quello in Termux: lo si propone una volta (un tocco), poi Termux si aggiorna da solo.
+     */
+    private void offriAggiornamentoTermux() {
+        try {
+            android.content.pm.PackageInfo mio = getPackageManager().getPackageInfo(getPackageName(), 0);
+            long v = Build.VERSION.SDK_INT >= 28 ? mio.getLongVersionCode() : mio.versionCode;
+            SharedPreferences p = getSharedPreferences(PREFS, MODE_PRIVATE);
+            long installata = p.getLong("versione_in_termux", -1);
+            if (installata == v) return;
+            p.edit().putLong("versione_in_termux", v).apply();
+            if (installata < 0) return;          // prima volta: è appena stato installato
+            runOnUiThread(() -> conferma("Aggiorno Nyctalus in Termux?",
+                    "L'app è stata aggiornata: aggiorno anche Nyctalus dentro Termux (un minuto, si vede in Termux).",
+                    this::installaNyctalus));
+        } catch (Exception ignorata) { }
     }
 
     /**

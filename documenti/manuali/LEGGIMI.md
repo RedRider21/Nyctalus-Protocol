@@ -55,7 +55,7 @@ Dalla [release su GitHub](https://github.com/RedRider21/Nyctalus-Protocol/releas
 | Apparecchio | Pacchetto | Poi |
 |---|---|---|
 | PC Linux | `Nyctalus-PC-Linux.zip` | `./installa.sh` → **1** client · **2** gestore (anche client) · **3** nodo |
-| Telefono Android | `Nyctalus-Android.zip` | installa l'APK, poi nell'app tocca **Installa / aggiorna Nyctalus in Termux** |
+| Telefono Android | `Nyctalus-Android.zip` | installa l'APK, poi nell'app tocca **⚡ Prepara Nyctalus** (Termux compreso) |
 | Windows (anteprima) | `Nyctalus-Windows.zip` | scompatta, doppio clic su `Nyctalus.cmd` |
 | Server, VPS | `Nyctalus-Server-Linux.zip` | `sudo ./installa.sh` |
 | Raspberry Pi, ARM | `Nyctalus-Server-Linux-arm64.zip` | `sudo ./installa.sh` |
