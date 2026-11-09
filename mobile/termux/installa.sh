@@ -70,11 +70,25 @@ rm -rf "$DEST/cli"; [ -d "$QUI/cli" ] && cp -r "$QUI/cli" "$DEST/"
 cp "$QUI/disinstalla.sh" "$QUI/nyctalus-mobile" "$DEST/"
 chmod +x "$DEST/nyctalus-mobile" "$DEST/disinstalla.sh"
 
-# --- 3) il motore: già pronto nell'archivio, oppure compilato qui ------------------
-if [ -x "$QUI/bin/nyctalus" ]; then
-  cp "$QUI/bin/nyctalus" "$DEST/bin/nyctalus.nuovo" && mv -f "$DEST/bin/nyctalus.nuovo" "$DEST/bin/nyctalus"
-  ok "Motore precompilato installato"
+# --- 3) il motore: già pronto nell'archivio (quello del processore di QUESTO dispositivo), ---
+#        oppure compilato qui
+ARCH="$(dpkg --print-architecture 2>/dev/null || uname -m)"
+case "$ARCH" in
+  aarch64|arm64)           BERSAGLIO=aarch64-linux-android ;;
+  arm|armv7l|armv8l|armhf) BERSAGLIO=armv7-linux-androideabi ;;
+  x86_64|amd64)            BERSAGLIO=x86_64-linux-android ;;
+  i686|i386|x86)           BERSAGLIO=i686-linux-android ;;
+  *)                       BERSAGLIO="" ;;
+esac
+PRONTO=""
+if [ -n "$BERSAGLIO" ] && [ -x "$QUI/bin/$BERSAGLIO/nyctalus" ]; then PRONTO="$QUI/bin/$BERSAGLIO/nyctalus"
+elif [ "$BERSAGLIO" = aarch64-linux-android ] && [ -x "$QUI/bin/nyctalus" ]; then PRONTO="$QUI/bin/nyctalus"   # pacchetti vecchi
+fi
+if [ -n "$PRONTO" ]; then
+  cp "$PRONTO" "$DEST/bin/nyctalus.nuovo" && mv -f "$DEST/bin/nyctalus.nuovo" "$DEST/bin/nyctalus"
+  ok "Motore precompilato installato (processore: $ARCH)"
 else
+  [ -n "$BERSAGLIO" ] || avv "Processore «$ARCH» senza motore pronto: lo compilo qui"
   STAMPA="$(cd "$QUI/sorgenti" && find . -type f -name '*.rs' -o -name 'Cargo.*' | sort | xargs cat | sha256sum | cut -c1-16)"
   if [ -x "$DEST/bin/nyctalus" ] && [ "$(cat "$DEST/bin/.sorgenti" 2>/dev/null)" = "$STAMPA" ]; then
     ok "Motore già compilato per questi sorgenti"
@@ -87,7 +101,14 @@ else
     ok "Motore compilato"
   fi
 fi
-"$DEST/bin/nyctalus" help >/dev/null 2>&1 || { err "il motore non parte su questo telefono"; exit 1; }
+if ! ERRORE="$("$DEST/bin/nyctalus" help 2>&1 >/dev/null)"; then
+  # spiegare PERCHÉ: processore, versione di Android, l'errore vero
+  err "il motore non parte su questo dispositivo"
+  echo "    processore: $ARCH ($(uname -m)) · Android API $(getprop ro.build.version.sdk 2>/dev/null) · ABI: $(getprop ro.product.cpu.abilist 2>/dev/null)"
+  echo "    errore: $(printf '%s' "$ERRORE" | head -3)"
+  echo "    Manda queste righe a chi sviluppa Nyctalus (o apri una segnalazione su GitHub)."
+  exit 1
+fi
 
 # --- 4) comando "nyctalus-mobile" (solo se il nome è libero o è già nostro) --------
 LINK="$PREFIX/bin/nyctalus-mobile"

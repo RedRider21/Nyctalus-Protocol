@@ -20,10 +20,11 @@ cp -r "$ROOT/motore" "$A/sorgenti/"
 mkdir -p "$A/Manuali"
 cp "$ROOT"/documenti/manuali/*.md "$ROOT/documenti/DEPLOY.md" "$ROOT/documenti/SICUREZZA.md" "$A/Manuali/"
 find "$A" -name __pycache__ -type d -prune -exec rm -rf {} +
-for t in aarch64-linux-android aarch64-unknown-linux-musl; do
+# un motore per ogni processore Android (l'installatore sceglie quello giusto): ARM 64 e 32 bit,
+# Intel/AMD 64 e 32 bit. bin/<bersaglio>/nyctalus
+for t in aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android; do
   if [ -x "$ROOT/target/$t/release/nyctalus" ]; then
-    mkdir -p "$A/bin"; cp "$ROOT/target/$t/release/nyctalus" "$A/bin/nyctalus"
-    echo "» pacchetto Termux: incluso il motore precompilato ($t)"; break
+    mkdir -p "$A/bin/$t"; cp "$ROOT/target/$t/release/nyctalus" "$A/bin/$t/nyctalus"
   fi
 done
 chmod +x "$A/installa.sh" "$A/disinstalla.sh" "$A/nyctalus-mobile"

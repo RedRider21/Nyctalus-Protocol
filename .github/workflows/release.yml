@@ -34,7 +34,17 @@ jobs:
           # così l'app lo porta pronto e in Termux non si compila (prima 10-30 minuti)
           - os: ubuntu-latest
             target: aarch64-linux-android
-            android: true
+            android: aarch64-linux-android24
+          # anche tablet e telefoni a 32 bit (molti tablet hanno Android a 32 bit) e Intel/AMD
+          - os: ubuntu-latest
+            target: armv7-linux-androideabi
+            android: armv7a-linux-androideabi24
+          - os: ubuntu-latest
+            target: x86_64-linux-android
+            android: x86_64-linux-android24
+          - os: ubuntu-latest
+            target: i686-linux-android
+            android: i686-linux-android24
           - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: macos-latest
@@ -64,9 +74,12 @@ jobs:
         run: |
           NDK="${ANDROID_NDK_LATEST_HOME:-$ANDROID_NDK_HOME}"
           BIN="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$BIN/aarch64-linux-android24-clang" >> "$GITHUB_ENV"
-          echo "CC_aarch64_linux_android=$BIN/aarch64-linux-android24-clang" >> "$GITHUB_ENV"
-          echo "AR_aarch64_linux_android=$BIN/llvm-ar" >> "$GITHUB_ENV"
+          T="${{ matrix.target }}"
+          T_MAIUSC="$(echo "$T" | tr 'a-z-' 'A-Z_')"
+          T_MINUSC="$(echo "$T" | tr '-' '_')"
+          echo "CARGO_TARGET_${T_MAIUSC}_LINKER=$BIN/${{ matrix.android }}-clang" >> "$GITHUB_ENV"
+          echo "CC_${T_MINUSC}=$BIN/${{ matrix.android }}-clang" >> "$GITHUB_ENV"
+          echo "AR_${T_MINUSC}=$BIN/llvm-ar" >> "$GITHUB_ENV"
 
       - name: Compila
         run: cargo build --release --locked --target ${{ matrix.target }} -p nyctalus
