@@ -82,7 +82,7 @@ case "$ARCH" in
 esac
 PRONTO=""
 if [ -n "$BERSAGLIO" ] && [ -x "$QUI/bin/$BERSAGLIO/nyctalus" ]; then PRONTO="$QUI/bin/$BERSAGLIO/nyctalus"
-elif [ "$BERSAGLIO" = aarch64-linux-android ] && [ -x "$QUI/bin/nyctalus" ]; then PRONTO="$QUI/bin/nyctalus"   # pacchetti vecchi
+elif [ -x "$QUI/bin/nyctalus" ]; then PRONTO="$QUI/bin/nyctalus"   # pacchetti vecchi (un solo motore): la verifica sotto dice se parte
 fi
 if [ -n "$PRONTO" ]; then
   cp "$PRONTO" "$DEST/bin/nyctalus.nuovo" && mv -f "$DEST/bin/nyctalus.nuovo" "$DEST/bin/nyctalus"
