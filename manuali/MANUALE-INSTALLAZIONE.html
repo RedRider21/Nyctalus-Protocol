@@ -118,19 +118,24 @@ identità e chat.</p>
 mostra la chat (stile Telegram), il browser e la rubrica.</p>
 <h3 id="21-il-modo-semplice-con-lapp">2.1 Il modo semplice: con l'app</h3>
 <ol>
-<li>Installa <strong>Termux</strong> da F-Droid (<a href="https://f-droid.org/packages/com.termux/">https://f-droid.org/packages/com.termux/</a>) o da GitHub
-   (<a href="https://github.com/termux/termux-app/releases">https://github.com/termux/termux-app/releases</a>, file <code>…arm64-v8a.apk</code>), <strong>non</strong> dal Play
-   Store. Aprilo una volta e aspetta che finisca. Se lo usi già per altro, va bene quello.</li>
-<li>Installa <strong><code>Nyctalus.apk</code></strong> (dal pacchetto <code>Nyctalus-Android.zip</code> della release) e aprila;
-   concedi «Esegui comandi in Termux». Android chiede di consentire «Installa app sconosciute».</li>
-<li>Nell'app: <strong>Strumenti ▾ → 🦇 Installa / aggiorna Nyctalus in Termux</strong>. Termux mostra
-   l'installazione (pochi secondi: il motore è già pronto) e poi torna all'app.</li>
+<li>Installa <strong><code>Nyctalus.apk</code></strong> (dal pacchetto <code>Nyctalus-Android.zip</code> della release) e aprila.
+   Android chiede di consentire «Installa app sconosciute» per il browser o per i file.</li>
+<li>Tocca <strong>⚡ Prepara Nyctalus</strong>: l'app fa tutto da sola, un passo alla volta, e ti chiede solo:
+   - <strong>«Installa»</strong> su <strong>Termux</strong>, che l'app scarica lei stessa dalla release ufficiale (GitHub),
+     nella versione giusta per il tuo dispositivo (la prima volta Android chiede anche di
+     consentire le installazioni da Nyctalus: attiva e torna indietro);
+   - <strong>«Consenti»</strong> al permesso «Esegui comandi in Termux»;
+   - <strong>una volta sola</strong>, se Termux è appena installato: si apre Termux, aspetti che si prepari
+     (compare <code>$</code>), <strong>tieni premuto → Incolla → Invio</strong>. Il comando è <strong>già copiato</strong>: non scrivi
+     niente. Prepara Termux (aggiornandolo se è nuovo), installa e avvia Nyctalus e torna all'app.
+     È l'unica cosa che l'app non può fare al posto tuo: Termux, per sicurezza, vuole che sia tu a
+     dargli il permesso di ricevere comandi da altre app.</li>
 <li>Collegati a una rete: <a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a> §1 (a casa: <a href="GUIDA-RETE-DI-CASA.html"><code>GUIDA-RETE-DI-CASA.md</code></a>).</li>
 </ol>
-<p>Solo la <strong>prima volta</strong> Termux può non eseguire il comando da solo: in Termux tieni premuto →
-<strong>Incolla</strong> → Invio (il comando è già negli appunti).</p>
-<p><strong>Per aggiornare:</strong> installa la nuova APK, poi di nuovo il punto 3 (ferma e riaccende da solo il
-servizio in Termux).</p>
+<p>Se usi già Termux per altro va bene quello: «⚡ Prepara Nyctalus» lo trova e salta il passo.</p>
+<p><strong>Per aggiornare:</strong> <strong>Strumenti ▾ → ☁ Aggiornamenti da GitHub</strong>: l'app controlla l'ultima
+release, scarica la nuova app e apre l'installazione (tocchi «Aggiorna»). Riaprendola, propone da
+sola di aggiornare anche Nyctalus in Termux (un tocco).</p>
 <p><strong>Convive con gli altri progetti in Termux:</strong> usa solo <code>~/nyctalus</code>, <code>~/.nyctalus-mobile</code>,
 <code>~/.nyctalus-chat</code>, porte 18xxx e comandi <code>nyctalus-*</code>; installa solo i pacchetti che mancano,
 non aggiorna mai quelli presenti, in <code>termux.properties</code> aggiunge una sola riga.</p>
