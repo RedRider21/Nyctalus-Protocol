@@ -22,7 +22,7 @@
 4. **Ricontrollo completo di cybersecurity** di tutto il sistema (richiesto 08/11/2026), insieme al piano sicurezza.
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
 
-## 09/11/2026 · App Android: «⚡ Prepara Nyctalus» e aggiornamenti da GitHub ✅ (release 0.3.16 da fare)
+## 09/11/2026 · App Android: «⚡ Prepara Nyctalus» e aggiornamenti da GitHub ✅ — release v0.3.16 (APK 0.59)
 - Richiesta dell'utente: su un tablet vuoto l'installazione non riusciva (Termux nuovo: allow-external-apps spento → RUN_COMMAND ignorato; Python da pacchetti vecchi; nessun comando d'installazione da incollare).
 - Ora un pulsante guidato: scarica Termux dalla release ufficiale (ABI giusta) e apre l'installatore (REQUEST_INSTALL_PACKAGES, permesso «app sconosciute» gestito); chiede RUN_COMMAND; prova silenziosa (/ping al servitore del pacchetto); se Termux non accetta, comando unico GIÀ COPIATO (allow-external-apps + pkg upgrade se nuovo + installazione + avvio) da incollare una volta. Pulsante visibile solo quando serve. Aggiornamenti da GitHub funzionanti (release latest → Nyctalus-Android.zip → APK più nuovo → installatore; poi propone l'aggiornamento in Termux).
 - Da provare sul tablet dell'utente (qui niente dispositivo/emulatore).
