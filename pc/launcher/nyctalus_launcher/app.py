@@ -415,6 +415,159 @@ class Launcher(Gtk.Window):
                 return
         self._avviso(_t("lau.firefox"), _t("lau.in_arrivo_corpo"))
 
+    # --- Impostazioni a schede (Gtk.Notebook): rete, prestazioni, chiamate, aiuta la rete ----------
+    _CFG_MOTORE = Path.home() / ".nyctalus-browser" / "config.json"
+
+    def _leggi_motore(self):
+        try:
+            return json.loads(self._CFG_MOTORE.read_text(encoding="utf-8"))
+        except Exception:          # noqa: BLE001
+            return {}
+
+    def _scrivi_motore(self, cambi):
+        cfg = self._leggi_motore()
+        cfg.update(cambi)
+        self._CFG_MOTORE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = self._CFG_MOTORE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(cfg, indent=1) + "\n", encoding="utf-8")
+        os.chmod(tmp, 0o600)
+        tmp.replace(self._CFG_MOTORE)
+
+    def _scelta_combo(self, griglia, riga, etichetta, opzioni, valore, nota=None):
+        """Una riga «etichetta : menu a tendina» nella griglia; restituisce la Gtk.ComboBoxText."""
+        griglia.attach(Gtk.Label(label=etichetta, xalign=0), 0, riga, 1, 1)
+        combo = Gtk.ComboBoxText()
+        for v, testo in opzioni:
+            combo.append(str(v), testo)
+        combo.set_active_id(str(valore))
+        combo.set_hexpand(True)
+        griglia.attach(combo, 1, riga, 1, 1)
+        if nota:
+            n = Gtk.Label(label=nota, xalign=0)
+            n.set_line_wrap(True)
+            n.set_max_width_chars(52)
+            n.get_style_context().add_class("dim-label")
+            griglia.attach(n, 0, riga + 1, 2, 1)
+        return combo
+
+    def _pagina_prestazioni(self):
+        cfg = self._leggi_motore()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box.set_border_width(14)
+        intro = Gtk.Label(label=_t("lau.imp.prest_nota"), xalign=0)
+        intro.set_line_wrap(True); intro.set_max_width_chars(56)
+        box.add(intro)
+        g = Gtk.Grid(column_spacing=8, row_spacing=6)
+        fin = self._scelta_combo(g, 0, _t("lau.imp.finestra"),
+                                 [(64, "64 KB"), (128, "128 KB"), (256, "256 KB"), (512, "512 KB"), (1024, "1 MB")],
+                                 cfg.get("finestra_kb", 256))
+        cong = self._scelta_combo(g, 1, _t("lau.imp.congestione"),
+                                  [("bbr", "BBR"), ("cubic", "Cubic"), ("newreno", "NewReno")],
+                                  cfg.get("congestione", "bbr"))
+        tcp = self._scelta_combo(g, 2, _t("lau.imp.tcp"),
+                                 [("auto", _t("lau.imp.tcp_auto")), ("sempre", _t("lau.imp.tcp_sempre")), ("mai", _t("lau.imp.tcp_mai"))],
+                                 cfg.get("tcp", "auto"))
+        riuso = self._scelta_combo(g, 3, _t("lau.imp.riuso"),
+                                   [("si", _t("lau.imp.si")), ("no", _t("lau.imp.no"))],
+                                   cfg.get("riuso", "si"))
+        box.add(g)
+        salva = Gtk.Button(label=_t("lau.imp.salva"))
+        salva.get_style_context().add_class("suggested-action")
+        esito = Gtk.Label(label="", xalign=0)
+
+        def _salva(_w):
+            cambi = {"congestione": cong.get_active_id(), "tcp": tcp.get_active_id(), "riuso": riuso.get_active_id()}
+            try:
+                cambi["finestra_kb"] = int(fin.get_active_id())
+            except (TypeError, ValueError):
+                pass
+            self._scrivi_motore(cambi)
+            esito.set_text(_t("lau.imp.salvato"))
+        salva.connect("clicked", _salva)
+        riga = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        riga.add(salva); riga.add(esito)
+        box.add(riga)
+        return box
+
+    def _pagina_chiamate(self):
+        cfg = self._leggi_motore()
+        q = cfg.get("chiamate") or {}
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box.set_border_width(14)
+        intro = Gtk.Label(label=_t("lau.imp.chiam_nota"), xalign=0)
+        intro.set_line_wrap(True); intro.set_max_width_chars(56)
+        box.add(intro)
+        g = Gtk.Grid(column_spacing=8, row_spacing=6)
+        video = self._scelta_combo(g, 0, _t("lau.imp.video"),
+                                   [(120, _t("lau.imp.q_leggero")), (200, _t("lau.imp.q_normale")), (400, _t("lau.imp.q_nitido")), (800, _t("lau.imp.q_max"))],
+                                   q.get("videoKbps", 200))
+        audio = self._scelta_combo(g, 1, _t("lau.imp.audio"),
+                                   [(16, _t("lau.imp.q_bassa")), (24, _t("lau.imp.q_normale")), (40, _t("lau.imp.q_alta")), (64, _t("lau.imp.q_max"))],
+                                   q.get("audioKbps", 24))
+        box.add(g)
+        salva = Gtk.Button(label=_t("lau.imp.salva"))
+        salva.get_style_context().add_class("suggested-action")
+        esito = Gtk.Label(label="", xalign=0)
+
+        def _salva(_w):
+            nuova = dict(self._leggi_motore().get("chiamate") or {})
+            try:
+                nuova["videoKbps"] = int(video.get_active_id()); nuova["audioKbps"] = int(audio.get_active_id())
+            except (TypeError, ValueError):
+                pass
+            self._scrivi_motore({"chiamate": nuova})
+            esito.set_text(_t("lau.imp.salvato_chiam"))
+        salva.connect("clicked", _salva)
+        riga = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        riga.add(salva); riga.add(esito)
+        box.add(riga)
+        return box
+
+    def _pagina_rete(self):
+        cfg = self._leggi_motore()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        box.set_border_width(14)
+        nome = cfg.get("nome_rete") or ""
+        forma = {"h3": "HTTP/3", "webrtc": _t("lau.imp.forma_webrtc")}.get(cfg.get("forma"), _t("lau.imp.forma_rumore"))
+        testo = (_t("lau.imp.rete_attuale", nome=nome) if (cfg.get("directory_url") and cfg.get("authority"))
+                 else _t("lau.imp.rete_prova"))
+        lab = Gtk.Label(label=testo + "\n" + _t("lau.imp.forma_attuale", forma=forma), xalign=0)
+        lab.set_line_wrap(True); lab.set_max_width_chars(56); lab.set_selectable(True)
+        box.add(lab)
+        nota = Gtk.Label(label=_t("lau.imp.rete_nota"), xalign=0)
+        nota.set_line_wrap(True); nota.set_max_width_chars(56)
+        nota.get_style_context().add_class("dim-label")
+        box.add(nota)
+        apri = Gtk.Button(label=_t("lau.imp.rete_apri"))
+        apri.connect("clicked", lambda _w: self._apri_gestore_rete())
+        box.add(apri)
+        return box
+
+    def _apri_gestore_rete(self):
+        rete = RADICE / "gestore-rete" / "nyctalus-rete"
+        if not rete.exists():
+            return self._avviso(_t("lau.settings"), _t("lau.in_arrivo_corpo"))
+        for term in (["x-terminal-emulator", "-e"], ["gnome-terminal", "--"], ["konsole", "-e"], ["xterm", "-e"]):
+            try:
+                subprocess.Popen(term + [sys.executable, str(rete)])
+                return
+            except FileNotFoundError:
+                continue
+        self._avviso(_t("lau.settings"), "nyctalus-rete")
+
+    def _impostazioni_finestra(self):
+        d = Gtk.Dialog(title=_t("lau.imp.titolo"), transient_for=self, modal=True)
+        d.set_default_size(460, 420)
+        nb = Gtk.Notebook()
+        nb.append_page(self._pagina_rete(), Gtk.Label(label="🌐 " + _t("lau.imp.tab_rete")))
+        nb.append_page(self._pagina_prestazioni(), Gtk.Label(label="⚡ " + _t("lau.imp.tab_prest")))
+        nb.append_page(self._pagina_chiamate(), Gtk.Label(label="📞 " + _t("lau.imp.tab_chiam")))
+        d.get_content_area().add(nb)
+        d.add_button(_t("lau.imp.chiudi"), 0)
+        d.show_all()
+        d.run()
+        d.destroy()
+
     def _aiuta_la_rete(self):
         """🦇 Aiuta la rete: questo PC fa anche da nodo SOLO INTERMEDIO (mai uscita), con un tetto."""
         rete = RADICE / "gestore-rete" / "nyctalus-rete"
@@ -485,6 +638,7 @@ class Launcher(Gtk.Window):
             mi.connect("activate", lambda _w: cb())
             menu.append(mi)
 
+        voce("⚙ " + _t("lau.imp.titolo") + "…", self._impostazioni_finestra)  # finestra a schede: rete, prestazioni, chiamate
         voce("🦊 " + _t("lau.firefox"), self._apri_firefox)    # navigazione anonima con Firefox
         voce("🦇 " + _t("lau.aiuta"), self._aiuta_la_rete)      # questo PC come nodo solo intermedio
         menu.append(Gtk.SeparatorMenuItem())

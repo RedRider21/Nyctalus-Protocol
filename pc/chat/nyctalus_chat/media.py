@@ -16,6 +16,17 @@ import queue
 import threading
 import time
 from pathlib import Path
+import json as _json_imp
+def _qualita_chiamate():
+    """Qualità di chiamate/videochiamate dalle Impostazioni (tab «Chiamate»): bitrate audio e video.
+    Letta a ogni chiamata da ~/.nyctalus-browser/config.json; valori fuori scala = predefiniti."""
+    try:
+        q = (_json_imp.loads((Path.home() / ".nyctalus-browser" / "config.json").read_text(encoding="utf-8")).get("chiamate")) or {}
+    except Exception:            # noqa: BLE001
+        q = {}
+    vk, ak = q.get("videoKbps"), q.get("audioKbps")
+    return {"video_bps": (vk if isinstance(vk, int) and 80 <= vk <= 1500 else 200) * 1000,
+            "audio_bps": (ak if isinstance(ak, int) and 10 <= ak <= 64 else 24) * 1000}
 
 import gi
 
@@ -368,8 +379,8 @@ class AudioChiamata:
                ) if self.eco else ""
         p = Gst.parse_launch(
             "%s ! audioconvert ! audioresample ! %saudio/x-raw,rate=48000,channels=1 ! valve name=muto drop=%s "
-            "! opusenc bitrate=24000 frame-size=20 audio-type=voice ! appsink name=pacchetti emit-signals=true "
-            "sync=false max-buffers=50 drop=true" % (sorgente_audio(), dsp, "true" if self.muto_attivo else "false"))
+            "! opusenc bitrate=%d frame-size=20 audio-type=voice ! appsink name=pacchetti emit-signals=true "
+            "sync=false max-buffers=50 drop=true" % (sorgente_audio(), dsp, "true" if self.muto_attivo else "false", _qualita_chiamate()["audio_bps"]))
         p.get_by_name("pacchetti").connect("new-sample", self._pacchetto)
         return p
 
@@ -469,11 +480,11 @@ class VideoChiamata:
         self.invio = Gst.parse_launch(
             "%s ! videoconvert ! videoscale ! videorate ! video/x-raw,width=320,height=240,framerate=15/1 "
             "! tee name=t t. ! queue leaky=downstream max-size-buffers=2 ! vp8enc name=enc deadline=1 cpu-used=8 "
-            "target-bitrate=200000 keyframe-max-dist=30 error-resilient=1 end-usage=cbr "
+            "target-bitrate=%d keyframe-max-dist=30 error-resilient=1 end-usage=cbr "
             "! appsink name=immagini emit-signals=true sync=false drop=true max-buffers=3 "
             "t. ! queue leaky=downstream max-size-buffers=2 ! videoscale ! video/x-raw,width=160,height=120 "
             "! videoconvert ! gtksink name=anteprima sync=false"
-            % sorgente_video())
+            % (sorgente_video(), _qualita_chiamate()["video_bps"]))
         self.invio.get_by_name("immagini").connect("new-sample", self._immagine)
         self.anteprima = self.invio.get_by_name("anteprima").get_property("widget")
         # parte con trasmetti(), DOPO aver messo l'anteprima in una finestra: gtksink, se parte
