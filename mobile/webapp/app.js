@@ -1259,11 +1259,12 @@ function impostazioni(solo) {
       sceltaRiga("Controllo di congestione", "BBR va meglio con perdite (Wi-Fi, rete mobile). Cambialo solo per prova.", [["bbr", "BBR (consigliato)"], ["cubic", "Cubic"], ["newreno", "NewReno"]], ["bbr", "cubic", "newreno"].includes(a.congestione) ? a.congestione : "bbr", (v) => { stato.congestione = v; }),
       sceltaRiga("Ripiego su TCP", "Quando l'UDP è bloccato, Nyctalus passa a TCP. «Sempre» forza il TCP.", [["auto", "Automatico"], ["sempre", "Sempre TCP"], ["mai", "Mai"]], ["auto", "sempre", "mai"].includes(a.tcp) ? a.tcp : "auto", (v) => { stato.tcp = v; }),
       sceltaRiga("Riuso dei collegamenti", "Un solo collegamento per coppia di nodi: meno tracce sul filo.", [["si", "Sì (consigliato)"], ["no", "No"]], a.riuso === "no" ? "no" : "si", (v) => { stato.riuso = v; }),
+      sceltaRiga("Uscite diverse", "Più uscite = scaricamenti paralleli da siti diversi più veloci; ogni sito resta sulla sua uscita. Ogni uscita in più è un nodo in più che vede un tuo sito: 1 è la scelta più prudente.", [[1, "1 (di serie)"], [2, "2"], [3, "3"], [4, "4"]], [1, 2, 3, 4].includes(a.uscite) ? a.uscite : 1, (v) => { stato.uscite = v; }),
     );
     const salvaBtn = el("div", "pulsanti"); salvaBtn.style.justifyContent = "flex-start";
     const bs = el("button", "primario", "Salva e riavvia la rete"), bs2 = el("button", "", "Salva soltanto");
     const invia = async (riavvia) => {
-      const r = await postJson("/api/impostazioni", Object.assign({ finestra_kb: a.finestra_kb, congestione: a.congestione, tcp: a.tcp, riuso: a.riuso }, stato, { riavvia }));
+      const r = await postJson("/api/impostazioni", Object.assign({ finestra_kb: a.finestra_kb, congestione: a.congestione, tcp: a.tcp, riuso: a.riuso, uscite: a.uscite }, stato, { riavvia }));
       if (r.ok) { toast(riavvia && r.riavviata ? "Salvato · rete riavviata" : "Salvato"); if (riavvia) controllaServizi(); } else toast("✗ non riuscito");
     };
     bs.onclick = () => invia(true); bs2.onclick = () => invia(false);

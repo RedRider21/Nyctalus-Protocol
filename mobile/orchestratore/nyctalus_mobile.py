@@ -102,6 +102,8 @@ def manopole_motore(cfg):
         e["NYCTALUS_TCP"] = "0"
     if cfg.get("riuso") == "no":
         e["NYCTALUS_RIUSO"] = "0"
+    if cfg.get("uscite") in (1, 2, 3, 4):
+        e["NYCTALUS_USCITE"] = str(cfg["uscite"])
     return e
 
 
@@ -1141,6 +1143,7 @@ async def instrada(req, lettore, scrittore):
             "congestione": cfg.get("congestione", "bbr"),
             "tcp": cfg.get("tcp", "auto"),
             "riuso": cfg.get("riuso", "si"),
+            "uscite": cfg.get("uscite", 1),
         })
     if p == "/api/servizi/avvia" and req.metodo == "POST":
         SERVIZI.avvia()
@@ -1255,6 +1258,8 @@ async def imposta_avanzate(lettore, scrittore, req):
         cambi["tcp"] = dati["tcp"]
     if dati.get("riuso") in ("si", "no"):
         cambi["riuso"] = dati["riuso"]
+    if dati.get("uscite") in (1, 2, 3, 4):
+        cambi["uscite"] = dati["uscite"]
     cfg.update(cambi)
     scrivi_config(cfg)
     riavvia = bool(dati.get("riavvia")) and SERVIZI.info().get("stato") == "pronto"

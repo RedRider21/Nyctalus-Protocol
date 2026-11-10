@@ -114,6 +114,14 @@ def _pagina_prestazioni_browser():
                      config.get("tcp", "auto"))
     riuso = _combo_imp(g, 3, _t("lau.imp.riuso"),
                        [("si", _t("lau.imp.si")), ("no", _t("lau.imp.no"))], config.get("riuso", "si"))
+    usc = Gtk.ComboBoxText()
+    for v in (1, 2, 3, 4):
+        usc.append(str(v), str(v))
+    usc.set_active_id(str(config.get("uscite", 1)))
+    _riga_u = Gtk.Label(label=_t("lau.imp.uscite")); _riga_u.set_xalign(0)
+    g.attach(_riga_u, 0, 4, 1, 1); usc.set_hexpand(True); g.attach(usc, 1, 4, 1, 1)
+    _n = Gtk.Label(label=_t("lau.imp.uscite_nota")); _n.set_xalign(0); _n.set_line_wrap(True); _n.set_max_width_chars(60)
+    _n.get_style_context().add_class("nxs-set-note"); g.attach(_n, 1, 5, 1, 1)
     box.pack_start(g, False, False, 0)
     esito = Gtk.Label(label=""); esito.set_xalign(0)
     salva = Gtk.Button(label=_t("lau.imp.salva")); salva.get_style_context().add_class("suggested-action")
@@ -126,6 +134,10 @@ def _pagina_prestazioni_browser():
         config.config["congestione"] = cong.get_active_id()
         config.config["tcp"] = tcp.get_active_id()
         config.config["riuso"] = riuso.get_active_id()
+        try:
+            config.config["uscite"] = int(usc.get_active_id())
+        except (TypeError, ValueError):
+            pass
         config.save_config()
         esito.set_text(_t("lau.imp.salvato"))
     salva.connect("clicked", _salva)

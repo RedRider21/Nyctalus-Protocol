@@ -1790,5 +1790,7 @@
  "lau.imp.forma_rumore": "ruido",
  "lau.imp.forma_webrtc": "videollamada",
  "lau.imp.rete_nota": "La forma del tráfico (ruido, sitio HTTP/3 o videollamada) y el tráfico de relleno se configuran en el gestor de red, porque valen para toda la red.",
- "lau.imp.rete_apri": "Abrir el gestor de red"
+ "lau.imp.rete_apri": "Abrir el gestor de red",
+ "lau.imp.uscite": "Salidas distintas",
+ "lau.imp.uscite_nota": "Más salidas = descargas paralelas de sitios distintos más rápidas; cada sitio conserva su salida. Cada salida extra es un nodo más que ve uno de tus sitios: 1 es la opción más prudente."
 }

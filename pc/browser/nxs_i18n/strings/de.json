@@ -1790,5 +1790,7 @@
  "lau.imp.forma_rumore": "Rauschen",
  "lau.imp.forma_webrtc": "Videoanruf",
  "lau.imp.rete_nota": "Die Verkehrsform (Rauschen, HTTP/3-Seite oder Videoanruf) und der Deckverkehr werden im Netzwerkmanager eingestellt, da sie für das ganze Netz gelten.",
- "lau.imp.rete_apri": "Netzwerkmanager öffnen"
+ "lau.imp.rete_apri": "Netzwerkmanager öffnen",
+ "lau.imp.uscite": "Verschiedene Ausgänge",
+ "lau.imp.uscite_nota": "Mehr Ausgänge = schnellere parallele Downloads von verschiedenen Seiten; jede Seite behält ihren Ausgang. Jeder zusätzliche Ausgang ist ein Knoten mehr, der eine deiner Seiten sieht: 1 ist die vorsichtigste Wahl."
 }

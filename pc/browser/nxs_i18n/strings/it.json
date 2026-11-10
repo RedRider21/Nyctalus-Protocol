@@ -1790,5 +1790,7 @@
  "lau.imp.forma_rumore": "rumore",
  "lau.imp.forma_webrtc": "videochiamata",
  "lau.imp.rete_nota": "La forma del traffico (rumore, sito HTTP/3 o videochiamata) e il rumore di fondo si impostano col gestore della rete, perché valgono per tutta la rete.",
- "lau.imp.rete_apri": "Apri il gestore della rete"
+ "lau.imp.rete_apri": "Apri il gestore della rete",
+ "lau.imp.uscite": "Uscite diverse",
+ "lau.imp.uscite_nota": "Più uscite = scaricamenti paralleli da siti diversi più veloci; ogni sito resta sulla sua uscita. Ogni uscita in più è un nodo in più che vede un tuo sito: 1 è la scelta più prudente."
 }

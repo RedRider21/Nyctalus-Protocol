@@ -1790,5 +1790,7 @@
  "lau.imp.forma_rumore": "noise",
  "lau.imp.forma_webrtc": "video call",
  "lau.imp.rete_nota": "The traffic shape (noise, HTTP/3 site or video call) and cover traffic are set in the network manager, since they apply to the whole network.",
- "lau.imp.rete_apri": "Open the network manager"
+ "lau.imp.rete_apri": "Open the network manager",
+ "lau.imp.uscite": "Different exits",
+ "lau.imp.uscite_nota": "More exits = faster parallel downloads from different sites; each site keeps its own exit. Every extra exit is one more node seeing one of your sites: 1 is the most cautious choice."
 }

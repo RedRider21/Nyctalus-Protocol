@@ -1790,5 +1790,7 @@
  "lau.imp.forma_rumore": "bruit",
  "lau.imp.forma_webrtc": "appel vidéo",
  "lau.imp.rete_nota": "La forme du trafic (bruit, site HTTP/3 ou appel vidéo) et le trafic de couverture se règlent dans le gestionnaire de réseau, car ils valent pour tout le réseau.",
- "lau.imp.rete_apri": "Ouvrir le gestionnaire de réseau"
+ "lau.imp.rete_apri": "Ouvrir le gestionnaire de réseau",
+ "lau.imp.uscite": "Sorties différentes",
+ "lau.imp.uscite_nota": "Plus de sorties = téléchargements parallèles depuis des sites différents plus rapides ; chaque site garde sa sortie. Chaque sortie en plus est un nœud de plus qui voit un de vos sites : 1 est le choix le plus prudent."
 }
