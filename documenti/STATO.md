@@ -3,7 +3,7 @@
 > Aggiornato all'8 novembre 2026 (versione 0.3.15). Cronologia sotto, dalla più recente.
 
 
-## 🗂 SCALETTA (aggiornata 08/11/2026, dopo la 0.3.15) — ▶ alla ripresa: chiedere all'utente da quale punto partire (consigliato il 1)
+## 🗂 SCALETTA (aggiornata 10/11/2026, dopo la 0.3.18) — ▶ alla ripresa: chiedere all'utente da quale punto partire
 1. **Prove su rete vera** (Internet, amico a Pavia, più persone): velocità, chiamate, file; confronto con le misure in Shadow.
 2. **Invisibilità**: forma «videochiamata» (WebRTC); impronta identica a Chrome (BoringSSL, pesante: da valutare).
 3. **Capacità**: promuovere a entrata i PC stabili che aiutano la rete (come le guardie di Tor); uscite diverse per gli scaricamenti grandi (pesare l'anonimato).
@@ -12,6 +12,7 @@
 6. **Mullvad Browser** come «Nyctalus Browser (Firefox)» (download ~105 MB da approvare).
 7. **Piano di sicurezza + ricontrollo cybersecurity completo**: firma delle release, cargo audit/deny, forbid unsafe, fuzzing, dati locali cifrati, hardening systemd, autocontrollo d'integrità.
 8. Revisione indipendente (NLnet/NGI Zero).
+8-bis. **App Android senza Termux** (scelta «prima A, poi B» dell'utente): motore e servizio dentro l'APK, riscrivendo in Rust il servizio del telefono (~1.900 righe Python). A (Termux automatizzato) è fatto.
 9. **Alla fine**: guida passo-passo (telefono, PC di casa, PC nodo su Internet), glossario dei termini e comandi, riordino organico della documentazione.
 
 ## ⚠️ DA FARE ALLA FINE DI TUTTO (richiesta dell'utente, 07/11/2026)
@@ -21,6 +22,9 @@
 3. **Riordino organico di tutta la documentazione** (manuali, guide, sito). In particolare (segnalato dall'utente 08/11): la riga «In arrivo — gestore file grafico, motore precompilato per il telefono, taratura del rumore di fondo su rete reale, confronto con Tor (Shadow), una rete di nodi pubblica» in README e home di Pages era SUPERATA → ✅ riscritta l'08/11 (stato, numeri delle prove, novità, scaletta come «In arrivo»).
 4. **Ricontrollo completo di cybersecurity** di tutto il sistema (richiesto 08/11/2026), insieme al piano sicurezza.
 L'utente ha chiesto di farle «quando avremo finito proprio tutto» (dopo invisibilità, browser, piano sicurezza).
+
+## 10/11/2026 · In UFFICIO: solo commit locali, NIENTE GitHub (SOC) finché l'utente non lo dice
+- Tablet Samsung Galaxy Tab A (32 bit): installazione da zero RIUSCITA con la 0.3.18 (script unico + motore armv7). Confermato dall'utente.
 
 ## 09/11/2026 · Script unico per Termux ✅ — release v0.3.18 (APK 0.61)
 - Sul Tab A «curl failed to connect to 127.0.0.1:…»: tocchi ripetuti spegnevano il servitore dell'app (porta nuova a ogni tocco) e l'aggiornamento lungo di Termux veniva PRIMA dello scaricamento (app chiusa da Android in sottofondo).
