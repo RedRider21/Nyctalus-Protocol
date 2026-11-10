@@ -6,7 +6,7 @@
 ## 🗂 SCALETTA (aggiornata 10/11/2026, dopo la 0.3.18) — ▶ alla ripresa: chiedere all'utente da quale punto partire
 1. **Prove su rete vera** (Internet, amico a Pavia, più persone): velocità, chiamate, file; confronto con le misure in Shadow.
 2. **Invisibilità**: forma «videochiamata» (WebRTC) ✅ FATTA (STUN+SRTP, prova 38; DTLS/RTCP rimandati); resta impronta identica a Chrome (BoringSSL, pesante: da valutare). ✅ FATTO anche: Impostazioni grafiche a schede in telefono/launcher/browser (richiesta 10/11).
-3. **Capacità**: promuovere a entrata i PC stabili che aiutano la rete (come le guardie di Tor); uscite diverse per gli scaricamenti grandi (pesare l'anonimato).
+3. **Capacità** ✅ FATTA: PC stabili promossi a guardia (prova 39); uscite diverse `--exits` (prova 40). Da misurare in Shadow quanto accelerano.
 4. **Chat da mixnet** (ritardi e rimescolamento nei nodi, buste finte DP) e copertura costante opzionale.
 5. Rumore di fondo tarato su rete reale; ripresa dai circuiti caduti; descrittore firmato dei servizi.
 6. **Mullvad Browser** come «Nyctalus Browser (Firefox)» (download ~105 MB da approvare).
@@ -14,6 +14,11 @@
 8. Revisione indipendente (NLnet/NGI Zero).
 8-bis. **App Android senza Termux** (scelta «prima A, poi B» dell'utente): motore e servizio dentro l'APK, riscrivendo in Rust il servizio del telefono (~1.900 righe Python). A (Termux automatizzato) è fatto.
 9. **Alla fine**: guida passo-passo (telefono, PC di casa, PC nodo su Internet), glossario dei termini e comandi, riordino organico della documentazione.
+
+## 10/11/2026 · Punto 3 · Capacità ✅ (solo commit locali)
+- **3a · PC stabili promossi a guardia**: elenco firmato `ruolo=intermedio guardia=si` (compatibile: i motori vecchi lo vedono intermedio); candidati guardia = pieni ∪ promossi (`percorsi::candidati_guardia`), uscite e punti d'incontro solo fra i pieni. Gestore: `stabilita [--sonda] [--applica]` (prova con `nodes --probe`, `stabilita.json`), `guardia IP si|no|auto`, prova+promozione automatica ogni ora mentre `servi`/`casa` pubblicano. Regola: 14 giorni, 20 prove, 95% (ultime 60) per promuovere; sotto 80% (ultime 20) si retrocede. Prova 39 (12/12).
+- **3b · Uscite diverse**: `--exits N` (1-4, `NYCTALUS_USCITE`, `exits` nella config, scheda ⚡ Prestazioni): N fasci conflux dalla stessa guardia sulla stessa connessione, uscite distinte; ogni sito resta sul suo fascio, i nuovi al più libero (`fascio_per`). Di serie 1. Peso sull'anonimato scritto nel PIANO. Prova 40 (9/9).
+- Suite completa (prima del punto 3): 682/683; l'unico FAIL (03, conteggio `.scelta-tema` dopo le schede) corretto con la classe `scelta-opz` → 03 tutta verde.
 
 ## 10/11/2026 · Impostazioni grafiche a schede (richiesta dell'utente) ✅ (solo commit locali)
 - Tutte le manopole dei comandi, prima solo in config o in variabili d'ambiente, ora si regolano graficamente, **separate per area con delle schede (tab)**:

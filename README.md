@@ -230,11 +230,15 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 
 - **Più veloce di Tor, misurato**: in simulazione (Shadow, contro Tor 0.4.9) più veloce in tutti gli scenari misurati, da +25% (nodi saturi) a +119% (nodi di velocità diverse): BBR, scelta dei nodi pesata per banda, ragnatela con distributore intelligente, celle piene, collegamenti riusati. Tabella sopra e in [PIANO-ANONIMATO.md](documenti/manuali/PIANO-ANONIMATO.md).
 - **Impronta TLS comune** (0.3.15): la stretta di mano TLS sul TCP ha l'impronta comune dei programmi rustls (JA4 `t13d1011h2`), non una propria; misura con `simulazione/impronta_tls.py`.
+- **Forma «videochiamata»** (0.3.19, a scelta della rete): il traffico sembra una chiamata WebRTC, con controlli STUN della linea e pacchetti video SRTP da ~1200 byte autenticati con la chiave della rete; chi sonda un nodo non riceve niente, e se l'UDP è bloccato il ripiego su TCP è un vero TLS (`nyctalus-rete protezione si --forma webrtc`; verificato da un osservatore che classifica ogni pacchetto, prova 38).
+- **PC stabili promossi a guardia** (0.3.19): i PC che aiutano la rete e restano accesi diventano anche entrate (mai uscite), decise dalla stabilità misurata dal gestore (`nyctalus-rete stabilita`), come il contrassegno «Guard» di Tor.
+- **Uscite diverse** (0.3.19, `--exits N`): più uscite dalla stessa guardia, ogni sito sulla sua; scaricamenti paralleli da siti diversi più veloci (di serie 1: più uscite = più nodi che vedono un tuo sito).
+- **Impostazioni a schede** (0.3.19): tutte le regolazioni, anche quelle del motore e la qualità di chiamate e videochiamate, dalle Impostazioni divise per area: telefono (Profilo, Aspetto, Chat, Chiamate, Rete, Prestazioni, App), launcher PC (Rete, Prestazioni, Chiamate) e browser (Browser, Rete, Prestazioni).
 
 **In arrivo** (scaletta, dettagli in [STATO.md](documenti/STATO.md)):
 1. **prove su rete vera** (Internet, più persone): velocità, chiamate, file;
-2. invisibilità: forma «videochiamata» (WebRTC); impronta identica a Chrome (valutare BoringSSL);
-3. capacità: promuovere a entrata i PC stabili che aiutano la rete; uscite diverse per gli scaricamenti grandi;
+2. invisibilità: impronta identica a Chrome (valutare BoringSSL) — forma «videochiamata» ✅ fatta;
+3. ✅ capacità fatta (guardie promosse, uscite diverse): da misurare in Shadow;
 4. chat da mixnet (ritardi e rimescolamento nei nodi) e copertura costante;
 5. rumore di fondo tarato su rete reale, ripresa dai circuiti caduti, descrittore firmato dei servizi;
 6. Mullvad Browser come «Nyctalus Browser (Firefox)»;

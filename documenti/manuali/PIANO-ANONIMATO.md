@@ -240,13 +240,27 @@ Misure in Shadow con `simulazione/velocita.py` (dettagli in `simulazione/LEGGIMI
 5. ✅ **«🦇 Aiuta la rete»** (0.3.11): i PC degli utenti, se vogliono, fanno da **nodo intermedio**
    (mai uscita, verificato anche contro un client che lo forza), con un tetto di banda. Misurato:
    con nodi saturi accelera poco (+5%) perché la strettoia sono entrata e uscita; conta con molti
-   utenti. Da misurare: quanto il traffico degli altri copre i tuoi ritmi. Poi: promuovere a
-   «entrata» i PC più stabili, come le guardie di Tor.
+   utenti. Da misurare: quanto il traffico degli altri copre i tuoi ritmi.
+5-quater. ✅ **PC stabili promossi a guardia** (0.3.19): il gestore prova ogni ora i PC che aiutano;
+   chi risponde almeno al 95% da 14 giorni diventa anche **entrata** (`guardia=si` nell'elenco
+   firmato), mai uscita; chi sparisce torna intermedio. **Peso sull'anonimato:** più guardie =
+   la guardia di ognuno è più spesso un PC di un altro utente invece che un server del gestore; è
+   un bene (meno potere concentrato nel gestore) se i PC sono di persone diverse, ed è il motivo
+   della soglia di stabilità: una guardia che va e viene costringe a cambiarla, cioè più occasioni
+   di finire su un'entrata malevola. Prova `39-guardie-promosse`.
 5-bis. ✅ **Riuso dei collegamenti fra nodi** (0.3.11): +1-3% e primo byte più rapido sotto carico,
    meno collegamenti nuovi sul filo.
 5-ter. ✅ **Celle piene** (0.3.12): trovata con le catture la causa del divario a nodi saturi
    (celle quasi vuote); ora +25% su Tor anche lì (3,32 contro 2,66 su 20 ripetizioni).
-6. Uscite diverse per strada, per gli scaricamenti grandi (da pesare contro l'anonimato).
+6. ✅ **Uscite diverse** (0.3.19, `--exits N`, di serie 1): fino a 4 fasci dalla stessa guardia,
+   ognuno con la sua uscita; ogni sito resta sulla sua uscita, i siti nuovi vanno alla più libera.
+   Accelera gli scaricamenti **paralleli da siti diversi** (non un singolo scaricamento: un flusso
+   TCP esce sempre da un'uscita sola). **Peso sull'anonimato:** ogni uscita vede **solo i suoi
+   siti** (meno collegamento fra i tuoi siti: è l'isolamento per destinazione di Tor), il sito non
+   ti vede mai da più indirizzi; ma con N uscite la probabilità che **almeno una** sia malevola
+   cresce (1−(1−f)^N con f la quota di uscite dell'avversario), e se lo è anche la guardia quei
+   flussi sono collegabili. Per questo il valore di serie resta 1 e la scelta è dell'utente
+   (scheda ⚡ Prestazioni). Prova `40-uscite-diverse`.
 
 ## Oltre l'anonimato: invisibilità
 
@@ -264,8 +278,10 @@ debole, e le misure del punto K lo confermano anche per noi. I passi, in ordine:
    sulla porta 443 con il nome scelto dal gestore, e chi li sonda (anche un vero Chrome) riceve una
    pagina 404. ✅ **Ripiego su TCP** (0.3.13): dove UDP è bloccato si entra in TCP sulla stessa
    porta, da soli; nella forma HTTP/3 quel TCP è un vero HTTPS (0.3.14), con un'impronta TLS
-   comune e non più propria (0.3.15). Restano: impronta identica a Chrome (serve BoringSSL),
-   forma «videochiamata».
+   comune e non più propria (0.3.15). ✅ **Forma «videochiamata»** (0.3.19): STUN + pacchetti
+   SRTP autenticati con la chiave della rete, sonde mute, ripiego TCP in TLS (prova
+   `38-forma-videochiamata`; limite: ritmo e dimensioni di Nyctalus, non di un video vero).
+   Resta: impronta identica a Chrome (serve BoringSSL, pesante).
    Il camuffamento di serie rende il traffico simile a rumore, e il rumore
    puro è sospetto (in alcuni paesi viene bloccato proprio così). Meglio farlo sembrare
    **traffico comune**: una normale videochiamata (WebRTC) o un normale sito HTTPS/HTTP-3

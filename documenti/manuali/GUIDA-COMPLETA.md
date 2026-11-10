@@ -148,13 +148,15 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi **gestisce
 | **Per chi gestisce la rete** | | |
 | [Rete di casa / via Internet](#10-rete-di-casa-e-via-internet) | provare senza server | — |
 | [Rubrica e casella](#11-rubrica-e-casella) | posta per chi è spento, elenco di chi c'è | accese nella rete di casa |
-| [Protezione: camuffamento e rumore](#12-protezione-camuffamento-e-rumore-di-fondo) | traffico simile a rumore (o a un sito HTTP/3), ritmi nascosti | accesa nelle reti nuove |
+| [Protezione: camuffamento e rumore](#12-protezione-camuffamento-e-rumore-di-fondo) | traffico simile a rumore, a un sito HTTP/3 o a una videochiamata; ritmi nascosti | accesa nelle reti nuove |
+| [Guardie promosse](#14-famiglie-e-nodi-di-amici) | i PC che aiutano e restano accesi diventano entrate (mai uscite) | automatico |
 | [UDP bloccato: ripiego su TCP](#13-bis-reti-con-udp-bloccato-ripiego-su-tcp) | collegarsi anche dove UDP non passa | automatico |
 | [Ponti nascosti](#13-ponti-nascosti) | entrare da un indirizzo privato, fuori dall'elenco; invisibile alle sonde | nessuno |
 | [Banda dei nodi](#14-famiglie-e-nodi-di-amici) | i nodi più veloci si usano di più (molto più veloce con nodi diversi) | non indicata |
 | [Famiglie e nodi di amici](#14-famiglie-e-nodi-di-amici) | mai due nodi dello stesso gestore in un percorso | — |
 | [Modalità rigida](#15-modalita-rigida) | rifiutare i percorsi non anonimi | spenta |
-| [Opzioni del motore](#16-opzioni-avanzate-del-motore) | salti, strade parallele (per esperti) | 3 · 2 |
+| [Opzioni del motore](#16-opzioni-avanzate-del-motore) | salti, strade parallele, uscite (per esperti) | 3 · 2 · 1 |
+| [Impostazioni a schede](#17-impostazioni-a-schede) | regolare tutto dalle Impostazioni (telefono, launcher, browser) | — |
 
 ---
 
@@ -270,7 +272,11 @@ tuoi ritmi.
 
 **Regole fisse:** solo **intermedio**, mai uscita (il traffico degli altri non esce **mai** su
 Internet dal tuo indirizzo: il nodo rifiuta anche se un client glielo chiede), mai guardia né
-punto d'incontro (un PC si spegne). Un **tetto di banda** che scegli tu.
+punto d'incontro (un PC si spegne). Un **tetto di banda** che scegli tu. **Eccezione (0.3.19):**
+se il tuo PC resta acceso con continuità, il gestore lo vede **stabile** (almeno 14 giorni e il 95%
+delle prove con risposta) e lo **promuove a guardia**: allora può fare anche da **entrata** per
+altri (non vede cosa fanno: solo che usano Nyctalus), ma mai da uscita. Se poi lo spegni spesso,
+torna da solo semplice intermedio.
 
 **Costo:** un po' di banda in upload (fino al tetto) e una porta UDP da aprire sul router.
 
@@ -284,7 +290,9 @@ punto d'incontro (un PC si spegne). Un **tetto di banda** che scegli tu.
   (serve che i client abbiano la 0.3.11).
 
 Misurato in simulazione: con i nodi della rete saturi l'aiuto come soli intermedi accelera poco
-(+5%), perché la strettoia sono entrata e uscita; conta quando gli utenti sono molti.
+(+5%), perché la strettoia sono entrata e uscita; conta quando gli utenti sono molti. Per questo
+i PC stabili vengono promossi a **guardia** (entrate in più) e il client può usare **più uscite**
+(`--exits`, §16; scheda ⚡ Prestazioni → «Uscite diverse»).
 
 ### Per chi gestisce la rete
 
@@ -450,6 +458,8 @@ Per chi usa il motore a mano (`nyctalus start`, `nyctalus circuit`…). Tutte in
 | `--obfuscation HEX` | camuffamento con la chiave della rete | quella del codice |
 | `--bridge RIGA` / `NYCTALUS_PONTI` | entrare da un ponte nascosto | nessuno |
 | `--mimic [--mimic-name SITO]` / `NYCTALUS_MIMETICO=1` | forma HTTP/3 (con `--obfuscation`) | spenta |
+| `--webrtc` / `NYCTALUS_WEBRTC=1` | forma videochiamata: STUN + SRTP (con `--obfuscation`) | spenta |
+| `--exits N` / `NYCTALUS_USCITE` / `exits = N` | uscite diverse (1-4): ogni sito resta sulla sua, i siti nuovi vanno alla più libera; più uscite = scaricamenti paralleli più veloci ma più nodi che vedono un tuo sito | 1 |
 | `--hidden-bridge` (nodo) | il nodo fa da ponte nascosto | spento |
 | `--middle-only` (nodo) | solo intermedio: mai uscita («Aiuta la rete») | spento |
 | `--max-rate MBIT` (nodo) | tetto della banda inoltrata | nessuno |
@@ -458,3 +468,23 @@ Per chi usa il motore a mano (`nyctalus start`, `nyctalus circuit`…). Tutte in
 | `NYCTALUS_FINESTRA_KB` | finestra per circuito (KB): più piccola = la ragnatela sente prima le strade lente | 256 |
 | `NYCTALUS_CONGESTIONE` | controllo di congestione: `bbr`, `cubic`, `newreno` | bbr |
 | `NYCTALUS_CODIFICA=8,2` | ragnatela codificata **sperimentale** (k celle + r riserve); misurata: non accelera | spenta |
+
+### 17. Impostazioni a schede
+Tutte le regolazioni che prima stavano solo nei file di configurazione o nelle variabili
+d'ambiente si cambiano dalle **Impostazioni**, divise per area in **schede**:
+
+| Dove | Schede |
+|---|---|
+| **Telefono** (☰ / ⚙️ Impostazioni) | 👤 Profilo · 🎨 Aspetto · 💬 Chat · 📞 Chiamate · 🌐 Rete · ⚡ Prestazioni · 📱 App |
+| **Launcher PC** (⚙ → Impostazioni…) | 🌐 Rete · ⚡ Prestazioni · 📞 Chiamate (tema, dimensioni, 🦇 Aiuta la rete restano nel menu ⚙) |
+| **Browser PC** (Impostazioni) | 🌐 Browser (le sue) · 🔗 Rete · ⚡ Prestazioni |
+
+- **📞 Chiamate**: risoluzione, fotogrammi al secondo, dati del video, qualità dell'audio (sul PC
+  dati del video e dell'audio). Valgono dalla chiamata successiva.
+- **⚡ Prestazioni**: finestra per circuito, controllo di congestione, ripiego su TCP, riuso dei
+  collegamenti, uscite diverse. Valgono al prossimo avvio della rete (sul telefono c'è «Salva e
+  riavvia la rete»). Si salvano in `~/.nyctalus-browser/config.json` (PC) o nella configurazione
+  dell'app (telefono): sono le stesse variabili della tabella del §16.
+- **🌐/🔗 Rete**: la rete in uso e la sua forma del traffico. La forma (rumore, HTTP/3,
+  videochiamata) vale per tutta la rete: la sceglie il gestore con `nyctalus-rete protezione`.
+
