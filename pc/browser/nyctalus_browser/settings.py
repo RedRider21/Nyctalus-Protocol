@@ -79,6 +79,79 @@ def _riga(griglia, r, etichetta, widget, nota=None):
     return r + 1
 
 
+def _combo_imp(griglia, riga, etichetta, opzioni, valore, nota=None):
+    """Riga «etichetta : menu a tendina» per le schede Rete/Prestazioni; ritorna la ComboBoxText."""
+    lab = Gtk.Label(label=etichetta); lab.set_xalign(0); lab.set_valign(Gtk.Align.CENTER)
+    griglia.attach(lab, 0, riga, 1, 1)
+    combo = Gtk.ComboBoxText()
+    for v, testo in opzioni:
+        combo.append(str(v), testo)
+    combo.set_active_id(str(valore)); combo.set_hexpand(True)
+    griglia.attach(combo, 1, riga, 1, 1)
+    if nota:
+        n = Gtk.Label(label=nota); n.set_xalign(0); n.set_line_wrap(True); n.set_max_width_chars(60)
+        n.get_style_context().add_class("nxs-set-note")
+        griglia.attach(n, 1, riga + 1, 1, 1)
+        return riga + 2
+    return riga + 1
+
+
+def _pagina_prestazioni_browser():
+    """Manopole avanzate del motore in ~/.nyctalus-browser/config.json (valgono al prossimo avvio)."""
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+    box.set_border_width(16)
+    intro = Gtk.Label(label=_t("lau.imp.prest_nota")); intro.set_xalign(0)
+    intro.set_line_wrap(True); intro.set_max_width_chars(64)
+    box.pack_start(intro, False, False, 0)
+    g = Gtk.Grid(column_spacing=14, row_spacing=10)
+    fin = _combo_imp(g, 0, _t("lau.imp.finestra"),
+                     [(64, "64 KB"), (128, "128 KB"), (256, "256 KB"), (512, "512 KB"), (1024, "1 MB")],
+                     config.get("finestra_kb", 256))
+    cong = _combo_imp(g, 1, _t("lau.imp.congestione"),
+                      [("bbr", "BBR"), ("cubic", "Cubic"), ("newreno", "NewReno")], config.get("congestione", "bbr"))
+    tcp = _combo_imp(g, 2, _t("lau.imp.tcp"),
+                     [("auto", _t("lau.imp.tcp_auto")), ("sempre", _t("lau.imp.tcp_sempre")), ("mai", _t("lau.imp.tcp_mai"))],
+                     config.get("tcp", "auto"))
+    riuso = _combo_imp(g, 3, _t("lau.imp.riuso"),
+                       [("si", _t("lau.imp.si")), ("no", _t("lau.imp.no"))], config.get("riuso", "si"))
+    box.pack_start(g, False, False, 0)
+    esito = Gtk.Label(label=""); esito.set_xalign(0)
+    salva = Gtk.Button(label=_t("lau.imp.salva")); salva.get_style_context().add_class("suggested-action")
+
+    def _salva(_w):
+        try:
+            config.config["finestra_kb"] = int(fin.get_active_id())
+        except (TypeError, ValueError):
+            pass
+        config.config["congestione"] = cong.get_active_id()
+        config.config["tcp"] = tcp.get_active_id()
+        config.config["riuso"] = riuso.get_active_id()
+        config.save_config()
+        esito.set_text(_t("lau.imp.salvato"))
+    salva.connect("clicked", _salva)
+    riga = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+    riga.pack_start(salva, False, False, 0); riga.pack_start(esito, False, False, 0)
+    box.pack_start(riga, False, False, 0)
+    return box
+
+
+def _pagina_rete_browser(browser):
+    """Info sulla rete in uso e pulsante per aprire il gestore (la forma vale per tutta la rete)."""
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+    box.set_border_width(16)
+    attiva = bool(config.get("directory_url") and config.get("authority"))
+    forma = {"h3": "HTTP/3", "webrtc": _t("lau.imp.forma_webrtc")}.get(config.get("forma"), _t("lau.imp.forma_rumore"))
+    testo = (_t("lau.imp.rete_attuale", nome=config.get("nome_rete") or "") if attiva else _t("lau.imp.rete_prova"))
+    lab = Gtk.Label(label=testo + "\n" + _t("lau.imp.forma_attuale", forma=forma))
+    lab.set_xalign(0); lab.set_line_wrap(True); lab.set_max_width_chars(64); lab.set_selectable(True)
+    box.pack_start(lab, False, False, 0)
+    nota = Gtk.Label(label=_t("lau.imp.rete_nota")); nota.set_xalign(0)
+    nota.set_line_wrap(True); nota.set_max_width_chars(64)
+    nota.get_style_context().add_class("nxs-set-note")
+    box.pack_start(nota, False, False, 0)
+    return box
+
+
 def apri_impostazioni(browser):
     """Dialogo modale; salva alla chiusura e riapplica tema/scelte al volo."""
     dlg = Gtk.Dialog(title=_t("br.set.title"), transient_for=browser, modal=True)
@@ -96,7 +169,12 @@ def apri_impostazioni(browser):
     sc.set_min_content_height(480)
     sc.set_propagate_natural_height(True)
     sc.add(g)
-    area.pack_start(sc, True, True, 0)
+    # Schede: «Browser» (queste impostazioni), «Rete» e «Prestazioni» (il motore di Nyctalus)
+    note = Gtk.Notebook()
+    note.append_page(sc, Gtk.Label(label="🌐 " + _t("br.set.title")))
+    note.append_page(_pagina_rete_browser(browser), Gtk.Label(label="🔗 " + _t("lau.imp.tab_rete")))
+    note.append_page(_pagina_prestazioni_browser(), Gtk.Label(label="⚡ " + _t("lau.imp.tab_prest")))
+    area.pack_start(note, True, True, 0)
     r = 0
 
     # --- Generale ---------------------------------------------------------------
