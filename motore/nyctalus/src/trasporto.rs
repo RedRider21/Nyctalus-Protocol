@@ -163,10 +163,20 @@ pub fn endpoint_server(
     let runtime = default_runtime().ok_or("nessun runtime asincrono disponibile")?;
     let udp = UdpSocket::bind(ascolta)?;
     udp.set_nonblocking(true)?;
-    let ibrido: Arc<dyn AsyncUdpSocket> =
-        crate::tcp::SocketTcp::nodo(runtime.wrap_udp_socket(udp)?, ascolta, offusca, tls_tcp.filter(|_| mimetico()));
-    // nella forma HTTP/3 i pacchetti restano QUIC in chiaro: la chiave fa da contrassegno
-    let socket: Arc<dyn AsyncUdpSocket> = match offusca.filter(|_| !mimetico()) {
+    // forma videochiamata: SOLO l'UDP (non il TCP di ripiego) viene vestito da SRTP+STUN
+    let udp_forma: Arc<dyn AsyncUdpSocket> = match offusca.filter(|_| crate::webrtc::attiva()) {
+        Some(k) => crate::webrtc::SocketWebRtc::nuovo(runtime.wrap_udp_socket(udp)?, &k, true),
+        None => runtime.wrap_udp_socket(udp)?,
+    };
+    let ibrido: Arc<dyn AsyncUdpSocket> = crate::tcp::SocketTcp::nodo(
+        udp_forma,
+        ascolta,
+        offusca,
+        tls_tcp.filter(|_| mimetico() || crate::webrtc::attiva()),
+    );
+    // forme HTTP/3 e videochiamata: i pacchetti non sono offuscati a parte (la chiave fa da
+    // contrassegno / etichetta di autenticazione)
+    let socket: Arc<dyn AsyncUdpSocket> = match offusca.filter(|_| !mimetico() && !crate::webrtc::attiva()) {
         None => ibrido,
         Some(segreto) => avvolgi(ibrido, segreto, true),
     };
@@ -181,14 +191,14 @@ pub async fn endpoint_client_tcp(
 ) -> Risultato<Endpoint> {
     let runtime = default_runtime().ok_or("nessun runtime asincrono disponibile")?;
     // forma HTTP/3: il TCP è un vero TLS verso il «sito» (nome del gestore), con l'impronta del nodo
-    let tls = if mimetico() {
+    let tls = if mimetico() || crate::webrtc::attiva() {
         let nome = rustls::pki_types::ServerName::try_from(crate::tls::nome_per(&destinazione))?.to_owned();
         Some((crate::tls::config_tls_tcp(impronta)?, nome))
     } else {
         None
     };
     let tcp: Arc<dyn AsyncUdpSocket> = crate::tcp::SocketTcp::client(destinazione, offusca, tls).await?;
-    let socket: Arc<dyn AsyncUdpSocket> = match offusca.filter(|_| !mimetico()) {
+    let socket: Arc<dyn AsyncUdpSocket> = match offusca.filter(|_| !mimetico() && !crate::webrtc::attiva()) {
         None => tcp,
         Some(segreto) => avvolgi(tcp, segreto, false),
     };
@@ -224,6 +234,15 @@ pub async fn collega_entrata(
 
 /// Crea un endpoint client, con offuscamento se è data la chiave di rete.
 pub fn endpoint_client(locale: SocketAddr, offusca: Option<[u8; 32]>) -> Risultato<Endpoint> {
+    // forma videochiamata: UDP vestito da SRTP+STUN (ha bisogno della chiave di rete)
+    if crate::webrtc::attiva() {
+        let segreto = offusca.ok_or("la forma videochiamata ha bisogno della chiave di rete (--offuscamento)")?;
+        let runtime = default_runtime().ok_or("nessun runtime asincrono disponibile")?;
+        let udp = UdpSocket::bind(locale)?;
+        udp.set_nonblocking(true)?;
+        let socket = crate::webrtc::SocketWebRtc::nuovo(runtime.wrap_udp_socket(udp)?, &segreto, false);
+        return Ok(Endpoint::new_with_abstract_socket(EndpointConfig::default(), None, socket, runtime)?);
+    }
     match offusca.filter(|_| !mimetico()) {
         None => Ok(Endpoint::client(locale)?),
         Some(segreto) => {

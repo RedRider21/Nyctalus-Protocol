@@ -68,6 +68,8 @@ CAM="$(leggi_cfg camuffamento)"; RUM="$(leggi_cfg rumore)"
 if [ -n "${PROT[*]:-}" ] && [ "$(leggi_cfg forma)" = h3 ]; then     # forma HTTP/3: sembra un sito
   NOMEH3="$(leggi_cfg nome_h3)"; [[ "$NOMEH3" =~ ^[A-Za-z0-9.-]{1,253}$ ]] || NOMEH3=""
   PROT+=(--mimic ${NOMEH3:+--mimic-name "$NOMEH3"}); PROT_SITO+=(--mimic ${NOMEH3:+--mimic-name "$NOMEH3"})
+elif [ -n "${PROT[*]:-}" ] && [ "$(leggi_cfg forma)" = webrtc ]; then   # forma videochiamata
+  PROT+=(--webrtc); PROT_SITO+=(--webrtc)
 fi
 # ponti nascosti della rete (righe segrete): al motore per variabile d'ambiente, non sulla riga
 # di comando, che tutti gli utenti del computer vedono con «ps»

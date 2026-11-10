@@ -136,6 +136,12 @@ pub async fn nodo(
     } else {
         println!("  downstream link authentication: off (prototype, unverified links)");
     }
+    if crate::webrtc::attiva() {
+        println!("  transport form: video call (WebRTC: STUN + SRTP packets); probers get nothing");
+        if ingresso.is_none() {
+            return Err("video-call form needs the network key (--obfuscation) to authenticate packets".into());
+        }
+    }
     if crate::trasporto::mimetico() {
         println!("  transport form: HTTP/3 (QUIC with ALPN h3, name {}); probers get a 404 page",
                  crate::trasporto::nome_mimetico().unwrap_or_else(|| "none".into()));

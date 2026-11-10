@@ -16,3 +16,6 @@ rcgen = { version = "0.14", default-features = false, features = ["crypto", "rin
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "io-util", "time"] }
 getrandom = "0.3"
 chacha20poly1305 = "0.11"
+chacha20 = "0.10"
+# ring: per HMAC-SHA1 di STUN (MESSAGE-INTEGRITY); già presente come dipendenza di rustls/quinn.
+ring = "0.17"

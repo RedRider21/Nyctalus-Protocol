@@ -14,6 +14,8 @@
 #          --codice NYCT1:…  il codice della rete: ne prende camuffamento e rumore di fondo
 #          --http3 NOME  FORMA HTTP/3: i nodi sembrano il sito NOME (porta consigliata 443);
 #                    di solito arriva già dal --codice della rete
+#          --webrtc  FORMA VIDEOCHIAMATA: il traffico sembra una chiamata WebRTC (STUN + SRTP);
+#                    anche questa di solito arriva dal --codice della rete
 #          --nuova-identita  rifà chiavi e certificato dei nodi (cambiano le righe: rimandale)
 #          --ponte   PONTE NASCOSTO: i nodi non vanno nell'elenco pubblico; ognuno ha una sua
 #                    chiave e stampa una RIGA DEL PONTE segreta, da dare solo a chi lo usa
@@ -35,6 +37,7 @@ while [ $# -gt 0 ]; do
     --utente) UTENTE=1 ;;
     --ponte) PONTE=1 ;;
     --http3) FORMA=h3; NOME_H3="$2"; shift ;;
+    --webrtc) FORMA=webrtc ;;
     --nuova-identita) NUOVA=1 ;;
     --si) SI=1 ;;
     *) echo "opzione sconosciuta: $1"; exit 2 ;;
@@ -88,9 +91,10 @@ d=json.loads(base64.urlsafe_b64decode(c[6:]+'='*(-len(c[6:])%4)))
 cam=str(d.get('camuffamento','')); rum=d.get('rumore',0)
 nome=str(d.get('nome_h3',''))
 print((cam if re.fullmatch('[0-9a-f]{64}',cam) else '-'), (rum if isinstance(rum,(int,float)) and 0<rum<=10 else 0),
-      ('h3' if d.get('forma')=='h3' else '-'), (nome if re.fullmatch('[A-Za-z0-9.-]{1,253}',nome) else '-'))" "$CODICE" 2>/dev/null || echo "ERR - - -")
+      (d.get('forma') if d.get('forma') in ('h3','webrtc') else '-'), (nome if re.fullmatch('[A-Za-z0-9.-]{1,253}',nome) else '-'))" "$CODICE" 2>/dev/null || echo "ERR - - -")
   [ "$C_CAM" = ERR ] && err "codice di rete non valido (deve iniziare con NYCT1:)"
   [ "$C_CAM" != "-" ] && CAMUFFA="$C_CAM" && RUMORE="$C_RUM"
+  if [ "$C_FORMA" = webrtc ] && [ -z "$FORMA" ]; then FORMA=webrtc; ok "Dal codice della rete: forma videochiamata (WebRTC)"; fi
   if [ "$C_FORMA" = h3 ] && [ -z "$FORMA" ]; then FORMA=h3; [ "$C_NOME" != "-" ] && NOME_H3="$C_NOME"; ok "Dal codice della rete: forma HTTP/3${NOME_H3:+ (sito $NOME_H3)}"; fi
   [ "$C_CAM" != "-" ] && ok "Dal codice della rete: camuffamento acceso, rumore di fondo $RUMORE" || ok "La rete del codice non usa il camuffamento"
 fi
@@ -126,6 +130,10 @@ if [ "$FORMA" = h3 ]; then
   [ -n "$CAMUFFA" ] || err "la forma HTTP/3 usa la chiave della rete: indica --codice NYCT1:… (o --camuffamento)"
   [ -z "$NOME_H3" ] || [[ "$NOME_H3" =~ ^[A-Za-z0-9.-]{1,253}$ ]] || err "--http3: un nome di sito (es. www.miosito.it)"
   OPZIONI="$OPZIONI --mimic${NOME_H3:+ --mimic-name $NOME_H3}"
+fi
+if [ "$FORMA" = webrtc ]; then
+  [ -n "$CAMUFFA" ] || err "la forma videochiamata usa la chiave della rete: indica --codice NYCT1:… (o --camuffamento)"
+  OPZIONI="$OPZIONI --webrtc"
 fi
 RIGA_F="riga-elenco.txt"; [ "$PONTE" = 1 ] && RIGA_F="riga-ponte.txt"
 umask 077

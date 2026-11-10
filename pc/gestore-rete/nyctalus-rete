@@ -27,9 +27,10 @@ Per il GESTORE della rete (chi la tiene in piedi):
                                          aggiunge alla rete di casa (o Internet) il NODO DI UN
                                          AMICO (righe dal suo «installa.sh»); vale subito
   nyctalus-rete ospite togli IP:PORTA [--internet] · ospite elenco [--internet]
-  nyctalus-rete protezione [si|no] [--rumore HZ] [--forma rumore|h3 [--nome SITO]] [--casa|--internet]
+  nyctalus-rete protezione [si|no] [--rumore HZ] [--forma rumore|h3|webrtc [--nome SITO]] [--casa|--internet]
                                          CAMUFFAMENTO (traffico simile a rumore, oppure con
-                                         --forma h3 simile a un sito HTTP/3) e RUMORE DI
+                                         --forma h3 simile a un sito HTTP/3, con --forma webrtc
+                                         simile a una videochiamata) e RUMORE DI
                                          FONDO per tutta la rete; nel codice per i client
   nyctalus-rete rubrica [--codice NYCT1:…] [--servizio [--togli|--stampa]]
                                          RUBRICA + CASELLA CIFRATA della rete, sempre accese
@@ -201,6 +202,8 @@ def prot_da_codice(cfg):
     except (TypeError, ValueError):
         pass
     # forma HTTP/3 (trasporto mimetico): i nodi sembrano un sito HTTP/3 con questo nome
+    if out.get("camuffamento") and cfg.get("forma") == "webrtc":
+        out["forma"] = "webrtc"   # forma «videochiamata» (STUN + SRTP)
     if out.get("camuffamento") and cfg.get("forma") == "h3":
         out["forma"] = "h3"
         if re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?", str(cfg.get("nome_h3", ""))):
@@ -215,6 +218,8 @@ def opz_prot(prot, rumore=True):
         o += ["--obfuscation", prot["camuffamento"]]
     if prot.get("forma") == "h3":
         o += ["--mimic"] + (["--mimic-name", prot["nome_h3"]] if prot.get("nome_h3") else [])
+    elif prot.get("forma") == "webrtc":
+        o += ["--webrtc"]
     if rumore and prot.get("rumore"):
         o += ["--cover", "%g" % prot["rumore"]]
     return o
@@ -250,7 +255,8 @@ class Rete:
         if not re.fullmatch(r"[0-9a-f]{64}", str(vecchia or "")):
             vecchia = None
         prot = {"attiva": bool(accesa), "camuffamento": vecchia or os.urandom(32).hex(), "rumore": rumore}
-        # forma: «rumore» (di serie) o «h3» (sembra un sito HTTP/3); si conserva se non indicata
+        # forma: «rumore» (di serie), «h3» (sembra un sito HTTP/3) o «webrtc» (sembra una
+        # videochiamata); si conserva se non indicata
         forma = forma or prima.get("forma") or "rumore"
         prot["forma"] = forma
         nome = prima.get("nome_h3", "") if nome is None else nome
@@ -1089,8 +1095,9 @@ def principale(args):
         rumore = opzione(args, "--rumore")
         forma = opzione(args, "--forma")
         nome = opzione(args, "--nome")
-        if forma is not None and forma not in ("h3", "rumore"):
-            esci("--forma: «rumore» (traffico simile a rumore, di serie) oppure «h3» (sembra un sito HTTP/3)")
+        if forma is not None and forma not in ("h3", "rumore", "webrtc"):
+            esci("--forma: «rumore» (traffico simile a rumore, di serie), «h3» (sembra un sito HTTP/3) "
+                 "oppure «webrtc» (sembra una videochiamata)")
         if nome is not None and not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?", nome):
             esci("--nome: un nome di sito (lettere, numeri, punti, trattini), es. www.miosito.it")
         r = Rete(DATI / quale) if quale else Rete(DATI)
@@ -1116,7 +1123,9 @@ def principale(args):
         print("Rumore di fondo: %s" % ("%g celle finte al secondo" % p["rumore"] if p.get("rumore") else "spento"))
         if p.get("camuffamento"):
             print("Forma: %s" % ("HTTP/3: i nodi sembrano il sito «%s» (porta consigliata 443)" % p.get("nome_h3", "senza nome")
-                                 if p.get("forma") == "h3" else "rumore (traffico simile a rumore)"))
+                                 if p.get("forma") == "h3" else
+                                 "videochiamata: il traffico sembra una chiamata WebRTC (STUN + SRTP)"
+                                 if p.get("forma") == "webrtc" else "rumore (traffico simile a rumore)"))
             print("Sui server dei nodi: ./installa.sh --codice NYCT1:…   (prende chiave, rumore e forma dal codice)")
     elif cmd == "ospite":
         internet = "--internet" in args

@@ -40,6 +40,7 @@ mod tls;
 mod tcp;
 mod trasporto;
 mod travaso;
+mod webrtc;
 mod uscita;
 
 use std::collections::HashMap;
@@ -78,6 +79,8 @@ Usage:
 'circuit': like 'start' but with nodes given explicitly (testing).
 '--mimic [--mimic-name HOST]' (all, or env NYCTALUS_MIMETICO=1): HTTP/3 form: plain QUIC with ALPN h3 that looks like
   a web site; the network key (--obfuscation) becomes a tag inside TLS; probers get an HTTP/3 404 page.
+'--webrtc' (all, or env NYCTALUS_WEBRTC=1): video-call form: traffic looks like a WebRTC call (STUN + SRTP
+  packets); the network key authenticates each packet (probers get nothing). Alternative to --mimic.
 '--hidden-bridge' (node): a private entry NOT in the directory, with its own camouflage key; it prints the
   bridge line. '--bridge LINE[;LINE]' (start/circuit/site/browse, or env NYCTALUS_PONTI, or 'bridge = ' in the config): always enter
   the network through those bridges.
@@ -114,6 +117,14 @@ async fn esegui() -> Risultato<()> {
             return Err("--mimic-name: a host name (letters, digits, dots, hyphens)".into());
         }
         trasporto::imposta_mimetico(&nome);
+    }
+    // forma «videochiamata» WebRTC (trasporto mimetico alternativo): STUN + pacchetti SRTP
+    let webrtc_amb = std::env::var("NYCTALUS_WEBRTC").is_ok_and(|v| v == "1");
+    if opzione(&opzioni, "webrtc").is_some() || webrtc_amb {
+        if trasporto::mimetico() {
+            return Err("--webrtc and --mimic are two different forms: pick one".into());
+        }
+        webrtc::imposta();
     }
     // ponti nascosti per entrare nella rete (start li legge anche dalla configurazione)
     // (meglio la variabile NYCTALUS_PONTI: la riga contiene una chiave e la riga di comando la
@@ -354,7 +365,7 @@ async fn esegui() -> Risultato<()> {
 type Opzioni = HashMap<String, String>;
 
 /// Opzioni senza valore (flag sì/no): se presenti valgono "true".
-const FLAG_BOOLEANI: &[&str] = &["probe", "hidden-bridge", "mimic", "middle-only"];
+const FLAG_BOOLEANI: &[&str] = &["probe", "hidden-bridge", "mimic", "webrtc", "middle-only"];
 
 fn leggi_opzioni(argomenti: &[String]) -> Risultato<(Opzioni, Vec<String>)> {
     let mut opzioni = HashMap::new();

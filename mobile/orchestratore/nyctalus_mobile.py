@@ -124,6 +124,8 @@ def prot_da_codice(cfg):
         except (TypeError, ValueError):
             pass
     # forma HTTP/3 (trasporto mimetico): i nodi sembrano un sito HTTP/3 con questo nome
+    if out.get("camuffamento") and cfg.get("forma") == "webrtc":
+        out["forma"] = "webrtc"   # forma «videochiamata» (STUN + SRTP)
     if out.get("camuffamento") and cfg.get("forma") == "h3":
         out["forma"] = "h3"
         if re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?", str(cfg.get("nome_h3", ""))):
@@ -137,6 +139,8 @@ def opz_prot(cfg, rumore=True):
     o = ["--obfuscation", p["camuffamento"]] if p.get("camuffamento") else []
     if p.get("forma") == "h3":
         o += ["--mimic"] + (["--mimic-name", p["nome_h3"]] if p.get("nome_h3") else [])
+    elif p.get("forma") == "webrtc":
+        o += ["--webrtc"]
     if rumore and p.get("rumore"):
         o += ["--cover", "%g" % p["rumore"]]
     return o

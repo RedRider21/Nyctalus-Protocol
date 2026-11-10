@@ -88,6 +88,8 @@ def leggi_codice(testo):
     rete = {"nome": str(cfg.get("nome") or "Rete Nyctalus")[:60], "directory_url": url, "authority": aut}
     if re.fullmatch(r"[0-9a-f]{64}", str(cfg.get("camuffamento", ""))):
         rete["camuffamento"] = cfg["camuffamento"]           # la rete è protetta (Tappa 4)
+        if cfg.get("forma") == "webrtc":                      # forma «videochiamata»
+            rete["forma"] = "webrtc"
         if cfg.get("forma") == "h3":                          # forma HTTP/3 (trasporto mimetico)
             rete["forma"] = "h3"
             if re.fullmatch(r"[A-Za-z0-9.-]{1,253}", str(cfg.get("nome_h3", ""))):
@@ -105,6 +107,8 @@ def rete_del_pc():
                 "authority": cfg["authority"]}
         if re.fullmatch(r"[0-9a-f]{64}", str(cfg.get("camuffamento", ""))):
             rete["camuffamento"] = cfg["camuffamento"]       # la rete è protetta (Tappa 4)
+            if cfg.get("forma") == "webrtc":                  # forma «videochiamata»
+                rete["forma"] = "webrtc"
             if cfg.get("forma") == "h3":                      # forma HTTP/3 (trasporto mimetico)
                 rete["forma"] = "h3"
                 if re.fullmatch(r"[A-Za-z0-9.-]{1,253}", str(cfg.get("nome_h3", ""))):
@@ -261,6 +265,8 @@ def avvia(nome):
         cmd += ["--obfuscation", rete["camuffamento"]]      # rete protetta: senza la chiave i nodi non rispondono
         if rete.get("forma") == "h3":                       # forma HTTP/3: sembra un sito
             cmd += ["--mimic"] + (["--mimic-name", rete["nome_h3"]] if re.fullmatch(r"[A-Za-z0-9.-]{1,253}", str(rete.get("nome_h3", ""))) else [])
+        elif rete.get("forma") == "webrtc":                 # forma «videochiamata»
+            cmd += ["--webrtc"]
     # ponti nascosti che questo PC usa per quella rete (per ambiente: la riga di comando è visibile a tutti)
     try:
         cc = json.loads((Path.home() / ".nyctalus-browser" / "config.json").read_text())
