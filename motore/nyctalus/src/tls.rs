@@ -167,6 +167,12 @@ fn trasporto_client() -> Arc<quinn::TransportConfig> {
     // molte corsie (circuiti) per collegamento: fra due nodi il collegamento è condiviso
     t.max_concurrent_bidi_streams(quinn::VarInt::from_u32(4096));
     t.max_idle_timeout(Some(std::time::Duration::from_secs(15).try_into().expect("15s valido")));
+    // forma videochiamata: pacchetti grandi come quelli del video WebRTC (libwebrtc li tiene sui
+    // 1200 byte): niente ricerca del MTU, datagrammi QUIC da 1200 (+22 di RTP ed etichetta)
+    if crate::webrtc::attiva() {
+        t.initial_mtu(1200);
+        t.mtu_discovery_config(None);
+    }
     // Finestra per flusso (= per circuito): di serie 256 KB (quinn: 1,25 MB). Con finestre grandi un
     // nodo lento accumula secondi di coda prima che chi spedisce se ne accorga: il distributore
     // della ragnatela non vede quale strada è lenta e i ritardi crescono. Misure (velocita.py, nodi

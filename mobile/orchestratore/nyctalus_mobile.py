@@ -85,9 +85,29 @@ def ponti_di(cfg):
     return [r for r in (cfg.get("ponti") or {}).get(cfg.get("authority", ""), []) if PONTE.match(r)]
 
 
+def manopole_motore(cfg):
+    """Variabili d'ambiente delle Impostazioni avanzate (finestra, congestione, ripiego, riuso)."""
+    e = {}
+    try:
+        k = int(cfg.get("finestra_kb"))
+        if 16 <= k <= 4096:
+            e["NYCTALUS_FINESTRA_KB"] = str(k)
+    except (TypeError, ValueError):
+        pass
+    if cfg.get("congestione") in ("cubic", "newreno"):
+        e["NYCTALUS_CONGESTIONE"] = cfg["congestione"]
+    if cfg.get("tcp") == "sempre":
+        e["NYCTALUS_TCP"] = "1"
+    elif cfg.get("tcp") == "mai":
+        e["NYCTALUS_TCP"] = "0"
+    if cfg.get("riuso") == "no":
+        e["NYCTALUS_RIUSO"] = "0"
+    return e
+
+
 def ambiente_ponti(cfg):
-    """Ambiente per il motore con i ponti: mai sulla riga di comando, che altre app potrebbero leggere."""
-    return dict(os.environ, NYCTALUS_PONTI=";".join(ponti_di(cfg)))
+    """Ambiente per il motore con i ponti (e le manopole avanzate): mai sulla riga di comando, che altre app potrebbero leggere."""
+    return dict(os.environ, NYCTALUS_PONTI=";".join(ponti_di(cfg)), **manopole_motore(cfg))
 
 
 def leggi_codice(testo):
@@ -274,7 +294,7 @@ class Servizi:
                                    % (", ".join(map(str, occupate)), CONFIG))
 
             # 1) il motore della chat (parte subito: la web-app vede il Contact ID)
-            env = dict(os.environ, NYCTALUS_CHAT_TOKEN=self.segreto_motore)
+            env = dict(os.environ, NYCTALUS_CHAT_TOKEN=self.segreto_motore, **manopole_motore(cfg))
             # rubrica e casella della rete: ritiro e deposito della posta per chi non è in linea
             extra = []
             for k in ("rubrica", "casella"):

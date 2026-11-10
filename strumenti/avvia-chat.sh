@@ -71,6 +71,11 @@ if [ -n "${PROT[*]:-}" ] && [ "$(leggi_cfg forma)" = h3 ]; then     # forma HTTP
 elif [ -n "${PROT[*]:-}" ] && [ "$(leggi_cfg forma)" = webrtc ]; then   # forma videochiamata
   PROT+=(--webrtc); PROT_SITO+=(--webrtc)
 fi
+# Impostazioni avanzate (dalle Impostazioni grafiche): manopole del motore per variabile d'ambiente
+FKB="$(leggi_cfg finestra_kb)"; [[ "$FKB" =~ ^[0-9]+$ ]] && [ "$FKB" -ge 16 ] && [ "$FKB" -le 4096 ] && export NYCTALUS_FINESTRA_KB="$FKB"
+CONG="$(leggi_cfg congestione)"; [[ "$CONG" =~ ^(cubic|newreno)$ ]] && export NYCTALUS_CONGESTIONE="$CONG"
+case "$(leggi_cfg tcp)" in sempre) export NYCTALUS_TCP=1 ;; mai) export NYCTALUS_TCP=0 ;; esac
+[ "$(leggi_cfg riuso)" = no ] && export NYCTALUS_RIUSO=0
 # ponti nascosti della rete (righe segrete): al motore per variabile d'ambiente, non sulla riga
 # di comando, che tutti gli utenti del computer vedono con «ps»
 export NYCTALUS_PONTI="$(python3 -c "import json,sys
