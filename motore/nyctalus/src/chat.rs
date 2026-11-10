@@ -87,6 +87,7 @@ pub async fn chat(
         coda_riservata: Mutex::new(carica_coda_riservata(&dati)),
         giri: Mutex::new(HashSet::new()),
         giri_conti: Mutex::new((0, 0)),
+        riservate_in_viaggio: Mutex::new(HashSet::new()),
         sveglia_ritiro: tokio::sync::Notify::new(),
     });
 
@@ -160,6 +161,7 @@ struct Stato {
     coda_riservata: Mutex<std::collections::VecDeque<(String, u64, Vec<u8>)>>, // (addr, ts, testo) in attesa del turno
     giri: Mutex<HashSet<String>>,                            // id delle buste finte («giri a vuoto») in viaggio
     giri_conti: Mutex<(u64, u64)>,                           // (finte spedite, finte tornate)
+    riservate_in_viaggio: Mutex<HashSet<(String, u64)>>,     // buste vere della coda riservata in viaggio
     sveglia_ritiro: tokio::sync::Notify,                     // cambio di modalità: il ritiro riparte subito
 }
 
@@ -856,31 +858,42 @@ impl Stato {
             if !self.riservata.load(std::sync::atomic::Ordering::Relaxed) {
                 continue;
             }
-            let prossimo = self.coda_riservata.lock().unwrap().front().cloned();
+            // Ogni busta parte in un compito suo: il ritmo casuale NON aspetta la consegna (con la
+            // chat da mixnet una consegna dura secondi). Una busta vera già in viaggio non si
+            // rispedisce: al suo turno parte una finta, così il ritmo osservabile non cambia.
+            let prossimo = self.coda_riservata.lock().unwrap().front().cloned()
+                .filter(|(a, t, _)| !self.riservate_in_viaggio.lock().unwrap().contains(&(a.clone(), *t)));
+            let stato = self.clone();
             match prossimo {
                 Some((addr, ts, testo)) => {
-                    if self.deposita_riempita(&addr, &format!("p-{}", nuovo_id()), ts, &testo).await.is_ok() {
-                        let tolto = {
-                            let mut c = self.coda_riservata.lock().unwrap();
-                            if c.front().is_some_and(|f| f.0 == addr && f.1 == ts) { c.pop_front() } else { None }
-                        };
-                        if tolto.is_some() {
-                            self.salva_coda_riservata();
-                            self.segna(&addr, ts, "c");
+                    self.riservate_in_viaggio.lock().unwrap().insert((addr.clone(), ts));
+                    tokio::spawn(async move {
+                        if stato.deposita_riempita(&addr, &format!("p-{}", nuovo_id()), ts, &testo).await.is_ok() {
+                            let tolto = {
+                                let mut c = stato.coda_riservata.lock().unwrap();
+                                if c.front().is_some_and(|f| f.0 == addr && f.1 == ts) { c.pop_front() } else { None }
+                            };
+                            if tolto.is_some() {
+                                stato.salva_coda_riservata();
+                                stato.segna(&addr, ts, "c");
+                            }
                         }
-                    }
+                        stato.riservate_in_viaggio.lock().unwrap().remove(&(addr, ts));
+                    });
                 }
                 None => {
-                    let id = format!("g-{}", nuovo_id());
-                    let me = self.indirizzo.clone();
-                    if self.deposita_riempita(&me, &id, ora(), b"").await.is_ok() {
-                        let mut g = self.giri.lock().unwrap();
-                        if g.len() > 1000 {
-                            g.clear();
+                    tokio::spawn(async move {
+                        let id = format!("g-{}", nuovo_id());
+                        let me = stato.indirizzo.clone();
+                        if stato.deposita_riempita(&me, &id, ora(), b"").await.is_ok() {
+                            let mut g = stato.giri.lock().unwrap();
+                            if g.len() > 1000 {
+                                g.clear();
+                            }
+                            g.insert(id);
+                            stato.giri_conti.lock().unwrap().0 += 1;
                         }
-                        g.insert(id);
-                        self.giri_conti.lock().unwrap().0 += 1;
-                    }
+                    });
                 }
             }
         }
@@ -1991,6 +2004,7 @@ mod prove {
             coda_riservata: Mutex::new(std::collections::VecDeque::new()),
             giri: Mutex::new(HashSet::new()),
             giri_conti: Mutex::new((0, 0)),
+            riservate_in_viaggio: Mutex::new(HashSet::new()),
             sveglia_ritiro: tokio::sync::Notify::new(),
         };
         st.registra_riga("x.nyct", "in 1 6161");
