@@ -62,7 +62,7 @@ Usage:
   nyctalus node    --listen 0.0.0.0:4601 [--data DIR] [--announce PUBLIC_IP:PORT] [--secret HEX] [--directory FILE --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0] [--hidden-bridge] [--middle-only] [--max-rate MBIT]
   nyctalus authority
   nyctalus directory --authority-secret HEX --entries 'addr,x,fp;addr,x,fp'
-  nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)] [--cover 0]
+  nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)] [--cover 0] [--exits 1 (1-4)]
   nyctalus test-circuit (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--message DEST]
   nyctalus site    (--dir ./folder | --backend IP:PORT) [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--identity FILE] [--hops 3] [--pool 4]
   nyctalus address --identity FILE      (a site's key, created if missing, and its .nyct address)
@@ -81,6 +81,8 @@ Usage:
   a web site; the network key (--obfuscation) becomes a tag inside TLS; probers get an HTTP/3 404 page.
 '--webrtc' (all, or env NYCTALUS_WEBRTC=1): video-call form: traffic looks like a WebRTC call (STUN + SRTP
   packets); the network key authenticates each packet (probers get nothing). Alternative to --mimic.
+'--exits N' (circuit/start, or env NYCTALUS_USCITE, or 'exits = N' in the config): up to 4 different exits; each
+  site keeps its own exit, new sites go to the least busy one (parallel downloads from different sites go faster).
 '--hidden-bridge' (node): a private entry NOT in the directory, with its own camouflage key; it prints the
   bridge line. '--bridge LINE[;LINE]' (start/circuit/site/browse, or env NYCTALUS_PONTI, or 'bridge = ' in the config): always enter
   the network through those bridges.
@@ -320,6 +322,13 @@ async fn esegui() -> Risultato<()> {
             let controllo: SocketAddr = opzione(&opzioni, "control").unwrap_or("127.0.0.1:1090").parse()?;
             let offusca = da_esadecimale_opt(opzione(&opzioni, "obfuscation"))?;
             let copertura: f64 = opzione(&opzioni, "cover").map(str::parse).transpose()?.unwrap_or(0.0);
+            if let Some(u) = opzione(&opzioni, "exits") {
+                let n: usize = u.parse().map_err(|_| "--exits: a number 1-4")?;
+                if !(1..=avvia_circuito::USCITE_MAX).contains(&n) {
+                    return Err("--exits: a number 1-4".into());
+                }
+                avvia_circuito::imposta_uscite(n);
+            }
             avvia_circuito::avvia_circuito(nodi, circuiti, salti, socks, controllo, offusca, copertura).await
         }
         "chat" => {
@@ -515,6 +524,13 @@ impl Config {
         let offuscamento = da_esadecimale_opt(val("obfuscation").as_deref())?;
         let copertura: f64 = val("cover").map(|s| s.parse()).transpose()?.unwrap_or(0.0);
         let ponti = val("bridge").filter(|p| !p.trim().is_empty());
+        if let Some(u) = val("exits") {
+            let n: usize = u.parse().map_err(|_| "exits: a number 1-4")?;
+            if !(1..=avvia_circuito::USCITE_MAX).contains(&n) {
+                return Err("exits: a number 1-4".into());
+            }
+            avvia_circuito::imposta_uscite(n);
+        }
         Ok(Self { percorso, elenco, autorita, socks, circuiti, salti, controllo, offuscamento, copertura, ponti })
     }
 
