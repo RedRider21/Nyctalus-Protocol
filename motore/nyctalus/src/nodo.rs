@@ -439,8 +439,13 @@ fn ottieni_set(set_id: [u8; 16], codifica: Option<(u8, u8)>) -> Arc<ConfluxUscit
     });
     reg.insert(set_id, set.clone());
     drop(reg);
-    tokio::spawn(collettore_uscita(rx_collect, tx_return.clone()));
-    tokio::spawn(schedulatore_ritorno(set_id, rx_return, circuiti_ritorno.clone(), codifica));
+    // copertura costante del ritorno: un regolatore che il client accende con la cella COSTANTE
+    let ritmo: crate::costante::Ritmo = Arc::new(Mutex::new(None));
+    let aperti = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let (tx_regolato, rx_regolato) = mpsc::channel::<Vec<u8>>(256);
+    tokio::spawn(crate::costante::regola(rx_return, tx_regolato, ritmo.clone(), aperti.clone(), Vec::new));
+    tokio::spawn(collettore_uscita(rx_collect, tx_return.clone(), ritmo, aperti));
+    tokio::spawn(schedulatore_ritorno(set_id, rx_regolato, circuiti_ritorno.clone(), codifica));
 
     // Rumore di fondo in discesa: celle fittizie a ritmo di Poisson verso il
     // client, scartate dal suo lato. Si ferma quando il gruppo non ha più
@@ -518,7 +523,12 @@ async fn uscita_conflux(
 
 /// Collettore del gruppo: ricompone le unità in andata e, in ordine, apre le
 /// connessioni TCP (`APRI`), vi scrive (`DATI`), le chiude (`CHIUDI`).
-async fn collettore_uscita(mut rx: mpsc::Receiver<(u64, Vec<u8>)>, tx_return: mpsc::Sender<Vec<u8>>) {
+async fn collettore_uscita(
+    mut rx: mpsc::Receiver<(u64, Vec<u8>)>,
+    tx_return: mpsc::Sender<Vec<u8>>,
+    ritmo: crate::costante::Ritmo,
+    aperti: Arc<std::sync::atomic::AtomicUsize>,
+) {
     use tokio::io::AsyncWriteExt;
     let mut riordina = Riordina::nuovo();
     let mut verso_tcp: HashMap<u16, mpsc::Sender<Vec<u8>>> = HashMap::new();
@@ -534,6 +544,7 @@ async fn collettore_uscita(mut rx: mpsc::Receiver<(u64, Vec<u8>)>, tx_return: mp
                             let (mut lettura, mut scrittura) = tokio::io::split(flusso_uscita);
                             let (tx_w, mut rx_w) = mpsc::channel::<Vec<u8>>(64);
                             verso_tcp.insert(flusso, tx_w);
+                            aperti.store(verso_tcp.len(), Ordering::Relaxed);
                             let _ = tx_return.send(Cella::controllo(flusso, cmd::APERTO).in_byte()).await;
                             let tx_ret2 = tx_return.clone();
                             tokio::spawn(async move {
@@ -572,6 +583,14 @@ async fn collettore_uscita(mut rx: mpsc::Receiver<(u64, Vec<u8>)>, tx_return: mp
                 }
                 cmd::CHIUDI => {
                     verso_tcp.remove(&cella.flusso);
+                    aperti.store(verso_tcp.len(), Ordering::Relaxed);
+                }
+                cmd::COSTANTE => {
+                    // il client chiede il ritorno a ritmo fisso (copertura costante)
+                    if let Some(r) = crate::costante::leggi_richiesta(&cella.dati) {
+                        *ritmo.lock().unwrap() = Some(r);
+                        crate::diagnosi(|| format!("uscita: copertura costante {} celle/s ({})", r.0, if r.1 { "sempre" } else { "durante l'uso" }));
+                    }
                 }
                 _ => {}
             }

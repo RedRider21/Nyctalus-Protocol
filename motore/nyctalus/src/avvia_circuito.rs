@@ -112,9 +112,23 @@ pub async fn avvia_circuito(
             tokio::spawn(lettore_circuito(ricezione, chiavi, tx_ret.clone()));
             inbox_circuiti.push(tx_unit);
         }
-        tokio::spawn(schedulatore(rx_out, inbox_circuiti));
+        let attivi = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        match crate::costante::scelto() {
+            // copertura costante: fra i flussi e i circuiti un regolatore a ritmo fisso; all'uscita
+            // la stessa richiesta per il ritorno (prima cella del gruppo)
+            Some((r, sempre)) => {
+                let (tx_regolato, rx_regolato) = mpsc::channel::<Vec<u8>>(256);
+                let ritmo: crate::costante::Ritmo = Arc::new(Mutex::new(Some((r, sempre))));
+                tokio::spawn(crate::costante::regola(rx_out, tx_regolato, ritmo, attivi.clone(), || Cella::riempimento().in_byte()));
+                tokio::spawn(schedulatore(rx_regolato, inbox_circuiti));
+                let _ = tx_out.send(Cella::nuova(0, cmd::COSTANTE, crate::costante::richiesta(r, sempre)).in_byte()).await;
+            }
+            None => {
+                tokio::spawn(schedulatore(rx_out, inbox_circuiti));
+            }
+        }
         tokio::spawn(collettore_ritorno(rx_ret, flussi.clone()));
-        fasci.push(Arc::new(Fascio { tx_out, flussi, attivi: std::sync::atomic::AtomicUsize::new(0) }));
+        fasci.push(Arc::new(Fascio { tx_out, flussi, attivi }));
     }
     let fasci: Arc<Vec<Arc<Fascio>>> = Arc::new(fasci);
     let scelte: Arc<Mutex<HashMap<String, usize>>> = Arc::new(Mutex::new(HashMap::new()));
@@ -152,6 +166,9 @@ pub async fn avvia_circuito(
         println!(
             "SOCKS5 proxy on {socks} — conflux over {tot_circuiti} circuits (shared guard and exit, {salti} hops)"
         );
+    }
+    if let Some((r, sempre)) = crate::costante::scelto() {
+        println!("Constant cover: {r} cells/s each way, {}", if sempre { "always" } else { "while in use" });
     }
     println!("Monitor:  nyctalus monitor --control {controllo}");
     println!("Try:  curl --socks5-hostname {socks} http://example.com\n");
@@ -380,7 +397,7 @@ fn seleziona_fasci(nodi: &[NodoRete], fasci: usize, circuiti: usize, salti: usiz
 struct Fascio {
     tx_out: mpsc::Sender<Vec<u8>>,
     flussi: MappaFlussi,
-    attivi: std::sync::atomic::AtomicUsize,
+    attivi: Arc<std::sync::atomic::AtomicUsize>,
 }
 
 /// Il fascio per una destinazione: lo stesso sito usa SEMPRE la stessa uscita (il sito non vede
@@ -561,7 +578,7 @@ mod test_fasci {
 
     fn fascio() -> Arc<Fascio> {
         let (tx_out, _rx) = mpsc::channel::<Vec<u8>>(1);
-        Arc::new(Fascio { tx_out, flussi: Arc::new(Mutex::new(HashMap::new())), attivi: std::sync::atomic::AtomicUsize::new(0) })
+        Arc::new(Fascio { tx_out, flussi: Arc::new(Mutex::new(HashMap::new())), attivi: Arc::new(std::sync::atomic::AtomicUsize::new(0)) })
     }
 
     #[test]

@@ -25,6 +25,7 @@ mod cella;
 mod codifica;
 mod chat;
 mod conflux;
+mod costante;
 mod circuito_rete;
 mod invia;
 mod incontro;
@@ -62,7 +63,7 @@ Usage:
   nyctalus node    --listen 0.0.0.0:4601 [--data DIR] [--announce PUBLIC_IP:PORT] [--secret HEX] [--directory FILE --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0] [--hidden-bridge] [--middle-only] [--max-rate MBIT]
   nyctalus authority
   nyctalus directory --authority-secret HEX --entries 'addr,x,fp;addr,x,fp'
-  nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)] [--cover 0] [--exits 1 (1-4)]
+  nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)] [--cover 0] [--exits 1 (1-4)] [--constant-rate N [--constant-always]]
   nyctalus test-circuit (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--message DEST]
   nyctalus site    (--dir ./folder | --backend IP:PORT) [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--identity FILE] [--hops 3] [--pool 4]
   nyctalus address --identity FILE      (a site's key, created if missing, and its .nyct address)
@@ -83,6 +84,8 @@ Usage:
   packets); the network key authenticates each packet (probers get nothing). Alternative to --mimic.
 '--exits N' (circuit/start, or env NYCTALUS_USCITE, or 'exits = N' in the config): up to 4 different exits; each
   site keeps its own exit, new sites go to the least busy one (parallel downloads from different sites go faster).
+'--constant-rate N [--constant-always]' (circuit/start, or env NYCTALUS_COSTANTE=N, NYCTALUS_COSTANTE_SEMPRE=1): constant
+  cover, N cells/s each way (real or dummy) while in use (or always): the line looks flat. Costs bandwidth, caps speed.
 '--hidden-bridge' (node): a private entry NOT in the directory, with its own camouflage key; it prints the
   bridge line. '--bridge LINE[;LINE]' (start/circuit/site/browse, or env NYCTALUS_PONTI, or 'bridge = ' in the config): always enter
   the network through those bridges.
@@ -322,6 +325,10 @@ async fn esegui() -> Risultato<()> {
             let controllo: SocketAddr = opzione(&opzioni, "control").unwrap_or("127.0.0.1:1090").parse()?;
             let offusca = da_esadecimale_opt(opzione(&opzioni, "obfuscation"))?;
             let copertura: f64 = opzione(&opzioni, "cover").map(str::parse).transpose()?.unwrap_or(0.0);
+            if let Some(c) = opzione(&opzioni, "constant-rate") {
+                let n: u32 = c.parse().map_err(|_| "--constant-rate: cells per second (5-2000)")?;
+                costante::imposta(n, opzioni.contains_key("constant-always"));
+            }
             if let Some(u) = opzione(&opzioni, "exits") {
                 let n: usize = u.parse().map_err(|_| "--exits: a number 1-4")?;
                 if !(1..=avvia_circuito::USCITE_MAX).contains(&n) {
@@ -374,7 +381,7 @@ async fn esegui() -> Risultato<()> {
 type Opzioni = HashMap<String, String>;
 
 /// Opzioni senza valore (flag sì/no): se presenti valgono "true".
-const FLAG_BOOLEANI: &[&str] = &["probe", "hidden-bridge", "mimic", "webrtc", "middle-only"];
+const FLAG_BOOLEANI: &[&str] = &["probe", "hidden-bridge", "mimic", "webrtc", "middle-only", "constant-always"];
 
 fn leggi_opzioni(argomenti: &[String]) -> Risultato<(Opzioni, Vec<String>)> {
     let mut opzioni = HashMap::new();

@@ -77,6 +77,7 @@ CONG="$(leggi_cfg congestione)"; [[ "$CONG" =~ ^(cubic|newreno)$ ]] && export NY
 case "$(leggi_cfg tcp)" in sempre) export NYCTALUS_TCP=1 ;; mai) export NYCTALUS_TCP=0 ;; esac
 [ "$(leggi_cfg riuso)" = no ] && export NYCTALUS_RIUSO=0
 USC="$(leggi_cfg uscite)"; [[ "$USC" =~ ^[1-4]$ ]] && export NYCTALUS_USCITE="$USC"
+COST="$(leggi_cfg costante)"; case "$COST" in uso) export NYCTALUS_COSTANTE=60 ;; sempre) export NYCTALUS_COSTANTE=60 NYCTALUS_COSTANTE_SEMPRE=1 ;; esac
 # ponti nascosti della rete (righe segrete): al motore per variabile d'ambiente, non sulla riga
 # di comando, che tutti gli utenti del computer vedono con «ps»
 export NYCTALUS_PONTI="$(python3 -c "import json,sys

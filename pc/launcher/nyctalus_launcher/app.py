@@ -472,6 +472,9 @@ class Launcher(Gtk.Window):
                                    cfg.get("riuso", "si"))
         usc = self._scelta_combo(g, 4, _t("lau.imp.uscite"), [(1, "1"), (2, "2"), (3, "3"), (4, "4")],
                                  cfg.get("uscite", 1), _t("lau.imp.uscite_nota"))
+        cost = self._scelta_combo(g, 6, _t("lau.imp.costante"),
+                                  [("no", _t("lau.imp.cost_no")), ("uso", _t("lau.imp.cost_uso")), ("sempre", _t("lau.imp.cost_sempre"))],
+                                  cfg.get("costante", "no"), _t("lau.imp.costante_nota"))
         box.add(g)
         salva = Gtk.Button(label=_t("lau.imp.salva"))
         salva.get_style_context().add_class("suggested-action")
@@ -480,6 +483,7 @@ class Launcher(Gtk.Window):
         def _salva(_w):
             cambi = {"congestione": cong.get_active_id(), "tcp": tcp.get_active_id(), "riuso": riuso.get_active_id()}
             try:
+                cambi["costante"] = cost.get_active_id() or "no"
                 cambi["uscite"] = int(usc.get_active_id())
                 cambi["finestra_kb"] = int(fin.get_active_id())
             except (TypeError, ValueError):

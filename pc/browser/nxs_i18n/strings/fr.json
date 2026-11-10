@@ -1792,5 +1792,10 @@
  "lau.imp.rete_nota": "La forme du trafic (bruit, site HTTP/3 ou appel vidéo) et le trafic de couverture se règlent dans le gestionnaire de réseau, car ils valent pour tout le réseau.",
  "lau.imp.rete_apri": "Ouvrir le gestionnaire de réseau",
  "lau.imp.uscite": "Sorties différentes",
- "lau.imp.uscite_nota": "Plus de sorties = téléchargements parallèles depuis des sites différents plus rapides ; chaque site garde sa sortie. Chaque sortie en plus est un nœud de plus qui voit un de vos sites : 1 est le choix le plus prudent."
+ "lau.imp.uscite_nota": "Plus de sorties = téléchargements parallèles depuis des sites différents plus rapides ; chaque site garde sa sortie. Chaque sortie en plus est un nœud de plus qui voit un de vos sites : 1 est le choix le plus prudent.",
+ "lau.imp.costante": "Couverture constante",
+ "lau.imp.cost_no": "Désactivée",
+ "lau.imp.cost_uso": "Pendant l'utilisation",
+ "lau.imp.cost_sempre": "Toujours",
+ "lau.imp.costante_nota": "Trafic à rythme fixe (60 cellules/s, ~85 Ko/s par sens), vraies ou factices : qui observe la ligne ne sait ni quand ni combien vous utilisez le réseau. Coûte de la bande passante et limite la vitesse à ~85 Ko/s."
 }

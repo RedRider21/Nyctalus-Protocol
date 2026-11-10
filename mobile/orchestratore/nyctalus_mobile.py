@@ -104,6 +104,10 @@ def manopole_motore(cfg):
         e["NYCTALUS_RIUSO"] = "0"
     if cfg.get("uscite") in (1, 2, 3, 4):
         e["NYCTALUS_USCITE"] = str(cfg["uscite"])
+    if cfg.get("costante") in ("uso", "sempre"):          # copertura costante (60 celle/s)
+        e["NYCTALUS_COSTANTE"] = "60"
+        if cfg["costante"] == "sempre":
+            e["NYCTALUS_COSTANTE_SEMPRE"] = "1"
     return e
 
 
@@ -1144,6 +1148,7 @@ async def instrada(req, lettore, scrittore):
             "tcp": cfg.get("tcp", "auto"),
             "riuso": cfg.get("riuso", "si"),
             "uscite": cfg.get("uscite", 1),
+            "costante": cfg.get("costante", "no"),
         })
     if p == "/api/servizi/avvia" and req.metodo == "POST":
         SERVIZI.avvia()
@@ -1260,6 +1265,8 @@ async def imposta_avanzate(lettore, scrittore, req):
         cambi["riuso"] = dati["riuso"]
     if dati.get("uscite") in (1, 2, 3, 4):
         cambi["uscite"] = dati["uscite"]
+    if dati.get("costante") in ("no", "uso", "sempre"):
+        cambi["costante"] = dati["costante"]
     cfg.update(cambi)
     scrivi_config(cfg)
     riavvia = bool(dati.get("riavvia")) and SERVIZI.info().get("stato") == "pronto"

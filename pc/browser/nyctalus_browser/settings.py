@@ -122,6 +122,9 @@ def _pagina_prestazioni_browser():
     g.attach(_riga_u, 0, 4, 1, 1); usc.set_hexpand(True); g.attach(usc, 1, 4, 1, 1)
     _n = Gtk.Label(label=_t("lau.imp.uscite_nota")); _n.set_xalign(0); _n.set_line_wrap(True); _n.set_max_width_chars(60)
     _n.get_style_context().add_class("nxs-set-note"); g.attach(_n, 1, 5, 1, 1)
+    cost = _combo_imp(g, 6, _t("lau.imp.costante"),
+                      [("no", _t("lau.imp.cost_no")), ("uso", _t("lau.imp.cost_uso")), ("sempre", _t("lau.imp.cost_sempre"))],
+                      config.get("costante", "no"), _t("lau.imp.costante_nota"))
     box.pack_start(g, False, False, 0)
     esito = Gtk.Label(label=""); esito.set_xalign(0)
     salva = Gtk.Button(label=_t("lau.imp.salva")); salva.get_style_context().add_class("suggested-action")
@@ -134,6 +137,7 @@ def _pagina_prestazioni_browser():
         config.config["congestione"] = cong.get_active_id()
         config.config["tcp"] = tcp.get_active_id()
         config.config["riuso"] = riuso.get_active_id()
+        config.config["costante"] = cost.get_active_id() or "no"
         try:
             config.config["uscite"] = int(usc.get_active_id())
         except (TypeError, ValueError):

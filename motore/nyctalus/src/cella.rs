@@ -27,6 +27,8 @@ pub mod cmd {
     pub const CHIUDI: u8 = 0x03;
     /// entrambe le direzioni: cella **fittizia** (cover traffic), da scartare.
     pub const RIEMPIMENTO: u8 = 0x04;
+    /// client → uscita: copertura costante, `dati` = ritmo (2 byte, celle/s) + modo (1 uso, 2 sempre).
+    pub const COSTANTE: u8 = 0x05;
     /// uscita → client: flusso aperto con successo.
     pub const APERTO: u8 = 0x10;
     /// uscita → client: apertura del flusso fallita.
