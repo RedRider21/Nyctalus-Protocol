@@ -64,7 +64,12 @@ GIU_USO=$(media "$A" "$Z" 2); SU_USO=$(media "$A" "$Z" 1)
 python3 -c "import sys;sys.exit(0 if 0.75 <= $GIU_USO/$GIU_FERMO <= 1.3 and 0.75 <= $SU_USO/$SU_FERMO <= 1.3 else 1)" \
   && pass "linea piatta: durante lo scaricamento giù ${GIU_USO} B/s, su ${SU_USO} B/s (da fermi ${GIU_FERMO}/${SU_FERMO})" \
   || fail "non piatta: giù uso $GIU_USO vs fermo $GIU_FERMO, su uso $SU_USO vs fermo $SU_FERMO"
-kill $CPID 2>/dev/null; wait $CPID 2>/dev/null; sleep 2
+kill $CPID 2>/dev/null; wait $CPID 2>/dev/null
+# l'uscita smette da sola quando il client sparisce (scadenza del collegamento, 15 s)
+sleep 18
+A=$(date +%s.%N); sleep 2; Z=$(date +%s.%N)
+DOPO=$(media "$A" "$Z" 2)
+[ "$DOPO" -lt 5000 ] && pass "client chiuso: l'uscita smette da sola le celle finte (giù ${DOPO} B/s)" || fail "l'uscita continua a mandare: $DOPO B/s"
 
 # senza copertura: da fermi la linea è quasi muta, durante lo scaricamento un picco
 "$BIN" circuit --directory "$TMP/dir.txt" --authority "$PUB" --obfuscation "$K" --hops 1 --circuits 1 \
