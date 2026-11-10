@@ -12,6 +12,11 @@ Per il GESTORE della rete (chi la tiene in piedi):
   nyctalus-rete famiglia IP:PORTA NOME|-  mette (o toglie con -) un nodo in una famiglia
   nyctalus-rete banda IP:PORTA MBIT|-     banda del nodo (Mbit/s): i nodi più capaci si scelgono
                                          più spesso (motori dalla 0.3.10)
+  nyctalus-rete stabilita [--sonda] [--applica]
+                                         STABILITÀ dei PC che aiutano: prova chi risponde
+                                         (--sonda), mostra giorni/quota online e PROMUOVE
+                                         a GUARDIA (entrata) i più stabili (--applica)
+  nyctalus-rete guardia IP:PORTA si|no|auto  promozione a guardia decisa a mano (auto = misura)
   nyctalus-rete togli IP:PORTA           toglie un nodo
   nyctalus-rete elenco                   mostra rete, nodi e stato dell'elenco
   nyctalus-rete firma                    firma l'elenco dei nodi → directory.txt
@@ -76,7 +81,7 @@ from pathlib import Path
 DATI = Path(os.environ.get("NYCTALUS_RETE_DATI", Path.home() / ".nyctalus-rete"))
 CONFIG_CLIENT = Path.home() / ".nyctalus-browser" / "config.json"     # lo leggono chat e browser del PC
 PREFISSO = "NYCT1:"
-RIGA = re.compile(r"^(\[?[0-9A-Za-z.:-]+\]?):(\d{1,5}),([0-9a-f]{64}),([0-9a-f]{64})(,[A-Za-z0-9_.-]{0,32}(,([1-9][0-9]{0,6})?(,middle)?)?)?$")
+RIGA = re.compile(r"^(\[?[0-9A-Za-z.:-]+\]?):(\d{1,5}),([0-9a-f]{64}),([0-9a-f]{64})(,[A-Za-z0-9_.-]{0,32}(,([1-9][0-9]{0,6})?(,(middle|guard))?)?)?$")
 
 
 def componi_riga(campi, famiglia, banda, ruolo=None):
@@ -225,6 +230,20 @@ def opz_prot(prot, rumore=True):
     return o
 
 
+# --- stabilità dei PC che aiutano (promozione a guardia) ------------------------------------
+# Un intermedio diventa GUARDIA quando il gestore lo conosce da almeno STAB_GIORNI giorni, l'ha
+# provato almeno STAB_PROVE volte e nelle ultime STAB_FINESTRA prove ha risposto almeno il 95%
+# delle volte; torna intermedio se nelle ultime STAB_PROVE prove scende sotto l'80%. (Tor dà il
+# contrassegno «Guard» ai relè stabili da settimane: chi entra da un nodo che va e viene perde la
+# guardia e ne sceglie un'altra, cioè più occasioni per finire su un'entrata malevola.)
+STAB_GIORNI = float(os.environ.get("NYCTALUS_STAB_GIORNI", "14"))
+STAB_PROVE = int(os.environ.get("NYCTALUS_STAB_PROVE", "20"))
+STAB_FINESTRA = 60
+STAB_MEMORIA = 500
+STAB_PROMUOVI = 0.95
+STAB_RETROCEDI = 0.80
+
+
 # --- la rete del gestore ---------------------------------------------------------------
 class Rete:
     def __init__(self, cartella):
@@ -235,6 +254,7 @@ class Rete:
         self.f_codice = cartella / "codice.txt"
         self.f_ospiti = cartella / "ospiti.txt"     # nodi di altri inclusi nella rete di casa
         self.f_prot = cartella / "protezione.json"   # camuffamento e rumore di fondo della rete
+        self.f_stab = cartella / "stabilita.json"    # prove di raggiungibilità dei PC che aiutano
 
     def _prot_file(self):
         try:
@@ -368,6 +388,85 @@ class Rete:
         resto = [a for a in attuali if a.split(",")[0] != indirizzo]
         self.salva_nodi(resto)
         return len(attuali) - len(resto)
+
+    # --- stabilità dei PC che aiutano: promozione a GUARDIA (come il contrassegno «Guard» di Tor) ---
+    def stabilita(self):
+        try:
+            return json.loads(self.f_stab.read_text())
+        except (OSError, ValueError):
+            return {}
+
+    def sonda(self):
+        """Prova ADESSO quali nodi dell'elenco firmato rispondono e lo annota (solo per gli intermedi).
+        Restituisce {indirizzo: True/False} per gli intermedi provati."""
+        if not self.f_elenco.exists():
+            return {}
+        intermedi = {r.split(",")[0] for r in self.nodi() if len(r.split(",")) > 5 and r.split(",")[5] in ("middle", "guard")}
+        if not intermedi:
+            return {}
+        out = subprocess.run([binario(), "nodes", "--directory", str(self.f_elenco), "--authority", self.autorita()["pubblica"],
+                              "--probe", "--timeout", "4"] + opz_prot(self.protezione(), rumore=False),
+                             capture_output=True, text=True, timeout=300)
+        esiti = {}
+        for riga in out.stdout.splitlines():
+            m = re.match(r"\s*\d+\s+(\S+)\s+\S+\s+\S+\s+([●○])", riga)
+            if m and m.group(1) in intermedi:
+                esiti[m.group(1)] = m.group(2) == "●"
+        st, ora = self.stabilita(), int(time.time())
+        for ind, su in esiti.items():
+            v = st.setdefault(ind, {"primo": ora, "prove": []})
+            v["prove"] = (v.get("prove", []) + [[ora, 1 if su else 0]])[-STAB_MEMORIA:]
+        scrivi_privato(self.f_stab, json.dumps(st, indent=1))
+        return esiti
+
+    def valuta_stabilita(self):
+        """Per ogni intermedio: (indirizzo, ruolo, giorni, prove, quota online, proposta, forzato)."""
+        st, ora, righe = self.stabilita(), time.time(), []
+        for r in self.nodi():
+            c = r.split(",")
+            ruolo = c[5] if len(c) > 5 else ""
+            if ruolo not in ("middle", "guard"):
+                continue
+            v = st.get(c[0], {})
+            prove = v.get("prove", [])
+            ultime = [p[1] for p in prove[-STAB_FINESTRA:]]
+            quota = sum(ultime) / len(ultime) if ultime else 0.0
+            giorni = (ora - v["primo"]) / 86400 if "primo" in v else 0.0
+            forzato = v.get("forza", "auto")
+            if forzato in ("si", "no"):
+                proposta = "guard" if forzato == "si" else "middle"
+            elif ruolo == "guard":
+                recenti = [p[1] for p in prove[-STAB_PROVE:]]
+                proposta = "middle" if recenti and sum(recenti) / len(recenti) < STAB_RETROCEDI else "guard"
+            else:
+                proposta = ("guard" if giorni >= STAB_GIORNI and len(prove) >= STAB_PROVE and quota >= STAB_PROMUOVI
+                            else "middle")
+            righe.append((c[0], ruolo, giorni, len(prove), quota, proposta, forzato))
+        return righe
+
+    def applica_stabilita(self):
+        """Promuove/retrocede gli intermedi secondo la stabilità misurata; rifirma se cambia qualcosa."""
+        proposte = {ind: prop for ind, ruolo, _g, _n, _q, prop, _f in self.valuta_stabilita() if prop != ruolo}
+        if not proposte:
+            return []
+        nuove = []
+        for r in self.nodi():
+            c = r.split(",")
+            if c[0] in proposte:
+                r = componi_riga(c, c[3] if len(c) > 3 else None, c[4] if len(c) > 4 and c[4] else None, proposte[c[0]])
+            nuove.append(r)
+        self.salva_nodi(nuove)
+        if self.f_aut.exists() and len(nuove) >= 3:
+            self.firma()
+        return sorted(proposte.items())
+
+    def forza_guardia(self, indirizzo, scelta):
+        """Scelta a mano del gestore: «si» (sempre guardia), «no» (mai), «auto» (decide la stabilità)."""
+        if indirizzo not in {r.split(",")[0] for r in self.nodi()}:
+            esci("nodo non trovato: " + indirizzo)
+        st = self.stabilita()
+        st.setdefault(indirizzo, {"primo": int(time.time()), "prove": []})["forza"] = scelta
+        scrivi_privato(self.f_stab, json.dumps(st, indent=1))
 
     def firma(self):
         a, nodi = self.autorita(), self.nodi()
@@ -639,6 +738,19 @@ def servitore(rete, porta, ip):
 
     srv = http.server.ThreadingHTTPServer(("0.0.0.0", porta), Gestore)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
+    # mentre il gestore pubblica l'elenco, ogni ora prova i PC che aiutano e promuove i più stabili
+    ogni = float(os.environ.get("NYCTALUS_STAB_OGNI", "3600"))
+    if ogni > 0:
+        def _stabilita():
+            while True:
+                time.sleep(ogni)
+                try:
+                    rete.sonda()
+                    for ind, ruolo in rete.applica_stabilita():
+                        print("» stabilità: %s → %s (elenco rifirmato)" % (ind, "guardia" if ruolo == "guard" else "intermedio"), flush=True)
+                except (Exception, SystemExit) as e:   # noqa: BLE001 (esci() lancia SystemExit)
+                    print("» stabilità: prova non riuscita (%s)" % e, flush=True)
+        threading.Thread(target=_stabilita, daemon=True).start()
     return srv, "http://%s:%d/directory.txt" % (ip, porta)
 
 
@@ -1024,6 +1136,34 @@ def principale(args):
         rete.banda(args[0], None if args[1] == "-" else int(args[1]))
         ok("fatto. I percorsi sceglieranno i nodi in proporzione alla banda. Firma e ripubblica: nyctalus-rete firma")
         print("  ⚠️  Un elenco con le bande lo leggono i motori dalla 0.3.10: aggiorna prima tutti i client.")
+    elif cmd == "stabilita":
+        if "--sonda" in args:
+            esiti = rete.sonda()
+            print("Prova di adesso: %d intermedi, %d rispondono" % (len(esiti), sum(esiti.values())))
+        righe = rete.valuta_stabilita()
+        if not righe:
+            print("Nessun PC che aiuta la rete (intermedio) in questa rete.")
+        for ind, ruolo, giorni, n, quota, prop, forzato in righe:
+            stato = {"guard": "🛡 guardia", "middle": "intermedio"}[ruolo]
+            cambio = "" if prop == ruolo else ("  → da PROMUOVERE a guardia" if prop == "guard" else "  → da RIPORTARE a intermedio")
+            print("  %-22s %-12s noto da %4.1f giorni · %3d prove · online %3.0f%%%s%s"
+                  % (ind, stato, giorni, n, quota * 100, "  (a mano: %s)" % forzato if forzato != "auto" else "", cambio))
+        print("  Regola: guardia dopo %g giorni e %d prove con almeno il 95%% online; torna intermedio sotto l'80%%."
+              % (STAB_GIORNI, STAB_PROVE))
+        if "--applica" in args:
+            cambi = rete.applica_stabilita()
+            for ind, ruolo in cambi:
+                ok("%s → %s" % (ind, "guardia (entrata)" if ruolo == "guard" else "intermedio"))
+            if cambi:
+                ok("elenco rifirmato: i client lo prendono al prossimo aggiornamento")
+            else:
+                print("  nessun cambio")
+    elif cmd == "guardia":
+        if len(args) < 2 or args[1] not in ("si", "sì", "no", "auto"):
+            esci("uso: nyctalus-rete guardia IP:PORTA si|no|auto")
+        rete.forza_guardia(args[0], "si" if args[1] == "sì" else args[1])
+        cambi = rete.applica_stabilita()
+        ok("fatto%s" % ("; elenco rifirmato" if cambi else ""))
     elif cmd == "togli":
         if not args:
             esci("indica IP:PORTA del nodo")
@@ -1038,7 +1178,8 @@ def principale(args):
             campi = n.split(",")
             print("    " + campi[0] + ("   famiglia: " + campi[3] if len(campi) > 3 and campi[3] else "")
                   + ("   banda: %s Mbit/s" % campi[4] if len(campi) > 4 and campi[4] else "")
-                  + ("   SOLO INTERMEDIO (aiuta la rete)" if len(campi) > 5 else ""))
+                  + ("   🛡 GUARDIA (aiuta la rete, stabile: entrata sì, uscita mai)" if len(campi) > 5 and campi[5] == "guard"
+                     else "   SOLO INTERMEDIO (aiuta la rete)" if len(campi) > 5 and campi[5] else ""))
         firmato = rete.f_elenco.exists() and rete.f_elenco.stat().st_mtime >= (rete.f_nodi.stat().st_mtime if rete.f_nodi.exists() else 0)
         print("  elenco firmato: %s" % (str(rete.f_elenco) if firmato else "DA FIRMARE (nyctalus-rete firma)"))
         if rete.f_codice.exists():

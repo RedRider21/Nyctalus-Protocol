@@ -288,8 +288,11 @@ pub(crate) fn ritardo_poisson(hz: f64) -> std::time::Duration {
 fn seleziona_conflux(nodi: &[NodoRete], circuiti: usize, salti: usize) -> Risultato<Vec<Vec<NodoRete>>> {
     let guard = crate::percorsi::guardia(nodi);
     if salti == 1 {
-        // Guard = uscita: nessun anonimato, ma valido.
-        return Ok(vec![vec![guard]; circuiti]);
+        // Guard = uscita: nessun anonimato, ma valido. Una guardia «promossa» (intermedio stabile)
+        // non fa mai da uscita: in quel caso si esce da un nodo pieno.
+        let pieni = crate::percorsi::pieni(nodi);
+        let unico = if pieni.iter().any(|n| n.1 == guard.1) { guard } else { *pieni.first().unwrap_or(&guard) };
+        return Ok(vec![vec![unico]; circuiti]);
     }
     // uscita: mai un nodo «solo intermedio»
     let (uscita, _) = crate::percorsi::scegli(&crate::percorsi::pieni(nodi), &[guard], 1)?;

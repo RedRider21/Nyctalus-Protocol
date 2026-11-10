@@ -420,6 +420,7 @@ fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_cir
     let mut famiglie = Vec::new();
     let mut bande = Vec::new();
     let mut intermedi = Vec::new();
+    let mut guardie = Vec::new();
     for v in voci {
         match circuito_rete::risolvi_voce(&v.indirizzo, &v.x25519) {
             Ok(a) => {
@@ -433,6 +434,9 @@ fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_cir
                 if v.intermedio {
                     intermedi.push(v.x25519);
                 }
+                if v.guardia {
+                    guardie.push(v.x25519);
+                }
             }
             Err(e) => eprintln!("nodo saltato: {e}"),
         }
@@ -444,6 +448,7 @@ fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_cir
     percorsi::imposta_rete(&autorita, famiglie);
     percorsi::imposta_bande(bande);
     percorsi::imposta_intermedi(intermedi);
+    percorsi::imposta_guardie_promosse(guardie);
     Ok(nodi)
 }
 
@@ -652,10 +657,10 @@ fn leggi_voci_elenco(testo: &str) -> Risultato<Vec<nyctalus_core::elenco::VoceEl
                 [a, x, f, fam] => (a, x, f, *fam, "", ""),
                 [a, x, f, fam, b] => (a, x, f, *fam, *b, ""),
                 [a, x, f, fam, b, r] => (a, x, f, *fam, *b, *r),
-                _ => return Err("entry in the form address,x25519hex,fingerprinthex[,family[,mbit[,middle]]]".into()),
+                _ => return Err("entry in the form address,x25519hex,fingerprinthex[,family[,mbit[,middle|guard]]]".into()),
             };
-            if !matches!(ruolo, "" | "middle" | "intermedio") {
-                return Err(format!("role: «middle» or empty, not {ruolo}").into());
+            if !matches!(ruolo, "" | "middle" | "intermedio" | "guard" | "guardia") {
+                return Err(format!("role: «middle», «guard» or empty, not {ruolo}").into());
             }
             let famiglia = if fam.is_empty() {
                 None
@@ -676,6 +681,7 @@ fn leggi_voci_elenco(testo: &str) -> Risultato<Vec<nyctalus_core::elenco::VoceEl
                 famiglia,
                 banda,
                 intermedio: !ruolo.is_empty(),
+                guardia: matches!(ruolo, "guard" | "guardia"),
             })
         })
         .collect()

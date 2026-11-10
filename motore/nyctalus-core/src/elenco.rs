@@ -44,6 +44,11 @@ pub struct VoceElenco {
     /// **Solo intermedio** (es. il PC di un utente che «aiuta la rete»): mai guardia, uscita o
     /// punto d'incontro (dalla 0.3.11; i motori 0.3.10 ignorano il campo).
     pub intermedio: bool,
+    /// **Promosso a guardia** (dalla 0.3.19): un intermedio che il gestore ha visto STABILE nel
+    /// tempo può fare anche da nodo d'entrata (guardia), come il contrassegno «Guard» di Tor; mai
+    /// uscita né punto d'incontro. Nell'elenco: `ruolo=intermedio guardia=si`, così i motori più
+    /// vecchi continuano a vederlo come semplice intermedio (degradano senza rompersi).
+    pub guardia: bool,
 }
 
 /// Nome di famiglia valido: 1-32 caratteri fra lettere, cifre, `_`, `.` e `-`.
@@ -135,6 +140,9 @@ fn righe_voci(voci: &[VoceElenco]) -> String {
         }
         if v.intermedio {
             s.push_str(" ruolo=intermedio");
+            if v.guardia {
+                s.push_str(" guardia=si");
+            }
         }
         s.push('\n');
     }
@@ -148,7 +156,7 @@ fn analizza_voce(resto: &str) -> Result<VoceElenco, ErroreElenco> {
     };
     // campi facoltativi «nome=valore»: quelli che non conosciamo si IGNORANO (sono comunque coperti
     // dalla firma), così un elenco con campi nuovi resta leggibile dai motori più vecchi
-    let (mut famiglia, mut banda, mut intermedio) = (None, None, false);
+    let (mut famiglia, mut banda, mut intermedio, mut guardia) = (None, None, false, false);
     for c in extra {
         let Some((k, v)) = c.split_once('=') else {
             return Err(ErroreElenco::Malformato(format!("campo non valido: {c}")));
@@ -158,6 +166,7 @@ fn analizza_voce(resto: &str) -> Result<VoceElenco, ErroreElenco> {
             "famiglia" => return Err(ErroreElenco::Malformato(format!("famiglia non valida: {v}"))),
             "banda" => banda = v.parse::<u32>().ok().filter(|b| (1..=1_000_000).contains(b)),
             "ruolo" => intermedio = v == "intermedio",
+            "guardia" => guardia = v == "si",
             _ => {}
         }
     }
@@ -166,7 +175,7 @@ fn analizza_voce(resto: &str) -> Result<VoceElenco, ErroreElenco> {
             .and_then(|b| b.try_into().ok())
             .ok_or_else(|| ErroreElenco::Malformato("chiave esadecimale non a 32 byte".into()))
     };
-    Ok(VoceElenco { indirizzo: (*indirizzo).to_string(), x25519: a_32(x25519)?, impronta_tls: a_32(impronta)?, famiglia, banda, intermedio })
+    Ok(VoceElenco { indirizzo: (*indirizzo).to_string(), x25519: a_32(x25519)?, impronta_tls: a_32(impronta)?, famiglia, banda, guardia: intermedio && guardia, intermedio })
 }
 
 fn esadecimale(byte: &[u8]) -> String {
@@ -186,8 +195,8 @@ mod test {
 
     fn voci() -> Vec<VoceElenco> {
         vec![
-            VoceElenco { indirizzo: "127.0.0.1:4601".into(), x25519: [1; 32], impronta_tls: [2; 32], famiglia: None, banda: None, intermedio: false },
-            VoceElenco { indirizzo: "127.0.0.1:4602".into(), x25519: [3; 32], impronta_tls: [4; 32], famiglia: None, banda: None, intermedio: false },
+            VoceElenco { indirizzo: "127.0.0.1:4601".into(), x25519: [1; 32], impronta_tls: [2; 32], famiglia: None, banda: None, intermedio: false, guardia: false },
+            VoceElenco { indirizzo: "127.0.0.1:4602".into(), x25519: [3; 32], impronta_tls: [4; 32], famiglia: None, banda: None, intermedio: false, guardia: false },
         ]
     }
 
@@ -256,6 +265,16 @@ mod test {
         let testo = firma_elenco(&v, &segreto);
         let lette = verifica_elenco(&testo, &pubblica).unwrap();
         assert!(!lette[0].intermedio && lette[1].intermedio, "ruolo=intermedio letto e firmato");
+        assert!(!lette[1].guardia, "intermedio non promosso");
+        v[1].guardia = true;
+        let testo = firma_elenco(&v, &segreto);
+        assert!(testo.contains(" ruolo=intermedio guardia=si\n"));
+        let lette = verifica_elenco(&testo, &pubblica).unwrap();
+        assert!(lette[1].intermedio && lette[1].guardia, "promosso a guardia, letto e firmato");
+        assert!(verifica_elenco(&testo.replace(" guardia=si", ""), &pubblica).is_err(), "la promozione è firmata");
+        // «guardia=si» senza «intermedio» non vale (un nodo pieno è già guardia)
+        let solo = analizza_voce("127.0.0.1:1 0101010101010101010101010101010101010101010101010101010101010101 0202020202020202020202020202020202020202020202020202020202020202 guardia=si").unwrap();
+        assert!(!solo.guardia && !solo.intermedio);
         // un campo che questo motore non conosce non rompe la lettura
         assert!(analizza_voce("127.0.0.1:1 0101010101010101010101010101010101010101010101010101010101010101 0202020202020202020202020202020202020202020202020202020202020202 futuro=1").is_ok());
     }

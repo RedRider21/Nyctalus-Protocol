@@ -51,11 +51,27 @@ struct Contesto {
     bande: HashMap<[u8; 32], u32>,
     /// nodi solo intermedi (mai guardia, uscita, punto d'incontro)
     intermedi: std::collections::HashSet<[u8; 32]>,
+    /// intermedi PROMOSSI a guardia dal gestore (stabili nel tempo): entrata sì, uscita mai
+    guardie_promosse: std::collections::HashSet<[u8; 32]>,
 }
 
 /// Imposta i nodi **solo intermedi** (dall'elenco firmato: `ruolo=intermedio`).
 pub fn imposta_intermedi(nodi: Vec<[u8; 32]>) {
     contesto().lock().unwrap().intermedi = nodi.into_iter().collect();
+}
+
+/// Imposta gli intermedi **promossi a guardia** (dall'elenco firmato: `guardia=si`).
+pub fn imposta_guardie_promosse(nodi: Vec<[u8; 32]>) {
+    contesto().lock().unwrap().guardie_promosse = nodi.into_iter().collect();
+}
+
+/// I candidati a guardia (nodo d'entrata): i nodi pieni più gli intermedi promossi dal gestore.
+pub fn candidati_guardia(nodi: &[NodoRete]) -> Vec<NodoRete> {
+    let promossi = contesto().lock().unwrap().guardie_promosse.clone();
+    let mut v = pieni(nodi);
+    let extra: Vec<NodoRete> = nodi.iter().copied().filter(|n| promossi.contains(&n.1) && !v.iter().any(|m| m.1 == n.1)).collect();
+    v.extend(extra);
+    v
 }
 
 /// I nodi che possono fare da guardia, uscita e punto d'incontro (tutti tranne i «solo intermedi»;
@@ -321,7 +337,7 @@ pub fn guardia(nodi: &[NodoRete]) -> NodoRete {
         (c.guardia, rete, c.ponti.iter().map(|p| p.0).collect::<Vec<_>>())
     };
     // con i ponti la guardia è uno dei ponti (ricordato a parte), mai un nodo dell'elenco
-    let (nodi, rete) = if ponti.is_empty() { (pieni(nodi), rete) } else { (ponti, rete + "-ponte") };
+    let (nodi, rete) = if ponti.is_empty() { (candidati_guardia(nodi), rete) } else { (ponti, rete + "-ponte") };
     let nodi = nodi.as_slice();
     if let Some(n) = gia.and_then(|k| nodi.iter().find(|n| n.1 == k)) {
         return *n;
@@ -353,7 +369,7 @@ pub fn percorso_verso(nodi: &[NodoRete], ultimo: NodoRete, salti: usize) -> Risu
     let g = guardia(nodi);
     let ponti = ponti();
     // se la guardia è parente del punto d'incontro si entra da un'altra (fra i ponti, se ci sono)
-    let pieni_nodi = pieni(nodi);
+    let pieni_nodi = candidati_guardia(nodi);
     let candidati: &[NodoRete] = if ponti.is_empty() { &pieni_nodi } else { &ponti };
     let entrata = if parenti(&g, &ultimo) {
         scegli(candidati, &[ultimo], 1)?.0.into_iter().next().or(Some(g))
@@ -480,12 +496,43 @@ pub(crate) mod test {
         c.ponti.clear();
         c.bande.clear();
         c.intermedi.clear();
+        c.guardie_promosse.clear();
     }
 
     fn cartella(nome: &str) -> std::path::PathBuf {
         let d = std::env::temp_dir().join(format!("nyct-guardie-{nome}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
         d
+    }
+
+    #[test]
+    fn intermedi_promossi_fanno_da_guardia_mai_da_uscita() {
+        let _b = blocco();
+        let d = cartella("promossi");
+        reimposta(vec![], &d);
+        let nodi = vec![nodo("81.10.0.1", 1), nodo("95.20.0.1", 2), nodo("62.30.0.1", 3), nodo("70.40.0.1", 4)];
+        // 3 e 4 aiutano la rete (solo intermedi); 3 è stabile e il gestore l'ha promosso a guardia
+        imposta_intermedi(vec![[3; 32], [4; 32]]);
+        imposta_guardie_promosse(vec![[3; 32]]);
+        let p: Vec<u8> = pieni(&nodi).iter().map(|n| n.1[0]).collect();
+        assert_eq!(p, vec![1, 2], "uscite e punti d'incontro: solo i nodi pieni");
+        let mut g: Vec<u8> = candidati_guardia(&nodi).iter().map(|n| n.1[0]).collect();
+        g.sort();
+        assert_eq!(g, vec![1, 2, 3], "guardia: i pieni più il promosso, mai l'intermedio non promosso");
+        // scegliendo molte volte la guardia (nuova ogni volta) il promosso esce, il 4 mai
+        let mut visti = std::collections::HashSet::new();
+        for i in 0..200 {
+            let _ = std::fs::remove_dir_all(&d);
+            reimposta(vec![], &cartella(&format!("promossi{}", i % 2)));
+            imposta_intermedi(vec![[3; 32], [4; 32]]);
+            imposta_guardie_promosse(vec![[3; 32]]);
+            let _ = std::fs::remove_dir_all(cartella(&format!("promossi{}", i % 2)));
+            visti.insert(guardia(&nodi).1[0]);
+        }
+        assert!(visti.contains(&3), "il promosso viene scelto come guardia");
+        assert!(!visti.contains(&4), "l'intermedio non promosso non è mai guardia");
+        imposta_intermedi(vec![]);
+        imposta_guardie_promosse(vec![]);
     }
 
     #[test]
