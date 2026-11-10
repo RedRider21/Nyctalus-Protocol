@@ -1228,7 +1228,7 @@ function impostazioni(solo) {
   // --- scheda «Chiamate»: qualità di chiamate e videochiamate (vale dalla prossima chiamata) -----
   const sceltaRiga = (etichetta, nota, opzioni, valore, cambia) => {
     const riga = el("div", "imp-riga");
-    const sel = el("div", "scelta-tema imp-scelta");
+    const sel = el("div", "scelta-opz imp-scelta");
     opzioni.forEach(([v, testo]) => {
       const b = el("button", v === valore ? "sel" : "", testo);
       b.onclick = () => { sel.querySelectorAll("button").forEach((x) => x.classList.toggle("sel", x === b)); cambia(v); };

@@ -208,9 +208,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tema-personalizzato .modo button.sel { border-color: var(--accento); }
 .tema-personalizzato .ripristina { border: 1px solid rgba(var(--rgb), .3); border-radius: 10px; padding: 8px 14px;
   background: none; color: var(--tenue); }
-.scelta-tema { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
-.scelta-tema button { border: 2px solid transparent; border-radius: 12px; padding: 12px 8px; background: rgba(var(--rgb), .1); }
-.scelta-tema button.sel { border-color: var(--accento); }
+.scelta-tema, .scelta-opz { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+.scelta-tema button, .scelta-opz button { border: 2px solid transparent; border-radius: 12px; padding: 12px 8px; background: rgba(var(--rgb), .1); }
+.scelta-tema button.sel, .scelta-opz button.sel { border-color: var(--accento); }
 .codice-id { background: var(--bg); border-radius: 10px; padding: 10px 12px; font-family: monospace; font-size: 12px;
   word-break: break-all; color: var(--accento); margin-bottom: 10px; user-select: all; }
 .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: rgba(20,24,36,.92); color: #fff;
