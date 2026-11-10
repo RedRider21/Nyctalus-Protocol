@@ -5,7 +5,7 @@
 
 ## 🗂 SCALETTA (aggiornata 10/11/2026, dopo la 0.3.18) — ▶ alla ripresa: chiedere all'utente da quale punto partire
 1. **Prove su rete vera** (Internet, amico a Pavia, più persone): velocità, chiamate, file; confronto con le misure in Shadow.
-2. **Invisibilità**: forma «videochiamata» (WebRTC); impronta identica a Chrome (BoringSSL, pesante: da valutare).
+2. **Invisibilità**: forma «videochiamata» (WebRTC) ✅ FATTA (STUN+SRTP, prova 38; DTLS/RTCP rimandati); resta impronta identica a Chrome (BoringSSL, pesante: da valutare). ✅ FATTO anche: Impostazioni grafiche a schede in telefono/launcher/browser (richiesta 10/11).
 3. **Capacità**: promuovere a entrata i PC stabili che aiutano la rete (come le guardie di Tor); uscite diverse per gli scaricamenti grandi (pesare l'anonimato).
 4. **Chat da mixnet** (ritardi e rimescolamento nei nodi, buste finte DP) e copertura costante opzionale.
 5. Rumore di fondo tarato su rete reale; ripresa dai circuiti caduti; descrittore firmato dei servizi.
@@ -14,6 +14,22 @@
 8. Revisione indipendente (NLnet/NGI Zero).
 8-bis. **App Android senza Termux** (scelta «prima A, poi B» dell'utente): motore e servizio dentro l'APK, riscrivendo in Rust il servizio del telefono (~1.900 righe Python). A (Termux automatizzato) è fatto.
 9. **Alla fine**: guida passo-passo (telefono, PC di casa, PC nodo su Internet), glossario dei termini e comandi, riordino organico della documentazione.
+
+## 10/11/2026 · Impostazioni grafiche a schede (richiesta dell'utente) ✅ (solo commit locali)
+- Tutte le manopole dei comandi, prima solo in config o in variabili d'ambiente, ora si regolano graficamente, **separate per area con delle schede (tab)**:
+  - **App telefono** (`mobile/webapp`): foglio Impostazioni rifatto a schede — 👤 Profilo, 🎨 Aspetto, 💬 Chat, 📞 Chiamate, 🌐 Rete, ⚡ Prestazioni, 📱 App.
+  - **Launcher PC** (GTK): nuova finestra «⚙ Impostazioni…» con `Gtk.Notebook` — 🌐 Rete, ⚡ Prestazioni, 📞 Chiamate.
+  - **Browser PC**: dialogo impostazioni rifatto a schede — 🌐 Browser (le sue), 🔗 Rete, ⚡ Prestazioni (separa le impostazioni del browser da quelle del motore).
+- **Chiamate/videochiamate regolabili**: risoluzione, fotogrammi/s, bit-rate video e audio. Telefono: client-side (vale subito); PC: la chat legge il bit-rate audio/video dalle Impostazioni (`media.py`).
+- **Prestazioni avanzate** (valgono al prossimo avvio della rete): finestra per circuito (`NYCTALUS_FINESTRA_KB`), congestione BBR/Cubic/NewReno (`NYCTALUS_CONGESTIONE`), ripiego TCP auto/sempre/mai (`NYCTALUS_TCP`), riuso collegamenti sì/no (`NYCTALUS_RIUSO`). Salvate in `~/.nyctalus-browser/config.json` e lette dagli script di avvio e dall'orchestratore; nuovo endpoint `/api/impostazioni` nell'orchestratore del telefono.
+- Nuove traduzioni `lau.imp.*` in 5 lingue (it/en/es/fr/de). Da fare all'upload: rigenerare i manuali HTML e aggiornare README/Pages con le schermate delle schede.
+
+## 10/11/2026 · Invisibilità punto 2: forma «videochiamata» (WebRTC) ✅ (solo commit locali)
+- Motore `--webrtc` (o `NYCTALUS_WEBRTC=1`): il traffico ha la forma di una videochiamata WebRTC — **STUN** (Binding Request/Success di ICE, USERNAME, PRIORITY, ICE-CONTROLLING, MESSAGE-INTEGRITY HMAC-SHA1, FINGERPRINT) all'inizio e ogni ~4,5 s; ogni datagramma è un pacchetto **SRTP** video (intestazione RTP, contenuto ChaCha20, etichetta di 10 byte = BLAKE3 con la chiave della rete). Chi sonda senza la chiave non riceve niente. Pacchetti da 1200 byte come libwebrtc (`webrtc.rs`, nuovo socket `SocketWebRtc`).
+- Ripiego su TCP nella forma videochiamata = vero TLS (come la forma HTTP/3). Senza chiave di rete il nodo non parte; `--webrtc` con `--mimic` è rifiutato (una forma sola).
+- Rete: `nyctalus-rete protezione si --forma webrtc`, codice `"forma":"webrtc"`, client PC/telefono/Windows/siti, installatore dei server (`--webrtc`). Messaggio del nodo «transport form: video call».
+- tshark **non installato** (solo `dumpcap`): verifica con un osservatore Python nostro (`simulazione/osserva_webrtc.py`) che inoltra e classifica ogni datagramma come un filtro DPI. Prova 38 (18/18): 3 salti, 540 KB integri, 100% dei pacchetti riconosciuti STUN/SRTP, sonde mute, ripiego TCP in TLS, percorso gestore→codice→PC/telefono/server. Unitari del motore 53+69 OK; forme 33 (HTTP/3) e 36 (TCP) senza FAIL.
+- **Limite onesto**: ritmo e dimensioni dei pacchetti restano quelli di Nyctalus (non 30 fps veri). Rimandati per ora (fermati dal classificatore): imitazione della stretta DTLS e rapporti RTCP. Da fare all'upload: documentazione completa + simulazione Shadow con questa forma.
 
 ## ⚠️ DA FARE ALLA FINE DI TUTTO (richiesta dell'utente, 07/11/2026)
 1. **Guida passo per passo per il caso dell'utente**: installazione sul **telefono**, sul **PC di casa** e su
