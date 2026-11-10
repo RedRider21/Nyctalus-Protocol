@@ -1132,6 +1132,16 @@ async def instrada(req, lettore, scrittore):
                                                "forma": prot_da_codice(cfg).get("forma", "") if condivisa else "",
                                                "nome_h3": prot_da_codice(cfg).get("nome_h3", "") if condivisa else "",
                                                "reti": reti})
+    if p == "/api/impostazioni":
+        if req.metodo == "POST":
+            return await imposta_avanzate(lettore, scrittore, req)
+        cfg = leggi_config()
+        return await rispondi_json(scrittore, {
+            "finestra_kb": cfg.get("finestra_kb", 256),
+            "congestione": cfg.get("congestione", "bbr"),
+            "tcp": cfg.get("tcp", "auto"),
+            "riuso": cfg.get("riuso", "si"),
+        })
     if p == "/api/servizi/avvia" and req.metodo == "POST":
         SERVIZI.avvia()
         return await rispondi_json(scrittore, SERVIZI.info())
@@ -1217,6 +1227,40 @@ def reti_salvate(cfg):
         reti.append({"nome": cfg.get("nome_rete") or "Rete Nyctalus", "directory_url": cfg["directory_url"],
                      "authority": cfg["authority"]})       # rete importata prima che ci fosse l'elenco
     return reti
+
+
+async def imposta_avanzate(lettore, scrittore, req):
+    """Scrive le manopole avanzate del motore nella config; valgono al prossimo avvio della rete."""
+    try:
+        n = int(req.h.get("content-length", "0"))
+    except ValueError:
+        n = -1
+    if not 0 < n <= 4096:
+        return await rispondi_json(scrittore, {"errore": "richiesta non valida"}, "400 Bad Request")
+    try:
+        dati = json.loads(await lettore.readexactly(n))
+    except Exception:          # noqa: BLE001
+        return await rispondi_json(scrittore, {"errore": "JSON non valido"}, "400 Bad Request")
+    cfg = leggi_config()
+    cambi = {}
+    try:
+        k = int(dati.get("finestra_kb"))
+        if 16 <= k <= 4096:
+            cambi["finestra_kb"] = k
+    except (TypeError, ValueError):
+        pass
+    if dati.get("congestione") in ("bbr", "cubic", "newreno"):
+        cambi["congestione"] = dati["congestione"]
+    if dati.get("tcp") in ("auto", "sempre", "mai"):
+        cambi["tcp"] = dati["tcp"]
+    if dati.get("riuso") in ("si", "no"):
+        cambi["riuso"] = dati["riuso"]
+    cfg.update(cambi)
+    scrivi_config(cfg)
+    riavvia = bool(dati.get("riavvia")) and SERVIZI.info().get("stato") == "pronto"
+    if riavvia:
+        SERVIZI.avvia()
+    return await rispondi_json(scrittore, {"ok": True, "riavviata": riavvia})
 
 
 async def cambia_rete(lettore, scrittore, req):

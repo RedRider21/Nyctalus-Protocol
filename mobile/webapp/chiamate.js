@@ -27,7 +27,17 @@ const Chiamate = (() => {
   const MUTA_MAX = 15;          // secondi senza voce dall'altro: la chiamata si chiude
   const VINCOLI = { audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false, channelCount: 1 } };
   // autoGainControl: NO — nelle pause alzava sempre più il rumore di fondo (suono metallico)
-  const FPS = 15, VIDEO_KBPS = 200, VIDEO_MAX = 60000, OGNI_KEY = 30;
+  const VIDEO_MAX = 60000, OGNI_KEY = 30;
+  // Qualità di chiamate/videochiamate, dalle Impostazioni → tab «Chiamate» (si applica alla prossima chiamata)
+  let FPS = 15, VIDEO_KBPS = 200, AUDIO_KBPS = 24, RIS_CAM = 480;
+  const leggiQualita = () => {
+    const q = (typeof salvato === "function" ? salvato("chiamate", {}) : {}) || {};
+    FPS = [10, 15, 20, 30].includes(q.fps) ? q.fps : 15;
+    VIDEO_KBPS = q.videoKbps >= 80 && q.videoKbps <= 1500 ? q.videoKbps : 200;
+    AUDIO_KBPS = q.audioKbps >= 10 && q.audioKbps <= 64 ? q.audioKbps : 24;
+    RIS_CAM = [360, 480, 720].includes(q.risoluzione) ? q.risoluzione : 480;
+  };
+  leggiQualita();
 
   // --- icone (tratto sottile, colore del testo) --------------------------------------------
   const ICONE = {
@@ -244,7 +254,8 @@ const Chiamate = (() => {
     try { micPronto = await navigator.mediaDevices.getUserMedia(VINCOLI); return true; }
     catch (e) { toast("🎤 Senza il permesso del microfono non si può chiamare (" + (e.name || e) + ")"); return false; }
   }
-  const vincoliCam = (giro) => ({ video: { facingMode: giro, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: FPS, max: 30 } } });
+  const RIS_WH = { 360: [480, 360], 480: [640, 480], 720: [1280, 720] };
+  const vincoliCam = (giro) => ({ video: { facingMode: giro, width: { ideal: RIS_WH[RIS_CAM][0] }, height: { ideal: RIS_WH[RIS_CAM][1] }, frameRate: { ideal: FPS, max: 30 } } });
   async function preparaCamera(giro) {
     if (camPronta) return true;
     try { camPronta = await navigator.mediaDevices.getUserMedia(vincoliCam(giro || "user")); return true; }
@@ -319,7 +330,7 @@ const Chiamate = (() => {
         output: (pezzo) => { const b = new Uint8Array(pezzo.byteLength); pezzo.copyTo(b); if (!muto && c && c.stato === "attiva") manda("AUD " + c.addr + " " + (++a.seq) + " " + hex(b)); },
         error: () => {},
       });
-      a.enc.configure({ codec: "opus", sampleRate: 48000, numberOfChannels: 1, bitrate: 24000, opus: { frameDuration: 20000 } });
+      a.enc.configure({ codec: "opus", sampleRate: 48000, numberOfChannels: 1, bitrate: AUDIO_KBPS * 1000, opus: { frameDuration: 20000 } });
       a.nodo = new AudioWorkletNode(a.ctx, "microfono");
       a.nodo.port.onmessage = (e) => {
         if (!a || !a.enc || a.enc.state !== "configured") return;
@@ -570,7 +581,7 @@ const Chiamate = (() => {
   function offline(addr) { if (c && c.addr === addr && c.stato === "attiva") { c.id = null; chiudi("Chiamata caduta: il contatto non è più in linea"); } }
 
   return {
-    chiama, evento, offline, disponibile, videoDisponibile, rispondiDaNotifica,
+    chiama, evento, offline, disponibile, videoDisponibile, rispondiDaNotifica, aggiornaQualita: leggiQualita,
     _stato: () => ({ c, a, v, muto, vivavoce, ridotta, remCam, principale, quieto, pip: { angolo: pip.angolo, scala: pip.scala } }),
     _ricevi: ricevi, _scambia: scambia,
   };

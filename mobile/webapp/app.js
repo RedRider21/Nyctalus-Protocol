@@ -28,6 +28,28 @@ const el = (tag, cls, testo) => {
   if (testo !== undefined) e.textContent = testo;
   return e;
 };
+// Pannello a schede: schede = [[etichetta, [nodi...]], ...]. Restituisce un contenitore con la
+// barra delle linguette in alto e sotto solo la scheda scelta (ne resta aperta una alla volta).
+function tabber(schede, iniziale) {
+  const box = el("div", "tabber");
+  const barra = el("div", "tabber-barra");
+  const corpo = el("div", "tabber-corpo");
+  const pannelli = [];
+  schede.forEach(([etichetta, nodi], i) => {
+    const lingu = el("button", "tabber-ling", etichetta);
+    const pan = el("div", "tabber-pan"); pan.append(...nodi);
+    pannelli.push([lingu, pan]);
+    lingu.onclick = () => {
+      pannelli.forEach(([l, p]) => { l.classList.toggle("sel", l === lingu); p.classList.toggle("nascosto", p !== pan); });
+      corpo.scrollTop = 0;
+    };
+    barra.append(lingu); corpo.append(pan);
+  });
+  const scelta = Math.max(0, iniziale || 0);
+  pannelli.forEach(([l, p], i) => { l.classList.toggle("sel", i === scelta); p.classList.toggle("nascosto", i !== scelta); });
+  box.append(barra, corpo);
+  return box;
+}
 const COLORI_AVATAR = ["#5aa9ff", "#7f6cff", "#38c6a4", "#e0794b", "#d45b8e", "#c9a227", "#4bb3e0", "#8a86ff"];
 const coloreAvatar = (addr) => COLORI_AVATAR[enc.encode(addr).reduce((a, b) => a + b, 0) % COLORI_AVATAR.length];
 const ora = (ts) => new Date(ts * 1000).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
@@ -1203,19 +1225,75 @@ function impostazioni(solo) {
   const notaRis = el("p", "nota-rete", ris.possibile
     ? "Messaggi tramite la casella a ritmo casuale, con buste finte tutte uguali: chi osserva non capisce quando né a chi scrivi. Arrivano con qualche decina di secondi di ritardo."
     : "Non disponibile: questa rete non ha la casella (chi gestisce la rete la accende con «nyctalus-rete rubrica»).");
-  const contenuto = [el("p", "", "Il tuo Contact ID — dallo agli amici perché ti scrivano (non è segreto):"), id, bott,
-    el("p", "", "Tema"), temi, pers, el("p", "", "Sfondo della chat"), sfondi, l, ...app,
-    el("p", "", "Riservatezza"), lr, notaRis, el("p", "", "Rete Nyctalus"), statoRete, servizi,
-    el("p", "", "Rete condivisa"), quale, condivisa];
+  // --- scheda «Chiamate»: qualità di chiamate e videochiamate (vale dalla prossima chiamata) -----
+  const sceltaRiga = (etichetta, nota, opzioni, valore, cambia) => {
+    const riga = el("div", "imp-riga");
+    const sel = el("div", "scelta-tema imp-scelta");
+    opzioni.forEach(([v, testo]) => {
+      const b = el("button", v === valore ? "sel" : "", testo);
+      b.onclick = () => { sel.querySelectorAll("button").forEach((x) => x.classList.toggle("sel", x === b)); cambia(v); };
+      sel.append(b);
+    });
+    riga.append(el("p", "imp-etichetta", etichetta), sel);
+    if (nota) riga.append(el("p", "nota-rete", nota));
+    return riga;
+  };
+  const q = salvato("chiamate", {});
+  const salvaQ = (k, v) => { const c = salvato("chiamate", {}); c[k] = v; salva("chiamate", c); if (window.Chiamate && Chiamate.aggiornaQualita) Chiamate.aggiornaQualita(); };
+  const chiamateTab = [
+    el("p", "", "Qualità delle videochiamate. Più alta = immagine migliore ma più dati e rete più carica; su connessioni lente conviene restare bassi."),
+    sceltaRiga("Risoluzione video", null, [[360, "Bassa (360p)"], [480, "Media (480p)"], [720, "Alta (720p)"]], [360, 480, 720].includes(q.risoluzione) ? q.risoluzione : 480, (v) => salvaQ("risoluzione", v)),
+    sceltaRiga("Fotogrammi al secondo", null, [[10, "10"], [15, "15"], [20, "20"], [30, "30"]], [10, 15, 20, 30].includes(q.fps) ? q.fps : 15, (v) => salvaQ("fps", v)),
+    sceltaRiga("Dati del video", "A quanti kbit/s comprimere il video.", [[120, "Leggero"], [200, "Normale"], [400, "Nitido"], [800, "Massimo"]], [120, 200, 400, 800].includes(q.videoKbps) ? q.videoKbps : 200, (v) => salvaQ("videoKbps", v)),
+    sceltaRiga("Qualità dell'audio", "Vale per chiamate e videochiamate.", [[16, "Bassa"], [24, "Normale"], [40, "Alta"], [64, "Massima"]], [16, 24, 40, 64].includes(q.audioKbps) ? q.audioKbps : 24, (v) => salvaQ("audioKbps", v)),
+  ];
+  // --- scheda «Prestazioni»: manopole avanzate del motore (dal prossimo avvio della rete) ---------
+  const prestTab = [el("p", "", "Regolazioni avanzate del motore. Hanno effetto al prossimo avvio della rete (c'è un pulsante per riavviarla subito).")];
+  const prestContenuto = el("div"); prestTab.push(prestContenuto);
+  const caricaPrest = async () => {
+    let a; try { a = await (await fetch("/api/impostazioni")).json(); } catch (e) { prestContenuto.textContent = "Non raggiungibile."; return; }
+    const stato = {};
+    prestContenuto.textContent = "";
+    prestContenuto.append(
+      sceltaRiga("Finestra per circuito", "Più grande = più veloce su reti con molto ritardo, ma usa più memoria.", [[64, "64 KB"], [128, "128 KB"], [256, "256 KB"], [512, "512 KB"], [1024, "1 MB"]], [64, 128, 256, 512, 1024].includes(a.finestra_kb) ? a.finestra_kb : 256, (v) => { stato.finestra_kb = v; }),
+      sceltaRiga("Controllo di congestione", "BBR va meglio con perdite (Wi-Fi, rete mobile). Cambialo solo per prova.", [["bbr", "BBR (consigliato)"], ["cubic", "Cubic"], ["newreno", "NewReno"]], ["bbr", "cubic", "newreno"].includes(a.congestione) ? a.congestione : "bbr", (v) => { stato.congestione = v; }),
+      sceltaRiga("Ripiego su TCP", "Quando l'UDP è bloccato, Nyctalus passa a TCP. «Sempre» forza il TCP.", [["auto", "Automatico"], ["sempre", "Sempre TCP"], ["mai", "Mai"]], ["auto", "sempre", "mai"].includes(a.tcp) ? a.tcp : "auto", (v) => { stato.tcp = v; }),
+      sceltaRiga("Riuso dei collegamenti", "Un solo collegamento per coppia di nodi: meno tracce sul filo.", [["si", "Sì (consigliato)"], ["no", "No"]], a.riuso === "no" ? "no" : "si", (v) => { stato.riuso = v; }),
+    );
+    const salvaBtn = el("div", "pulsanti"); salvaBtn.style.justifyContent = "flex-start";
+    const bs = el("button", "primario", "Salva e riavvia la rete"), bs2 = el("button", "", "Salva soltanto");
+    const invia = async (riavvia) => {
+      const r = await postJson("/api/impostazioni", Object.assign({ finestra_kb: a.finestra_kb, congestione: a.congestione, tcp: a.tcp, riuso: a.riuso }, stato, { riavvia }));
+      if (r.ok) { toast(riavvia && r.riavviata ? "Salvato · rete riavviata" : "Salvato"); if (riavvia) controllaServizi(); } else toast("✗ non riuscito");
+    };
+    bs.onclick = () => invia(true); bs2.onclick = () => invia(false);
+    salvaBtn.append(bs, bs2); prestContenuto.append(salvaBtn);
+  };
+  caricaPrest();
+  // --- i tab: aspetto, chat, chiamate, rete, prestazioni, app — separati per area ------------------
+  const profilo = [el("p", "", "Il tuo Contact ID — dallo agli amici perché ti scrivano (non è segreto):"), id, bott];
+  const aspetto = [el("p", "", "Tema"), temi, pers, el("p", "", "Sfondo della chat"), sfondi, l];
+  const chat = [el("p", "", "Riservatezza"), lr, notaRis];
+  const rete = [el("p", "", "Rete Nyctalus"), statoRete, servizi, el("p", "", "Rete condivisa"), quale, condivisa];
+  const schede = [
+    ["👤 Profilo", profilo],
+    ["🎨 Aspetto", aspetto],
+    ["💬 Chat", chat],
+    ["📞 Chiamate", chiamateTab],
+    ["🌐 Rete", rete],
+    ["⚡ Prestazioni", prestTab],
+  ];
+  if (app.length) schede.push(["📱 App", app]);
+  const pannelloTab = tabber(schede, 0);
   if (solo) {
     S.soloRubrica = true; document.body.classList.add("solo-rubrica"); if (HOST && HOST.rubrica) HOST.rubrica(true);
-    const box = el("div", "impostazioni-pagina"); box.append(...contenuto);
+    const box = el("div", "impostazioni-pagina"); box.append(pannelloTab);
     apriFoglio("Impostazioni", [box]);
     const ind = el("button", "indietro-rubrica", "←"); ind.onclick = chiudiFoglio;
     document.querySelector("#foglio .titolo").prepend(ind);
     return;
   }
-  dialogo("Impostazioni", contenuto,
+  dialogo("Impostazioni", [pannelloTab],
     HOST ? [["Esci dall'app", () => HOST.esci()], ["Chiudi", null, "primario"]] : [["Chiudi", null, "primario"]]);
 }
 

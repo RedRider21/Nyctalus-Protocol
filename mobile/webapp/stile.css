@@ -496,3 +496,20 @@ body.solo-rubrica #velo { background: var(--panel); }
 .term-aiuto-arg { font-weight: 400; color: var(--tenue); }
 .term-aiuto-desc { font-size: 13px; color: var(--tenue); }
 .term-aiuto-nota { font-size: 12px; color: var(--tenue); margin: 10px 2px 0; }
+
+/* Impostazioni a schede (tabber): barra delle linguette in alto, una scheda alla volta */
+.tabber { display: flex; flex-direction: column; min-height: 0; }
+.tabber-barra { display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; padding-bottom: 8px; margin-bottom: 4px; position: sticky; top: 0;
+  background: var(--panel); z-index: 2; }
+.tabber-barra::-webkit-scrollbar { display: none; }
+.tabber-ling { flex: 0 0 auto; border: 0; background: rgba(var(--rgb), .08); color: var(--tenue);
+  font: 600 13px system-ui, sans-serif; padding: 8px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+.tabber-ling:active { background: rgba(var(--rgb), .18); }
+.tabber-ling.sel { background: var(--accento); color: #fff; }
+.tabber-corpo { overflow-y: auto; }
+.tabber-pan { display: flex; flex-direction: column; gap: 2px; }
+.tabber-pan.nascosto { display: none; }
+.imp-riga { margin: 4px 0 10px; }
+.imp-etichetta { margin: 2px; font-weight: 600; color: var(--testo); }
+.imp-scelta { flex-wrap: wrap; }
