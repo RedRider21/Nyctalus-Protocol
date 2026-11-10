@@ -243,13 +243,34 @@ async fn canale_diretto(nodo: &NodoRete, offusca: Option<[u8; 32]>) -> Risultato
     Ok(Canale::Diretto { invio, ricezione, _conn: Some(conn), _endpoint: Some(endpoint) })
 }
 
+/// Ritardo medio per salto della chat da mixnet (ms): `NYCTALUS_MIX_MS` (di serie 800).
+fn ritardo_mix_medio() -> f64 {
+    std::env::var("NYCTALUS_MIX_MS").ok().and_then(|v| v.parse::<f64>().ok()).filter(|m| (1.0..=10_000.0).contains(m)).unwrap_or(800.0)
+}
+
+/// Un ritardo esponenziale (Loopix) per un salto, in ms, limitato a 4× la media.
+fn ritardo_mix_ms() -> u16 {
+    let media = ritardo_mix_medio();
+    let mut b = [0u8; 8];
+    getrandom::fill(&mut b).expect("generatore casuale di sistema");
+    let u = (u64::from_le_bytes(b) as f64 / u64::MAX as f64).clamp(1e-12, 1.0);
+    (-u.ln() * media).min(media * 4.0).clamp(1.0, 20_000.0) as u16
+}
+
 /// Apre un canale **onion** costruendo un circuito il cui ultimo nodo è il punto
 /// d'incontro (`percorso` = guard + intermedi + punto d'incontro).
-async fn canale_onion(percorso: &[NodoRete], offusca: Option<[u8; 32]>) -> Risultato<Canale> {
-    let nodi: Vec<NodoPercorso> = percorso
+async fn canale_onion(percorso: &[NodoRete], offusca: Option<[u8; 32]>, mix: bool) -> Risultato<Canale> {
+    let mut nodi: Vec<NodoPercorso> = percorso
         .iter()
         .map(|(a, pubblica, _)| Ok(NodoPercorso { indirizzo: codifica_nodo(*a, pubblica)?, pubblica: *pubblica }))
         .collect::<Risultato<_>>()?;
+    if mix {
+        // Chat da mixnet: l'istruzione per il nodo i-1 viaggia nell'indirizzo del nodo i (solo
+        // il nodo i-1 la legge). Ritardi esponenziali scelti qui, come in Loopix.
+        for n in nodi.iter_mut().skip(1) {
+            n.indirizzo = crate::circuito_rete::con_ritardo(n.indirizzo, ritardo_mix_ms());
+        }
+    }
     let circuito = apri_circuito(&nodi, b"nyctalus rendezvous")?;
 
     let (guard, _, impronta_guard) = percorso[0];
@@ -304,6 +325,7 @@ async fn collega_al_servizio(
     manuale: Option<NodoRete>,
     offusca: Option<[u8; 32]>,
     salti: usize,
+    mix: bool,
 ) -> Risultato<Canale> {
     if let Some(nodo) = manuale {
         let mut canale = canale_diretto(&nodo, offusca).await?;
@@ -322,7 +344,7 @@ async fn collega_al_servizio(
     for idx in rendezvous::ordine_con_ricambio(chiave, elenco.len(), epoca) {
         let percorso = percorso_onion(elenco, idx, salti)?;
         let nodo = percorso.last().unwrap().0;
-        let mut canale = match canale_onion(&percorso, offusca).await {
+        let mut canale = match canale_onion(&percorso, offusca, mix).await {
             Ok(c) => c,
             Err(e) => {
                 ultimo = format!("rendezvous {nodo}: {e}");
@@ -716,7 +738,7 @@ async fn registra_onion_e_canale(
     for idx in rendezvous::ordine(chiave_pub, elenco.len(), epoca) {
         let percorso = percorso_onion(elenco, idx, salti)?;
         let nodo = percorso.last().unwrap().0;
-        let mut canale = match canale_onion(&percorso, offusca).await {
+        let mut canale = match canale_onion(&percorso, offusca, false).await {
             Ok(c) => c,
             Err(e) => {
                 ultimo = format!("rendezvous {nodo}: {e}");
@@ -871,9 +893,9 @@ pub async fn browse(
     let chiave = indirizzo::in_chiave(indirizzo_nyct)?;
     // Stretta Noise NK end-to-end col servizio (il client è il mittente).
     let (mut canale, segreti) = if manuale.is_none() {
-        collega_e_stringi(&chiave, &elenco, offusca, salti).await?   // salta le registrazioni morte
+        collega_e_stringi(&chiave, &elenco, offusca, salti, false).await?   // salta le registrazioni morte
     } else {
-        let mut canale = collega_al_servizio(&chiave, &elenco, manuale, offusca, salti).await?;
+        let mut canale = collega_al_servizio(&chiave, &elenco, manuale, offusca, salti, false).await?;
         let (mittente, primo) = Mittente::inizia(&chiave)?;
         canale.invia(&primo).await?;
         let risposta = canale.ricevi().await?.ok_or("no handshake reply")?;
@@ -943,11 +965,12 @@ async fn collega_e_stringi(
     elenco: &[NodoRete],
     offusca: Option<[u8; 32]>,
     salti: usize,
+    mix: bool,
 ) -> Risultato<(Canale, SegretiSessione)> {
     let mut ultimo = String::from("nessun tentativo");
     for _ in 0..TENTATIVI_STRETTA {
         // il punto d'incontro non trova proprio il servizio: inutile insistere
-        let mut canale = collega_al_servizio(chiave, elenco, None, offusca, salti).await?;
+        let mut canale = collega_al_servizio(chiave, elenco, None, offusca, salti, mix).await?;
         let (mittente, primo) = Mittente::inizia(chiave)?;
         if canale.invia(&primo).await.is_err() {
             ultimo = "registrazione caduta durante l'invio".into();
@@ -971,6 +994,7 @@ pub async fn tunnel_socks(
     elenco: Vec<NodoRete>,
     offusca: Option<[u8; 32]>,
     salti: usize,
+    mix: bool,
 ) -> Risultato<()> {
     let chiave = match indirizzo::in_chiave(indirizzo_nyct) {
         Ok(k) => k,
@@ -981,7 +1005,7 @@ pub async fn tunnel_socks(
     };
 
     // Collega e fai la stretta prima di confermare al client SOCKS.
-    let avviato = collega_e_stringi(&chiave, &elenco, offusca, salti).await;
+    let avviato = collega_e_stringi(&chiave, &elenco, offusca, salti, mix).await;
 
     let (canale, segreti) = match avviato {
         Ok(v) => v,

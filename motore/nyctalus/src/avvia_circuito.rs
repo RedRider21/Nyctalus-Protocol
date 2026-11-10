@@ -419,11 +419,20 @@ async fn gestisci_flusso(
 ) -> Risultato<()> {
     use std::sync::atomic::Ordering::Relaxed;
     let saluto = leggi_socks(&mut cliente, Saluto::analizza).await?;
-    if !saluto.offre_senza_autenticazione() {
+    // Nome utente/password (RFC 1929) non autentica: sceglie il trattamento del flusso.
+    // «mix» = chat da mixnet (buste della modalità riservata, ritardate nei nodi).
+    let mut mix = false;
+    if saluto.offre_utente_password() {
+        cliente.write_all(&socks5::risposta_saluto(socks5::METODO_UTENTE_PASSWORD)).await?;
+        let (utente, _) = leggi_socks(&mut cliente, socks5::analizza_credenziali).await?;
+        mix = utente == "mix";
+        cliente.write_all(&[1, 0]).await?; // sotto-negoziazione riuscita
+    } else if saluto.offre_senza_autenticazione() {
+        cliente.write_all(&socks5::risposta_saluto(socks5::METODO_SENZA_AUTENTICAZIONE)).await?;
+    } else {
         cliente.write_all(&socks5::risposta_saluto(socks5::METODO_NESSUNO_ACCETTABILE)).await?;
-        return Err("the SOCKS client offers no 'no authentication' method".into());
+        return Err("the SOCKS client offers no usable authentication method".into());
     }
-    cliente.write_all(&socks5::risposta_saluto(socks5::METODO_SENZA_AUTENTICAZIONE)).await?;
     let richiesta = leggi_socks(&mut cliente, Richiesta::analizza).await?;
 
     // Siti interni `.nyct`: non passano dall'uscita del circuito, ma dal punto
@@ -432,7 +441,7 @@ async fn gestisci_flusso(
         if let Destinazione::Nome(nome) = &richiesta.destinazione {
             metriche.flussi.fetch_add(1, Relaxed);
             let _guardia = GuardiaFlusso(metriche);
-            return crate::incontro::tunnel_socks(cliente, nome, (**punti_incontro).clone(), offusca, salti).await;
+            return crate::incontro::tunnel_socks(cliente, nome, (**punti_incontro).clone(), offusca, salti, mix).await;
         }
     }
 

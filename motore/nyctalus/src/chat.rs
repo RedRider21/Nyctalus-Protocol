@@ -840,7 +840,7 @@ impl Stato {
         let mut carico = format!("{} {ts} ", nuovo_id()).into_bytes();
         carico.extend_from_slice(testo);
         let busta = casella::sigilla(&self.identita, &chiave, &carico)?;
-        tokio::time::timeout(DEPOSITO_TEMPO, consegna_busta(self.socks, &casella, addr, &busta))
+        tokio::time::timeout(DEPOSITO_TEMPO, consegna_busta(self.socks, &casella, addr, &busta, false))
             .await
             .map_err(|_| "la casella non risponde")??;
         Ok(())
@@ -900,7 +900,7 @@ impl Stato {
         getrandom::fill(&mut riempitivo).expect("generatore casuale di sistema");
         carico.extend_from_slice(&riempitivo);
         let busta = casella::sigilla(&self.identita, &chiave, &carico)?;
-        tokio::time::timeout(DEPOSITO_TEMPO, consegna_busta(self.socks, &casella, addr, &busta))
+        tokio::time::timeout(DEPOSITO_TEMPO, consegna_busta(self.socks, &casella, addr, &busta, true))
             .await
             .map_err(|_| "la casella non risponde")??;
         Ok(())
@@ -1646,8 +1646,9 @@ fn carica_posta_vista(dati: &Path) -> HashSet<String> {
 }
 
 /// Deposito anonimo: POST della busta all'indirizzo .nyct della casella, attraverso i circuiti.
-async fn consegna_busta(socks: SocketAddr, casella: &str, per: &str, busta: &[u8]) -> Risultato<()> {
-    let mut flusso = socks5_connetti(socks, casella, 80).await?;
+/// `mix`: busta della modalità riservata → chat da mixnet (i nodi la trattengono e rimescolano).
+async fn consegna_busta(socks: SocketAddr, casella: &str, per: &str, busta: &[u8], mix: bool) -> Risultato<()> {
+    let mut flusso = socks5_connetti_come(socks, casella, 80, mix.then_some("mix")).await?;
     let testa = format!(
         "POST /deposita?a={per} HTTP/1.0\r\nHost: casella\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n",
         busta.len()
@@ -1803,12 +1804,39 @@ fn da_hex(testo: &str) -> Risultato<Vec<u8>> {
 /// Client SOCKS5 minimo: CONNECT verso un dominio (il nostro proxy riconosce i
 /// `.nyct` e li instrada col punto d'incontro).
 async fn socks5_connetti(proxy: SocketAddr, host: &str, porta: u16) -> Risultato<TcpStream> {
+    socks5_connetti_come(proxy, host, porta, None).await
+}
+
+/// Come `socks5_connetti`; con `utente` si presenta con nome utente/password (RFC 1929): il nome
+/// sceglie il trattamento del flusso nel proxy di Nyctalus («mix» = chat da mixnet).
+async fn socks5_connetti_come(proxy: SocketAddr, host: &str, porta: u16, utente: Option<&str>) -> Risultato<TcpStream> {
     let mut s = TcpStream::connect(proxy).await?;
-    s.write_all(&[0x05, 0x01, 0x00]).await?; // VER, 1 metodo, "senza autenticazione"
-    let mut saluto = [0u8; 2];
-    s.read_exact(&mut saluto).await?;
-    if saluto != [0x05, 0x00] {
-        return Err("SOCKS: metodo di autenticazione non accettato".into());
+    match utente {
+        None => {
+            s.write_all(&[0x05, 0x01, 0x00]).await?; // VER, 1 metodo, "senza autenticazione"
+            let mut saluto = [0u8; 2];
+            s.read_exact(&mut saluto).await?;
+            if saluto != [0x05, 0x00] {
+                return Err("SOCKS: metodo di autenticazione non accettato".into());
+            }
+        }
+        Some(u) => {
+            s.write_all(&[0x05, 0x01, 0x02]).await?; // VER, 1 metodo, "nome utente e password"
+            let mut saluto = [0u8; 2];
+            s.read_exact(&mut saluto).await?;
+            if saluto != [0x05, 0x02] {
+                return Err("SOCKS: il proxy non accetta il nome utente (motore troppo vecchio?)".into());
+            }
+            let mut cred = vec![0x01, u.len() as u8];
+            cred.extend_from_slice(u.as_bytes());
+            cred.extend_from_slice(&[1, b'x']);
+            s.write_all(&cred).await?;
+            let mut esito = [0u8; 2];
+            s.read_exact(&mut esito).await?;
+            if esito[1] != 0 {
+                return Err("SOCKS: nome utente rifiutato".into());
+            }
+        }
     }
     let hb = host.as_bytes();
     if hb.len() > 255 {

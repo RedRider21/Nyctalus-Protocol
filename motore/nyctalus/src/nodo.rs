@@ -202,7 +202,7 @@ fn impronta_attesa(auth: &Autenticazione, indirizzo: SocketAddr) -> Risultato<[u
 async fn nodo_per_chiave(auth: &Autenticazione, chiave: &[u8]) -> Risultato<(SocketAddr, [u8; 32])> {
     let testo = std::fs::read_to_string(&auth.elenco)?;
     let voci = nyctalus_core::elenco::verifica_elenco(&testo, &auth.autorita)?;
-    let v = voci.into_iter().find(|v| v.x25519[..31] == *chiave).ok_or("next hop not in the signed directory")?;
+    let v = voci.into_iter().find(|v| v.x25519[..chiave.len()] == *chiave).ok_or("next hop not in the signed directory")?;
     let addr = tokio::net::lookup_host(v.indirizzo.as_str())
         .await?
         .find(SocketAddr::is_ipv4)
@@ -233,9 +233,15 @@ async fn gestisci_circuito(
         PassoNodo::Inoltra { prossimo_indirizzo, pacchetto } => {
             // Il nodo a valle: per IP, oppure per chiave (annunciato con un nome → si cerca
             // nell'elenco firmato e si risolve adesso, così un IP dinamico non lo rende irraggiungibile).
+            // chat da mixnet: il mittente può chiedere a QUESTO nodo di trattenere le celle
+            let ritardo_mix = crate::circuito_rete::ritardo_di(&prossimo_indirizzo);
             let (prossimo, impronta) = if prossimo_indirizzo[0] == crate::circuito_rete::PER_CHIAVE {
                 let a = auth.as_ref().ok_or("next hop by key requires the signed directory (--directory)")?;
                 let (addr, fp) = nodo_per_chiave(a, &prossimo_indirizzo[1..]).await?;
+                (addr, Some(fp))
+            } else if prossimo_indirizzo[0] == crate::circuito_rete::PER_CHIAVE_MIX {
+                let a = auth.as_ref().ok_or("next hop by key requires the signed directory (--directory)")?;
+                let (addr, fp) = nodo_per_chiave(a, &prossimo_indirizzo[1..30]).await?;
                 (addr, Some(fp))
             } else {
                 let prossimo = crate::circuito_rete::decodifica_indirizzo(&prossimo_indirizzo)?;
@@ -249,37 +255,6 @@ async fn gestisci_circuito(
             // `_endpoint` va tenuto in vita per tutta la durata del circuito.
             let (_endpoint, mut invio_valle, mut ricezione_valle) = collega_valle(prossimo, pacchetto, impronta, offusca).await?;
 
-            // Andata: togli il tuo strato e inoltra a valle. Il nonce è un
-            // contatore locale (non viaggia sul filo): stessa posizione, stesso
-            // nonce su ogni nodo, grazie all'ordine garantito dallo stream.
-            // Se una direzione CADE (errore, non fine regolare), la caduta si passa
-            // anche all'altra parte: reset in avanti, stop all'indietro. Senza, il
-            // nodo dopo restava in attesa per sempre — e il punto d'incontro teneva
-            // le registrazioni di servizi spenti, consegnandole a chi li cercava.
-            let andata = async {
-                let mut n: u64 = 0;
-                loop {
-                    match leggi_quadro(&mut ricezione_monte).await {
-                        Ok(Some(mut payload)) => {
-                            cipolla::sbuccia(n, &chiave, &mut payload);
-                            rispetta_tetto(payload.len()).await;
-                            if let Err(e) = scrivi_quadro(&mut invio_valle, &payload).await {
-                                let _ = ricezione_monte.stop(quinn::VarInt::from_u32(0));
-                                return Err(e);
-                            }
-                            n += 1;
-                        }
-                        Ok(None) => {
-                            let _ = invio_valle.finish();
-                            return Risultato::Ok(());
-                        }
-                        Err(e) => {
-                            let _ = invio_valle.reset(quinn::VarInt::from_u32(0));
-                            return Err(e);
-                        }
-                    }
-                }
-            };
             // Ritorno: aggiungi il tuo strato e rimanda a monte.
             let ritorno = async {
                 let mut n: u64 = 0;
@@ -305,9 +280,101 @@ async fn gestisci_circuito(
                     }
                 }
             };
-            let (a, b) = tokio::join!(andata, ritorno);
-            a?;
-            b?;
+            if let Some(ritardo) = ritardo_mix {
+                crate::diagnosi(|| format!("nodo: circuito mix, ogni cella trattenuta {} ms", ritardo.as_millis()));
+                // Mix: il lettore sbuccia e mette in coda con l'ora d'arrivo; lo scrittore fa uscire
+                // ogni cella `ritardo` dopo il suo arrivo, nello stesso ordine (flusso integro).
+                // Cadute: come nell'inoltro diretto (reset in avanti, stop all'indietro).
+                enum Voce {
+                    Cella(tokio::time::Instant, Vec<u8>),
+                    Fine,
+                    Caduta,
+                }
+                let (tx, mut rx) = mpsc::channel::<Voce>(1024);
+                let lettore = async {
+                    let mut n: u64 = 0;
+                    loop {
+                        match leggi_quadro(&mut ricezione_monte).await {
+                            Ok(Some(mut payload)) => {
+                                cipolla::sbuccia(n, &chiave, &mut payload);
+                                if tx.send(Voce::Cella(tokio::time::Instant::now(), payload)).await.is_err() {
+                                    let _ = ricezione_monte.stop(quinn::VarInt::from_u32(0));
+                                    return Risultato::Ok(());
+                                }
+                                n += 1;
+                            }
+                            Ok(None) => {
+                                let _ = tx.send(Voce::Fine).await;
+                                return Risultato::Ok(());
+                            }
+                            Err(e) => {
+                                let _ = tx.send(Voce::Caduta).await;
+                                return Err(e);
+                            }
+                        }
+                    }
+                };
+                // `move`: se lo scrittore si ferma (errore a valle), la coda si chiude e il lettore smette
+                let scrittore = async move {
+                    while let Some(v) = rx.recv().await {
+                        match v {
+                            Voce::Cella(arrivo, payload) => {
+                                tokio::time::sleep_until(arrivo + ritardo).await;
+                                rispetta_tetto(payload.len()).await;
+                                scrivi_quadro(&mut invio_valle, &payload).await?;
+                            }
+                            Voce::Fine => {
+                                let _ = invio_valle.finish();
+                                break;
+                            }
+                            Voce::Caduta => {
+                                let _ = invio_valle.reset(quinn::VarInt::from_u32(0));
+                                break;
+                            }
+                        }
+                    }
+                    Risultato::Ok(())
+                };
+                let (a, w, b) = tokio::join!(lettore, scrittore, ritorno);
+                a?;
+                w?;
+                b?;
+            } else {
+                // Andata: togli il tuo strato e inoltra a valle. Il nonce è un
+                // contatore locale (non viaggia sul filo): stessa posizione, stesso
+                // nonce su ogni nodo, grazie all'ordine garantito dallo stream.
+                // Se una direzione CADE (errore, non fine regolare), la caduta si passa
+                // anche all'altra parte: reset in avanti, stop all'indietro. Senza, il
+                // nodo dopo restava in attesa per sempre — e il punto d'incontro teneva
+                // le registrazioni di servizi spenti, consegnandole a chi li cercava.
+                let andata = async {
+                    let mut n: u64 = 0;
+                    loop {
+                        match leggi_quadro(&mut ricezione_monte).await {
+                            Ok(Some(mut payload)) => {
+                                cipolla::sbuccia(n, &chiave, &mut payload);
+                                rispetta_tetto(payload.len()).await;
+                                if let Err(e) = scrivi_quadro(&mut invio_valle, &payload).await {
+                                    let _ = ricezione_monte.stop(quinn::VarInt::from_u32(0));
+                                    return Err(e);
+                                }
+                                n += 1;
+                            }
+                            Ok(None) => {
+                                let _ = invio_valle.finish();
+                                return Risultato::Ok(());
+                            }
+                            Err(e) => {
+                                let _ = invio_valle.reset(quinn::VarInt::from_u32(0));
+                                return Err(e);
+                            }
+                        }
+                    }
+                };
+                let (a, b) = tokio::join!(andata, ritorno);
+                a?;
+                b?;
+            }
         }
         PassoNodo::Finale if *SOLO_INTERMEDIO.get().unwrap_or(&false) => {
             // nodo «solo intermedio»: mai uscita, né verso Internet né verso un punto d'incontro

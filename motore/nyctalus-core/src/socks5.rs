@@ -25,6 +25,9 @@ use std::fmt;
 pub const VERSIONE: u8 = 0x05;
 pub const METODO_SENZA_AUTENTICAZIONE: u8 = 0x00;
 pub const METODO_NESSUNO_ACCETTABILE: u8 = 0xFF;
+/// Nome utente e password (RFC 1929): qui non autentica nessuno, serve a **scegliere** come
+/// trattare il flusso (come l'isolamento per credenziali di Tor). Nome «mix» = chat da mixnet.
+pub const METODO_UTENTE_PASSWORD: u8 = 0x02;
 const CMD_CONNECT: u8 = 0x01;
 const ATYP_IPV4: u8 = 0x01;
 const ATYP_NOME: u8 = 0x03;
@@ -97,6 +100,29 @@ impl Saluto {
     pub fn offre_senza_autenticazione(&self) -> bool {
         self.metodi.contains(&METODO_SENZA_AUTENTICAZIONE)
     }
+
+    pub fn offre_utente_password(&self) -> bool {
+        self.metodi.contains(&METODO_UTENTE_PASSWORD)
+    }
+}
+
+/// Sotto-negoziazione RFC 1929: `[VER=1, ULEN, UTENTE, PLEN, PASSWORD]` → (utente, byte consumati).
+pub fn analizza_credenziali(byte: &[u8]) -> Result<(String, usize), ErroreSocks> {
+    let &[versione, ulen, ..] = byte else {
+        return Err(ErroreSocks::Incompleto);
+    };
+    if versione != 1 {
+        return Err(ErroreSocks::VersioneErrata);
+    }
+    let fine_utente = 2 + ulen as usize;
+    let Some(&plen) = byte.get(fine_utente) else {
+        return Err(ErroreSocks::Incompleto);
+    };
+    let totale = fine_utente + 1 + plen as usize;
+    if byte.len() < totale {
+        return Err(ErroreSocks::Incompleto);
+    }
+    Ok((String::from_utf8_lossy(&byte[2..fine_utente]).into_owned(), totale))
 }
 
 /// Risposta al saluto: `[VER=5, metodo scelto]`.
@@ -182,6 +208,9 @@ mod test {
         assert_eq!(s.byte_consumati, 4);
         assert!(s.offre_senza_autenticazione());
         assert_eq!(risposta_saluto(METODO_SENZA_AUTENTICAZIONE), [5, 0]);
+        assert_eq!(analizza_credenziali(&[1, 3, b'm', b'i', b'x', 1, b'x']).unwrap(), ("mix".to_string(), 7));
+        assert_eq!(analizza_credenziali(&[1, 3, b'm', b'i']), Err(ErroreSocks::Incompleto));
+        assert!(Saluto::analizza(&[5, 2, 0, 2]).unwrap().offre_utente_password());
     }
 
     #[test]

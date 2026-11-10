@@ -64,6 +64,43 @@ pub fn risolvi_voce(indirizzo: &str, x25519: &[u8; 32]) -> Risultato<SocketAddr>
     Ok(a)
 }
 
+/// Tipo dell'indirizzo «per chiave» CON ritardo di mix: `[7][primi 29 byte della chiave][ms (2 BE)]`.
+pub const PER_CHIAVE_MIX: u8 = 7;
+/// Marca del ritardo di mix nell'indirizzo IPv4 (byte 7; i byte 8-9 sono i millisecondi).
+const MARCA_MIX: u8 = b'M';
+/// Ritardo massimo che un nodo accetta di applicare (oltre: lo si limita).
+pub const RITARDO_MIX_MAX: std::time::Duration = std::time::Duration::from_secs(20);
+
+/// **Chat da mixnet** (PIANO-ANONIMATO, invisibilità punto 3): aggiunge all'indirizzo del nodo
+/// `i` l'istruzione per il nodo `i-1` di trattenere le celle di questo circuito per `ms`
+/// millisecondi prima di inoltrarle (ritardo scelto dal mittente, come in Loopix). Solo il nodo
+/// che sbuccia quello strato Sphinx la legge. I nodi più vecchi ignorano i byte in più
+/// dell'indirizzo IPv4 (inoltrano subito).
+pub fn con_ritardo(mut byte: [u8; 32], ms: u16) -> [u8; 32] {
+    match byte[0] {
+        4 => {
+            byte[7] = MARCA_MIX;
+            byte[8..10].copy_from_slice(&ms.to_be_bytes());
+        }
+        PER_CHIAVE => {
+            byte[0] = PER_CHIAVE_MIX;
+            byte[30..32].copy_from_slice(&ms.to_be_bytes());
+        }
+        _ => {}
+    }
+    byte
+}
+
+/// Il ritardo di mix chiesto a questo nodo, se c'è.
+pub fn ritardo_di(byte: &[u8; 32]) -> Option<std::time::Duration> {
+    let ms = match byte[0] {
+        4 if byte[7] == MARCA_MIX => u16::from_be_bytes([byte[8], byte[9]]),
+        PER_CHIAVE_MIX => u16::from_be_bytes([byte[30], byte[31]]),
+        _ => return None,
+    };
+    (ms > 0).then(|| std::time::Duration::from_millis(ms as u64).min(RITARDO_MIX_MAX))
+}
+
 /// Il «prossimo salto» di un nodo del percorso: per IP, o per chiave se annunciato per nome.
 pub fn codifica_nodo(indirizzo: SocketAddr, x25519: &[u8; 32]) -> Risultato<[u8; 32]> {
     if PER_NOME.lock().unwrap().as_ref().is_some_and(|s| s.contains(x25519)) {
@@ -105,4 +142,26 @@ pub async fn scrivi_quadro<W: AsyncWrite + Unpin>(stream: &mut W, payload: &[u8]
     stream.write_u32(payload.len() as u32).await?;
     stream.write_all(payload).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod test_mix {
+    use super::*;
+
+    #[test]
+    fn ritardo_di_mix_nell_indirizzo() {
+        let a = codifica_indirizzo("81.10.0.1:4601".parse().unwrap()).unwrap();
+        assert_eq!(ritardo_di(&a), None, "senza mix nessun ritardo");
+        let m = con_ritardo(a, 1500);
+        assert_eq!(ritardo_di(&m), Some(std::time::Duration::from_millis(1500)));
+        assert_eq!(decodifica_indirizzo(&m).unwrap(), "81.10.0.1:4601".parse().unwrap(), "l'indirizzo resta lo stesso");
+        assert_eq!(ritardo_di(&con_ritardo(a, 60000)), Some(RITARDO_MIX_MAX), "limitato");
+        let mut k = [0u8; 32];
+        k[0] = PER_CHIAVE;
+        k[1..].copy_from_slice(&[9u8; 31]);
+        let km = con_ritardo(k, 700);
+        assert_eq!(km[0], PER_CHIAVE_MIX);
+        assert_eq!(&km[1..30], &[9u8; 29]);
+        assert_eq!(ritardo_di(&km), Some(std::time::Duration::from_millis(700)));
+    }
 }
