@@ -7,7 +7,7 @@
 1. **Prove su rete vera** (Internet, amico a Pavia, più persone): velocità, chiamate, file; confronto con le misure in Shadow.
 2. **Invisibilità**: forma «videochiamata» (WebRTC) ✅ FATTA (STUN+SRTP, prova 38; DTLS/RTCP rimandati); resta impronta identica a Chrome (BoringSSL, pesante: da valutare). ✅ FATTO anche: Impostazioni grafiche a schede in telefono/launcher/browser (richiesta 10/11).
 3. **Capacità** ✅ FATTA: PC stabili promossi a guardia (prova 39); uscite diverse `--exits` (prova 40). Da misurare in Shadow quanto accelerano.
-4. **Chat da mixnet** (ritardi e rimescolamento nei nodi, buste finte DP) e copertura costante opzionale.
+4. **Chat da mixnet** e **copertura costante** ✅ FATTE (prove 41, 42).
 5. Rumore di fondo tarato su rete reale; ripresa dai circuiti caduti; descrittore firmato dei servizi.
 6. **Mullvad Browser** come «Nyctalus Browser (Firefox)» (download ~105 MB da approvare).
 7. **Piano di sicurezza + ricontrollo cybersecurity completo**: firma delle release, cargo audit/deny, forbid unsafe, fuzzing, dati locali cifrati, hardening systemd, autocontrollo d'integrità.
@@ -15,10 +15,11 @@
 8-bis. **App Android senza Termux** (scelta «prima A, poi B» dell'utente): motore e servizio dentro l'APK, riscrivendo in Rust il servizio del telefono (~1.900 righe Python). A (Termux automatizzato) è fatto.
 9. **Alla fine**: guida passo-passo (telefono, PC di casa, PC nodo su Internet), glossario dei termini e comandi, riordino organico della documentazione.
 
-## 10/11/2026 · Punto 4 · Chat da mixnet 🔧 A METÀ (solo commit locali) — ▶ RIPARTIRE DA QUI
-- FATTO (commit 798355f): ritardo per salto scelto dal mittente (esponenziale, media `NYCTALUS_MIX_MS`, di serie 800 ms, max 20 s) scritto nell'indirizzo Sphinx del salto successivo (`circuito_rete::con_ritardo/ritardo_di`, IPv4 byte 7 = 'M' + ms; per chiave tipo 7 = 29 byte di chiave + ms); il nodo trattiene in coda ordinata le celle dei circuiti mix (lettore+scrittore separati, flusso integro); SOCKS5 nome utente «mix» (RFC 1929, `socks5::analizza_credenziali`); le buste della modalità riservata (vere e finte) partono come mix. Unitari 56+69 OK.
-- DA FARE: 1) eseguire la prova `41-chat-mixnet.sh` sul motore release (scritta, mai girata); 2) rilanciare la suite completa (l'ultima, prima di mix e fasci, era 682/683 → corretta la 03); 3) documentare il mix (PIANO, GUIDA §5 modalità riservata, SPECIFICA, DEPLOY, README); 4) **copertura costante** opzionale (modi spento/durante l'uso/sempre: andata a ritmo fisso nel client, ritorno a ritmo fisso nell'uscita con una cella di controllo; vedi `nodo.rs` copertura_nodo/schedulatore_ritorno); 5) punto 5 della scaletta.
-- Limiti onesti: non si ritarda la stretta d'apertura del circuito; con pochi utenti il rimescolamento è scarso; i nodi vecchi (indirizzi per nome) non capiscono il tipo 7 → serve 0.3.19 su tutti i nodi.
+## 10/11/2026 · Punto 4 · Chat da mixnet e copertura costante ✅ (solo commit locali)
+- **Mix**: ritardo per salto scelto dal mittente (esponenziale, `NYCTALUS_MIX_MS`, di serie 800 ms, max 20 s) nell'indirizzo Sphinx del salto successivo (`circuito_rete::con_ritardo/ritardo_di`; IPv4 byte 7 'M' + ms; per chiave tipo 7); il nodo trattiene in coda ordinata (lettore+scrittore separati). SOCKS5 nome utente «mix» (RFC 1929). Le buste della modalità riservata (vere e finte) partono come mix. Prova 41 (8/8: 11,6 s contro 0,03 s, 270 KB integri), prova 26 riservata 17/17.
+- **Copertura costante**: `costante.rs`, regolatore a ritmo fisso nel client (per fascio) e all'uscita (cella `COSTANTE` 0x05); modi durante l'uso/sempre; `--constant-rate N [--constant-always]`, `NYCTALUS_COSTANTE[_SEMPRE]`; manopola nelle schede Prestazioni (60 celle/s). Prova 42 (6/6: linea piatta 86,8 vs 87,2 KB/s; senza 161 B/s).
+- Limiti: stretta d'apertura non ritardata; rimescolamento scarso con pochi utenti; nodi 0.3.19 necessari.
+- ▶ PROSSIMA SESSIONE: esito della suite completa (lanciata a fine sessione), poi punto 5 (rumore tarato su rete reale, ripresa dai circuiti caduti, descrittore firmato dei servizi). A casa: release 0.3.19 + manuali HTML + Pages (solo su richiesta dell'utente).
 
 ## 10/11/2026 · Punto 3 · Capacità ✅ (solo commit locali)
 - **3a · PC stabili promossi a guardia**: elenco firmato `ruolo=intermedio guardia=si` (compatibile: i motori vecchi lo vedono intermedio); candidati guardia = pieni ∪ promossi (`percorsi::candidati_guardia`), uscite e punti d'incontro solo fra i pieni. Gestore: `stabilita [--sonda] [--applica]` (prova con `nodes --probe`, `stabilita.json`), `guardia IP si|no|auto`, prova+promozione automatica ogni ora mentre `servi`/`casa` pubblicano. Regola: 14 giorni, 20 prove, 95% (ultime 60) per promuovere; sotto 80% (ultime 20) si retrocede. Prova 39 (12/12).

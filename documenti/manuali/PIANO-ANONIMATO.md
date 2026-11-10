@@ -287,13 +287,23 @@ debole, e le misure del punto K lo confermano anche per noi. I passi, in ordine:
    **traffico comune**: una normale videochiamata (WebRTC) o un normale sito HTTPS/HTTP-3
    (con ALPN `h3`, porta 443, dimensioni dei pacchetti come i browser), più il ripiego su TCP 443
    dove UDP è bloccato. Cambia la stretta di mano: va con un salto di versione del protocollo.
-3. **Chat da mixnet.** La modalità riservata è il primo passo. Il prossimo: i nodi trattengono
-   e **rimescolano** le buste con ritardi casuali, e si aggiungono buste finte calcolate apposta
-   (privacy differenziale, come Vuvuzela/Karaoke e Loopix). Così nemmeno chi vede **tutta
-   Internet** capisce chi scrive a chi. Per i messaggi è il punto in cui si può **superare Tor**.
-4. **Copertura costante durante l'uso.** Il traffico resta piatto anche quando chiami o
-   scarichi. Le misure dicono che la copertura deve essere **pari al traffico**, non a celle
-   sparse: costa molta banda, quindi è un'opzione per chi ne ha bisogno.
+3. ✅ **Chat da mixnet** (0.3.19). Le buste della modalità riservata (vere e finte, tutte della
+   stessa misura, a ritmo casuale) viaggiano su circuiti in cui **ogni nodo le trattiene** per un
+   ritardo casuale esponenziale scelto dal mittente (come Loopix; media 800 ms per salto,
+   `NYCTALUS_MIX_MS`), scritto nello strato Sphinx di quel nodo: lo legge solo lui. Buste di utenti
+   diversi escono dai nodi **rimescolate nel tempo**, quindi chi vede entrare e uscire i pacchetti
+   non può accoppiarli dagli orari. Il flusso resta integro (coda ordinata). Le buste finte
+   tengono costante il ritmo osservabile: è più forte del rumore calcolato della privacy
+   differenziale, finché la coda non trabocca. Prove `41-chat-mixnet`, `26-riservata`.
+   **Limiti:** la stretta d'apertura del circuito non è ritardata; con pochi utenti il
+   rimescolamento è scarso (serve gente); i nodi devono avere la 0.3.19 (i più vecchi inoltrano
+   subito, e non capiscono i nodi annunciati per nome con il mix).
+4. ✅ **Copertura costante** (0.3.19, a scelta: spenta / durante l'uso / sempre). Il traffico va a
+   **ritmo fisso** in entrambi i versi (60 celle/s, ~85 KB/s per verso), celle vere o finte:
+   misurato, la linea è piatta (86,8 KB/s da fermi, 87,2 KB/s durante uno scaricamento; senza
+   copertura da fermi 161 B/s). Costa la banda del ritmo anche quando non serve e limita la velocità
+   a ~85 KB/s: è per chi ne ha bisogno. «Durante l'uso» nasconde quanto e cosa fai ma non i
+   periodi in cui usi la rete; «sempre» nasconde anche quelli. Prova `42-copertura-costante`.
 5. **Igiene automatica.** Ritardi casuali sui messaggi (già nella modalità riservata), niente
    dati del dispositivo in uscita, attenzione agli orari di attività.
 

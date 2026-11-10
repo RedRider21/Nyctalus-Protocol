@@ -139,7 +139,8 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi **gestisce
 | [Foto senza metadati](#2-foto-senza-metadati) | non far sapere dove hai scattato una foto | accesa |
 | [Notifiche](#3-notifiche) | sapere che è arrivato un messaggio o una chiamata | accese |
 | [Avvio all'accensione](#4-avvio-allaccensione-telefono) | ricevere anche dopo aver riacceso il telefono | spento |
-| [Modalità riservata](#5-modalita-riservata) | non far capire **quando** né **a chi** scrivi | spenta |
+| [Modalità riservata](#5-modalita-riservata) | non far capire **quando** né **a chi** scrivi (buste ritardate e rimescolate nei nodi: chat da mixnet) | spenta |
+| [Copertura costante](#17-impostazioni-a-schede) | linea piatta: non si vede quando né quanto usi la rete | spenta |
 | [File: soglia, collegamenti, chat](#6-programma-file) | quanto accettare da solo, velocità, traccia in chat | 100 MB · 3 · sì |
 | [Rubrica della rete](#7-rubrica-della-rete) | farsi trovare dagli altri della rete | non iscritto |
 | [Browser 🦇 e Nyctalus Firefox](#8-browser-modalita-nyctalus) | navigare attraverso la rete; con Firefox anche con impronta uniforme | da scegliere |
@@ -459,6 +460,8 @@ Per chi usa il motore a mano (`nyctalus start`, `nyctalus circuit`…). Tutte in
 | `--bridge RIGA` / `NYCTALUS_PONTI` | entrare da un ponte nascosto | nessuno |
 | `--mimic [--mimic-name SITO]` / `NYCTALUS_MIMETICO=1` | forma HTTP/3 (con `--obfuscation`) | spenta |
 | `--webrtc` / `NYCTALUS_WEBRTC=1` | forma videochiamata: STUN + SRTP (con `--obfuscation`) | spenta |
+| `--constant-rate N [--constant-always]` / `NYCTALUS_COSTANTE`, `NYCTALUS_COSTANTE_SEMPRE=1` | copertura costante: N celle/s per verso, vere o finte, durante l'uso (o sempre) | spenta |
+| `NYCTALUS_MIX_MS` | ritardo medio per salto delle buste della modalità riservata (chat da mixnet) | 800 |
 | `--exits N` / `NYCTALUS_USCITE` / `exits = N` | uscite diverse (1-4): ogni sito resta sulla sua, i siti nuovi vanno alla più libera; più uscite = scaricamenti paralleli più veloci ma più nodi che vedono un tuo sito | 1 |
 | `--hidden-bridge` (nodo) | il nodo fa da ponte nascosto | spento |
 | `--middle-only` (nodo) | solo intermedio: mai uscita («Aiuta la rete») | spento |
@@ -482,7 +485,7 @@ d'ambiente si cambiano dalle **Impostazioni**, divise per area in **schede**:
 - **📞 Chiamate**: risoluzione, fotogrammi al secondo, dati del video, qualità dell'audio (sul PC
   dati del video e dell'audio). Valgono dalla chiamata successiva.
 - **⚡ Prestazioni**: finestra per circuito, controllo di congestione, ripiego su TCP, riuso dei
-  collegamenti, uscite diverse. Valgono al prossimo avvio della rete (sul telefono c'è «Salva e
+  collegamenti, uscite diverse, copertura costante. Valgono al prossimo avvio della rete (sul telefono c'è «Salva e
   riavvia la rete»). Si salvano in `~/.nyctalus-browser/config.json` (PC) o nella configurazione
   dell'app (telefono): sono le stesse variabili della tabella del §16.
 - **🌐/🔗 Rete**: la rete in uso e la sua forma del traffico. La forma (rumore, HTTP/3,
