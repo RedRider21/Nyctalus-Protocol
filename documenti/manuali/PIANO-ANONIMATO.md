@@ -247,20 +247,28 @@ Misure in Shadow con `simulazione/velocita.py` (dettagli in `simulazione/LEGGIMI
    la guardia di ognuno è più spesso un PC di un altro utente invece che un server del gestore; è
    un bene (meno potere concentrato nel gestore) se i PC sono di persone diverse, ed è il motivo
    della soglia di stabilità: una guardia che va e viene costringe a cambiarla, cioè più occasioni
-   di finire su un'entrata malevola. Prova `39-guardie-promosse`.
+   di finire su un'entrata malevola. Prova `39-guardie-promosse`. **Misurato in Shadow (11/11/2026,
+   5 semi, nodi a 10 Mbit, ogni utente aiuta con 10 Mbit, 1 scaricamento da 5 MB):** con 4 utenti
+   13,6 s solo intermedi contro 14,7 s promossi (+8%, poco peggio); con **8 utenti 22,3 contro 18,3 s
+   (−18%)**: quando gli utenti crescono le entrate diventano la strettoia e i PC promossi la
+   allargano. Misure in `simulazione/misure-guardie-2026-11-11.txt`.
 5-bis. ✅ **Riuso dei collegamenti fra nodi** (0.3.11): +1-3% e primo byte più rapido sotto carico,
    meno collegamenti nuovi sul filo.
 5-ter. ✅ **Celle piene** (0.3.12): trovata con le catture la causa del divario a nodi saturi
    (celle quasi vuote); ora +25% su Tor anche lì (3,32 contro 2,66 su 20 ripetizioni).
 6. ✅ **Uscite diverse** (0.3.19, `--exits N`, di serie 1): fino a 4 fasci dalla stessa guardia,
    ognuno con la sua uscita; ogni sito resta sulla sua uscita, i siti nuovi vanno alla più libera.
-   Accelera gli scaricamenti **paralleli da siti diversi** (non un singolo scaricamento: un flusso
-   TCP esce sempre da un'uscita sola). **Peso sull'anonimato:** ogni uscita vede **solo i suoi
+   **Misurato in Shadow (11/11/2026, 5 semi, nodi a 10 Mbit, 4 scaricamenti paralleli da 5 MB per
+   utente da 4 siti diversi): NON accelera.** Tempo per finire tutto: 1 utente 21,9 s con 1 uscita,
+   21,5 con 2, 23,3 con 4 (Tor 28,2); 4 utenti 55,8 / 56,5 / 60,1 s (Tor 71,2). La strettoia è
+   la **guardia** di ogni utente (una sola, comune a tutti i fasci), non l'uscita; i fasci in più
+   aggiungono solo lavoro. Il vantaggio che resta è di anonimato, non di velocità. **Peso sull'anonimato:** ogni uscita vede **solo i suoi
    siti** (meno collegamento fra i tuoi siti: è l'isolamento per destinazione di Tor), il sito non
    ti vede mai da più indirizzi; ma con N uscite la probabilità che **almeno una** sia malevola
    cresce (1−(1−f)^N con f la quota di uscite dell'avversario), e se lo è anche la guardia quei
-   flussi sono collegabili. Per questo il valore di serie resta 1 e la scelta è dell'utente
-   (scheda ⚡ Prestazioni). Prova `40-uscite-diverse`.
+   flussi sono collegabili. Per questo il valore di serie resta 1 (anche la scelta più veloce) e
+   la scelta è dell'utente (scheda ⚡ Prestazioni). Prova `40-uscite-diverse`; misure in
+   `simulazione/misure-uscite-2026-11-11.txt`.
 
 ## Oltre l'anonimato: invisibilità
 

@@ -1792,7 +1792,7 @@
  "lau.imp.rete_nota": "La forma del traffico (rumore, sito HTTP/3 o videochiamata) e il rumore di fondo si impostano col gestore della rete, perché valgono per tutta la rete.",
  "lau.imp.rete_apri": "Apri il gestore della rete",
  "lau.imp.uscite": "Uscite diverse",
- "lau.imp.uscite_nota": "Più uscite = scaricamenti paralleli da siti diversi più veloci; ogni sito resta sulla sua uscita. Ogni uscita in più è un nodo in più che vede un tuo sito: 1 è la scelta più prudente.",
+ "lau.imp.uscite_nota": "Ogni sito resta sulla sua uscita, così ogni uscita vede meno siti tuoi; ma ogni uscita in più è un nodo in più che ne vede qualcuno. Misurato: non accelera (la strettoia è la guardia). 1 è la scelta più prudente.",
  "lau.imp.costante": "Copertura costante",
  "lau.imp.cost_no": "Spenta",
  "lau.imp.cost_uso": "Durante l'uso",

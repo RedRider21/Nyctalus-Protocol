@@ -52,19 +52,32 @@ def banda(a, i=0):
     return ['    bandwidth_down: "%d Mbit"' % b, '    bandwidth_up: "%d Mbit"' % b] if b else []
 
 
-def sito(out):
-    return ["  sito:", "    network_node_id: 0", "    ip_addr: 12.0.0.20", "    processes:",
-            "    - path: /usr/bin/python3",
-            "      args: %s" % lista("-m", "http.server", "80", "--bind", "12.0.0.20", "--directory", str(out / "sito")),
-            "      start_time: 1s", "      expected_final_state: running"]
+def sito(out, siti=1):
+    """`siti` siti uguali su indirizzi diversi (12.0.0.20, .21, …): per gli scaricamenti paralleli."""
+    y = []
+    for k in range(siti):
+        ip = "12.0.0.%d" % (20 + k)
+        y += ["  sito%s:" % ("" if k == 0 else k), "    network_node_id: 0", "    ip_addr: %s" % ip, "    processes:",
+              "    - path: /usr/bin/python3",
+              "      args: %s" % lista("-m", "http.server", "80", "--bind", ip, "--directory", str(out / "sito")),
+              "      start_time: 1s", "      expected_final_state: running"]
+    return y
 
 
-def scaricamento(u, t, socks):
+def scaricamento(u, t, socks, ip="12.0.0.20"):
     return ["    - path: /usr/bin/curl",
             "      args: %s" % lista("-s", "-o", "/dev/null", "--max-time", str(ATTESA - 20),
                                      "-w", "%{http_code} %{size_download} %{time_total} %{time_starttransfer}\\n",
-                                     "--socks5-hostname", socks, "http://12.0.0.20/file.bin?u=%d" % u),
+                                     "--socks5-hostname", socks, "http://%s/file.bin?u=%d" % (ip, u)),
             "      start_time: %d ms" % int(t * 1000), "      expected_final_state: { exited: 0 }"]
+
+
+def scaricamenti(a, u, t, socks):
+    """Gli scaricamenti dell'utente `u`: `--paralleli` insieme, ognuno da un sito diverso."""
+    y = []
+    for k in range(a.paralleli):
+        y += scaricamento(u, t, socks, "12.0.0.%d" % (20 + k % a.siti))
+    return y
 
 
 def prepara_tor(out, a):
@@ -81,7 +94,7 @@ def prepara_tor(out, a):
             "    processes:", "    - path: %s" % TOR,
             "      args: %s" % lista("--Address", h, "--Nickname", h, "--defaults-torrc", "torrc-defaults", "-f", "torrc"),
             "      start_time: %ds" % (1 if h == "4uthority" else 60), "      expected_final_state: running"]
-    y += sito(out)
+    y += sito(out, a.siti)
     rnd = random.Random(a.seme)
     for u in range(a.utenti):
         y += ["  utente%d:" % u, "    network_node_id: 0", "    ip_addr: 13.0.0.%d" % (10 + u), "    processes:",
@@ -89,7 +102,7 @@ def prepara_tor(out, a):
               "      args: %s" % lista("--Address", "utente%d" % u, "--Nickname", "utente%d" % u,
                                        "--defaults-torrc", "torrc-defaults", "-f", "torrc"),
               "      start_time: 900s", "      expected_final_state: running"]
-        y += scaricamento(u, inizio + rnd.uniform(0, 1), "127.0.0.1:9000")
+        y += scaricamenti(a, u, inizio + rnd.uniform(0, 1), "127.0.0.1:9000")
     testo = "\n".join(y) + "\n"
     if a.pcap:
         for h in RELE_TOR:
@@ -158,7 +171,7 @@ def prepara_nyctalus(out, a):
     # «Aiuta la rete»: ogni utente fa anche da nodo SOLO INTERMEDIO, con un tetto di banda
     for u in range(a.utenti if a.aiuto else 0):
         riga = identita_nodo(a, out / ("aiuto%d" % u), "aiuto%d" % u, "13.0.0.%d:4700" % (10 + u))
-        righe.append(riga + ",utente%d,%d,middle" % (u, a.aiuto))
+        righe.append(riga + ",utente%d,%d,%s" % (u, a.aiuto, "guard" if a.guardie else "middle"))
     (out / "directory.txt").write_text(subprocess.run(
         [str(BIN), "directory", "--authority-secret", sec, "--entries", ";".join(righe)],
         capture_output=True, text=True).stdout)
@@ -171,21 +184,21 @@ def prepara_nyctalus(out, a):
                                        "--announce", "11.%d.0.1:4600" % i),
               '      environment: { NYCTALUS_CONGESTIONE: "%s", NYCTALUS_FINESTRA_KB: "%s", NYCTALUS_RIUSO: "%s" }' % (a.congestione, a.finestra, "0" if a.senza_riuso else "1"),
               "      start_time: 1s", "      expected_final_state: running"]
-    y += sito(out)
+    y += sito(out, a.siti)
     rnd = random.Random(a.seme)
     for u in range(a.utenti):
         y += ["  utente%d:" % u, "    network_node_id: 0", "    ip_addr: 13.0.0.%d" % (10 + u), "    processes:",
               "    - path: %s" % BIN,
               "      args: %s" % lista("start", "--directory", str(out / "directory.txt"), "--authority", pub,
                                        "--socks", "127.0.0.1:1080", "--circuits", str(a.circuiti)),
-              '      environment: { NYCTALUS_GUARDIE: "%s", NYCTALUS_CONGESTIONE: "%s", NYCTALUS_FINESTRA_KB: "%s", NYCTALUS_CODIFICA: "%s" }' % (out / ("guardie%d" % u), a.congestione, a.finestra, a.codifica),
+              '      environment: { NYCTALUS_GUARDIE: "%s", NYCTALUS_CONGESTIONE: "%s", NYCTALUS_FINESTRA_KB: "%s", NYCTALUS_CODIFICA: "%s", NYCTALUS_USCITE: "%d" }' % (out / ("guardie%d" % u), a.congestione, a.finestra, a.codifica, a.uscite),
               "      start_time: 5s", "      expected_final_state: running"]
         if a.aiuto:
             y += ["    - path: %s" % BIN,
                   "      args: %s" % lista("node", "--listen", "0.0.0.0:4700", "--data", str(out / ("aiuto%d" % u)),
                                            "--announce", "13.0.0.%d:4700" % (10 + u), "--middle-only", "--max-rate", str(a.aiuto)),
                   "      start_time: 1s", "      expected_final_state: running"]
-        y += scaricamento(u, inizio + rnd.uniform(0, 1), "127.0.0.1:1080")
+        y += scaricamenti(a, u, inizio + rnd.uniform(0, 1), "127.0.0.1:1080")
     testo = "\n".join(y) + "\n"
     if a.pcap:          # catture dei pacchetti sui nodi (intestazioni), per misurare quanto lavorano
         testo = testo.replace('    network_node_id: 0\n    ip_addr: 11.', '    network_node_id: 0\n    host_options:\n      pcap_enabled: true\n      pcap_capture_size: 64 B\n    ip_addr: 11.')
@@ -193,6 +206,20 @@ def prepara_nyctalus(out, a):
         testo = testo.replace("environment: { ", 'environment: { NYCTALUS_DIAGNOSI: "1", ')
     (out / "shadow.yaml").write_text(testo)
     return []
+
+
+def completamento(out, byte):
+    """Per ogni utente il tempo per finire TUTTI i suoi scaricamenti (partono insieme): media."""
+    fine = []
+    for h in sorted((out / "shadow.data" / "hosts").glob("utente*")):
+        t = []
+        for f in h.glob("curl.*.stdout"):
+            for p in (r.split() for r in f.read_text().splitlines() if r.strip()):
+                if len(p) == 4 and p[0] == "200" and int(p[1]) == byte:
+                    t.append(float(p[2]))
+        if t:
+            fine.append(max(t))
+    return sum(fine) / len(fine) if fine else 0.0
 
 
 def risultati(out, byte):
@@ -229,6 +256,10 @@ def main():
     ap.add_argument("--codifica", default="", help="Nyctalus: ragnatela codificata k,r (es. 8,2)")
     ap.add_argument("--finestra", default="", help="Nyctalus: finestra per flusso in KB (NYCTALUS_FINESTRA_KB)")
     ap.add_argument("--congestione", default="", help="Nyctalus: bbr (di serie)|cubic|newreno (NYCTALUS_CONGESTIONE)")
+    ap.add_argument("--siti", type=int, default=1, help="quanti siti diversi (stesso file, indirizzi diversi)")
+    ap.add_argument("--paralleli", type=int, default=1, help="scaricamenti insieme per utente, ognuno da un sito diverso")
+    ap.add_argument("--uscite", type=int, default=1, help="Nyctalus: uscite diverse (NYCTALUS_USCITE, 1-4)")
+    ap.add_argument("--guardie", action="store_true", help="Nyctalus con --aiuto: i PC che aiutano sono promossi a guardia")
     a = ap.parse_args()
     out = Path(a.cartella).resolve()
     if out.exists():
@@ -242,10 +273,11 @@ def main():
     tempi, primi, falliti = risultati(out, byte)
     media = sum(tempi) / len(tempi) if tempi else 0.0
     vel = sum(byte / t for t in tempi) / len(tempi) * 8 / 1e6 if tempi else 0.0
-    print("RISULTATO riuso=%s aiuto=%s codifica=%s pesi=%s finestra=%s congestione=%s sistema=%s perdita=%g banda_nodi=%s utenti=%d mb=%g circuiti=%s seme=%d riusciti=%d falliti=%d "
-          "tempo_medio=%.2f primo_byte=%.2f mbit_s=%.2f"
-          % ("no" if a.senza_riuso else "si", a.aiuto or "no", a.codifica.replace(",", "+") or "no", "no" if a.senza_pesi or not a.bande else "si", a.finestra or "-", a.congestione or "bbr", a.sistema, a.perdita, (a.bande.replace(",", "/") if a.bande else (a.banda_nodi or "-")), a.utenti, a.mb, a.circuiti if a.sistema == "nyctalus" else "-",
-             a.seme, len(tempi), falliti, media, sum(primi) / len(primi) if primi else 0.0, vel))
+    fine = completamento(out, byte)
+    print("RISULTATO uscite=%d guardie=%s paralleli=%d riuso=%s aiuto=%s codifica=%s pesi=%s finestra=%s congestione=%s sistema=%s perdita=%g banda_nodi=%s utenti=%d mb=%g circuiti=%s seme=%d riusciti=%d falliti=%d "
+          "tempo_medio=%.2f primo_byte=%.2f mbit_s=%.2f completamento=%.2f"
+          % (a.uscite, "si" if a.guardie else "no", a.paralleli, "no" if a.senza_riuso else "si", a.aiuto or "no", a.codifica.replace(",", "+") or "no", "no" if a.senza_pesi or not a.bande else "si", a.finestra or "-", a.congestione or "bbr", a.sistema, a.perdita, (a.bande.replace(",", "/") if a.bande else (a.banda_nodi or "-")), a.utenti, a.mb, a.circuiti if a.sistema == "nyctalus" else "-",
+             a.seme, len(tempi), falliti, media, sum(primi) / len(primi) if primi else 0.0, vel, fine))
     # i file scaricati non servono più: si tiene solo il registro (il disco è quasi pieno)
     shutil.rmtree(out / "sito", ignore_errors=True)
     if falliti and a.diagnosi:

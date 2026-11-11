@@ -292,8 +292,9 @@ torna da solo semplice intermedio.
 
 Misurato in simulazione: con i nodi della rete saturi l'aiuto come soli intermedi accelera poco
 (+5%), perché la strettoia sono entrata e uscita; conta quando gli utenti sono molti. Per questo
-i PC stabili vengono promossi a **guardia** (entrate in più) e il client può usare **più uscite**
-(`--exits`, §16; scheda ⚡ Prestazioni → «Uscite diverse»).
+i PC stabili vengono promossi a **guardia** (entrate in più: misurato −18% sul tempo con 8 utenti).
+Il client può anche usare **più uscite** (`--exits`, §16), ma misurato non accelera: serve solo a
+far vedere a ogni uscita meno siti.
 
 ### Per chi gestisce la rete
 
@@ -462,7 +463,7 @@ Per chi usa il motore a mano (`nyctalus start`, `nyctalus circuit`…). Tutte in
 | `--webrtc` / `NYCTALUS_WEBRTC=1` | forma videochiamata: STUN + SRTP (con `--obfuscation`) | spenta |
 | `--constant-rate N [--constant-always]` / `NYCTALUS_COSTANTE`, `NYCTALUS_COSTANTE_SEMPRE=1` | copertura costante: N celle/s per verso, vere o finte, durante l'uso (o sempre) | spenta |
 | `NYCTALUS_MIX_MS` | ritardo medio per salto delle buste della modalità riservata (chat da mixnet) | 800 |
-| `--exits N` / `NYCTALUS_USCITE` / `exits = N` | uscite diverse (1-4): ogni sito resta sulla sua, i siti nuovi vanno alla più libera; più uscite = scaricamenti paralleli più veloci ma più nodi che vedono un tuo sito | 1 |
+| `--exits N` / `NYCTALUS_USCITE` / `exits = N` | uscite diverse (1-4): ogni sito resta sulla sua, i siti nuovi vanno alla più libera; ogni uscita vede solo i suoi siti, ma più uscite = più nodi che vedono un tuo sito; misurato: non accelera (la strettoia è la guardia) | 1 |
 | `--hidden-bridge` (nodo) | il nodo fa da ponte nascosto | spento |
 | `--middle-only` (nodo) | solo intermedio: mai uscita («Aiuta la rete») | spento |
 | `--max-rate MBIT` (nodo) | tetto della banda inoltrata | nessuno |

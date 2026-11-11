@@ -1792,7 +1792,7 @@
  "lau.imp.rete_nota": "La forma del tráfico (ruido, sitio HTTP/3 o videollamada) y el tráfico de relleno se configuran en el gestor de red, porque valen para toda la red.",
  "lau.imp.rete_apri": "Abrir el gestor de red",
  "lau.imp.uscite": "Salidas distintas",
- "lau.imp.uscite_nota": "Más salidas = descargas paralelas de sitios distintos más rápidas; cada sitio conserva su salida. Cada salida extra es un nodo más que ve uno de tus sitios: 1 es la opción más prudente.",
+ "lau.imp.uscite_nota": "Cada sitio conserva su salida, así cada salida ve menos sitios tuyos; pero cada salida extra es un nodo más que ve alguno. Medido: no acelera (el cuello de botella es la guardia). 1 es la opción más prudente.",
  "lau.imp.costante": "Cobertura constante",
  "lau.imp.cost_no": "Apagada",
  "lau.imp.cost_uso": "Durante el uso",

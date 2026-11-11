@@ -6,7 +6,7 @@
 ## 🗂 SCALETTA (aggiornata 10/11/2026, dopo la 0.3.18) — ▶ alla ripresa: chiedere all'utente da quale punto partire
 1. **Prove su rete vera** (Internet, amico a Pavia, più persone): velocità, chiamate, file; confronto con le misure in Shadow.
 2. **Invisibilità**: forma «videochiamata» (WebRTC) ✅ FATTA (STUN+SRTP, prova 38; DTLS/RTCP rimandati); resta impronta identica a Chrome (BoringSSL, pesante: da valutare). ✅ FATTO anche: Impostazioni grafiche a schede in telefono/launcher/browser (richiesta 10/11).
-3. **Capacità** ✅ FATTA: PC stabili promossi a guardia (prova 39); uscite diverse `--exits` (prova 40). Da misurare in Shadow quanto accelerano.
+3. **Capacità** ✅ FATTA e MISURATA (11/11): guardie promosse −18% sul tempo con 8 utenti (+8% con 4); uscite diverse NON accelerano (strettoia = guardia), restano 1 di serie.
 4. **Chat da mixnet** e **copertura costante** ✅ FATTE (prove 41, 42).
 5. ✅ Ripresa dai circuiti caduti (prova 44) e registrazione provata dei servizi (prova 43) FATTE; il rumore di fondo tarato su rete reale va con il punto 1.
 6. **Mullvad Browser** come «Nyctalus Browser (Firefox)» (download ~105 MB da approvare).
@@ -14,6 +14,12 @@
 8. Revisione indipendente (NLnet/NGI Zero).
 8-bis. **App Android senza Termux** (scelta «prima A, poi B» dell'utente): motore e servizio dentro l'APK, riscrivendo in Rust il servizio del telefono (~1.900 righe Python). A (Termux automatizzato) è fatto.
 9. **Alla fine**: guida passo-passo (telefono, PC di casa, PC nodo su Internet), glossario dei termini e comandi, riordino organico della documentazione.
+
+## 11/11/2026 notte · Misure in Shadow del punto 3 ✅
+- `velocita.py`: nuove opzioni `--siti`, `--paralleli`, `--uscite`, `--guardie` e la misura «completamento» (tempo per finire tutti gli scaricamenti di un utente). Dati grezzi in `simulazione/misure-*-2026-11-11.txt`.
+- **Uscite diverse** (nodi 10 Mbit, 4 scaricamenti paralleli da 5 MB da 4 siti, 5 semi): 1 utente 21,9 / 21,5 / 23,3 s con 1/2/4 uscite (Tor 28,2); 4 utenti 55,8 / 56,5 / 60,1 s (Tor 71,2). **Non accelera**: la strettoia è la guardia unica. Testi corretti ovunque (non promettono più velocità).
+- **Guardie promosse** (ogni utente aiuta con 10 Mbit): 4 utenti 13,6 → 14,7 s (+8%); **8 utenti 22,3 → 18,3 s (−18%)**.
+- Idea per accelerare davvero i paralleli (da valutare con l'anonimato): più guardie per utente, come le «guardie primarie» multiple di Tor.
 
 ## 11/11/2026 sera (a casa) · Release v0.3.19 PUBBLICATA ✅ (APK 0.62)
 - Push di main, CI dei motori (run 43107647765, 9 bersagli), release v0.3.19 «Latest» con 18 file (APK, zip Android/PC/Server/arm64/Windows, pacchetto Termux + sha256, script unico, motori nudi); link «latest» dello script unico verificati (impronta OK). Pages aggiornato (home con le novità 0.3.19 e «In arrivo», manuali HTML rigenerati).

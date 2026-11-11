@@ -172,3 +172,30 @@ già i pacchetti persi e le strade condividono entrata e uscita; spenta di serie
 collegamento **locale** fra `rubrica.py` e il suo motore blocca quel collegamento simulato; sul PC
 vero funziona (prova `26`). In simulazione la rubrica consegna una busta per messaggio
 (`NYCTALUS_LOTTO_POSTA`, solo per le prove).
+
+## Risultati (11/11/2026): uscite diverse e guardie promosse
+
+Opzioni nuove di `velocita.py`: `--siti S` (S siti uguali su indirizzi diversi), `--paralleli P`
+(P scaricamenti insieme per utente, ognuno da un sito diverso), `--uscite N` (Nyctalus, uscite
+diverse), `--guardie` (con `--aiuto`: i PC che aiutano sono promossi a guardia). La riga
+`RISULTATO` ha in più `completamento` = tempo medio per finire TUTTI gli scaricamenti di un utente.
+Dati grezzi: `misure-uscite-2026-11-11.txt`, `misure-guardie-2026-11-11.txt` (5 semi ciascuno,
+nessuno scaricamento fallito).
+
+**Uscite diverse** (`--banda-nodi 10 --mb 5 --siti 4 --paralleli 4`), completamento in secondi:
+
+| | 1 uscita | 2 uscite | 4 uscite | Tor |
+|---|---|---|---|---|
+| 1 utente | 21,9 | 21,5 | 23,3 | 28,2 |
+| 4 utenti | 55,8 | 56,5 | 60,1 | 71,2 |
+
+Non accelera: la strettoia è la guardia (una sola per utente, comune a tutti i fasci).
+
+**Guardie promosse** (`--banda-nodi 10 --mb 5 --aiuto 10`, con e senza `--guardie`):
+
+| | solo intermedi | promossi a guardia |
+|---|---|---|
+| 4 utenti | 13,6 s | 14,7 s (+8%) |
+| 8 utenti | 22,3 s | 18,3 s (−18%) |
+
+Con più utenti le entrate diventano la strettoia e i PC promossi la allargano.

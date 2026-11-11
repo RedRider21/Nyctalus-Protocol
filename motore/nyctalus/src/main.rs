@@ -84,7 +84,7 @@ Usage:
 '--webrtc' (all, or env NYCTALUS_WEBRTC=1): video-call form: traffic looks like a WebRTC call (STUN + SRTP
   packets); the network key authenticates each packet (probers get nothing). Alternative to --mimic.
 '--exits N' (circuit/start, or env NYCTALUS_USCITE, or 'exits = N' in the config): up to 4 different exits; each
-  site keeps its own exit, new sites go to the least busy one (parallel downloads from different sites go faster).
+  site keeps its own exit, new sites go to the least busy one (each exit sees fewer of your sites; measured: no speed gain).
 '--constant-rate N [--constant-always]' (circuit/start, or env NYCTALUS_COSTANTE=N, NYCTALUS_COSTANTE_SEMPRE=1): constant
   cover, N cells/s each way (real or dummy) while in use (or always): the line looks flat. Costs bandwidth, caps speed.
 '--hidden-bridge' (node): a private entry NOT in the directory, with its own camouflage key; it prints the

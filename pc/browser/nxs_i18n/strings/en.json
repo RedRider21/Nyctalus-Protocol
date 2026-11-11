@@ -1792,7 +1792,7 @@
  "lau.imp.rete_nota": "The traffic shape (noise, HTTP/3 site or video call) and cover traffic are set in the network manager, since they apply to the whole network.",
  "lau.imp.rete_apri": "Open the network manager",
  "lau.imp.uscite": "Different exits",
- "lau.imp.uscite_nota": "More exits = faster parallel downloads from different sites; each site keeps its own exit. Every extra exit is one more node seeing one of your sites: 1 is the most cautious choice.",
+ "lau.imp.uscite_nota": "Each site keeps its own exit, so each exit sees fewer of your sites; but every extra exit is one more node seeing some of them. Measured: no speed gain (the bottleneck is the guard). 1 is the most cautious choice.",
  "lau.imp.costante": "Constant cover",
  "lau.imp.cost_no": "Off",
  "lau.imp.cost_uso": "While in use",
