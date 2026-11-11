@@ -406,8 +406,8 @@ async fn gestisci_circuito(
 /// le unità in andata dai vari circuiti e tiene le caselle di ritorno di ognuno.
 struct ConfluxUscita {
     tx_collect: mpsc::Sender<(u64, Vec<u8>)>,
-    circuiti_ritorno: Arc<Mutex<Vec<(u64, mpsc::Sender<Vec<u8>>)>>>,
-    prossimo_id: AtomicU64,
+    /// strade di ritorno con la memoria delle unità non confermate (ripresa dai circuiti caduti)
+    strade: Arc<crate::ripresa::Strade>,
 }
 
 /// Ritmo (celle/s) del rumore di fondo in **discesa** (uscita→client), impostato
@@ -431,12 +431,9 @@ fn ottieni_set(set_id: [u8; 16], codifica: Option<(u8, u8)>) -> Arc<ConfluxUscit
     }
     let (tx_collect, rx_collect) = mpsc::channel::<(u64, Vec<u8>)>(256);
     let (tx_return, rx_return) = mpsc::channel::<Vec<u8>>(256);
-    let circuiti_ritorno = Arc::new(Mutex::new(Vec::new()));
-    let set = Arc::new(ConfluxUscita {
-        tx_collect,
-        circuiti_ritorno: circuiti_ritorno.clone(),
-        prossimo_id: AtomicU64::new(0),
-    });
+    let strade = crate::ripresa::Strade::nuove();
+    let circuiti_ritorno = strade.lista.clone();
+    let set = Arc::new(ConfluxUscita { tx_collect, strade: strade.clone() });
     reg.insert(set_id, set.clone());
     drop(reg);
     // copertura costante del ritorno: un regolatore che il client accende con la cella COSTANTE
@@ -444,8 +441,8 @@ fn ottieni_set(set_id: [u8; 16], codifica: Option<(u8, u8)>) -> Arc<ConfluxUscit
     let aperti = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let (tx_regolato, rx_regolato) = mpsc::channel::<Vec<u8>>(256);
     tokio::spawn(crate::costante::regola(rx_return, tx_regolato, ritmo.clone(), aperti.clone(), Vec::new));
-    tokio::spawn(collettore_uscita(rx_collect, tx_return.clone(), ritmo, aperti));
-    tokio::spawn(schedulatore_ritorno(set_id, rx_regolato, circuiti_ritorno.clone(), codifica));
+    tokio::spawn(collettore_uscita(rx_collect, tx_return.clone(), ritmo, aperti, strade.clone()));
+    tokio::spawn(schedulatore_ritorno(set_id, rx_regolato, strade.clone(), codifica));
 
     // Rumore di fondo in discesa: celle fittizie a ritmo di Poisson verso il
     // client, scartate dal suo lato. Si ferma quando il gruppo non ha più
@@ -490,9 +487,15 @@ async fn uscita_conflux(
     // dalla lista del gruppo quando il circuito cade (così lo schedulatore e il
     // rumore di fondo non girano a vuoto su circuiti morti).
     let (tx_unit, mut rx_unit) = mpsc::channel::<Vec<u8>>(256);
-    let id = set.prossimo_id.fetch_add(1, Ordering::Relaxed);
-    set.circuiti_ritorno.lock().unwrap().push((id, tx_unit));
-    let circuiti = set.circuiti_ritorno.clone();
+    let id = set.strade.aggiungi(tx_unit);
+    // un circuito che arriva dopo una caduta: riparte con le unità rimaste senza strada
+    if set.strade.vive() == 1 {
+        let s = set.strade.clone();
+        tokio::spawn(async move {
+            s.rispedisci_orfane().await;
+        });
+    }
+    let strade = set.strade.clone();
     tokio::spawn(async move {
         let mut n: u64 = 0;
         while let Some(mut unita) = rx_unit.recv().await {
@@ -504,12 +507,14 @@ async fn uscita_conflux(
             }
         }
         let _ = invio_monte.finish();
-        circuiti.lock().unwrap().retain(|(i, _)| *i != id);
+        // circuito caduto: le sue unità non confermate passano sugli altri
+        let n = strade.caduta(id).await;
+        crate::diagnosi(|| format!("uscita: circuito di ritorno caduto, {n} unità rispedite"));
     });
 
     // Unità in andata → collettore del gruppo (0 era il LINK).
     let mut n: u64 = 1;
-    while let Some(mut payload) = leggi_quadro(&mut ricezione_monte).await? {
+    while let Ok(Some(mut payload)) = leggi_quadro(&mut ricezione_monte).await {
         cipolla::sbuccia(n, &chiave, &mut payload);
         n += 1;
         if let Some((seq, cella)) = conflux::spacchetta(&payload)
@@ -518,6 +523,8 @@ async fn uscita_conflux(
             break;
         }
     }
+    // l'andata è finita (o caduta): il circuito non c'è più, anche per il ritorno
+    set.strade.caduta(id).await;
     Ok(())
 }
 
@@ -528,14 +535,51 @@ async fn collettore_uscita(
     tx_return: mpsc::Sender<Vec<u8>>,
     ritmo: crate::costante::Ritmo,
     aperti: Arc<std::sync::atomic::AtomicUsize>,
+    strade: Arc<crate::ripresa::Strade>,
 ) {
     use tokio::io::AsyncWriteExt;
     let mut riordina = Riordina::nuovo();
+    // conferme verso il client: ogni 64 celle ricomposte e, se cambia, ogni 300 ms
+    let ricevuto = Arc::new(AtomicU64::new(0));
+    {
+        let (ricevuto, tx) = (ricevuto.clone(), tx_return.clone());
+        tokio::spawn(async move {
+            let mut ultimo = 0;
+            loop {
+                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+                let r = ricevuto.load(Ordering::Relaxed);
+                if r != ultimo {
+                    ultimo = r;
+                    let c = Cella::nuova(crate::cella::FLUSSO_CONTROLLO, cmd::CONFERMA, crate::ripresa::conferma_in_byte(r - 1));
+                    if tx.send(c.in_byte()).await.is_err() {
+                        break;
+                    }
+                }
+            }
+        });
+    }
+    let mut ricomposte: u64 = 0;
     let mut verso_tcp: HashMap<u16, mpsc::Sender<Vec<u8>>> = HashMap::new();
     while let Some((seq, cella_bytes)) = rx.recv().await {
-        for cb in riordina.inserisci(seq, cella_bytes) {
+        let pronte = riordina.inserisci(seq, cella_bytes);
+        if !pronte.is_empty() {
+            ricevuto.store(riordina.stato().0, Ordering::Relaxed);
+            ricomposte += pronte.len() as u64;
+            if ricomposte >= 64 {
+                ricomposte = 0;
+                let c = Cella::nuova(crate::cella::FLUSSO_CONTROLLO, cmd::CONFERMA, crate::ripresa::conferma_in_byte(riordina.stato().0 - 1));
+                let _ = tx_return.try_send(c.in_byte());
+            }
+        }
+        for cb in pronte {
             let Some(cella) = Cella::da_byte(&cb) else { continue };
             match cella.comando {
+                cmd::CONFERMA => {
+                    // il client ha tutto fino a N: quelle unità di ritorno non servono più
+                    if let Some(n) = crate::ripresa::conferma_da_byte(&cella.dati) {
+                        strade.conferma(n);
+                    }
+                }
                 cmd::APRI => {
                     let flusso = cella.flusso;
                     let dest = String::from_utf8_lossy(&cella.dati).to_string();
@@ -603,42 +647,34 @@ async fn collettore_uscita(
 async fn schedulatore_ritorno(
     set_id: [u8; 16],
     mut rx: mpsc::Receiver<Vec<u8>>,
-    circuiti: Arc<Mutex<Vec<(u64, mpsc::Sender<Vec<u8>>)>>>,
+    strade: Arc<crate::ripresa::Strade>,
     codifica: Option<(u8, u8)>,
 ) {
     if let Some((k, r)) = codifica {
-        return schedulatore_ritorno_codificato(set_id, rx, circuiti, k, r).await;
+        return schedulatore_ritorno_codificato(set_id, rx, strade.lista.clone(), k, r).await;
     }
     let mut seq: u64 = 0;
     while let Some(mut cella_bytes) = rx.recv().await {
         if cella_bytes.is_empty() {
             cella_bytes = Cella::riempimento().in_byte(); // rumore di fondo: cella finta
         }
-        let unita = conflux::impacchetta(seq, &cella_bytes);
-        let destinatario = {
-            let c = circuiti.lock().unwrap();
-            if c.is_empty() {
-                None
-            } else {
-                // la strada con la coda più libera (non più a turno rigido)
-                let liberi: Vec<usize> = c.iter().map(|(_, t)| t.capacity()).collect();
-                Some(c[conflux::scegli_strada(&liberi, seq as usize)].1.clone())
+        // tenuta in memoria finché il client non la conferma: se la sua strada cade, si rispedisce
+        if !strade.spedisci(seq, conflux::impacchetta(seq, &cella_bytes)).await {
+            // nessun circuito: il client ne sta costruendo uno nuovo? si aspetta fino a 30 s
+            let mut atteso = 0;
+            while strade.vive() == 0 && atteso < 300 {
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                atteso += 1;
             }
-        };
-        match destinatario {
-            Some(tx) => {
-                if tx.send(unita).await.is_err() {
-                    crate::diagnosi(|| format!("uscita: UNITÀ {seq} PERSA (circuito di ritorno chiuso)"));
-                }
-                seq += 1;
-                if seq % 500 == 0 {
-                    crate::diagnosi(|| {
-                        let c = circuiti.lock().unwrap();
-                        format!("uscita: {seq} unità, code libere {:?}", c.iter().map(|(_, t)| t.capacity()).collect::<Vec<_>>())
-                    });
-                }
+            if strade.vive() == 0 {
+                crate::diagnosi(|| "uscita: nessun circuito per 30 s, gruppo chiuso".into());
+                break;
             }
-            None => break,
+            strade.rispedisci_orfane().await;
+        }
+        seq += 1;
+        if seq % 500 == 0 {
+            crate::diagnosi(|| format!("uscita: {seq} unità, {} in memoria", strade.in_memoria()));
         }
     }
     // Gruppo esaurito: togli lo stato dal registro.

@@ -18,6 +18,9 @@
 //! Formato: `[flusso u16 BE][comando u8][lunghezza u16 LE][dati…][zeri]`.
 
 /// Comandi di una cella.
+/// Flusso riservato alle celle di controllo della ragnatela (CONFERMA): mai un flusso vero.
+pub const FLUSSO_CONTROLLO: u16 = 0xFFFF;
+
 pub mod cmd {
     /// client → uscita: apri un flusso verso `dati` = "host:porta".
     pub const APRI: u8 = 0x01;
@@ -29,6 +32,9 @@ pub mod cmd {
     pub const RIEMPIMENTO: u8 = 0x04;
     /// client → uscita: copertura costante, `dati` = ritmo (2 byte, celle/s) + modo (1 uso, 2 sempre).
     pub const COSTANTE: u8 = 0x05;
+    /// entrambe le direzioni: «ho ricevuto tutto, in ordine, fino all'unità N» (`dati` = N, 8 byte),
+    /// per la ripresa dai circuiti caduti. Sul flusso [`super::FLUSSO_CONTROLLO`].
+    pub const CONFERMA: u8 = 0x06;
     /// uscita → client: flusso aperto con successo.
     pub const APERTO: u8 = 0x10;
     /// uscita → client: apertura del flusso fallita.

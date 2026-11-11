@@ -87,7 +87,9 @@ pub async fn avvia_circuito(
     // UDP, oppure (se UDP è bloccato) TCP alla stessa porta
     let (_endpoint, connessione) = crate::trasporto::collega_entrata(guardiano, chiave_entrata, config, impronta_guard).await?;
 
-    // Ogni fascio: i suoi circuiti, uno schedulatore in andata e un collettore del ritorno.
+    // Ogni fascio: i suoi circuiti (strade), uno schedulatore in andata e un collettore del
+    // ritorno. Le strade cadute si rimpiazzano (ripresa dai circuiti caduti).
+    let connessione = Arc::new(connessione);
     let mut fasci: Vec<Arc<Fascio>> = Vec::with_capacity(gruppi.len());
     for percorsi in &gruppi {
         // Identificativo del gruppo conflux (l'uscita ricompone per gruppo)
@@ -96,21 +98,19 @@ pub async fn avvia_circuito(
         let flussi: MappaFlussi = Arc::new(Mutex::new(HashMap::new()));
         let (tx_out, rx_out) = mpsc::channel::<Vec<u8>>(256); // celle in uscita (senza seq)
         let (tx_ret, rx_ret) = mpsc::channel::<(u64, Vec<u8>)>(256); // unità di ritorno
-        let mut inbox_circuiti = Vec::with_capacity(percorsi.len());
+        let rag = Arc::new(Ragnatela {
+            strade: crate::ripresa::Strade::nuove(),
+            connessione: connessione.clone(),
+            chiave_entrata,
+            set_id,
+            tx_ret: tx_ret.clone(),
+            nodi: nodi.clone(),
+            guardia: percorsi[0][0],
+            uscita: *percorsi[0].last().expect("percorso non vuoto"),
+            salti,
+        });
         for percorso in percorsi {
-            let nodi_sphinx: Vec<NodoPercorso> = percorso
-                .iter()
-                .map(|(a, p, _)| Ok(NodoPercorso { indirizzo: codifica_nodo(*a, p)?, pubblica: *p }))
-                .collect::<Risultato<_>>()?;
-            let circuito = apri_circuito(&nodi_sphinx, b"nyctalus")?;
-            let chiavi: Chiavi = Arc::new(circuito.chiavi_salto);
-            let (mut invio, ricezione) = crate::trasporto::apri_flusso(&connessione, chiave_entrata).await?;
-            scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
-
-            let (tx_unit, rx_unit) = mpsc::channel::<Vec<u8>>(256);
-            tokio::spawn(scrittore_circuito(invio, chiavi.clone(), set_id, rx_unit));
-            tokio::spawn(lettore_circuito(ricezione, chiavi, tx_ret.clone()));
-            inbox_circuiti.push(tx_unit);
+            apri_strada(&rag, percorso).await?;
         }
         let attivi = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         match crate::costante::scelto() {
@@ -120,14 +120,14 @@ pub async fn avvia_circuito(
                 let (tx_regolato, rx_regolato) = mpsc::channel::<Vec<u8>>(256);
                 let ritmo: crate::costante::Ritmo = Arc::new(Mutex::new(Some((r, sempre))));
                 tokio::spawn(crate::costante::regola(rx_out, tx_regolato, ritmo, attivi.clone(), || Cella::riempimento().in_byte()));
-                tokio::spawn(schedulatore(rx_regolato, inbox_circuiti));
+                tokio::spawn(schedulatore(rx_regolato, rag.clone()));
                 let _ = tx_out.send(Cella::nuova(0, cmd::COSTANTE, crate::costante::richiesta(r, sempre)).in_byte()).await;
             }
             None => {
-                tokio::spawn(schedulatore(rx_out, inbox_circuiti));
+                tokio::spawn(schedulatore(rx_out, rag.clone()));
             }
         }
-        tokio::spawn(collettore_ritorno(rx_ret, flussi.clone()));
+        tokio::spawn(collettore_ritorno(rx_ret, flussi.clone(), rag.clone(), tx_out.clone()));
         fasci.push(Arc::new(Fascio { tx_out, flussi, attivi }));
     }
     let fasci: Arc<Vec<Arc<Fascio>>> = Arc::new(fasci);
@@ -255,22 +255,130 @@ async fn lettore_circuito(mut ricezione: quinn::RecvStream, chiavi: Chiavi, tx_r
 }
 
 /// Assegna la sequenza end-to-end e spezza le celle sui circuiti a rotazione.
-async fn schedulatore(mut rx_out: mpsc::Receiver<Vec<u8>>, inbox: Vec<mpsc::Sender<Vec<u8>>>) {
+async fn schedulatore(mut rx_out: mpsc::Receiver<Vec<u8>>, rag: Arc<Ragnatela>) {
     let mut seq: u64 = 0;
     while let Some(cella) = rx_out.recv().await {
-        let unita = conflux::impacchetta(seq, &cella);
-        let liberi: Vec<usize> = inbox.iter().map(|t| t.capacity()).collect();
-        let i = conflux::scegli_strada(&liberi, seq as usize);
-        if inbox[i].send(unita).await.is_err() {
-            break;
-        }
+        // tenuta in memoria finché l'uscita non la conferma: se la sua strada cade, si rispedisce
+        rag.strade.spedisci(seq, conflux::impacchetta(seq, &cella)).await;
         seq += 1;
     }
 }
 
+/// Stato di un fascio per la ripresa: le strade e quanto serve per costruirne di nuove.
+struct Ragnatela {
+    strade: Arc<crate::ripresa::Strade>,
+    connessione: Arc<quinn::Connection>,
+    chiave_entrata: Option<[u8; 32]>,
+    set_id: [u8; 16],
+    tx_ret: mpsc::Sender<(u64, Vec<u8>)>,
+    nodi: Vec<NodoRete>,
+    guardia: NodoRete,
+    uscita: NodoRete,
+    salti: usize,
+}
+
+/// Apre una strada (circuito) del fascio sul collegamento con la guardia. Un custode la segue:
+/// se cade, rispedisce le sue unità non confermate e ne costruisce una nuova.
+async fn apri_strada(rag: &Arc<Ragnatela>, percorso: &[NodoRete]) -> Risultato<()> {
+    let nodi_sphinx: Vec<NodoPercorso> = percorso
+        .iter()
+        .map(|(a, p, _)| Ok(NodoPercorso { indirizzo: codifica_nodo(*a, p)?, pubblica: *p }))
+        .collect::<Risultato<_>>()?;
+    let circuito = apri_circuito(&nodi_sphinx, b"nyctalus")?;
+    let chiavi: Chiavi = Arc::new(circuito.chiavi_salto);
+    let (mut invio, ricezione) = crate::trasporto::apri_flusso(&rag.connessione, rag.chiave_entrata).await?;
+    scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
+    let (tx_unit, rx_unit) = mpsc::channel::<Vec<u8>>(256);
+    let id = rag.strade.aggiungi(tx_unit);
+    let scrittore = tokio::spawn(scrittore_circuito(invio, chiavi.clone(), rag.set_id, rx_unit));
+    let lettore = tokio::spawn(lettore_circuito(ricezione, chiavi, rag.tx_ret.clone()));
+    let r = rag.clone();
+    let strada: Vec<String> = percorso.iter().map(|n| n.0.to_string()).collect();
+    let strada = strada.join(" → ");
+    tokio::spawn(async move {
+        // la strada è caduta quando finisce il ritorno (il nodo a valle è sparito) o l'andata
+        tokio::select! {
+            _ = lettore => {}
+            _ = scrittore => {}
+        }
+        if r.connessione.close_reason().is_some() || r.tx_ret.is_closed() {
+            return; // fine della sessione (o guardia persa): niente da riprendere qui
+        }
+        let n = r.strade.caduta(id).await;
+        println!("  circuit lost ({strada}): {n} unconfirmed units resent on the other circuits");
+        ricostruisci(r).await;
+    });
+    Ok(())
+}
+
+/// Costruisce una strada al posto di una caduta: stessa guardia e stessa uscita, intermedi nuovi.
+fn ricostruisci(rag: Arc<Ragnatela>) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>> {
+    Box::pin(async move { ricostruisci_dentro(rag).await })
+}
+
+async fn ricostruisci_dentro(rag: Arc<Ragnatela>) {
+    for tentativo in 0..8u32 {
+        if tentativo > 0 {
+            tokio::time::sleep(std::time::Duration::from_millis(500 * tentativo as u64)).await;
+        }
+        let interni = rag.salti.saturating_sub(2);
+        let intermedi = if interni == 0 {
+            Vec::new()
+        } else {
+            match crate::percorsi::scegli_non_parenti(&rag.nodi, &[rag.guardia, rag.uscita], interni) {
+                Some(v) => v,
+                None => match crate::percorsi::scegli(&rag.nodi, &[rag.guardia, rag.uscita], interni) {
+                    Ok((v, _)) => v,
+                    Err(_) => continue,
+                },
+            }
+        };
+        let mut percorso = vec![rag.guardia];
+        percorso.extend(intermedi);
+        if rag.salti > 1 {
+            percorso.push(rag.uscita);
+        }
+        match apri_strada(&rag, &percorso).await {
+            Ok(()) => {
+                let n = rag.strade.rispedisci_orfane().await;
+                let strada: Vec<String> = percorso.iter().map(|n| n.0.to_string()).collect();
+                println!("  replacement circuit: {} ({n} units resent)", strada.join(" → "));
+                return;
+            }
+            Err(e) => crate::diagnosi(|| format!("client: strada nuova non riuscita ({e})")),
+        }
+    }
+    eprintln!("WARNING: could not replace a lost circuit (still {} working)", rag.strade.vive());
+}
+
 /// Ricompone le unità di ritorno e consegna le celle al flusso giusto.
-async fn collettore_ritorno(mut rx_ret: mpsc::Receiver<(u64, Vec<u8>)>, flussi: MappaFlussi) {
+async fn collettore_ritorno(
+    mut rx_ret: mpsc::Receiver<(u64, Vec<u8>)>,
+    flussi: MappaFlussi,
+    rag: Arc<Ragnatela>,
+    tx_out: mpsc::Sender<Vec<u8>>,
+) {
     let mut riordina = Riordina::nuovo();
+    // conferme verso l'uscita: ogni 64 celle ricomposte e, se cambia qualcosa, ogni 300 ms
+    let ricevuto = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    {
+        let (ricevuto, tx) = (ricevuto.clone(), tx_out.clone());
+        tokio::spawn(async move {
+            let mut ultimo = 0;
+            loop {
+                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+                let r = ricevuto.load(std::sync::atomic::Ordering::Relaxed);
+                if r != ultimo {
+                    ultimo = r;
+                    let c = Cella::nuova(crate::cella::FLUSSO_CONTROLLO, cmd::CONFERMA, crate::ripresa::conferma_in_byte(r - 1));
+                    if tx.send(c.in_byte()).await.is_err() {
+                        break;
+                    }
+                }
+            }
+        });
+    }
+    let mut ricomposte: u64 = 0;
     // ragnatela codificata: le unità con il bit di codifica vanno al decodificatore
     let mut decodifica = crate::codifica::richiesta_configurata()
         .map(|(k, _)| crate::codifica::Decodificatore::nuovo(k));
@@ -288,10 +396,28 @@ async fn collettore_ritorno(mut rx_ret: mpsc::Receiver<(u64, Vec<u8>)>, flussi: 
             Some(d) if seq & crate::codifica::CODIFICATA != 0 => d.inserisci(seq, cella_bytes),
             _ => riordina.inserisci(seq, cella_bytes),
         };
+        let quante = pronte.len() as u64;
+        if quante > 0 {
+            ricevuto.store(riordina.stato().0, std::sync::atomic::Ordering::Relaxed);
+            ricomposte += quante;
+            if ricomposte >= 64 {
+                ricomposte = 0;
+                let fino = riordina.stato().0;
+                let c = Cella::nuova(crate::cella::FLUSSO_CONTROLLO, cmd::CONFERMA, crate::ripresa::conferma_in_byte(fino - 1));
+                let _ = tx_out.try_send(c.in_byte());
+            }
+        }
         for cb in pronte {
             if let Some(cella) = Cella::da_byte(&cb) {
                 if cella.comando == cmd::RIEMPIMENTO {
                     continue; // cella fittizia (cover traffic): scartala
+                }
+                if cella.comando == cmd::CONFERMA {
+                    // l'uscita ha tutto fino a N: quelle unità non servono più in memoria
+                    if let Some(n) = crate::ripresa::conferma_da_byte(&cella.dati) {
+                        rag.strade.conferma(n);
+                    }
+                    continue;
                 }
                 let inbox = flussi.lock().unwrap().get(&cella.flusso).cloned();
                 if let Some(inbox) = inbox {
