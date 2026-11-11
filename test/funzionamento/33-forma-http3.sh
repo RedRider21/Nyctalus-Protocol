@@ -44,8 +44,8 @@ R=$(curl -s -m 8 --socks5-hostname 127.0.0.1:$((B+12)) http://127.0.0.1:$((B+20)
 ADDR=$("$BIN" address --identity "$TMP/servizio" | grep -oE '[a-z2-7]{56}\.nyct' | tail -1)
 "$BIN" site --dir "$TMP/www" --identity "$TMP/servizio" --directory "$DIR" --authority "$PUB" --obfuscation "$K" --hops 3 > "$TMP/s.log" 2>&1 & PIDS+=($!)
 attendi_regex "$TMP/s.log" "online" 30 > /dev/null
-R=$(timeout 40 "$BIN" browse "$ADDR" --directory "$DIR" --authority "$PUB" --obfuscation "$K" --hops 3 2>/dev/null)
-echo "$R" | grep -q "ciao dal sito" && pass "sito .nyct pubblicato e visitato nella forma HTTP/3" || fail "sito .nyct: $(tail -2 "$TMP/s.log")"
+R=$(timeout 40 "$BIN" browse "$ADDR" --directory "$DIR" --authority "$PUB" --obfuscation "$K" --hops 3 2>"$TMP/b.log")
+echo "$R" | grep -q "ciao dal sito" && pass "sito .nyct pubblicato e visitato nella forma HTTP/3" || fail "sito .nyct: $(tail -2 "$TMP/s.log") · visita: $(tail -2 "$TMP/b.log")"
 # 4) ponte nascosto nella forma HTTP/3 (contrassegno del ponte)
 "$BIN" node --listen 127.0.0.1:$((B+5)) --data "$TMP/ponte" --obfuscation "$K" --directory "$DIR" --authority "$PUB" --hidden-bridge > "$TMP/ponte.log" 2>&1 & PIDS+=($!)
 PONTE=$(attendi_regex "$TMP/ponte.log" "127\.0\.0\.1:$((B+5)),[0-9a-f]{64},[0-9a-f]{64},[0-9a-f]{64}")

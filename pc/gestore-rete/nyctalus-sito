@@ -288,16 +288,27 @@ def avvia(nome):
         while not fermo["si"]:
             figlio = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
             prossimo = time.time() + AGGIORNA_ELENCO
-            import selectors
-            sel = selectors.DefaultSelector()
-            sel.register(figlio.stdout, selectors.EVENT_READ)
+            # Le righe del motore le legge un thread e le passa una per una: con select() + un solo
+            # readline() le righe successive restavano nel buffer di Python, invisibili a select()
+            # (la riga «online», che ora arriva dopo la registrazione vera, si vedeva solo alla fine).
+            import queue
+            import threading
+            righe = queue.Queue()
+
+            def _leggi(f=figlio.stdout, q=righe):
+                for r in f:
+                    q.put(r)
+                q.put(None)
+            threading.Thread(target=_leggi, daemon=True).start()
             while figlio.poll() is None and not fermo["si"]:
-                for _k, _e in sel.select(timeout=5):
-                    riga = figlio.stdout.readline()
-                    if riga:
-                        if "Nyctalus site online" in riga:
-                            ok("%s è ONLINE: %s" % (nome, sito["indirizzo"]))
-                        print("   " + riga.rstrip(), flush=True)
+                try:
+                    riga = righe.get(timeout=5)
+                except queue.Empty:
+                    riga = ""
+                if riga:
+                    if "Nyctalus site online" in riga:
+                        ok("%s è ONLINE: %s" % (nome, sito["indirizzo"]))
+                    print("   " + riga.rstrip(), flush=True)
                 if time.time() > prossimo:          # nodi cambiati? si riparte con l'elenco nuovo
                     prossimo = time.time() + AGGIORNA_ELENCO
                     try:
@@ -306,7 +317,6 @@ def avvia(nome):
                             figlio.terminate()
                     except Exception:   # noqa: BLE001
                         pass
-            sel.close()
             if figlio.poll() is None:
                 figlio.wait(10)
             if not fermo["si"]:

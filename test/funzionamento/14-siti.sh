@@ -34,8 +34,9 @@ SITO crea 'Nome Brutto' > /dev/null 2>&1 && fail "nome non valido accettato" || 
 SITO crea x --backend 10.0.0.5:80 > /dev/null 2>&1 && fail "backend esterno accettato" || pass "--backend solo su questo computer (127.0.0.1)"
 
 HOME="$H" NYCTALUS_BIN="$BIN" python3 "$ROOT/pc/gestore-rete/nyctalus-sito" avvia blog > "$TMP/avvia.log" 2>&1 & PIDS+=($!); AVVIO=$!
-attendi_regex "$TMP/avvia.log" "ONLINE" 60 > /dev/null
-grep -q "ONLINE" "$TMP/avvia.log" && pass "avvia: il sito è online" || fail "avvia: $(tail -3 "$TMP/avvia.log")"
+T0=$SECONDS
+attendi_regex "$TMP/avvia.log" "ONLINE" 180 > /dev/null
+grep -q "ONLINE" "$TMP/avvia.log" && pass "avvia: il sito è online (registrato a un punto d'incontro in $((SECONDS-T0)) s)" || fail "avvia: $(tail -3 "$TMP/avvia.log")"
 SITO elenco | grep -q "online" && pass "elenco: indirizzo e stato «online»" || fail "elenco: $(SITO elenco)"
 visita() { timeout 90 "$BIN" browse "$ADDR" --directory "$TMP/dir.txt" --authority "$PUB" $OBF --path "${1:-/}" 2>/dev/null; }
 visita / | grep -q "Benvenuto sul mio sito" && pass "visitato attraverso la rete: la pagina d'esempio" || fail "visita: $(visita / | head -3)"

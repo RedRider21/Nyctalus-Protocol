@@ -574,8 +574,9 @@ pub async fn uscita_rendezvous(
                 coda.push_back(Incontro { verso_servizio: tx_vs, consegna: consegna_tx, provata: ammissione == Ammissione::Provata });
             }
 
-            // Verso il servizio: "OK", poi i plaintext client→servizio da rx_vs.
-            let scrittore = scrittore_ritorno(invio, chiave, b"OK".to_vec(), rx_vs);
+            // Verso il servizio: "OK" SUBITO (prima partiva solo all'arrivo del primo client, e il
+            // servizio non sapeva di essere registrato), poi i plaintext client→servizio da rx_vs.
+            let scrittore = tokio::spawn(scrittore_ritorno(invio, chiave, b"OK".to_vec(), rx_vs));
             // Attende che un client si colleghi e consegni il suo canale — ma intanto
             // tiene d'occhio il circuito del servizio: se cade (servizio spento), la
             // registrazione si scarta invece di restare in coda «morta».
@@ -587,11 +588,11 @@ pub async fn uscita_rendezvous(
                 Some(verso_client) => {
                     // Dal servizio: plaintext servizio→client verso `verso_client`.
                     let lettore = lettore_avanti(ricezione, chiave, 1, verso_client);
-                    tokio::join!(scrittore, lettore);
+                    let (_s, _l) = tokio::join!(scrittore, lettore);
                 }
                 None => {
                     // Nessun client (o circuito del servizio caduto): chiudi pulito.
-                    drop(scrittore);
+                    scrittore.abort();
                 }
             }
             Ok(())
@@ -746,7 +747,9 @@ pub async fn site(
         None => Identita::genera()?,
     };
     let indirizzo_nyct = indirizzo::da_chiave(&identita.pubblica());
-    println!("Nyctalus site online.");
+    // «online» SOLO dopo la prima registrazione riuscita a un punto d'incontro: prima chi visitava
+    // subito il sito poteva trovarlo «non registrato» (scoperto con la prova 33, errore intermittente)
+    println!("Nyctalus site starting (registering at a rendezvous node)…");
     println!("  address:  {indirizzo_nyct}");
     println!("  serving:  {descrizione}");
     println!(
@@ -771,6 +774,7 @@ pub async fn site(
     // entrava più. L'ha scoperto la simulazione in Shadow, PIANO-ANONIMATO punto K.)
     // Tetto ai client serviti insieme, perché nessuno possa esaurire le risorse del servizio.
     let pool = pool.clamp(1, 32);
+    let annunciato = Arc::new(std::sync::Once::new());
     let elenco = Arc::new(elenco);
     let attivi = Arc::new(tokio::sync::Semaphore::new(CLIENT_MAX));
     let mut task = Vec::new();
@@ -779,16 +783,29 @@ pub async fn site(
         let modo = modo.clone();
         let elenco = elenco.clone();
         let attivi = attivi.clone();
+        let annunciato = annunciato.clone();
         task.push(tokio::spawn(async move {
             loop {
                 let Ok(posto) = attivi.clone().acquire_owned().await else { return };
                 match registra_onion_e_canale(&identita, &elenco, offusca, salti).await {
-                    Ok(canale) => {
+                    Ok(mut canale) => {
+                        annunciato.call_once(|| println!("Nyctalus site online (registered at a rendezvous node)."));
+                        // il posto resta in attesa finché arriva un client (il suo primo messaggio):
+                        // solo allora si ri-registra per il prossimo. Se la registrazione muore prima
+                        // (punto d'incontro caduto), si ri-registra subito.
+                        let primo = match canale.ricevi().await {
+                            Ok(Some(p)) => p,
+                            _ => {
+                                drop(posto);
+                                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                                continue;
+                            }
+                        };
                         let (identita, modo) = (identita.clone(), modo.clone());
                         tokio::spawn(async move {
                             let _posto = posto; // libero quando il client se ne va
                             crate::diagnosi(|| "servizio: arriva un client".into());
-                            if let Err(e) = servi_client(canale, &identita, &modo).await {
+                            if let Err(e) = servi_client_da(canale, primo, &identita, &modo).await {
                                 eprintln!("client error: {e}");
                             }
                             crate::diagnosi(|| "servizio: client finito".into());
@@ -821,7 +838,7 @@ async fn site_diretto(
             // Registra questa connessione come servizio.
             scrivi_quadro(&mut invio, &registrazione(&identita, &nodo.1)).await?;
             match leggi_quadro(&mut ricezione).await? {
-                Some(r) if r == b"OK" => {}
+                Some(r) if r == b"OK" => println!("Nyctalus site online (registered at the rendezvous node)."),
                 _ => return Err("registration refused".into()),
             }
             (conn, _endpoint)
@@ -880,6 +897,11 @@ async fn registra_onion_e_canale(
 async fn servi_client(mut canale: Canale, identita: &Identita, modo: &ModoServizio) -> Risultato<()> {
     // Stretta Noise NK: il servizio è il destinatario (la sua chiave = il .nyct).
     let primo = canale.ricevi().await?.ok_or("no handshake")?;
+    servi_client_da(canale, primo, identita, modo).await
+}
+
+/// Come `servi_client`, con il primo messaggio del client già letto.
+async fn servi_client_da(mut canale: Canale, primo: Vec<u8>, identita: &Identita, modo: &ModoServizio) -> Risultato<()> {
     let (risposta, segreti) = stretta::rispondi(identita, &primo)?;
     canale.invia(&risposta).await?;
     match modo {
