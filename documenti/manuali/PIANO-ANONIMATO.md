@@ -320,6 +320,24 @@ può confrontare i tempi. Nessuna rete al mondo lo evita senza enormi quantità 
 Solo dopo questa tappa ha senso dire «fidatevi». Fino ad allora Nyctalus è un **prototipo
 da provare**, non uno strumento da cui far dipendere la propria sicurezza.
 
+## Robustezza e servizi (punto 5) ✅ (0.3.19)
+
+- **Ripresa dai circuiti caduti.** Uno scaricamento passa da più circuiti; se un nodo intermedio
+  si spegne a metà, le celle che erano in viaggio su quel circuito si perdevano e tutto restava
+  bloccato (anche i flussi nuovi). Ora i due capi si confermano a vicenda cosa hanno ricevuto,
+  rispediscono sugli altri circuiti ciò che non è confermato e il client costruisce un circuito
+  nuovo al posto di quello caduto. Misurato: nodo spento a metà di 6 MB, il file arriva integro
+  (prova `44-circuiti-caduti`, 3 giri su 3). Se cade la guardia o l'uscita, la sessione si perde
+  ancora (si riparte con un circuito nuovo).
+- **Registrazione provata dei servizi `.nyct`** (il «descrittore firmato» di Tor). Prima chiunque
+  poteva registrarsi al punto d'incontro con la chiave di un servizio altrui: non poteva
+  impersonarlo, ma riempiendo la coda di registrazioni false poteva renderlo irraggiungibile. Ora
+  la registrazione porta una prova fatta con la chiave privata del servizio, legata a quel nodo e
+  all'ora; prove false, scadute o ripetute si rifiutano. Prova `43-registrazione-provata`: un
+  impostore con lo stesso indirizzo ci prova in due modi, 6 visite su 6 arrivano al servizio vero.
+- **Rumore di fondo tarato su rete reale:** resta da fare con le prove su Internet (punto 1): in
+  simulazione non si può tarare onestamente.
+
 ## Cosa nessuna tappa può dare
 
 - **Invisibilità totale.** Si può rendere il traffico simile a rumore o a un altro protocollo

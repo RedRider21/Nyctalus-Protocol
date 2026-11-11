@@ -8,12 +8,19 @@
 2. **Invisibilità**: forma «videochiamata» (WebRTC) ✅ FATTA (STUN+SRTP, prova 38; DTLS/RTCP rimandati); resta impronta identica a Chrome (BoringSSL, pesante: da valutare). ✅ FATTO anche: Impostazioni grafiche a schede in telefono/launcher/browser (richiesta 10/11).
 3. **Capacità** ✅ FATTA: PC stabili promossi a guardia (prova 39); uscite diverse `--exits` (prova 40). Da misurare in Shadow quanto accelerano.
 4. **Chat da mixnet** e **copertura costante** ✅ FATTE (prove 41, 42).
-5. Rumore di fondo tarato su rete reale; ripresa dai circuiti caduti; descrittore firmato dei servizi.
+5. ✅ Ripresa dai circuiti caduti (prova 44) e registrazione provata dei servizi (prova 43) FATTE; il rumore di fondo tarato su rete reale va con il punto 1.
 6. **Mullvad Browser** come «Nyctalus Browser (Firefox)» (download ~105 MB da approvare).
 7. **Piano di sicurezza + ricontrollo cybersecurity completo**: firma delle release, cargo audit/deny, forbid unsafe, fuzzing, dati locali cifrati, hardening systemd, autocontrollo d'integrità.
 8. Revisione indipendente (NLnet/NGI Zero).
 8-bis. **App Android senza Termux** (scelta «prima A, poi B» dell'utente): motore e servizio dentro l'APK, riscrivendo in Rust il servizio del telefono (~1.900 righe Python). A (Termux automatizzato) è fatto.
 9. **Alla fine**: guida passo-passo (telefono, PC di casa, PC nodo su Internet), glossario dei termini e comandi, riordino organico della documentazione.
+
+## 11/11/2026 · Punto 5 · Robustezza e servizi ✅ (in ufficio: solo commit locali, nessun upload)
+- **Registrazione provata dei servizi .nyct** («descrittore firmato»): REGISTRA con ora, numero casuale e MAC sul segreto DH servizio↔nodo d'incontro (`stretta::prova_registrazione/verifica_registrazione`, `incontro::ammetti`); prove false, scadute (±10 min) o ripetute rifiutate; di serie i nodi rifiutano le registrazioni senza prova (`NYCTALUS_REGISTRA_COMPATIBILE=1` per il passaggio di versione). Prova 43 (7/7: impostore con lo stesso .nyct rifiutato in due modi, 6/6 visite al servizio vero).
+- **Ripresa dai circuiti caduti**: `ripresa.rs` (strade vive + memoria delle unità non confermate, max 16384), cella `CONFERMA` 0x06 sul flusso 0xFFFF nei due versi (ogni 64 celle e ogni 300 ms), rispedizione delle unità della strada caduta, circuito nuovo con la stessa guardia e uscita (`apri_strada`/`ricostruisci`), l'uscita aspetta 30 s un circuito nuovo. Prova 44 (5/5, 3 giri su 3: nodo intermedio spento a metà di 6 MB, file integro, si naviga ancora). Prima: scaricamento bloccato a 2,9 MB e proxy morto anche per i flussi nuovi.
+- **Rumore di fondo tarato su rete reale**: rimandato al punto 1 (serve Internet vero, a casa).
+- Da fare dopo la suite: aggiornare il commento in testa ad `avvia_circuito.rs` («nessuna gestione della morte di un circuito» non vale più).
+- ▶ PROSSIMA SESSIONE: a casa e solo su richiesta: release 0.3.19 + manuali HTML + Pages. Poi scaletta punti 6 (Mullvad Browser, download ~105 MB da approvare), 7 (piano di sicurezza + ricontrollo cybersecurity), 8, 8-bis, 9.
 
 ## 10/11/2026 · Punto 4 · Chat da mixnet e copertura costante ✅ (solo commit locali)
 - **Mix**: ritardo per salto scelto dal mittente (esponenziale, `NYCTALUS_MIX_MS`, di serie 800 ms, max 20 s) nell'indirizzo Sphinx del salto successivo (`circuito_rete::con_ritardo/ritardo_di`; IPv4 byte 7 'M' + ms; per chiave tipo 7); il nodo trattiene in coda ordinata (lettore+scrittore separati). SOCKS5 nome utente «mix» (RFC 1929). Le buste della modalità riservata (vere e finte) partono come mix. Prova 41 (8/8: 11,6 s contro 0,03 s, 270 KB integri), prova 26 riservata 17/17.

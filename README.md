@@ -235,6 +235,8 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 - **Uscite diverse** (0.3.19, `--exits N`): più uscite dalla stessa guardia, ogni sito sulla sua; scaricamenti paralleli da siti diversi più veloci (di serie 1: più uscite = più nodi che vedono un tuo sito).
 - **Chat da mixnet** (0.3.19): le buste della modalità riservata vengono trattenute da ogni nodo per un ritardo casuale scelto dal mittente (come Loopix) e ne escono rimescolate nel tempo: dagli orari non si accoppiano entrate e uscite.
 - **Copertura costante** (0.3.19, a scelta): traffico a ritmo fisso in entrambi i versi, vero o finto: la linea resta piatta da fermi e durante l'uso (misurato), al prezzo di banda e velocità.
+- **Ripresa dai circuiti caduti** (0.3.19): se un nodo intermedio si spegne a metà di uno scaricamento, le celle perse si rispediscono sugli altri circuiti e se ne costruisce uno nuovo; il file arriva integro (prima tutto si bloccava).
+- **Registrazione provata dei servizi `.nyct`** (0.3.19): solo chi ha la chiave privata di un servizio può registrarlo ai punti d'incontro; un impostore non può più renderlo irraggiungibile.
 - **Impostazioni a schede** (0.3.19): tutte le regolazioni, anche quelle del motore e la qualità di chiamate e videochiamate, dalle Impostazioni divise per area: telefono (Profilo, Aspetto, Chat, Chiamate, Rete, Prestazioni, App), launcher PC (Rete, Prestazioni, Chiamate) e browser (Browser, Rete, Prestazioni).
 
 **In arrivo** (scaletta, dettagli in [STATO.md](documenti/STATO.md)):
@@ -242,7 +244,7 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 2. invisibilità: impronta identica a Chrome (valutare BoringSSL) — forma «videochiamata» ✅ fatta;
 3. ✅ capacità fatta (guardie promosse, uscite diverse): da misurare in Shadow;
 4. ✅ chat da mixnet e copertura costante fatte;
-5. rumore di fondo tarato su rete reale, ripresa dai circuiti caduti, descrittore firmato dei servizi;
+5. ✅ ripresa dai circuiti caduti e registrazione provata dei servizi fatte; resta il rumore di fondo tarato su rete reale (con il punto 1);
 6. Mullvad Browser come «Nyctalus Browser (Firefox)»;
 7. piano di sicurezza e ricontrollo completo (firma delle release, audit delle dipendenze, fuzzing, dati locali cifrati, hardening);
 8. revisione indipendente;
