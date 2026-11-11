@@ -419,8 +419,9 @@ torna da solo semplice intermedio.</p>
 </ul>
 <p>Misurato in simulazione: con i nodi della rete saturi l'aiuto come soli intermedi accelera poco
 (+5%), perché la strettoia sono entrata e uscita; conta quando gli utenti sono molti. Per questo
-i PC stabili vengono promossi a <strong>guardia</strong> (entrate in più) e il client può usare <strong>più uscite</strong>
-(<code>--exits</code>, §16; scheda ⚡ Prestazioni → «Uscite diverse»).</p>
+i PC stabili vengono promossi a <strong>guardia</strong> (entrate in più: misurato −18% sul tempo con 8 utenti).
+Il client può anche usare <strong>più uscite</strong> (<code>--exits</code>, §16), ma misurato non accelera: serve solo a
+far vedere a ogni uscita meno siti.</p>
 <h3 id="per-chi-gestisce-la-rete">Per chi gestisce la rete</h3>
 <p>I comandi sono di <code>nyctalus-rete</code>, sul PC del gestore. Dopo ogni cambio che tocca il
 <strong>codice di rete</strong>, va ridato a chi si collega (importandolo di nuovo).</p>
@@ -623,7 +624,7 @@ modalità rigida invece <strong>si rifiuta</strong>: meglio niente che un percor
 </tr>
 <tr>
 <td><code>--exits N</code> / <code>NYCTALUS_USCITE</code> / <code>exits = N</code></td>
-<td>uscite diverse (1-4): ogni sito resta sulla sua, i siti nuovi vanno alla più libera; più uscite = scaricamenti paralleli più veloci ma più nodi che vedono un tuo sito</td>
+<td>uscite diverse (1-4): ogni sito resta sulla sua, i siti nuovi vanno alla più libera; ogni uscita vede solo i suoi siti, ma più uscite = più nodi che vedono un tuo sito; misurato: non accelera (la strettoia è la guardia)</td>
 <td>1</td>
 </tr>
 <tr>
