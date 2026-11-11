@@ -71,6 +71,20 @@ i client più vecchi non leggono un elenco con le famiglie.</p>
 <p>Un utente che attiva «🦇 Aiuta la rete» ti manda la riga del suo PC. Aggiungila con
 <code>nyctalus-rete aggiungi 'RIGA' --intermedio --banda MBIT --famiglia NOME</code>: quel nodo sarà usato
 solo come intermedio (mai guardia, uscita o punto d'incontro). Serve la 0.3.11 su tutti i client.</p>
+<h3 id="pc-stabili-promossi-a-guardia-dalla-0319">PC stabili promossi a guardia (dalla 0.3.19)</h3>
+<p>Un PC che aiuta la rete e resta acceso con continuità può fare anche da <strong>guardia</strong> (il nodo
+d'entrata, come il contrassegno «Guard» di Tor): così la rete ha più entrate senza nuovi server.
+Non diventa mai uscita né punto d'incontro. Decide la <strong>stabilità misurata</strong>:</p>
+<pre><code class="language-sh">nyctalus-rete stabilita --sonda      # prova adesso chi risponde e lo annota
+nyctalus-rete stabilita              # tabella: giorni, prove, % online, proposta
+nyctalus-rete stabilita --applica    # promuove/retrocede e rifirma l'elenco
+nyctalus-rete guardia IP:PORTA si|no|auto   # decisione a mano (auto = di nuovo la misura)
+</code></pre>
+<p>Regola: guardia dopo <strong>14 giorni</strong> e <strong>20 prove</strong> con almeno il <strong>95%</strong> di risposte (sulle ultime 60);
+torna intermedio se nelle ultime 20 prove scende sotto l'<strong>80%</strong>. Mentre <code>servi</code> o <code>casa</code>
+pubblicano l'elenco, la prova e la promozione girano da sole <strong>ogni ora</strong>. Nell'elenco firmato la
+promozione è <code>ruolo=intermedio guardia=si</code>: i client più vecchi continuano a usarlo come semplice
+intermedio (nessuna rottura); servono client 0.3.19 perché lo usino come entrata.</p>
 <h3 id="banda-dei-nodi">Banda dei nodi</h3>
 <p><code>nyctalus-rete banda IP:PORTA MBIT</code> (es. 100, oppure <code>-</code> per toglierla) mette nell'elenco firmato
 la banda del nodo: i percorsi scelgono più spesso i nodi più capaci. Indica la banda <strong>in upload</strong>
@@ -197,6 +211,12 @@ nyctalus-rete protezione no                   # spegne (la chiave resta da parte
 <p><strong>Forma HTTP/3</strong> (<code>nyctalus-rete protezione si --forma h3 --nome www.miosito.it</code>): i nodi sembrano
 un normale sito HTTP/3 sulla porta 443 invece di rumore; chi li sonda riceve una pagina 404. Sui
 server reinstalla con <code>--codice … --nuova-identita</code> e aggiorna le righe nell'elenco.</p>
+<p><strong>Forma videochiamata</strong> (<code>nyctalus-rete protezione si --forma webrtc</code>, dalla 0.3.19): il traffico
+sembra una chiamata WebRTC: controlli <strong>STUN</strong> della linea e pacchetti video <strong>SRTP</strong> da ~1200 byte,
+ognuno con un'etichetta fatta con la chiave della rete. Chi sonda un nodo senza la chiave non
+riceve niente; se l'UDP è bloccato il ripiego su TCP è un vero TLS. Sui server reinstalla con
+<code>./installa.sh --codice NYCT1:…</code> (o <code>--webrtc</code>). Limite: ritmo e dimensioni restano quelli di
+Nyctalus, non di un video a 30 fotogrammi.</p>
 <h2 id="6-quater-ponti-nascosti">6-quater. Ponti nascosti</h2>
 <p>Un ponte è un'entrata <strong>privata</strong>: non sta nell'elenco e ha una chiave sua. Non lo gestisci tu
 come gestore: lo installa chi lo ospita (<code>./installa.sh --ponte --codice NYCT1:…</code> sul server) e

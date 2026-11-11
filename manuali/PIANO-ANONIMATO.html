@@ -21,7 +21,7 @@
 <main class="wrap manuale-doc">
 <nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html" class="qui">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
-<h1 id="piano-verso-una-rete-anonima">Piano verso una rete anonima</h1><nav class="sommario"><b>In questa pagina</b><a href="#in-breve">In breve</a><a href="#tappa-0-oggi-la-prova-di-funzionamento">Tappa 0 · Oggi: la prova di funzionamento</a><a href="#tappa-1-tre-piccoli-server-su-tre-fornitori-diversi">Tappa 1 · Tre piccoli server su tre fornitori diversi</a><a href="#tappa-2-percorsi-davvero-casuali-lavoro-sul-motore-fatta-07112026">Tappa 2 · Percorsi davvero casuali (lavoro sul motore) ✅ fatta (07/11/2026)</a><a href="#tappa-2-bis-modalita-riservata-chat-fatta-07112026">Tappa 2-bis · Modalità riservata (chat) ✅ fatta (07/11/2026)</a><a href="#tappa-3-nodi-di-persone-diverse-strumenti-pronti-07112026">Tappa 3 · Nodi di persone diverse 🔧 strumenti pronti (07/11/2026)</a><a href="#tappa-4-piu-utenti-meno-ritmi-riconoscibili-protezione-di-serie-fatta-07112026">Tappa 4 · Più utenti, meno ritmi riconoscibili 🔧 protezione di serie fatta (07/11/2026)</a><a href="#tappa-5-misure-e-browser-pubblico">Tappa 5 · Misure e browser pubblico</a><a href="#nyctalus-e-tor-a-confronto">Nyctalus e Tor, a confronto</a><a href="#velocita-dove-siamo-e-cosa-viene-dopo">Velocità: dove siamo e cosa viene dopo</a><a href="#oltre-lanonimato-invisibilita">Oltre l'anonimato: invisibilità</a><a href="#tappa-6-revisione-indipendente">Tappa 6 · Revisione indipendente</a><a href="#cosa-nessuna-tappa-puo-dare">Cosa nessuna tappa può dare</a><a href="#cosa-fare-adesso">Cosa fare adesso</a></nav>
+<h1 id="piano-verso-una-rete-anonima">Piano verso una rete anonima</h1><nav class="sommario"><b>In questa pagina</b><a href="#in-breve">In breve</a><a href="#tappa-0-oggi-la-prova-di-funzionamento">Tappa 0 · Oggi: la prova di funzionamento</a><a href="#tappa-1-tre-piccoli-server-su-tre-fornitori-diversi">Tappa 1 · Tre piccoli server su tre fornitori diversi</a><a href="#tappa-2-percorsi-davvero-casuali-lavoro-sul-motore-fatta-07112026">Tappa 2 · Percorsi davvero casuali (lavoro sul motore) ✅ fatta (07/11/2026)</a><a href="#tappa-2-bis-modalita-riservata-chat-fatta-07112026">Tappa 2-bis · Modalità riservata (chat) ✅ fatta (07/11/2026)</a><a href="#tappa-3-nodi-di-persone-diverse-strumenti-pronti-07112026">Tappa 3 · Nodi di persone diverse 🔧 strumenti pronti (07/11/2026)</a><a href="#tappa-4-piu-utenti-meno-ritmi-riconoscibili-protezione-di-serie-fatta-07112026">Tappa 4 · Più utenti, meno ritmi riconoscibili 🔧 protezione di serie fatta (07/11/2026)</a><a href="#tappa-5-misure-e-browser-pubblico">Tappa 5 · Misure e browser pubblico</a><a href="#nyctalus-e-tor-a-confronto">Nyctalus e Tor, a confronto</a><a href="#velocita-dove-siamo-e-cosa-viene-dopo">Velocità: dove siamo e cosa viene dopo</a><a href="#oltre-lanonimato-invisibilita">Oltre l'anonimato: invisibilità</a><a href="#tappa-6-revisione-indipendente">Tappa 6 · Revisione indipendente</a><a href="#robustezza-e-servizi-punto-5-0319">Robustezza e servizi (punto 5) ✅ (0.3.19)</a><a href="#cosa-nessuna-tappa-puo-dare">Cosa nessuna tappa può dare</a><a href="#cosa-fare-adesso">Cosa fare adesso</a></nav>
 <p>Nyctalus <strong>cifra</strong> già tutto da un capo all'altro. L'<strong>anonimato</strong>, cioè che nessuno sappia
 <em>chi parla con chi</em>, non dipende però solo dal programma. Dipende da <strong>dove stanno i nodi</strong>,
 da <strong>chi li gestisce</strong> e da <strong>quanta gente usa la rete</strong>. Questo piano dice, tappa per tappa,
@@ -386,13 +386,27 @@ camuffamento collaudato.</p>
 <li>✅ <strong>«🦇 Aiuta la rete»</strong> (0.3.11): i PC degli utenti, se vogliono, fanno da <strong>nodo intermedio</strong>
    (mai uscita, verificato anche contro un client che lo forza), con un tetto di banda. Misurato:
    con nodi saturi accelera poco (+5%) perché la strettoia sono entrata e uscita; conta con molti
-   utenti. Da misurare: quanto il traffico degli altri copre i tuoi ritmi. Poi: promuovere a
-   «entrata» i PC più stabili, come le guardie di Tor.
+   utenti. Da misurare: quanto il traffico degli altri copre i tuoi ritmi.
+5-quater. ✅ <strong>PC stabili promossi a guardia</strong> (0.3.19): il gestore prova ogni ora i PC che aiutano;
+   chi risponde almeno al 95% da 14 giorni diventa anche <strong>entrata</strong> (<code>guardia=si</code> nell'elenco
+   firmato), mai uscita; chi sparisce torna intermedio. <strong>Peso sull'anonimato:</strong> più guardie =
+   la guardia di ognuno è più spesso un PC di un altro utente invece che un server del gestore; è
+   un bene (meno potere concentrato nel gestore) se i PC sono di persone diverse, ed è il motivo
+   della soglia di stabilità: una guardia che va e viene costringe a cambiarla, cioè più occasioni
+   di finire su un'entrata malevola. Prova <code>39-guardie-promosse</code>.
 5-bis. ✅ <strong>Riuso dei collegamenti fra nodi</strong> (0.3.11): +1-3% e primo byte più rapido sotto carico,
    meno collegamenti nuovi sul filo.
 5-ter. ✅ <strong>Celle piene</strong> (0.3.12): trovata con le catture la causa del divario a nodi saturi
    (celle quasi vuote); ora +25% su Tor anche lì (3,32 contro 2,66 su 20 ripetizioni).</li>
-<li>Uscite diverse per strada, per gli scaricamenti grandi (da pesare contro l'anonimato).</li>
+<li>✅ <strong>Uscite diverse</strong> (0.3.19, <code>--exits N</code>, di serie 1): fino a 4 fasci dalla stessa guardia,
+   ognuno con la sua uscita; ogni sito resta sulla sua uscita, i siti nuovi vanno alla più libera.
+   Accelera gli scaricamenti <strong>paralleli da siti diversi</strong> (non un singolo scaricamento: un flusso
+   TCP esce sempre da un'uscita sola). <strong>Peso sull'anonimato:</strong> ogni uscita vede <strong>solo i suoi
+   siti</strong> (meno collegamento fra i tuoi siti: è l'isolamento per destinazione di Tor), il sito non
+   ti vede mai da più indirizzi; ma con N uscite la probabilità che <strong>almeno una</strong> sia malevola
+   cresce (1−(1−f)^N con f la quota di uscite dell'avversario), e se lo è anche la guardia quei
+   flussi sono collegabili. Per questo il valore di serie resta 1 e la scelta è dell'utente
+   (scheda ⚡ Prestazioni). Prova <code>40-uscite-diverse</code>.</li>
 </ol>
 <h2 id="oltre-lanonimato-invisibilita">Oltre l'anonimato: invisibilità</h2>
 <p>Anonimo vuol dire che non si sa <strong>chi parla con chi</strong>. Invisibile vuol dire che non si capisce
@@ -409,20 +423,32 @@ debole, e le misure del punto K lo confermano anche per noi. I passi, in ordine:
    sulla porta 443 con il nome scelto dal gestore, e chi li sonda (anche un vero Chrome) riceve una
    pagina 404. ✅ <strong>Ripiego su TCP</strong> (0.3.13): dove UDP è bloccato si entra in TCP sulla stessa
    porta, da soli; nella forma HTTP/3 quel TCP è un vero HTTPS (0.3.14), con un'impronta TLS
-   comune e non più propria (0.3.15). Restano: impronta identica a Chrome (serve BoringSSL),
-   forma «videochiamata».
+   comune e non più propria (0.3.15). ✅ <strong>Forma «videochiamata»</strong> (0.3.19): STUN + pacchetti
+   SRTP autenticati con la chiave della rete, sonde mute, ripiego TCP in TLS (prova
+   <code>38-forma-videochiamata</code>; limite: ritmo e dimensioni di Nyctalus, non di un video vero).
+   Resta: impronta identica a Chrome (serve BoringSSL, pesante).
    Il camuffamento di serie rende il traffico simile a rumore, e il rumore
    puro è sospetto (in alcuni paesi viene bloccato proprio così). Meglio farlo sembrare
    <strong>traffico comune</strong>: una normale videochiamata (WebRTC) o un normale sito HTTPS/HTTP-3
    (con ALPN <code>h3</code>, porta 443, dimensioni dei pacchetti come i browser), più il ripiego su TCP 443
    dove UDP è bloccato. Cambia la stretta di mano: va con un salto di versione del protocollo.</li>
-<li><strong>Chat da mixnet.</strong> La modalità riservata è il primo passo. Il prossimo: i nodi trattengono
-   e <strong>rimescolano</strong> le buste con ritardi casuali, e si aggiungono buste finte calcolate apposta
-   (privacy differenziale, come Vuvuzela/Karaoke e Loopix). Così nemmeno chi vede <strong>tutta
-   Internet</strong> capisce chi scrive a chi. Per i messaggi è il punto in cui si può <strong>superare Tor</strong>.</li>
-<li><strong>Copertura costante durante l'uso.</strong> Il traffico resta piatto anche quando chiami o
-   scarichi. Le misure dicono che la copertura deve essere <strong>pari al traffico</strong>, non a celle
-   sparse: costa molta banda, quindi è un'opzione per chi ne ha bisogno.</li>
+<li>✅ <strong>Chat da mixnet</strong> (0.3.19). Le buste della modalità riservata (vere e finte, tutte della
+   stessa misura, a ritmo casuale) viaggiano su circuiti in cui <strong>ogni nodo le trattiene</strong> per un
+   ritardo casuale esponenziale scelto dal mittente (come Loopix; media 800 ms per salto,
+   <code>NYCTALUS_MIX_MS</code>), scritto nello strato Sphinx di quel nodo: lo legge solo lui. Buste di utenti
+   diversi escono dai nodi <strong>rimescolate nel tempo</strong>, quindi chi vede entrare e uscire i pacchetti
+   non può accoppiarli dagli orari. Il flusso resta integro (coda ordinata). Le buste finte
+   tengono costante il ritmo osservabile: è più forte del rumore calcolato della privacy
+   differenziale, finché la coda non trabocca. Prove <code>41-chat-mixnet</code>, <code>26-riservata</code>.
+   <strong>Limiti:</strong> la stretta d'apertura del circuito non è ritardata; con pochi utenti il
+   rimescolamento è scarso (serve gente); i nodi devono avere la 0.3.19 (i più vecchi inoltrano
+   subito, e non capiscono i nodi annunciati per nome con il mix).</li>
+<li>✅ <strong>Copertura costante</strong> (0.3.19, a scelta: spenta / durante l'uso / sempre). Il traffico va a
+   <strong>ritmo fisso</strong> in entrambi i versi (60 celle/s, ~85 KB/s per verso), celle vere o finte:
+   misurato, la linea è piatta (86,8 KB/s da fermi, 87,2 KB/s durante uno scaricamento; senza
+   copertura da fermi 161 B/s). Costa la banda del ritmo anche quando non serve e limita la velocità
+   a ~85 KB/s: è per chi ne ha bisogno. «Durante l'uso» nasconde quanto e cosa fai ma non i
+   periodi in cui usi la rete; «sempre» nasconde anche quelli. Prova <code>42-copertura-costante</code>.</li>
 <li><strong>Igiene automatica.</strong> Ritardi casuali sui messaggi (già nella modalità riservata), niente
    dati del dispositivo in uscita, attenzione agli orari di attività.</li>
 </ol>
@@ -437,6 +463,24 @@ può confrontare i tempi. Nessuna rete al mondo lo evita senza enormi quantità 
 </ul>
 <p>Solo dopo questa tappa ha senso dire «fidatevi». Fino ad allora Nyctalus è un <strong>prototipo
 da provare</strong>, non uno strumento da cui far dipendere la propria sicurezza.</p>
+<h2 id="robustezza-e-servizi-punto-5-0319">Robustezza e servizi (punto 5) ✅ (0.3.19)</h2>
+<ul>
+<li><strong>Ripresa dai circuiti caduti.</strong> Uno scaricamento passa da più circuiti; se un nodo intermedio
+  si spegne a metà, le celle che erano in viaggio su quel circuito si perdevano e tutto restava
+  bloccato (anche i flussi nuovi). Ora i due capi si confermano a vicenda cosa hanno ricevuto,
+  rispediscono sugli altri circuiti ciò che non è confermato e il client costruisce un circuito
+  nuovo al posto di quello caduto. Misurato: nodo spento a metà di 6 MB, il file arriva integro
+  (prova <code>44-circuiti-caduti</code>, 3 giri su 3). Se cade la guardia o l'uscita, la sessione si perde
+  ancora (si riparte con un circuito nuovo).</li>
+<li><strong>Registrazione provata dei servizi <code>.nyct</code></strong> (il «descrittore firmato» di Tor). Prima chiunque
+  poteva registrarsi al punto d'incontro con la chiave di un servizio altrui: non poteva
+  impersonarlo, ma riempiendo la coda di registrazioni false poteva renderlo irraggiungibile. Ora
+  la registrazione porta una prova fatta con la chiave privata del servizio, legata a quel nodo e
+  all'ora; prove false, scadute o ripetute si rifiutano. Prova <code>43-registrazione-provata</code>: un
+  impostore con lo stesso indirizzo ci prova in due modi, 6 visite su 6 arrivano al servizio vero.</li>
+<li><strong>Rumore di fondo tarato su rete reale:</strong> resta da fare con le prove su Internet (punto 1): in
+  simulazione non si può tarare onestamente.</li>
+</ul>
 <h2 id="cosa-nessuna-tappa-puo-dare">Cosa nessuna tappa può dare</h2>
 <ul>
 <li><strong>Invisibilità totale.</strong> Si può rendere il traffico simile a rumore o a un altro protocollo

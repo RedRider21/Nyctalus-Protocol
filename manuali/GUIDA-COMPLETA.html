@@ -193,7 +193,12 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi <strong>ge
 </tr>
 <tr>
 <td><a href="#5-modalita-riservata">Modalità riservata</a></td>
-<td>non far capire <strong>quando</strong> né <strong>a chi</strong> scrivi</td>
+<td>non far capire <strong>quando</strong> né <strong>a chi</strong> scrivi (buste ritardate e rimescolate nei nodi: chat da mixnet)</td>
+<td>spenta</td>
+</tr>
+<tr>
+<td><a href="#17-impostazioni-a-schede">Copertura costante</a></td>
+<td>linea piatta: non si vede quando né quanto usi la rete</td>
 <td>spenta</td>
 </tr>
 <tr>
@@ -238,8 +243,13 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi <strong>ge
 </tr>
 <tr>
 <td><a href="#12-protezione-camuffamento-e-rumore-di-fondo">Protezione: camuffamento e rumore</a></td>
-<td>traffico simile a rumore (o a un sito HTTP/3), ritmi nascosti</td>
+<td>traffico simile a rumore, a un sito HTTP/3 o a una videochiamata; ritmi nascosti</td>
 <td>accesa nelle reti nuove</td>
+</tr>
+<tr>
+<td><a href="#14-famiglie-e-nodi-di-amici">Guardie promosse</a></td>
+<td>i PC che aiutano e restano accesi diventano entrate (mai uscite)</td>
+<td>automatico</td>
 </tr>
 <tr>
 <td><a href="#13-bis-reti-con-udp-bloccato-ripiego-su-tcp">UDP bloccato: ripiego su TCP</a></td>
@@ -268,8 +278,13 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi <strong>ge
 </tr>
 <tr>
 <td><a href="#16-opzioni-avanzate-del-motore">Opzioni del motore</a></td>
-<td>salti, strade parallele (per esperti)</td>
-<td>3 · 2</td>
+<td>salti, strade parallele, uscite (per esperti)</td>
+<td>3 · 2 · 1</td>
+</tr>
+<tr>
+<td><a href="#17-impostazioni-a-schede">Impostazioni a schede</a></td>
+<td>regolare tutto dalle Impostazioni (telefono, launcher, browser)</td>
+<td>—</td>
 </tr>
 </tbody>
 </table>
@@ -386,7 +401,11 @@ degli altri. Più utenti aiutano, più la rete è capace; e il traffico degli al
 tuoi ritmi.</p>
 <p><strong>Regole fisse:</strong> solo <strong>intermedio</strong>, mai uscita (il traffico degli altri non esce <strong>mai</strong> su
 Internet dal tuo indirizzo: il nodo rifiuta anche se un client glielo chiede), mai guardia né
-punto d'incontro (un PC si spegne). Un <strong>tetto di banda</strong> che scegli tu.</p>
+punto d'incontro (un PC si spegne). Un <strong>tetto di banda</strong> che scegli tu. <strong>Eccezione (0.3.19):</strong>
+se il tuo PC resta acceso con continuità, il gestore lo vede <strong>stabile</strong> (almeno 14 giorni e il 95%
+delle prove con risposta) e lo <strong>promuove a guardia</strong>: allora può fare anche da <strong>entrata</strong> per
+altri (non vede cosa fanno: solo che usano Nyctalus), ma mai da uscita. Se poi lo spegni spesso,
+torna da solo semplice intermedio.</p>
 <p><strong>Costo:</strong> un po' di banda in upload (fino al tetto) e una porta UDP da aprire sul router.</p>
 <p><strong>Passi:</strong></p>
 <ul>
@@ -399,7 +418,9 @@ punto d'incontro (un PC si spegne). Un <strong>tetto di banda</strong> che scegl
   (serve che i client abbiano la 0.3.11).</li>
 </ul>
 <p>Misurato in simulazione: con i nodi della rete saturi l'aiuto come soli intermedi accelera poco
-(+5%), perché la strettoia sono entrata e uscita; conta quando gli utenti sono molti.</p>
+(+5%), perché la strettoia sono entrata e uscita; conta quando gli utenti sono molti. Per questo
+i PC stabili vengono promossi a <strong>guardia</strong> (entrate in più) e il client può usare <strong>più uscite</strong>
+(<code>--exits</code>, §16; scheda ⚡ Prestazioni → «Uscite diverse»).</p>
 <h3 id="per-chi-gestisce-la-rete">Per chi gestisce la rete</h3>
 <p>I comandi sono di <code>nyctalus-rete</code>, sul PC del gestore. Dopo ogni cambio che tocca il
 <strong>codice di rete</strong>, va ridato a chi si collega (importandolo di nuovo).</p>
@@ -586,6 +607,26 @@ modalità rigida invece <strong>si rifiuta</strong>: meglio niente che un percor
 <td>spenta</td>
 </tr>
 <tr>
+<td><code>--webrtc</code> / <code>NYCTALUS_WEBRTC=1</code></td>
+<td>forma videochiamata: STUN + SRTP (con <code>--obfuscation</code>)</td>
+<td>spenta</td>
+</tr>
+<tr>
+<td><code>--constant-rate N [--constant-always]</code> / <code>NYCTALUS_COSTANTE</code>, <code>NYCTALUS_COSTANTE_SEMPRE=1</code></td>
+<td>copertura costante: N celle/s per verso, vere o finte, durante l'uso (o sempre)</td>
+<td>spenta</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_MIX_MS</code></td>
+<td>ritardo medio per salto delle buste della modalità riservata (chat da mixnet)</td>
+<td>800</td>
+</tr>
+<tr>
+<td><code>--exits N</code> / <code>NYCTALUS_USCITE</code> / <code>exits = N</code></td>
+<td>uscite diverse (1-4): ogni sito resta sulla sua, i siti nuovi vanno alla più libera; più uscite = scaricamenti paralleli più veloci ma più nodi che vedono un tuo sito</td>
+<td>1</td>
+</tr>
+<tr>
 <td><code>--hidden-bridge</code> (nodo)</td>
 <td>il nodo fa da ponte nascosto</td>
 <td>spento</td>
@@ -627,6 +668,41 @@ modalità rigida invece <strong>si rifiuta</strong>: meglio niente che un percor
 </tr>
 </tbody>
 </table>
+<h3 id="17-impostazioni-a-schede">17. Impostazioni a schede</h3>
+<p>Tutte le regolazioni che prima stavano solo nei file di configurazione o nelle variabili
+d'ambiente si cambiano dalle <strong>Impostazioni</strong>, divise per area in <strong>schede</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Dove</th>
+<th>Schede</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Telefono</strong> (☰ / ⚙️ Impostazioni)</td>
+<td>👤 Profilo · 🎨 Aspetto · 💬 Chat · 📞 Chiamate · 🌐 Rete · ⚡ Prestazioni · 📱 App</td>
+</tr>
+<tr>
+<td><strong>Launcher PC</strong> (⚙ → Impostazioni…)</td>
+<td>🌐 Rete · ⚡ Prestazioni · 📞 Chiamate (tema, dimensioni, 🦇 Aiuta la rete restano nel menu ⚙)</td>
+</tr>
+<tr>
+<td><strong>Browser PC</strong> (Impostazioni)</td>
+<td>🌐 Browser (le sue) · 🔗 Rete · ⚡ Prestazioni</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>📞 Chiamate</strong>: risoluzione, fotogrammi al secondo, dati del video, qualità dell'audio (sul PC
+  dati del video e dell'audio). Valgono dalla chiamata successiva.</li>
+<li><strong>⚡ Prestazioni</strong>: finestra per circuito, controllo di congestione, ripiego su TCP, riuso dei
+  collegamenti, uscite diverse, copertura costante. Valgono al prossimo avvio della rete (sul telefono c'è «Salva e
+  riavvia la rete»). Si salvano in <code>~/.nyctalus-browser/config.json</code> (PC) o nella configurazione
+  dell'app (telefono): sono le stesse variabili della tabella del §16.</li>
+<li><strong>🌐/🔗 Rete</strong>: la rete in uso e la sua forma del traffico. La forma (rumore, HTTP/3,
+  videochiamata) vale per tutta la rete: la sceglie il gestore con <code>nyctalus-rete protezione</code>.</li>
+</ul>
 </article>
 </main>
 <button class="torna-su" id="torna-su" type="button" title="Torna su" aria-label="Torna su">↑</button>
