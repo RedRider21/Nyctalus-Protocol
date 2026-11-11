@@ -94,6 +94,51 @@ impl Identita {
     }
 }
 
+// --- registrazione PROVATA al punto d'incontro (il «descrittore firmato» del servizio) ----------
+//
+// Un servizio `.nyct` si registra a un punto d'incontro dicendo la sua chiave. Senza prova chiunque
+// potrebbe registrarsi con la chiave di un altro e riempire la coda di registrazioni false (il
+// servizio vero diventerebbe irraggiungibile, anche se nessuno può impersonarlo: la stretta Noise
+// fallirebbe). Con la prova la registrazione vale solo se viene da chi ha la chiave PRIVATA del
+// servizio: un MAC con il segreto Diffie-Hellman fra la chiave del servizio e quella del NODO
+// d'incontro (che il nodo ricalcola dal suo lato), legato a quel nodo e all'ora. Come il
+// descrittore firmato di Tor, senza bisogno di una seconda chiave di firma.
+
+const CONTESTO_PROVA: &str = "Nyctalus 2026-11-11 registrazione provata al punto d'incontro";
+
+fn mac_prova(segreto_dh: &[u8; 32], servizio: &[u8; 32], nodo: &[u8; 32], ora: u64, unico: &[u8; 8]) -> [u8; 32] {
+    let chiave = blake3::derive_key(CONTESTO_PROVA, segreto_dh);
+    let mut dati = Vec::with_capacity(80);
+    dati.extend_from_slice(servizio);
+    dati.extend_from_slice(nodo);
+    dati.extend_from_slice(&ora.to_be_bytes());
+    dati.extend_from_slice(unico);
+    *blake3::keyed_hash(&chiave, &dati).as_bytes()
+}
+
+impl Identita {
+    /// Prova di registrazione del servizio presso il nodo d'incontro `nodo` (sua chiave X25519).
+    /// `unico`: 8 byte casuali, perché due registrazioni nello stesso secondo abbiano prove diverse.
+    pub fn prova_registrazione(&self, nodo: &[u8; 32], ora: u64, unico: &[u8; 8]) -> [u8; 32] {
+        let dh = x25519_dalek::StaticSecret::from(self.privata).diffie_hellman(&x25519_dalek::PublicKey::from(*nodo));
+        mac_prova(dh.as_bytes(), &self.pubblica, nodo, ora, unico)
+    }
+}
+
+/// Lato nodo: la prova è di chi ha la chiave privata di `servizio`? (`segreto_nodo` = chiave
+/// privata X25519 del nodo). Rifiuta i punti «deboli» (segreto tutto zero).
+pub fn verifica_registrazione(segreto_nodo: &[u8; 32], servizio: &[u8; 32], ora: u64, unico: &[u8; 8], prova: &[u8; 32]) -> bool {
+    let s = x25519_dalek::StaticSecret::from(*segreto_nodo);
+    let nodo = x25519_dalek::PublicKey::from(&s).to_bytes();
+    let dh = s.diffie_hellman(&x25519_dalek::PublicKey::from(*servizio));
+    if !dh.was_contributory() {
+        return false;
+    }
+    let atteso = mac_prova(dh.as_bytes(), servizio, &nodo, ora, unico);
+    // confronto a tempo costante
+    atteso.iter().zip(prova).fold(0u8, |a, (x, y)| a | (x ^ y)) == 0
+}
+
 impl Drop for Identita {
     fn drop(&mut self) {
         chiavi::azzera(&mut self.privata);
@@ -171,6 +216,25 @@ pub fn rispondi(
 
 #[cfg(test)]
 mod test {
+
+    #[test]
+    fn registrazione_provata_solo_con_la_chiave_privata() {
+        let servizio = Identita::genera().unwrap();
+        let altro = Identita::genera().unwrap();
+        let segreto_nodo = [42u8; 32];
+        let nodo = x25519_dalek::PublicKey::from(&x25519_dalek::StaticSecret::from(segreto_nodo)).to_bytes();
+        let u = [5u8; 8];
+        let p = servizio.prova_registrazione(&nodo, 1000, &u);
+        assert!(verifica_registrazione(&segreto_nodo, &servizio.pubblica(), 1000, &u, &p), "prova giusta");
+        assert!(!verifica_registrazione(&segreto_nodo, &servizio.pubblica(), 1001, &u, &p), "ora diversa");
+        assert!(!verifica_registrazione(&segreto_nodo, &servizio.pubblica(), 1000, &[6u8; 8], &p), "numero diverso");
+        assert_ne!(p, servizio.prova_registrazione(&nodo, 1000, &[6u8; 8]), "stesso secondo, prove diverse");
+        let falsa = altro.prova_registrazione(&nodo, 1000, &u);
+        assert!(!verifica_registrazione(&segreto_nodo, &servizio.pubblica(), 1000, &u, &falsa), "chi non ha la chiave privata");
+        assert!(!verifica_registrazione(&[7u8; 32], &servizio.pubblica(), 1000, &u, &p), "un altro nodo");
+        assert!(!verifica_registrazione(&segreto_nodo, &[0u8; 32], 1000, &u, &[0u8; 32]), "punto debole");
+    }
+
     use super::*;
 
     #[test]

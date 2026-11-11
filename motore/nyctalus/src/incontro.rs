@@ -315,6 +315,96 @@ fn controllo(tipo: u8, chiave: &[u8; 32]) -> Vec<u8> {
     c
 }
 
+fn adesso_s() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+}
+
+/// REGISTRA **provata** (dalla 0.3.19): dopo la chiave, l'ora (8 byte), un numero casuale (8 byte:
+/// due registrazioni nello stesso secondo hanno prove diverse) e la prova (32 byte) che
+/// la registrazione viene da chi ha la chiave privata del servizio, legata al nodo `nodo`.
+fn registrazione(identita: &Identita, nodo: &[u8; 32]) -> Vec<u8> {
+    let ora = adesso_s();
+    let mut c = controllo(REGISTRA, &identita.pubblica());
+    // solo per le prove di compatibilità: registrarsi come un servizio di prima della 0.3.19
+    if std::env::var("NYCTALUS_REGISTRA_VECCHIA").is_ok_and(|v| v == "1") {
+        return c;
+    }
+    let mut unico = [0u8; 8];
+    getrandom::fill(&mut unico).expect("generatore casuale di sistema");
+    c.extend_from_slice(&ora.to_be_bytes());
+    c.extend_from_slice(&unico);
+    c.extend_from_slice(&identita.prova_registrazione(nodo, ora, &unico));
+    c
+}
+
+/// Tolleranza sull'ora della prova (orologi non perfetti) e memoria delle prove già viste.
+const FINESTRA_PROVA_S: u64 = 600;
+
+/// Prova di una REGISTRA: ora, numero casuale, MAC.
+type Prova = (u64, [u8; 8], [u8; 32]);
+
+/// Esito del controllo di una REGISTRA.
+#[derive(Debug, PartialEq, Eq)]
+enum Ammissione {
+    /// prova valida: la registrazione è del servizio
+    Provata,
+    /// senza prova (servizio vecchio): solo se il nodo è in modo compatibile
+    /// (`NYCTALUS_REGISTRA_COMPATIBILE=1`) e il servizio non ne ha di provate
+    NonProvata,
+    /// prova sbagliata, scaduta o già usata, oppure senza prova per un servizio che prova
+    Rifiutata,
+}
+
+/// Chiavi con registrazioni provate di recente (per rifiutare quelle senza prova) e prove già viste.
+fn memoria_prove() -> &'static Mutex<(HashMap<[u8; 32], u64>, HashMap<[u8; 32], u64>)> {
+    static M: OnceLock<Mutex<(HashMap<[u8; 32], u64>, HashMap<[u8; 32], u64>)>> = OnceLock::new();
+    M.get_or_init(|| Mutex::new((HashMap::new(), HashMap::new())))
+}
+
+/// Di serie il nodo accetta SOLO registrazioni provate: altrimenti un impostore, rifiutato dove
+/// il servizio vero si è registrato, potrebbe registrarsi senza prova a un altro punto d'incontro
+/// candidato. `NYCTALUS_REGISTRA_COMPATIBILE=1` (scelta di chi gestisce il nodo, solo durante il
+/// passaggio alla 0.3.19) ammette anche i servizi vecchi, finché quel servizio non ne ha di provate.
+fn compatibile() -> bool {
+    static C: OnceLock<bool> = OnceLock::new();
+    *C.get_or_init(|| std::env::var("NYCTALUS_REGISTRA_COMPATIBILE").is_ok_and(|v| v == "1"))
+}
+
+fn ammetti(segreto_nodo: &[u8; 32], chiave: &[u8; 32], prova: Option<Prova>) -> Ammissione {
+    ammetti_con(compatibile(), segreto_nodo, chiave, prova)
+}
+
+fn ammetti_con(compatibile: bool, segreto_nodo: &[u8; 32], chiave: &[u8; 32], prova: Option<Prova>) -> Ammissione {
+    let ora = adesso_s();
+    let mut m = memoria_prove().lock().unwrap();
+    let (provate, viste) = &mut *m;
+    // pulizia: dimentica ciò che è più vecchio della finestra (e del periodo di una registrazione)
+    if viste.len() > 100_000 {
+        viste.retain(|_, t| ora.saturating_sub(*t) <= 2 * FINESTRA_PROVA_S);
+    }
+    provate.retain(|_, t| ora.saturating_sub(*t) <= 3600);
+    match prova {
+        None => {
+            if !compatibile || provate.contains_key(chiave) {
+                Ammissione::Rifiutata
+            } else {
+                Ammissione::NonProvata
+            }
+        }
+        Some((t, u, p)) => {
+            if ora.abs_diff(t) > FINESTRA_PROVA_S
+                || viste.contains_key(&p)
+                || !stretta::verifica_registrazione(segreto_nodo, chiave, t, &u, &p)
+            {
+                return Ammissione::Rifiutata;
+            }
+            viste.insert(p, ora);
+            provate.insert(*chiave, ora);
+            Ammissione::Provata
+        }
+    }
+}
+
 /// Lato client: apre un canale **collegato al servizio** `chiave`. In manuale
 /// usa il nodo diretto; altrimenti prova i punti d'incontro candidati
 /// (nell'ordine deterministico) con un circuito a più salti finché trova il
@@ -385,10 +475,15 @@ pub async fn gestisci(
     mut invio: quinn::SendStream,
     ricezione: quinn::RecvStream,
     primo: Vec<u8>,
+    segreto_nodo: &[u8; 32],
 ) -> Risultato<()> {
-    let (tipo, chiave) = analizza_controllo(&primo)?;
+    let (tipo, chiave, prova) = analizza_controllo_provato(&primo)?;
     match tipo {
         REGISTRA => {
+            if ammetti(segreto_nodo, &chiave, prova) == Ammissione::Rifiutata {
+                scrivi_quadro(&mut invio, b"NO").await?;
+                return Ok(());
+            }
             registro_diretto().lock().unwrap().insert(chiave, connessione.clone());
             scrivi_quadro(&mut invio, b"OK").await?;
             connessione.closed().await;
@@ -436,6 +531,8 @@ async fn ponte_grezzo(
 struct Incontro {
     verso_servizio: mpsc::Sender<Vec<u8>>,
     consegna: oneshot::Sender<mpsc::Sender<Vec<u8>>>,
+    /// registrazione provata (dalla 0.3.19) o di un servizio vecchio
+    provata: bool,
 }
 
 /// Coda di servizi in attesa per ogni chiave: un servizio può registrare più
@@ -455,18 +552,27 @@ pub async fn uscita_rendezvous(
     mut ricezione: quinn::RecvStream,
     chiave: [u8; 32],
     primo: Vec<u8>,
+    segreto_nodo: &[u8; 32],
 ) -> Risultato<()> {
-    let (tipo, key) = analizza_controllo(&spacchetta_tunnel(&primo)?)?;
+    let (tipo, key, prova) = analizza_controllo_provato(&spacchetta_tunnel(&primo)?)?;
     match tipo {
         REGISTRA => {
+            let ammissione = ammetti(segreto_nodo, &key, prova);
+            if ammissione == Ammissione::Rifiutata {
+                scrittore_ritorno_singolo(invio, chiave, b"NO".to_vec()).await;
+                return Ok(());
+            }
             let (tx_vs, rx_vs) = mpsc::channel::<Vec<u8>>(256);
             let (consegna_tx, consegna_rx) = oneshot::channel::<mpsc::Sender<Vec<u8>>>();
-            registro_onion()
-                .lock()
-                .unwrap()
-                .entry(key)
-                .or_default()
-                .push_back(Incontro { verso_servizio: tx_vs, consegna: consegna_tx });
+            {
+                let mut reg = registro_onion().lock().unwrap();
+                let coda = reg.entry(key).or_default();
+                // la prima registrazione provata scarta quelle senza prova (forse di un impostore)
+                if ammissione == Ammissione::Provata {
+                    coda.retain(|i| i.provata);
+                }
+                coda.push_back(Incontro { verso_servizio: tx_vs, consegna: consegna_tx, provata: ammissione == Ammissione::Provata });
+            }
 
             // Verso il servizio: "OK", poi i plaintext client→servizio da rx_vs.
             let scrittore = scrittore_ritorno(invio, chiave, b"OK".to_vec(), rx_vs);
@@ -589,14 +695,28 @@ async fn lettore_avanti(
     }
 }
 
+#[cfg(test)]
 fn analizza_controllo(primo: &[u8]) -> Risultato<(u8, [u8; 32])> {
-    if primo.len() < MAGIA.len() + 1 + 32 || !primo.starts_with(MAGIA) {
+    analizza_controllo_provato(primo).map(|(t, k, _)| (t, k))
+}
+
+/// Come `analizza_controllo`, con l'eventuale prova di una REGISTRA (ora, prova).
+fn analizza_controllo_provato(primo: &[u8]) -> Risultato<(u8, [u8; 32], Option<Prova>)> {
+    let base = MAGIA.len() + 1 + 32;
+    if primo.len() < base || !primo.starts_with(MAGIA) {
         return Err("rendezvous: malformed control frame".into());
     }
     let tipo = primo[MAGIA.len()];
     let mut chiave = [0u8; 32];
-    chiave.copy_from_slice(&primo[MAGIA.len() + 1..MAGIA.len() + 1 + 32]);
-    Ok((tipo, chiave))
+    chiave.copy_from_slice(&primo[MAGIA.len() + 1..base]);
+    let prova = (primo.len() >= base + 48).then(|| {
+        let ora = u64::from_be_bytes(primo[base..base + 8].try_into().expect("8 byte"));
+        let unico: [u8; 8] = primo[base + 8..base + 16].try_into().expect("8 byte");
+        let mut p = [0u8; 32];
+        p.copy_from_slice(&primo[base + 16..base + 48]);
+        (ora, unico, p)
+    });
+    Ok((tipo, chiave, prova))
 }
 
 // ======================================================================
@@ -662,7 +782,7 @@ pub async fn site(
         task.push(tokio::spawn(async move {
             loop {
                 let Ok(posto) = attivi.clone().acquire_owned().await else { return };
-                match registra_onion_e_canale(&identita.pubblica(), &elenco, offusca, salti).await {
+                match registra_onion_e_canale(&identita, &elenco, offusca, salti).await {
                     Ok(canale) => {
                         let (identita, modo) = (identita.clone(), modo.clone());
                         tokio::spawn(async move {
@@ -699,7 +819,7 @@ async fn site_diretto(
     let (conn, _endpoint) = match canale_diretto(&nodo, offusca).await? {
         Canale::Diretto { mut invio, mut ricezione, _conn: Some(conn), _endpoint } => {
             // Registra questa connessione come servizio.
-            scrivi_quadro(&mut invio, &controllo(REGISTRA, &identita.pubblica())).await?;
+            scrivi_quadro(&mut invio, &registrazione(&identita, &nodo.1)).await?;
             match leggi_quadro(&mut ricezione).await? {
                 Some(r) if r == b"OK" => {}
                 _ => return Err("registration refused".into()),
@@ -725,11 +845,12 @@ async fn site_diretto(
 /// Lato servizio (onion): costruisce un circuito verso un punto d'incontro
 /// candidato e si registra; restituisce il canale oltre REGISTRA→OK.
 async fn registra_onion_e_canale(
-    chiave_pub: &[u8; 32],
+    identita: &Identita,
     elenco: &[NodoRete],
     offusca: Option<[u8; 32]>,
     salti: usize,
 ) -> Risultato<Canale> {
+    let chiave_pub = &identita.pubblica();
     if elenco.is_empty() {
         return Err("empty signed directory".into());
     }
@@ -745,7 +866,7 @@ async fn registra_onion_e_canale(
                 continue;
             }
         };
-        if canale.invia(&controllo(REGISTRA, chiave_pub)).await.is_err() {
+        if canale.invia(&registrazione(identita, &percorso.last().unwrap().1)).await.is_err() {
             continue;
         }
         match canale.ricevi().await? {
@@ -1194,6 +1315,42 @@ mod test {
         let dir = std::env::temp_dir();
         let (stato, _, _) = apri_risorsa(&dir, "/../etc/passwd");
         assert_eq!(stato, "403 Forbidden");
+    }
+
+    #[test]
+    fn registrazione_provata_ammessa_falsa_ripetuta_o_senza_prova_rifiutata() {
+        let servizio = Identita::genera().unwrap();
+        let segreto_nodo = [33u8; 32];
+        let nodo = x25519_dalek_pub(&segreto_nodo);
+        // un servizio vecchio (senza prova) entra finché il servizio non si registra con la prova
+        let altra = Identita::genera().unwrap();
+        assert_eq!(ammetti_con(false, &segreto_nodo, &altra.pubblica(), None), Ammissione::Rifiutata, "di serie: senza prova no");
+        assert_eq!(ammetti_con(true, &segreto_nodo, &altra.pubblica(), None), Ammissione::NonProvata, "nodo compatibile: sì");
+        let c = registrazione(&servizio, &nodo);
+        let (_, k, prova) = analizza_controllo_provato(&c).unwrap();
+        assert_eq!(k, servizio.pubblica());
+        assert_eq!(ammetti(&segreto_nodo, &k, prova), Ammissione::Provata);
+        assert_eq!(ammetti(&segreto_nodo, &k, prova), Ammissione::Rifiutata, "la stessa prova due volte: replica");
+        assert_eq!(ammetti_con(true, &segreto_nodo, &k, None), Ammissione::Rifiutata, "anche compatibile: senza prova per un servizio che prova = impostore");
+        // un impostore senza la chiave privata
+        let impostore = Identita::genera().unwrap();
+        let mut falsa = registrazione(&impostore, &nodo);
+        falsa[MAGIA.len() + 1..MAGIA.len() + 33].copy_from_slice(&servizio.pubblica());
+        let (_, k2, p2) = analizza_controllo_provato(&falsa).unwrap();
+        assert_eq!(ammetti(&segreto_nodo, &k2, p2), Ammissione::Rifiutata, "prova di un altro");
+        // prova scaduta
+        let t = adesso_s() - 2 * FINESTRA_PROVA_S;
+        let vecchia = (t, [1u8; 8], servizio.prova_registrazione(&nodo, t, &[1u8; 8]));
+        // due registrazioni nello stesso secondo (riserva di circuiti): prove diverse, entrambe ammesse
+        let (_, _, a) = analizza_controllo_provato(&registrazione(&servizio, &nodo)).unwrap();
+        let (_, _, b) = analizza_controllo_provato(&registrazione(&servizio, &nodo)).unwrap();
+        assert_eq!(ammetti(&segreto_nodo, &servizio.pubblica(), a), Ammissione::Provata);
+        assert_eq!(ammetti(&segreto_nodo, &servizio.pubblica(), b), Ammissione::Provata);
+        assert_eq!(ammetti(&segreto_nodo, &servizio.pubblica(), Some(vecchia)), Ammissione::Rifiutata, "fuori tempo");
+    }
+
+    fn x25519_dalek_pub(segreto: &[u8; 32]) -> [u8; 32] {
+        nyctalus_core::circuito::chiave_pubblica(segreto)
     }
 
     #[test]

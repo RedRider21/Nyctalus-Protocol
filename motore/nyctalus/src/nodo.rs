@@ -224,7 +224,7 @@ async fn gestisci_circuito(
         return Ok(());
     };
     if pacchetto.starts_with(crate::incontro::MAGIA) {
-        return crate::incontro::gestisci(connessione, invio_monte, ricezione_monte, pacchetto).await;
+        return crate::incontro::gestisci(connessione, invio_monte, ricezione_monte, pacchetto, &segreto).await;
     }
     let elaborazione = circuito::elabora_nodo(&pacchetto, &segreto)?;
     let chiave = elaborazione.chiave_salto;
@@ -393,7 +393,7 @@ async fn gestisci_circuito(
                 .map(|p| p.starts_with(crate::incontro::MAGIA))
                 .unwrap_or(false);
             if e_rendezvous {
-                crate::incontro::uscita_rendezvous(invio_monte, ricezione_monte, chiave, primo).await?;
+                crate::incontro::uscita_rendezvous(invio_monte, ricezione_monte, chiave, primo, &segreto).await?;
             } else {
                 uscita_conflux(invio_monte, ricezione_monte, chiave, primo).await?;
             }
