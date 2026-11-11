@@ -15,6 +15,9 @@
 8-bis. **App Android senza Termux** (scelta «prima A, poi B» dell'utente): motore e servizio dentro l'APK, riscrivendo in Rust il servizio del telefono (~1.900 righe Python). A (Termux automatizzato) è fatto.
 9. **Alla fine**: guida passo-passo (telefono, PC di casa, PC nodo su Internet), glossario dei termini e comandi, riordino organico della documentazione.
 
+## 11/11/2026 sera (a casa) · Release v0.3.19 PUBBLICATA ✅ (APK 0.62)
+- Push di main, CI dei motori (run 43107647765, 9 bersagli), release v0.3.19 «Latest» con 18 file (APK, zip Android/PC/Server/arm64/Windows, pacchetto Termux + sha256, script unico, motori nudi); link «latest» dello script unico verificati (impronta OK). Pages aggiornato (home con le novità 0.3.19 e «In arrivo», manuali HTML rigenerati).
+
 ## 11/11/2026 · Punto 5 · Robustezza e servizi ✅ (in ufficio: solo commit locali, nessun upload)
 - **Registrazione provata dei servizi .nyct** («descrittore firmato»): REGISTRA con ora, numero casuale e MAC sul segreto DH servizio↔nodo d'incontro (`stretta::prova_registrazione/verifica_registrazione`, `incontro::ammetti`); prove false, scadute (±10 min) o ripetute rifiutate; di serie i nodi rifiutano le registrazioni senza prova (`NYCTALUS_REGISTRA_COMPATIBILE=1` per il passaggio di versione). Prova 43 (7/7: impostore con lo stesso .nyct rifiutato in due modi, 6/6 visite al servizio vero).
 - **Ripresa dai circuiti caduti**: `ripresa.rs` (strade vive + memoria delle unità non confermate, max 16384), cella `CONFERMA` 0x06 sul flusso 0xFFFF nei due versi (ogni 64 celle e ogni 300 ms), rispedizione delle unità della strada caduta, circuito nuovo con la stessa guardia e uscita (`apri_strada`/`ricostruisci`), l'uscita aspetta 30 s un circuito nuovo. Prova 44 (5/5, 3 giri su 3: nodo intermedio spento a metà di 6 MB, file integro, si naviga ancora). Prima: scaricamento bloccato a 2,9 MB e proxy morto anche per i flussi nuovi.
@@ -22,7 +25,7 @@
 - ✅ 11/11 sera: suite completa **731/731** (0 fallite; saltata solo la compilazione dell'APK senza SDK). La 33 intermittente era un difetto vero dei siti .nyct, corretto (commit 2b464c4): «online» solo a registrazione avvenuta, OK del punto d'incontro subito, il posto del servizio aspetta il client prima di ri-registrarsi, nyctalus-sito legge l'uscita con un thread.
 - (storico) Suite completa dopo il punto 5: **730/731**. Unico FAIL: prova 33 «sito .nyct pubblicato e visitato nella forma HTTP/3», **INTERMITTENTE** (da sola: 2 giri su 3 verdi). ▶ DA INDAGARE alla ripresa: può essere tempo (servizio non ancora registrato) oppure un effetto della registrazione provata nella forma HTTP/3; ripetere la 33 più volte con NYCTALUS_DIAGNOSI=1 e guardare s.log (rifiuti «refused the registration»?).
 - Commento in testa ad `avvia_circuito.rs` aggiornato.
-- ▶ PROSSIMA SESSIONE: a casa e solo su richiesta: release 0.3.19 + manuali HTML + Pages. Poi scaletta punti 6 (Mullvad Browser, download ~105 MB da approvare), 7 (piano di sicurezza + ricontrollo cybersecurity), 8, 8-bis, 9.
+- ▶ Release 0.3.19 FATTA (vedi sopra). Prossimi: scaletta punti 6 (Mullvad Browser, download ~105 MB da approvare), 7 (piano di sicurezza + ricontrollo cybersecurity), 8, 8-bis, 9.
 
 ## 10/11/2026 · Punto 4 · Chat da mixnet e copertura costante ✅ (solo commit locali)
 - **Mix**: ritardo per salto scelto dal mittente (esponenziale, `NYCTALUS_MIX_MS`, di serie 800 ms, max 20 s) nell'indirizzo Sphinx del salto successivo (`circuito_rete::con_ritardo/ritardo_di`; IPv4 byte 7 'M' + ms; per chiave tipo 7); il nodo trattiene in coda ordinata (lettore+scrittore separati). SOCKS5 nome utente «mix» (RFC 1929). Le buste della modalità riservata (vere e finte) partono come mix. Prova 41 (8/8: 11,6 s contro 0,03 s, 270 KB integri), prova 26 riservata 17/17.
