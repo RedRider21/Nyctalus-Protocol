@@ -11,8 +11,8 @@
 //! vedono. Così un singolo scaricamento sfrutta la banda di più strade.
 //!
 //! Guardia persistente e uscita a caso con la regola di parentela ([`crate::percorsi`]);
-//! guard e uscita restano gli stessi per la sessione. Prototipo: nessuna gestione della
-//! morte di un circuito (un circuito perso blocca la ricomposizione).
+//! guard e uscita restano gli stessi per la sessione. Se un circuito cade, le sue unità non
+//! confermate si rispediscono sugli altri e se ne costruisce uno nuovo ([`crate::ripresa`]).
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
