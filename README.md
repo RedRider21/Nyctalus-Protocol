@@ -196,7 +196,7 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 
 ## A che punto siamo
 
-**Fatto e testato** (119 test automatici del motore, 658 verifiche di funzionamento e sicurezza con `test/esegui-tutti.sh`):
+**Fatto e testato** (129 test automatici del motore, 731 verifiche di funzionamento e sicurezza con `test/esegui-tutti.sh`):
 - **L2 — nucleo del protocollo:** frammentazione, etichette segrete rotanti (BLAKE3), cifratura end-to-end (ChaCha20-Poly1305) con pacchetti di lunghezza fissa, ricomposizione con limiti anti-DoS.
 - **Stretta di mano Noise NK:** i due estremi si accordano sul segreto senza farlo mai viaggiare; forward secrecy; il mittente resta anonimo.
 - **Indirizzi `.nyct`:** la chiave pubblica di un servizio in base32, con controllo anti-errori di battitura.
