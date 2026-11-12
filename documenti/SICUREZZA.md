@@ -145,6 +145,21 @@ casi delicati sul web normale c'è Nyctalus Firefox (profilo sul modello di Tor 
 
 ---
 
+### 1.2-bis Piano di sicurezza (punto 7 della scaletta) — stato al 12/11/2026
+
+| Misura | Stato | Come si verifica |
+|---|---|---|
+| **Nessun `unsafe`** nel motore | ✅ `#![forbid(unsafe_code)]` in `nyctalus-core` e `nyctalus`; chiavi azzerate con `zeroize` | il compilatore rifiuta qualunque `unsafe` |
+| **Controlli di overflow** nella versione release | ✅ `overflow-checks = true` (un intero che trabocca ferma solo quel compito, non il nodo) | `Cargo.toml` |
+| **Prove a raffica** (fuzzing leggero, deterministico) | ✅ 8 serie, decine di migliaia di input casuali e messaggi validi rovinati su: elenco firmato, SOCKS5, Sphinx, Noise, casella, offuscamento, indirizzi, celle, ragnatela e riordino, codifica, videochiamata (STUN/SRTP), punto d'incontro, indirizzi dei salti. **Hanno trovato e fatto correggere un crash vero**: l'elenco firmato con un carattere di più byte faceva cadere chi lo leggeva | `cargo test raffica` (anche in `test/esegui-tutti.sh`) |
+| **Servizi systemd induriti** | ✅ nodi dei server (sistema e utente), «Aiuta la rete», rubrica e casella, siti sempre accesi: niente dispositivi/kernel/cgroup/orologio, processi altrui invisibili, niente namespace, chiamate di sistema `@system-service`, solo socket di rete, W^X per i nodi, umask 077, nessuna capability sopra la porta 1024; nei servizi dell'utente `PrivateUsers` | provati davvero: rete a 3 nodi e sito `.nyct` sempre acceso fatti girare dentro le protezioni (`systemd-run --user`) |
+| Registrazione provata dei servizi, sonde mute, ripresa dai circuiti caduti | ✅ (0.3.19) | prove 43, 38, 44 |
+| **Firma delle release** | ⏳ da decidere (proposta: elenco SHA-256 firmato con una chiave della release, verificabile con strumenti standard) | — |
+| **Audit delle dipendenze** (`cargo audit`/`cargo deny`) | ⏳ serve scaricare il database delle vulnerabilità note | — |
+| **Dati locali cifrati** (cronologia della chat, file ricevuti) | ⏳ da decidere dove tenere la chiave (passphrase all'avvio o portachiavi del sistema) | — |
+| Fuzzing guidato (`cargo-fuzz`, libFuzzer) | ⏳ serve installare strumenti (nightly) | — |
+| Autocontrollo d'integrità dei programmi installati | ⏳ dopo la firma delle release | — |
+
 ## 2. Verifiche manuali su **rete reale** (con un'uscita remota)
 
 Alcune cose **non** si possono provare in locale (dove client, nodi e uscita sono
