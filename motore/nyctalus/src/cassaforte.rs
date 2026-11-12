@@ -178,27 +178,54 @@ pub fn togli(dati: &Path) -> Risultato<usize> {
     Ok(file.len())
 }
 
-/// I file della cartella dei dati da proteggere (tutti, ricorsivamente, tranne il descrittore e i
-/// collegamenti/segnali che non contengono dati personali).
+/// I file del MOTORE da proteggere: un elenco preciso (nella stessa cartella ci sono anche file
+/// delle interfacce, come `ui.json`, che devono restare leggibili da loro). Allegati e trasferimenti
+/// hanno una gestione a parte.
+const FILE_MOTORE: &[&str] = &["identita", "contatti", "visti", "coda-riservata", "casella-viste", "riservata"];
+const CARTELLE_MOTORE: &[&str] = &["cronologia", "stati"];
+
 fn file_da_proteggere(dati: &Path) -> Vec<PathBuf> {
-    fn giro(d: &Path, v: &mut Vec<PathBuf>) {
-        let Ok(e) = std::fs::read_dir(d) else { return };
-        for x in e.flatten() {
-            let p = x.path();
-            let nome = x.file_name().to_string_lossy().to_string();
-            if nome == FILE_CASSAFORTE || nome == "controllo" || nome == "finestre" || nome.ends_with(".tmp") || nome.starts_with(".") {
-                continue;
-            }
-            match x.file_type() {
-                Ok(t) if t.is_dir() => giro(&p, v),
-                Ok(t) if t.is_file() => v.push(p),
-                _ => {}
+    let mut v: Vec<PathBuf> = FILE_MOTORE.iter().map(|f| dati.join(f)).filter(|p| p.is_file()).collect();
+    for c in CARTELLE_MOTORE {
+        if let Ok(e) = std::fs::read_dir(dati.join(c)) {
+            for x in e.flatten() {
+                let p = x.path();
+                if p.is_file() && !p.to_string_lossy().ends_with(".tmp") {
+                    v.push(p);
+                }
             }
         }
     }
-    let mut v = Vec::new();
-    giro(dati, &mut v);
     v
+}
+
+/// File «a righe» (si aggiunge una riga per volta): cifrati riga per riga, così aggiungere un
+/// messaggio non obbliga a riscrivere tutta la cronologia.
+fn e_a_righe(f: &Path) -> bool {
+    let cartella = f.parent().and_then(|p| p.file_name()).and_then(|n| n.to_str()).unwrap_or("");
+    CARTELLE_MOTORE.contains(&cartella) || f.file_name().and_then(|n| n.to_str()) == Some("casella-viste")
+}
+
+const RIGA: &str = "NYCR1 ";
+
+/// Aggiunge una riga a un file a righe: cifrata se la cassaforte è aperta.
+pub fn aggiungi_riga(f: &Path, riga: &str) -> Risultato<()> {
+    use std::io::Write;
+    #[cfg(unix)]
+    use std::os::unix::fs::OpenOptionsExt;
+    let testo = {
+        let g = aperta().read().unwrap();
+        match g.as_ref() {
+            Some(k) => format!("{RIGA}{}\n", esa(&sigilla(&k.0, riga.as_bytes()))),
+            None => format!("{riga}\n"),
+        }
+    };
+    let mut o = std::fs::OpenOptions::new();
+    o.create(true).append(true);
+    #[cfg(unix)]
+    o.mode(0o600);
+    o.open(f)?.write_all(testo.as_bytes())?;
+    Ok(())
 }
 
 /// Legge un file dei dati: lo decifra se è cifrato (serve la cassaforte aperta), altrimenti lo
@@ -206,6 +233,25 @@ fn file_da_proteggere(dati: &Path) -> Vec<PathBuf> {
 pub fn leggi(f: &Path) -> Risultato<Vec<u8>> {
     let d = std::fs::read(f)?;
     if !d.starts_with(MAGIA) {
+        // file a righe: le righe cifrate si aprono una per una, quelle in chiaro (di prima) restano
+        if d.starts_with(RIGA.as_bytes()) || d.windows(RIGA.len() + 1).any(|w| w[0] == b'\n' && &w[1..] == RIGA.as_bytes()) {
+            let testo = String::from_utf8_lossy(&d).into_owned();
+            let g = aperta().read().unwrap();
+            let k = g.as_ref().ok_or("dati cifrati e cassaforte chiusa")?;
+            let mut out = Vec::with_capacity(d.len() / 2);
+            for r in testo.lines() {
+                match r.strip_prefix(RIGA) {
+                    Some(h) => {
+                        let chiaro = da_esa(h).and_then(|b| apri_con(&k.0, &b))
+                            .ok_or_else(|| format!("{}: riga cifrata rovinata", f.display()))?;
+                        out.extend_from_slice(&chiaro);
+                    }
+                    None => out.extend_from_slice(r.as_bytes()),
+                }
+                out.push(b'\n');
+            }
+            return Ok(out);
+        }
         return Ok(d);
     }
     let g = aperta().read().unwrap();
@@ -222,6 +268,15 @@ pub fn leggi_testo(f: &Path) -> Risultato<String> {
 pub fn scrivi(f: &Path, dati: &[u8]) -> Risultato<()> {
     let g = aperta().read().unwrap();
     match g.as_ref() {
+        Some(k) if e_a_righe(f) => {
+            let mut out = String::new();
+            for r in String::from_utf8_lossy(dati).lines() {
+                out.push_str(RIGA);
+                out.push_str(&esa(&sigilla(&k.0, r.as_bytes())));
+                out.push('\n');
+            }
+            scrivi_atomico(f, out.as_bytes())
+        }
         Some(k) => scrivi_atomico(f, &sigilla(&k.0, dati)),
         None => scrivi_atomico(f, dati),
     }
@@ -269,7 +324,16 @@ pub(crate) mod test {
         assert_eq!(imposta(&d, b"una passphrase lunga").unwrap(), 2);
         let grezzo = std::fs::read(d.join("contatti")).unwrap();
         assert!(grezzo.starts_with(MAGIA) && !grezzo.windows(5).any(|w| w == b"mario"), "sul disco non c'è più il testo");
-        assert_eq!(leggi(&d.join("cronologia").join("abc")).unwrap(), b"ciao Mario");
+        assert_eq!(leggi(&d.join("cronologia").join("abc")).unwrap(), b"ciao Mario\n");
+        // file a righe: una riga aggiunta resta cifrata e si legge insieme alle altre
+        aggiungi_riga(&d.join("cronologia").join("abc"), "come stai?").unwrap();
+        let grezzo = std::fs::read_to_string(d.join("cronologia").join("abc")).unwrap();
+        assert!(grezzo.lines().all(|l| l.starts_with(RIGA)) && !grezzo.contains("come"), "righe tutte cifrate");
+        assert_eq!(leggi(&d.join("cronologia").join("abc")).unwrap(), b"ciao Mario\ncome stai?\n");
+        // file non del motore (es. ui.json delle interfacce): mai toccato
+        std::fs::write(d.join("ui.json"), b"{}").unwrap();
+        imposta(&d, b"una passphrase lunga").unwrap();
+        assert_eq!(std::fs::read(d.join("ui.json")).unwrap(), b"{}");
         // chiusa: non si legge; passphrase sbagliata: errore; giusta: si legge
         *aperta().write().unwrap() = None;
         assert!(leggi(&d.join("contatti")).is_err(), "cassaforte chiusa");
@@ -291,6 +355,7 @@ pub(crate) mod test {
         // togli: tutto torna in chiaro
         togli(&d).unwrap();
         assert_eq!(std::fs::read(d.join("contatti")).unwrap(), b"mario abc.nyct\n");
+        assert_eq!(std::fs::read(d.join("cronologia").join("abc")).unwrap(), b"ciao Mario\ncome stai?\n");
         assert!(!esiste(&d));
         let _ = std::fs::remove_dir_all(&d);
     }

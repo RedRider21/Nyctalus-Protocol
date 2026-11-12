@@ -356,10 +356,12 @@ class Servizi:
                 if not porta_libera(porta_socks):
                     break
                 time.sleep(0.25)
-            self._lancia([binario, "site", "--backend", BACKEND, "--identity", str(DATI_CHAT / "identita"),
+            # l'identità la dà il motore della chat (i dati possono essere cifrati: niente file in chiaro)
+            amb = dict(ambiente_ponti(cfg) if pubblica else os.environ, NYCTALUS_CHAT_TOKEN=self.segreto_motore)
+            self._lancia([binario, "site", "--backend", BACKEND, "--identity-chat", "%s:%d" % CONTROLLO,
                           "--directory", str(dirf), "--authority", autorita, "--hops", "3"]
                          + (opz_prot(cfg, rumore=False) if pubblica else []),
-                         lavoro / "site.log", env=ambiente_ponti(cfg) if pubblica else None)
+                         lavoro / "site.log", env=amb)
             self.stato, self.dettaglio = "pronto", ""
             log("servizi pronti (%s) — %s" % (self.modalita, self.indirizzo))
         except Exception as e:    # noqa: BLE001

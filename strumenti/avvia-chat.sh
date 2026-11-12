@@ -140,7 +140,8 @@ avvia_rete() {
   fi
   # pubblica il nostro servizio .nyct (entrata)
   for _ in $(seq 1 30); do porta_occupata "${SOCKS##*:}" && break; sleep 0.2; done
-  "$BIN" site --backend "$BACKEND" --identity "$DATI/identita" --directory "$DIRFILE" --authority "$AUTHORITY" --hops 3 ${PROT_SITO[@]+"${PROT_SITO[@]}"} > "$WORK/site.log" 2>&1 & MIEI+=($!)
+  # l'identità la dà il motore della chat (i dati possono essere cifrati: niente file in chiaro)
+  "$BIN" site --backend "$BACKEND" --identity-chat "$CONTROL" --directory "$DIRFILE" --authority "$AUTHORITY" --hops 3 ${PROT_SITO[@]+"${PROT_SITO[@]}"} > "$WORK/site.log" 2>&1 & MIEI+=($!)
   echo "» (sottofondo) rete pronta — puoi scrivere"
 }
 # NB: in primo piano nella shell principale (la finestra è GIÀ aperta sopra),

@@ -28,6 +28,7 @@ use std::sync::{Arc, Mutex};
 
 use nyctalus_core::stretta::{self, Identita, Mittente, SegretiSessione};
 use nyctalus_core::{casella, indirizzo};
+use zeroize::Zeroize;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
@@ -55,6 +56,12 @@ pub async fn chat(
     casella: Option<String>,
 ) -> Risultato<()> {
     std::fs::create_dir_all(&dati)?;
+    // dati cifrati (cassaforte): niente si legge finché un'interfaccia non manda la passphrase
+    if crate::cassaforte::esiste(&dati) && !crate::cassaforte::e_aperta() {
+        println!("Dati cifrati: aspetto la passphrase (SBLOCCA) sulla porta di controllo {controllo}");
+        attendi_sblocco(controllo, segreto.clone(), &dati).await?;
+        println!("Cassaforte aperta.");
+    }
     let identita = carica_identita(&identita_path)?;
     let indirizzo = indirizzo::da_chiave(&identita.pubblica());
     let stato = Arc::new(Stato {
@@ -82,7 +89,7 @@ pub async fn chat(
         inviti: Mutex::new(HashMap::new()),
         trasf: trasferimenti::Registro::carica(&dati),
         riservata: std::sync::atomic::AtomicBool::new(
-            std::fs::read_to_string(dati.join("riservata")).map(|t| t.trim() == "1").unwrap_or(false),
+            crate::cassaforte::leggi_testo(&dati.join("riservata")).map(|t| t.trim() == "1").unwrap_or(false),
         ),
         coda_riservata: Mutex::new(carica_coda_riservata(&dati)),
         giri: Mutex::new(HashSet::new()),
@@ -772,7 +779,7 @@ impl Stato {
             v.insert(addr.to_string(), ts);
             v.iter().map(|(a, t)| format!("{a} {t}\n")).collect()
         };
-        let _ = std::fs::write(self.dati.join("visti"), righe);
+        let _ = crate::cassaforte::scrivi(&self.dati.join("visti"), righe.as_bytes());
         self.notifica(format!("V {addr} {ts}"));
     }
 
@@ -927,7 +934,7 @@ impl Stato {
             .iter()
             .map(|(a, ts, t)| format!("{a} {ts} {}\n", in_esadecimale(t)))
             .collect();
-        let _ = std::fs::write(self.dati.join("coda-riservata"), righe);
+        let _ = crate::cassaforte::scrivi(&self.dati.join("coda-riservata"), righe.as_bytes());
     }
 
     /// Riga per le interfacce: `RISERVATA <0|1> <casella 0|1> <in coda> <finte spedite> <finte tornate>`.
@@ -991,7 +998,7 @@ impl Stato {
 
     /// Il contatto ha già confermato almeno un messaggio (ha le spunte).
     fn conferma_di_solito(&self, addr: &str) -> bool {
-        std::fs::read_to_string(self.dati.join("stati").join(format!("{addr}.log")))
+        crate::cassaforte::leggi_testo(&self.dati.join("stati").join(format!("{addr}.log")))
             .unwrap_or_default()
             .lines()
             // «ts stato [quando]»: conta il secondo campo (le righe nuove finiscono con l'ora)
@@ -1004,13 +1011,10 @@ impl Stato {
     /// interfacce come `SP <addr> <ts> <stato> <quando>` (o `CAS <addr> <ts> <quando>` per la
     /// casella): `quando` è l'ora in cui lo abbiamo saputo, per l'«Info» del messaggio.
     fn segna(&self, addr: &str, ts: u64, stato: &str) {
-        use std::io::Write;
         let dir = self.dati.join("stati");
         let _ = std::fs::create_dir_all(&dir);
         let quando = ora();
-        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(dir.join(format!("{addr}.log"))) {
-            let _ = writeln!(f, "{ts} {stato} {quando}");
-        }
+        let _ = crate::cassaforte::aggiungi_riga(&dir.join(format!("{addr}.log")), &format!("{ts} {stato} {quando}"));
         self.notifica(evento_spunta(addr, ts, stato, quando));
     }
 
@@ -1035,7 +1039,7 @@ impl Stato {
     }
 
     fn leggi_stati(&self, addr: &str) -> Vec<String> {
-        std::fs::read_to_string(self.dati.join("stati").join(format!("{}.log", con_suffisso(addr))))
+        crate::cassaforte::leggi_testo(&self.dati.join("stati").join(format!("{}.log", con_suffisso(addr))))
             .unwrap_or_default()
             .lines()
             .filter_map(|l| {
@@ -1132,7 +1136,7 @@ impl Stato {
             self.conferma(&mittente, format!("K {ts}").into_bytes());
             // già arrivato direttamente (la sessione era caduta prima del «ricevuto»)
             let riga = format!("in {ts} {}", in_esadecimale(testo));
-            if std::fs::read_to_string(self.file_cronologia(&mittente)).unwrap_or_default().lines().any(|l| l == riga) {
+            if crate::cassaforte::leggi_testo(&self.file_cronologia(&mittente)).unwrap_or_default().lines().any(|l| l == riga) {
                 continue;
             }
             self.registra(&mittente, "in", ts, testo);
@@ -1147,34 +1151,25 @@ impl Stato {
     }
 
     fn registra_posta_vista(&self, id: &str) {
-        use std::io::Write;
-        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(self.dati.join("casella-viste")) {
-            let _ = writeln!(f, "{id}");
-        }
+        let _ = crate::cassaforte::aggiungi_riga(&self.dati.join("casella-viste"), id);
     }
 
     // --- persistenza ---------------------------------------------------------
     fn registra_riga(&self, addr: &str, riga: &str) {
-        use std::io::Write;
         let dir = self.dati.join("cronologia");
         let _ = std::fs::create_dir_all(&dir);
-        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(dir.join(format!("{addr}.log"))) {
-            let _ = writeln!(f, "{riga}");
-        }
+        let _ = crate::cassaforte::aggiungi_riga(&dir.join(format!("{addr}.log")), riga);
     }
 
     fn registra(&self, addr: &str, direzione: &str, ts: u64, testo: &[u8]) {
-        use std::io::Write;
         let dir = self.dati.join("cronologia");
         let _ = std::fs::create_dir_all(&dir);
-        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(dir.join(format!("{addr}.log"))) {
-            let _ = writeln!(f, "{direzione} {ts} {}", in_esadecimale(testo));
-        }
+        let _ = crate::cassaforte::aggiungi_riga(&dir.join(format!("{addr}.log")), &format!("{direzione} {ts} {}", in_esadecimale(testo)));
     }
 
     fn leggi_cronologia(&self, addr: &str) -> Vec<String> {
         let percorso = self.dati.join("cronologia").join(format!("{}.log", con_suffisso(addr)));
-        match std::fs::read_to_string(percorso) {
+        match crate::cassaforte::leggi_testo(&percorso) {
             Ok(testo) => testo.lines().map(|l| format!("P {l}\n")).collect(),
             Err(_) => Vec::new(),
         }
@@ -1186,14 +1181,14 @@ impl Stato {
 
     /// Ultima riga della cronologia di un contatto (per l'anteprima nell'elenco).
     fn ultima_riga(&self, addr: &str) -> Option<String> {
-        let testo = std::fs::read_to_string(self.file_cronologia(addr)).ok()?;
+        let testo = crate::cassaforte::leggi_testo(&self.file_cronologia(addr)).ok()?;
         testo.lines().rev().find(|l| !l.trim().is_empty()).map(str::to_string)
     }
 
     /// Toglie dalla cronologia l'ultima occorrenza esatta di `riga`.
     fn togli_riga(&self, addr: &str, riga: &str) -> bool {
         let percorso = self.file_cronologia(addr);
-        let Ok(testo) = std::fs::read_to_string(&percorso) else { return false };
+        let Ok(testo) = crate::cassaforte::leggi_testo(&percorso) else { return false };
         let mut righe: Vec<&str> = testo.lines().collect();
         let Some(i) = righe.iter().rposition(|l| *l == riga) else { return false };
         righe.remove(i);
@@ -1201,22 +1196,17 @@ impl Stato {
         if !nuovo.is_empty() {
             nuovo.push('\n');
         }
-        std::fs::write(&percorso, nuovo).is_ok()
+        crate::cassaforte::scrivi(&percorso, nuovo.as_bytes()).is_ok()
     }
 
     fn rimuovi_contatto(&self, addr: &str) {
-        use std::io::Write;
         let mut g = self.contatti.lock().unwrap();
         g.retain(|(a, _)| a != addr);
-        if let Ok(mut f) = std::fs::File::create(self.dati.join("contatti")) {
-            for (a, n) in g.iter() {
-                let _ = writeln!(f, "{a} {n}");
-            }
-        }
+        let testo: String = g.iter().map(|(a, n)| format!("{a} {n}\n")).collect();
+        let _ = crate::cassaforte::scrivi(&self.dati.join("contatti"), testo.as_bytes());
     }
 
     fn aggiungi_contatto(&self, addr: &str, nick_hex: &str) {
-        use std::io::Write;
         let mut g = self.contatti.lock().unwrap();
         if let Some(c) = g.iter_mut().find(|(a, _)| a == addr) {
             c.1 = nick_hex.to_string();
@@ -1224,11 +1214,8 @@ impl Stato {
             g.push((addr.to_string(), nick_hex.to_string()));
         }
         // riscriviamo l'elenco per intero (poche righe)
-        if let Ok(mut f) = std::fs::File::create(self.dati.join("contatti")) {
-            for (a, n) in g.iter() {
-                let _ = writeln!(f, "{a} {n}");
-            }
-        }
+        let testo: String = g.iter().map(|(a, n)| format!("{a} {n}\n")).collect();
+        let _ = crate::cassaforte::scrivi(&self.dati.join("contatti"), testo.as_bytes());
     }
 
     // --- protocollo di controllo per l'interfaccia ---------------------------
@@ -1301,6 +1288,53 @@ impl Stato {
         match it.next().unwrap_or("") {
             "WHOAMI" => {
                 let _ = tx.send(format!("ME {}\n", self.indirizzo));
+            }
+            // --- cassaforte dei dati locali (passphrase in esadecimale) ---
+            "CASSAFORTE" => {
+                let s = if crate::cassaforte::esiste(&self.dati) { "aperta" } else { "assente" };
+                let _ = tx.send(format!("CASSAFORTE {s}\n"));
+            }
+            cmd @ ("CIFRA" | "CAMBIA" | "DECIFRA") => {
+                let a = it.next().and_then(passphrase_da);
+                let b = it.next().and_then(passphrase_da);
+                let dati = self.dati.clone();
+                let c = cmd.to_string();
+                let esito = tokio::task::spawn_blocking(move || -> Result<String, String> {
+                    let esiste = crate::cassaforte::esiste(&dati);
+                    // per cambiare o togliere serve la passphrase attuale (la si ricontrolla)
+                    let verifica = |p: &[u8]| crate::cassaforte::apri(&dati, p).map_err(|e| e.to_string());
+                    match (c.as_str(), a, b) {
+                        ("CIFRA", Some(nuova), None) if !esiste => {
+                            crate::cassaforte::imposta(&dati, &nuova).map(|n| format!("CIFRATA {n}")).map_err(|e| e.to_string())
+                        }
+                        ("CIFRA", _, _) if esiste => Err("la cassaforte c'è già: usa CAMBIA".into()),
+                        ("CAMBIA", Some(vecchia), Some(nuova)) if esiste => {
+                            verifica(&vecchia)?;
+                            crate::cassaforte::imposta(&dati, &nuova).map(|n| format!("CAMBIATA {n}")).map_err(|e| e.to_string())
+                        }
+                        ("DECIFRA", Some(attuale), None) if esiste => {
+                            verifica(&attuale)?;
+                            crate::cassaforte::togli(&dati).map(|n| format!("DECIFRATA {n}")).map_err(|e| e.to_string())
+                        }
+                        _ => Err("uso: CIFRA <nuova> · CAMBIA <vecchia> <nuova> · DECIFRA <attuale> (in esadecimale)".into()),
+                    }
+                })
+                .await
+                .unwrap_or_else(|e| Err(e.to_string()));
+                match esito {
+                    Ok(r) => {
+                        let _ = tx.send(format!("{r}\n"));
+                    }
+                    Err(e) => {
+                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                        let _ = tx.send(format!("ERR {e}\n"));
+                    }
+                }
+            }
+            // l'identità per il demone `site` (che pubblica il .nyct della chat): solo a chi ha il
+            // segreto del controllo, così la chiave privata non resta in chiaro su un file
+            "IDENTITA" => {
+                let _ = tx.send(format!("IDENTITA {}\n", in_esadecimale(&self.identita.in_byte())));
             }
             "LIST" => {
                 let contatti = self.contatti.lock().unwrap().clone();
@@ -1562,7 +1596,7 @@ impl Stato {
                     Some(v @ ("0" | "1")) => {
                         let accesa = v == "1";
                         self.riservata.store(accesa, std::sync::atomic::Ordering::Relaxed);
-                        let _ = std::fs::write(self.dati.join("riservata"), if accesa { "1\n" } else { "0\n" });
+                        let _ = crate::cassaforte::scrivi(&self.dati.join("riservata"), if accesa { b"1\n" } else { b"0\n" });
                         // il ritiro riparte subito con il nuovo intervallo, e la rubrica lo sa (posta
                         // solo su richiesta, o di nuovo anche da sola)
                         self.sveglia_ritiro.notify_one();
@@ -1634,15 +1668,94 @@ fn con_suffisso(addr: &str) -> String {
     }
 }
 
+/// Passphrase dal protocollo di controllo: esadecimale (può contenere spazi e accenti).
+fn passphrase_da(esa: &str) -> Option<Vec<u8>> {
+    da_hex(esa.trim()).ok().filter(|p| !p.is_empty())
+}
+
+/// Dati cifrati: la porta di controllo accetta solo `AUTH`, `CASSAFORTE` e `SBLOCCA <passphrase>`
+/// finché la cassaforte non si apre (ogni tentativo sbagliato costa un secondo). Poi si chiude e
+/// riapre normalmente: le interfacce si ricollegano.
+async fn attendi_sblocco(controllo: SocketAddr, segreto: Option<String>, dati: &Path) -> Risultato<()> {
+    let ascoltatore = TcpListener::bind(controllo).await?;
+    let (fatto_tx, mut fatto_rx) = mpsc::unbounded_channel::<()>();
+    let dati = dati.to_path_buf();
+    loop {
+        let (flusso, _) = tokio::select! {
+            a = ascoltatore.accept() => a?,
+            _ = fatto_rx.recv() => return Ok(()),
+        };
+        let (segreto, dati, fatto) = (segreto.clone(), dati.clone(), fatto_tx.clone());
+        tokio::spawn(async move {
+            let (lettura, mut scrittura) = flusso.into_split();
+            let mut lettore = BufReader::new(lettura);
+            let mut linea = String::new();
+            if let Some(atteso) = &segreto {
+                if lettore.read_line(&mut linea).await.unwrap_or(0) == 0 {
+                    return;
+                }
+                let dato = linea.trim_end().strip_prefix("AUTH ").unwrap_or("");
+                if !uguali_a_tempo_costante(dato.as_bytes(), atteso.as_bytes()) {
+                    let _ = scrittura.write_all(b"ERR autenticazione richiesta\n").await;
+                    return;
+                }
+                let _ = scrittura.write_all(b"AUTHOK\n").await;
+            }
+            let _ = scrittura.write_all(b"CASSAFORTE chiusa\n").await;
+            loop {
+                linea.clear();
+                if lettore.read_line(&mut linea).await.unwrap_or(0) == 0 {
+                    return;
+                }
+                let riga = linea.trim_end();
+                let risposta = match riga.split_once(' ').map(|(c, r)| (c, r)).unwrap_or((riga, "")) {
+                    ("CASSAFORTE", _) => "CASSAFORTE chiusa\n".to_string(),
+                    ("SBLOCCA", esa) => match passphrase_da(esa) {
+                        Some(mut pp) => {
+                            let d = dati.clone();
+                            let p2 = pp.clone();
+                            pp.zeroize();
+                            let esito = tokio::task::spawn_blocking(move || {
+                                let mut p2 = p2;
+                                let r = crate::cassaforte::apri(&d, &p2);
+                                p2.zeroize();
+                                r.map_err(|e| e.to_string())
+                            })
+                            .await
+                            .unwrap_or_else(|e| Err(e.to_string()));
+                            match esito {
+                                Ok(()) => {
+                                    let _ = scrittura.write_all(b"SBLOCCATA\n").await;
+                                    let _ = fatto.send(());
+                                    return;
+                                }
+                                Err(e) => {
+                                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                                    format!("ERR {e}\n")
+                                }
+                            }
+                        }
+                        None => "ERR passphrase non valida (esadecimale)\n".to_string(),
+                    },
+                    _ => "BLOCCATA\n".to_string(),
+                };
+                if scrittura.write_all(risposta.as_bytes()).await.is_err() {
+                    return;
+                }
+            }
+        });
+    }
+}
+
 fn carica_identita(percorso: &Path) -> Risultato<Identita> {
     if percorso.exists() {
-        return Ok(Identita::da_byte(&std::fs::read(percorso)?)?);
+        return Ok(Identita::da_byte(&crate::cassaforte::leggi(percorso)?)?);
     }
     let id = Identita::genera()?;
     if let Some(p) = percorso.parent() {
         std::fs::create_dir_all(p)?;
     }
-    std::fs::write(percorso, id.in_byte())?;
+    crate::cassaforte::scrivi(percorso, &id.in_byte())?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -1653,7 +1766,7 @@ fn carica_identita(percorso: &Path) -> Risultato<Identita> {
 
 /// Id delle buste già ricevute (gli ultimi 5000 bastano: la casella le tiene al più 14 giorni).
 fn carica_posta_vista(dati: &Path) -> HashSet<String> {
-    let testo = std::fs::read_to_string(dati.join("casella-viste")).unwrap_or_default();
+    let testo = crate::cassaforte::leggi_testo(&dati.join("casella-viste")).unwrap_or_default();
     let righe: Vec<&str> = testo.lines().collect();
     righe[righe.len().saturating_sub(5000)..].iter().map(|s| s.to_string()).collect()
 }
@@ -1694,7 +1807,7 @@ fn evento_spunta(addr: &str, ts: u64, stato: &str, quando: u64) -> String {
 }
 
 fn carica_visti(dati: &Path) -> HashMap<String, u64> {
-    std::fs::read_to_string(dati.join("visti"))
+    crate::cassaforte::leggi_testo(&dati.join("visti"))
         .unwrap_or_default()
         .lines()
         .filter_map(|l| {
@@ -1705,7 +1818,7 @@ fn carica_visti(dati: &Path) -> HashMap<String, u64> {
 }
 
 fn carica_contatti(dati: &Path) -> Vec<(String, String)> {
-    match std::fs::read_to_string(dati.join("contatti")) {
+    match crate::cassaforte::leggi_testo(&dati.join("contatti")) {
         Ok(testo) => testo
             .lines()
             .filter_map(|l| {
@@ -1764,7 +1877,7 @@ fn id_valido(id: &str) -> bool {
 
 /// Coda della modalità riservata salvata su disco: «addr ts testo-hex» per riga.
 fn carica_coda_riservata(dati: &std::path::Path) -> std::collections::VecDeque<(String, u64, Vec<u8>)> {
-    std::fs::read_to_string(dati.join("coda-riservata"))
+    crate::cassaforte::leggi_testo(&dati.join("coda-riservata"))
         .unwrap_or_default()
         .lines()
         .filter_map(|l| {

@@ -724,9 +724,11 @@ pub(crate) fn analizza_controllo_provato(primo: &[u8]) -> Risultato<(u8, [u8; 32
 //  Lato servizio: `nyctalus site`
 // ======================================================================
 
+#[allow(clippy::too_many_arguments)]
 pub async fn site(
     modo: ModoServizio,
     file_identita: Option<PathBuf>,
+    identita_chat: Option<SocketAddr>,
     elenco: Vec<NodoRete>,
     manuale: Option<NodoRete>,
     offusca: Option<[u8; 32]>,
@@ -742,9 +744,10 @@ pub async fn site(
         }
         ModoServizio::Backend(addr) => format!("backend {addr}"),
     };
-    let identita = match &file_identita {
-        Some(p) => carica_o_crea_identita(p)?,
-        None => Identita::genera()?,
+    let identita = match (identita_chat, &file_identita) {
+        (Some(chat), _) => identita_dalla_chat(chat).await?,
+        (None, Some(p)) => carica_o_crea_identita(p)?,
+        (None, None) => Identita::genera()?,
     };
     let indirizzo_nyct = indirizzo::da_chiave(&identita.pubblica());
     // «online» SOLO dopo la prima registrazione riuscita a un punto d'incontro: prima chi visitava
@@ -1195,6 +1198,49 @@ pub async fn tunnel_socks(
 // ======================================================================
 //  Utilità comuni
 // ======================================================================
+
+/// L'identità del servizio chiesta al motore della chat (`IDENTITA` sulla sua porta di controllo,
+/// con il segreto `NYCTALUS_CHAT_TOKEN`): con i dati cifrati la chiave privata non sta in chiaro su
+/// un file. Se la chat è ancora chiusa (aspetta la passphrase) si riprova finché non si apre.
+async fn identita_dalla_chat(chat: SocketAddr) -> Risultato<Identita> {
+    use tokio::io::AsyncBufReadExt;
+    let segreto = std::env::var("NYCTALUS_CHAT_TOKEN").ok().filter(|s| !s.is_empty());
+    let mut avvisato = false;
+    loop {
+        if let Ok(f) = TcpStream::connect(chat).await {
+            let (lettura, mut scrittura) = f.into_split();
+            let mut lettore = tokio::io::BufReader::new(lettura);
+            let mut pronto = true;
+            if let Some(s) = &segreto {
+                pronto = scrittura.write_all(format!("AUTH {s}\n").as_bytes()).await.is_ok();
+            }
+            if pronto && scrittura.write_all(b"IDENTITA\n").await.is_ok() {
+                let mut riga = String::new();
+                while tokio::time::timeout(std::time::Duration::from_secs(5), lettore.read_line(&mut riga))
+                    .await
+                    .is_ok_and(|r| r.is_ok_and(|n| n > 0))
+                {
+                    if let Some(h) = riga.trim_end().strip_prefix("IDENTITA ") {
+                        let byte: Option<Vec<u8>> = (0..h.len())
+                            .step_by(2)
+                            .map(|i| h.get(i..i + 2).and_then(|x| u8::from_str_radix(x, 16).ok()))
+                            .collect();
+                        return Ok(Identita::da_byte(&byte.ok_or("identità dalla chat non valida")?)?);
+                    }
+                    if riga.starts_with("BLOCCATA") || riga.starts_with("ERR") {
+                        break;
+                    }
+                    riga.clear();
+                }
+            }
+        }
+        if !avvisato {
+            println!("Aspetto l'identità dal motore della chat su {chat} (sbloccala con la passphrase)…");
+            avvisato = true;
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    }
+}
 
 pub(crate) fn carica_o_crea_identita(percorso: &Path) -> Risultato<Identita> {
     use std::io::Write;

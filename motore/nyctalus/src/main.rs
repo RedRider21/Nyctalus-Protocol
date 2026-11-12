@@ -70,7 +70,7 @@ Usage:
   nyctalus directory --authority-secret HEX --entries 'addr,x,fp;addr,x,fp'
   nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)] [--cover 0] [--exits 1 (1-4)] [--constant-rate N [--constant-always]]
   nyctalus test-circuit (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--message DEST]
-  nyctalus site    (--dir ./folder | --backend IP:PORT) [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--identity FILE] [--hops 3] [--pool 4]
+  nyctalus site    (--dir ./folder | --backend IP:PORT) [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--identity FILE | --identity-chat 127.0.0.1:1091] [--hops 3] [--pool 4]
   nyctalus address --identity FILE      (a site's key, created if missing, and its .nyct address)
   nyctalus browse  ADDRESS.nyct [--directory FILE --authority HEX | --rendezvous IP:PORT --fingerprint HEX] [--path /] [--hops 3]
   nyctalus chat    [--data DIR] [--identity FILE] [--backend 127.0.0.1:1082] [--control 127.0.0.1:1091] [--socks 127.0.0.1:1080] [--max-file 200] [--control-token SECRET] [--rubrica ADDR.nyct] [--casella ADDR.nyct]
@@ -220,7 +220,9 @@ async fn esegui() -> Risultato<()> {
             let manuale = manuale_rendezvous(&opzioni)?;
             let elenco = if manuale.is_some() { Vec::new() } else { carica_punti_incontro(&opzioni)? };
             let pool: usize = opzione(&opzioni, "pool").map(str::parse).transpose()?.unwrap_or(4);
-            incontro::site(modo, identita, elenco, manuale, offusca, salti_incontro(&opzioni)?, pool).await
+            // `--identity-chat ADDR`: l'identità la dà il motore della chat (dati cifrati: niente file in chiaro)
+            let identita_chat: Option<SocketAddr> = opzione(&opzioni, "identity-chat").map(str::parse).transpose()?;
+            incontro::site(modo, identita, identita_chat, elenco, manuale, offusca, salti_incontro(&opzioni)?, pool).await
         }
         "browse" => {
             let indirizzo_nyct = match opzione(&opzioni, "address") {
