@@ -86,4 +86,18 @@ echo "$R" | grep -q "^CAMBIATA" && pass "CAMBIA: passphrase cambiata (tutto rici
 R=$(NYCT_FINO="^(DECIFRATA|ERR)" ctl 30 "DECIFRA $(hex "$PP2")")
 echo "$R" | grep -q "^DECIFRATA" && ! head -c 5 "$D/contatti" | grep -q NYCF1 && grep -q "$(hex mario)" "$D/contatti" && ! grep -q "^NYCR1 " "$F" && [ ! -e "$D/cassaforte.json" ] \
   && pass "DECIFRA: cassaforte tolta, i dati tornano in chiaro" || fail "DECIFRA: $R"
+# 5) lo stesso dal terminale (nyctalus-cli), passphrase letta dallo standard input
+CLI() { NYCTALUS_CHAT_PORT=$C NYCTALUS_CHAT_TOKEN="$SEG" python3 "$ROOT/pc/cli/nyctalus-cli" "$@" 2>&1; }
+CLI cassaforte | grep -q "spenta" && pass "nyctalus-cli cassaforte: «spenta»" || fail "cli stato: $(CLI cassaforte)"
+printf 'corta\ncorta\n' | CLI cassaforte attiva | grep -q "troppo corta" && pass "cli: passphrase troppo corta rifiutata" || fail "cli corta"
+printf '%s\n%s\n' "$PP" "$PP" | CLI cassaforte attiva | grep -q "protezione accesa" && CLI cassaforte | grep -q "ACCESA" \
+  && pass "nyctalus-cli cassaforte attiva: protezione accesa" || fail "cli attiva: $(CLI cassaforte)"
+kill $MOT; wait $MOT 2>/dev/null; sleep 0.5
+motore 3
+attendi_regex "$TMP/chat3.log" "aspetto la passphrase" 10 > /dev/null
+CLI io | grep -q "prima sbloccali" && pass "cli a dati chiusi: ogni comando dice di sbloccare prima" || fail "cli chiuso: $(CLI io)"
+printf 'non è lei\n' | CLI sblocca | grep -q "passphrase sbagliata" && pass "nyctalus-cli sblocca: passphrase sbagliata rifiutata" || fail "cli sblocca sbagliata"
+printf '%s\n' "$PP" | CLI sblocca | grep -q "dati sbloccati" && sleep 1 && [ "$(CLI io)" = "$ME" ] && pass "nyctalus-cli sblocca: dati aperti, «io» risponde con l'indirizzo" || fail "cli sblocca: $(CLI io)"
+printf '%s\n%s\n%s\n' "$PP" "$PP2" "$PP2" | CLI cassaforte cambia | grep -q "passphrase cambiata" && pass "nyctalus-cli cassaforte cambia" || fail "cli cambia"
+printf '%s\n' "$PP2" | CLI cassaforte togli | grep -q "protezione tolta" && [ ! -e "$D/cassaforte.json" ] && pass "nyctalus-cli cassaforte togli: dati di nuovo in chiaro" || fail "cli togli"
 [ "$KO" -eq 0 ]

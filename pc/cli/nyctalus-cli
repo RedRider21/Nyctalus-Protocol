@@ -39,6 +39,11 @@ AIUTO = """nyctalus-cli — Nyctalus dal terminale
 
   avvia                           accende il motore senza finestre (Ctrl-C lo spegne)
 
+  sblocca                         apre i dati cifrati (chiede la passphrase; il motore riparte chiuso)
+  cassaforte                      la protezione dei dati con passphrase: com'è adesso
+  cassaforte attiva|cambia|togli  la accende (cifra identità, contatti, cronologia), cambia la
+                                  passphrase o la toglie. ⚠ Passphrase dimenticata = dati persi
+
 <contatto> = nome (anche solo l'inizio, senza maiuscole) o indirizzo .nyct.
 <id> = basta l'inizio, se non è ambiguo."""
 
@@ -100,6 +105,11 @@ class Motore:
             self.manda("AUTH " + segreto)
             if self.riga(10) != "AUTHOK":
                 errore("il motore non accetta il segreto (si è riavviato? riprova)")
+        # dati cifrati e motore ancora chiuso: lo dice subito, da solo
+        primo = self.riga(0.15)
+        self.chiusa = primo == "CASSAFORTE chiusa"
+        if primo is not None and not self.chiusa:
+            self.buf = primo.encode() + b"\n" + self.buf
 
     def manda(self, riga):
         self.s.sendall((riga + "\n").encode())
@@ -146,6 +156,28 @@ class Motore:
 
 
 hx = lambda t: t.encode().hex()
+
+
+def chiedi_passphrase(domanda):
+    """La passphrase senza mostrarla; da uno script si legge una riga dallo standard input."""
+    if sys.stdin.isatty():
+        import getpass
+        return getpass.getpass(domanda + ": ")
+    return sys.stdin.readline().rstrip("\n")
+
+
+def esito_cassaforte(m, attesa=60):
+    """La risposta del motore a un comando della cassaforte (gli altri eventi si ignorano)."""
+    limite = time.time() + attesa
+    while time.time() < limite:
+        r = m.riga(max(0.1, limite - time.time()))
+        if r is None:
+            break
+        if r.startswith("ERR"):
+            errore(r[4:])
+        if r.split(" ")[0] in ("SBLOCCATA", "CIFRATA", "CAMBIATA", "DECIFRATA"):
+            return r
+    errore("il motore non ha risposto in tempo")
 
 
 def dahex(h):
@@ -251,6 +283,43 @@ def main(argv):
         errore("avvia-chat.sh non trovato")
 
     m = Motore()
+    if cmd == "sblocca":
+        if not m.chiusa:
+            print("I dati non sono chiusi: niente da sbloccare.")
+            return
+        m.manda("SBLOCCA " + hx(chiedi_passphrase("Passphrase")))
+        esito_cassaforte(m)
+        print("✓ dati sbloccati")
+        return
+    if m.chiusa:
+        errore("i dati di Nyctalus sono cifrati: prima sbloccali con «nyctalus-cli sblocca»")
+    if cmd == "cassaforte":
+        m.manda("CASSAFORTE")
+        stato = (m.riga(10) or "").replace("CASSAFORTE ", "")
+        if not arg:
+            print("protezione dei dati (passphrase): %s" % {"aperta": "ACCESA — identità, contatti e cronologia sono cifrati su questo dispositivo",
+                                                           "assente": "spenta — i dati sono in chiaro (accendila con «nyctalus-cli cassaforte attiva»)"}.get(stato, stato))
+        elif arg[0] == "attiva" and stato == "assente":
+            nuova, ripeti = chiedi_passphrase("Nuova passphrase (almeno 8 caratteri)"), chiedi_passphrase("Ripetila")
+            if len(nuova) < 8 or nuova != ripeti:
+                errore("la passphrase è troppo corta (almeno 8 caratteri) o le due non coincidono")
+            m.manda("CIFRA " + hx(nuova))
+            print("✓ protezione accesa: %s file cifrati. ⚠ Se dimentichi la passphrase i dati sono persi." % esito_cassaforte(m).split()[-1])
+        elif arg[0] == "cambia" and stato == "aperta":
+            attuale = chiedi_passphrase("Passphrase attuale")
+            nuova, ripeti = chiedi_passphrase("Nuova passphrase (almeno 8 caratteri)"), chiedi_passphrase("Ripetila")
+            if len(nuova) < 8 or nuova != ripeti:
+                errore("la passphrase è troppo corta (almeno 8 caratteri) o le due non coincidono")
+            m.manda("CAMBIA %s %s" % (hx(attuale), hx(nuova)))
+            esito_cassaforte(m)
+            print("✓ passphrase cambiata")
+        elif arg[0] == "togli" and stato == "aperta":
+            m.manda("DECIFRA " + hx(chiedi_passphrase("Passphrase attuale")))
+            esito_cassaforte(m)
+            print("✓ protezione tolta: i dati sono di nuovo in chiaro")
+        else:
+            errore("uso: cassaforte [attiva|cambia|togli] (ora la protezione è %s)" % ("accesa" if stato == "aperta" else "spenta"))
+        return
     if cmd == "io":
         m.manda("WHOAMI")
         r = m.riga(10) or ""
