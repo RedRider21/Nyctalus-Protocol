@@ -29,6 +29,7 @@ mod chat;
 mod conflux;
 mod costante;
 mod ripresa;
+mod cassaforte;
 mod raffica;
 mod circuito_rete;
 mod invia;
