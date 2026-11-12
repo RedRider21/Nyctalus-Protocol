@@ -1679,14 +1679,25 @@ fn passphrase_da(esa: &str) -> Option<Vec<u8>> {
 async fn attendi_sblocco(controllo: SocketAddr, segreto: Option<String>, dati: &Path) -> Risultato<()> {
     let ascoltatore = TcpListener::bind(controllo).await?;
     let (fatto_tx, mut fatto_rx) = mpsc::unbounded_channel::<()>();
+    // allo sblocco si chiudono TUTTE le connessioni di questa fase: le interfacce si ricollegano
+    // alla chat vera (altrimenti restavano su una sessione «chiusa» che risponde BLOCCATA)
+    let (chiudi_tx, chiudi_rx) = tokio::sync::watch::channel(false);
     let dati = dati.to_path_buf();
     loop {
         let (flusso, _) = tokio::select! {
             a = ascoltatore.accept() => a?,
-            _ = fatto_rx.recv() => return Ok(()),
+            _ = fatto_rx.recv() => {
+                let _ = chiudi_tx.send(true);
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                return Ok(());
+            }
         };
         let (segreto, dati, fatto) = (segreto.clone(), dati.clone(), fatto_tx.clone());
+        let mut chiudi = chiudi_rx.clone();
         tokio::spawn(async move {
+          tokio::select! {
+            _ = chiudi.wait_for(|c| *c) => {}
+            _ = async move {
             let (lettura, mut scrittura) = flusso.into_split();
             let mut lettore = BufReader::new(lettura);
             let mut linea = String::new();
@@ -1743,6 +1754,8 @@ async fn attendi_sblocco(controllo: SocketAddr, segreto: Option<String>, dati: &
                     return;
                 }
             }
+            } => {}
+          }
         });
     }
 }

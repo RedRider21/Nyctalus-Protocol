@@ -62,8 +62,13 @@ T0=$(date +%s.%N)
 R=$(NYCT_FINO="^ERR" ctl 10 "SBLOCCA $(hex 'passphrase sbagliata')")
 DT=$(python3 -c "print(round($(date +%s.%N)-$T0,1))")
 echo "$R" | grep -q "^ERR passphrase sbagliata" && python3 -c "import sys;sys.exit(0 if $DT >= 1.0 else 1)" && pass "passphrase sbagliata: rifiutata, dopo un'attesa (${DT} s)" || fail "sbagliata: $R ($DT s)"
+# un'altra interfaccia collegata mentre è chiusa (es. le notifiche del telefono)
+( T1=$(date +%s); ctl 25 "CASSAFORTE" > "$TMP/altra.txt"; echo $(( $(date +%s) - T1 )) > "$TMP/altra.durata" ) &
+ALTRA=$!; sleep 1
 R=$(NYCT_FINO="SBLOCCATA|^ERR" ctl 30 "SBLOCCA $(hex "$PP")")
 echo "$R" | grep -q SBLOCCATA && pass "passphrase giusta: cassaforte aperta" || fail "sblocco: $R"
+wait $ALTRA
+[ "$(cat "$TMP/altra.durata")" -lt 20 ] && pass "allo sblocco le altre interfacce collegate vengono scollegate (si ricollegano alla chat vera)" || fail "connessione chiusa rimasta appesa"
 sleep 1
 R=$(NYCT_FINO="^ME " ctl 10 "WHOAMI")
 echo "$R" | grep -q "^ME $ME" && pass "dopo lo sblocco la chat riparte con la stessa identità ($ME)" || fail "dopo lo sblocco: $R"
