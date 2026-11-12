@@ -183,17 +183,39 @@ EnvironmentFile=${CONF#$R}
 ExecStart=${BASE#$R}/bin/nyctalus node --listen 0.0.0.0:%i --data \${NYCTALUS_STATO}/nodo-%i --announce \${NYCTALUS_IP}:%i \$NYCTALUS_OPZIONI
 Restart=always
 RestartSec=3
-$( [ "${PORTE[0]}" -lt 1024 ] && [ -n "$PROPRIETARIO" ] && printf 'AmbientCapabilities=CAP_NET_BIND_SERVICE\nCapabilityBoundingSet=CAP_NET_BIND_SERVICE\n' )
+$( if [ "${PORTE[0]}" -lt 1024 ] && [ -n "$PROPRIETARIO" ]; then printf 'AmbientCapabilities=CAP_NET_BIND_SERVICE\nCapabilityBoundingSet=CAP_NET_BIND_SERVICE\n'; else printf 'CapabilityBoundingSet=\n'; fi )
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true
 ProtectSystem=strict
 ReadWritePaths=${STATO#$R}
+# piano di sicurezza (punto 7): il nodo fa solo rete. Provato con una rete vera (uscita compresa)
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+UMask=0077
 
 [Install]
 WantedBy=$([ "$UTENTE" = 1 ] && echo default.target || echo multi-user.target)
 EOF
-[ "$UTENTE" = 1 ] && sed -i '/^ProtectHome=/d;/^ProtectSystem=/d;/^ReadWritePaths=/d' "$UNITA/nyctalus-nodo@.service"
+# servizi dell'utente: niente ProtectHome/System (i dati stanno nella home), e le altre protezioni
+# hanno bisogno di uno spazio utenti separato (PrivateUsers), che con l'utente funziona
+[ "$UTENTE" = 1 ] && sed -i '/^ProtectHome=/d;/^ProtectSystem=/d;/^ReadWritePaths=/d;/^CapabilityBoundingSet=$/d;s/^NoNewPrivileges=true$/NoNewPrivileges=true\nPrivateUsers=true/' "$UNITA/nyctalus-nodo@.service"
 "${SC[@]}" daemon-reload
 for p in "${PORTE[@]}"; do "${SC[@]}" enable --now "nyctalus-nodo@$p" >/dev/null 2>&1 || avv "servizio nyctalus-nodo@$p non avviato (vedi: nyctalus-server stato)"; done
 ok "Servizi avviati: ${PORTE[*]/#/nyctalus-nodo@}"
