@@ -702,7 +702,7 @@ fn analizza_controllo(primo: &[u8]) -> Risultato<(u8, [u8; 32])> {
 }
 
 /// Come `analizza_controllo`, con l'eventuale prova di una REGISTRA (ora, prova).
-fn analizza_controllo_provato(primo: &[u8]) -> Risultato<(u8, [u8; 32], Option<Prova>)> {
+pub(crate) fn analizza_controllo_provato(primo: &[u8]) -> Risultato<(u8, [u8; 32], Option<Prova>)> {
     let base = MAGIA.len() + 1 + 32;
     if primo.len() < base || !primo.starts_with(MAGIA) {
         return Err("rendezvous: malformed control frame".into());
