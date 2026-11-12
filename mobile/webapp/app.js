@@ -381,7 +381,7 @@ function evento(riga) {
   // --- cassaforte dei dati (passphrase) ---
   else if (t === "CASSAFORTE") {
     S.cassaforte = p[1];
-    if (p[1] === "chiusa") chiediPassphrase();
+    if (p[1] === "chiusa" && !S.sblocco) chiediPassphrase();   // una sola richiesta per volta
     document.querySelectorAll(".stato-cassaforte").forEach((x) => x.dispatchEvent(new Event("aggiorna")));
   }
   else if (t === "SBLOCCATA") { S.cassaforte = "aperta"; S.sblocco = false; toast("🔓 Dati sbloccati"); }

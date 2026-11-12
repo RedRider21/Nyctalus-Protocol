@@ -128,6 +128,26 @@ _ITA = {
     "chat.notifiche": "Notifiche sul desktop dei nuovi messaggi",
     "chat.riservata": "Modalità riservata (messaggi tramite casella, a ritmo casuale)",
     "chat.riservata.no_casella": "Questa rete non ha la casella: la modalità riservata non è disponibile",
+    "chat.cass.menu": "🔐 Protezione dei dati…",
+    "chat.cass.sblocca": "Dati protetti",
+    "chat.cass.sblocca.testo": "I dati di Nyctalus su questo computer sono cifrati: scrivi la passphrase per aprirli.",
+    "chat.cass.sbagliata": "Passphrase sbagliata, riprova.",
+    "chat.cass.campo": "Passphrase",
+    "chat.cass.attuale": "Passphrase attuale",
+    "chat.cass.nuova": "Nuova passphrase (almeno 8 caratteri)",
+    "chat.cass.ripeti": "Ripeti la passphrase",
+    "chat.cass.attiva": "Proteggi i dati",
+    "chat.cass.attiva.testo": "Identità, contatti e cronologia verranno cifrati su questo computer con la passphrase, che servirà a ogni avvio.\n\n⚠ Se la dimentichi i dati sono persi: nessuno può recuperarli.",
+    "chat.cass.stato_accesa": "La protezione è accesa: identità, contatti e cronologia sono cifrati su questo computer.",
+    "chat.cass.cambia": "Cambia passphrase",
+    "chat.cass.togli": "Togli la protezione",
+    "chat.cass.togli.testo": "I dati torneranno in chiaro su questo computer: chi lo usa o ne copia il disco potrà leggerli.",
+    "chat.cass.corta": "La passphrase è troppo corta (almeno 8 caratteri) o le due non coincidono.",
+    "chat.cass.fatto.CIFRATA": "Protezione accesa: i dati sono cifrati.",
+    "chat.cass.fatto.CAMBIATA": "Passphrase cambiata.",
+    "chat.cass.fatto.DECIFRATA": "Protezione tolta: i dati sono di nuovo in chiaro.",
+    "chat.cass.annulla": "Annulla",
+    "chat.cass.ok": "OK",
     "chat.riservata.titolo": "Modalità riservata",
     "chat.riservata.spiega": "I messaggi non vanno più in diretta: passano dalla casella cifrata a ritmo casuale, insieme a buste finte tutte uguali, così chi osserva non capisce quando né a chi scrivi. Arrivano con qualche decina di secondi di ritardo; non mandi ricevute di consegna e lettura e non risulti «in linea» ai contatti. Chiamate e file restano diretti. Serve che anche i contatti abbiano Nyctalus 0.3.3 o successivo.",
     "chat.ch.chiama": "Chiamata vocale",
@@ -996,6 +1016,7 @@ class Chat(Gtk.Window):
         self._cmd("LIST")
         self._cmd("SUB")
         self._cmd("RISERVATA")            # stato della modalità riservata (per il menu)
+        self._cmd("CASSAFORTE")           # dati cifrati con passphrase? (per il menu)
         # rubrica: «ci sono» se iscritti (così risultiamo in linea), apertura chiesta dal mini menu
         GLib.timeout_add_seconds(4, lambda: self._ci_sono() and False)
         GLib.timeout_add_seconds(180, self._ci_sono)
@@ -1031,8 +1052,14 @@ class Chat(Gtk.Window):
             while b"\n" in buf:
                 riga, buf = buf.split(b"\n", 1)
                 testo = riga.decode(errors="replace").strip()
+                if testo == "SBLOCCATA":          # deciso QUI: il collegamento si chiude subito dopo,
+                    self._ricollega = True        # prima che l'interfaccia abbia elaborato la riga
                 if testo:
                     GLib.idle_add(self._evento, testo)
+        if getattr(self, "_ricollega", False):            # cassaforte appena aperta: la chat vera è pronta
+            self._ricollega = False
+            GLib.timeout_add(700, lambda: self._connetti() and False)
+            return
         GLib.idle_add(self._mostra_vuoto)
 
     # --- eventi dal motore -----------------------------------------------------
@@ -1046,7 +1073,21 @@ class Chat(Gtk.Window):
             return False
         if self.chiamate.evento(tipo, parti):     # chiamate e voce
             return False
-        if tipo == "ME" and len(parti) >= 2:
+        if tipo == "CASSAFORTE" and len(parti) >= 2:      # dati cifrati (passphrase)
+            self.cassaforte = parti[1]
+            # una sola richiesta per volta (il motore lo annuncia al collegamento e lo ripete a domanda)
+            if parti[1] == "chiusa" and not getattr(self, "_sblocco", False):
+                self._chiedi_passphrase()
+        elif tipo == "SBLOCCATA":                         # il motore riapre la porta: ci si ricollega
+            self.cassaforte, self._sblocco = "aperta", False
+        elif tipo == "BLOCCATA":
+            pass
+        elif tipo == "ERR" and getattr(self, "_sblocco", False):
+            self._chiedi_passphrase(_t("chat.cass.sbagliata") if "sbagliata" in riga else riga[4:])
+        elif tipo in ("CIFRATA", "CAMBIATA", "DECIFRATA"):
+            self._avviso_semplice(_t("chat.cass.fatto." + tipo))
+            self._cmd("CASSAFORTE")
+        elif tipo == "ME" and len(parti) >= 2:
             self.me = parti[1]
             self.mio_id.set_text(self.me)
         elif tipo == "C" and len(parti) >= 2:
@@ -2158,8 +2199,87 @@ class Chat(Gtk.Window):
         ris.set_tooltip_text(_t("chat.riservata.spiega"))
         ris.connect("toggled", self._cambia_riservata)
         menu.append(ris)
+        cass = Gtk.MenuItem(label=_t("chat.cass.menu"))
+        cass.connect("activate", lambda _v: self._protezione_dati())
+        menu.append(cass)
         menu.show_all()
         menu.popup_at_widget(bottone, Gdk.Gravity.SOUTH_WEST, Gdk.Gravity.NORTH_WEST, None)
+
+    # --- cassaforte: i dati locali cifrati con una passphrase -------------------------------
+    def _avviso_semplice(self, testo):
+        d = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.INFO,
+                              buttons=Gtk.ButtonsType.OK, text=testo)
+        d.run()
+        d.destroy()
+
+    def _chiedi_campi(self, titolo, testo, etichette, conferma=None):
+        """Finestra con campi nascosti (passphrase): la lista dei valori, o None se annullata."""
+        d = Gtk.Dialog(title=titolo, transient_for=self if self.get_visible() else None, modal=True)
+        d.add_button(_t("chat.cass.annulla"), Gtk.ResponseType.CANCEL)
+        d.add_button(conferma or _t("chat.cass.ok"), Gtk.ResponseType.OK)
+        d.set_default_response(Gtk.ResponseType.OK)
+        box = d.get_content_area()
+        box.set_spacing(8)
+        box.set_border_width(14)
+        if testo:
+            lab = Gtk.Label(label=testo, xalign=0)
+            lab.set_line_wrap(True)
+            lab.set_max_width_chars(52)
+            box.add(lab)
+        campi = []
+        for e in etichette:
+            c = Gtk.Entry()
+            c.set_visibility(False)
+            c.set_placeholder_text(e)
+            c.set_activates_default(True)
+            c.set_input_purpose(Gtk.InputPurpose.PASSWORD)
+            box.add(c)
+            campi.append(c)
+        d.show_all()
+        ok = d.run() == Gtk.ResponseType.OK
+        valori = [c.get_text() for c in campi]
+        d.destroy()
+        return valori if ok else None
+
+    def _chiedi_passphrase(self, errore=None):
+        """Il motore è «chiuso»: senza passphrase non legge i dati (nemmeno il nostro indirizzo)."""
+        self._sblocco = True
+        v = self._chiedi_campi(_t("chat.cass.sblocca"), errore or _t("chat.cass.sblocca.testo"), [_t("chat.cass.campo")])
+        if v and v[0]:
+            self._cmd("SBLOCCA " + v[0].encode().hex())
+        elif v is None:
+            self.close()                       # senza passphrase la chat non può aprirsi
+
+    def _protezione_dati(self):
+        stato = getattr(self, "cassaforte", "assente")
+        if stato != "aperta":
+            v = self._chiedi_campi(_t("chat.cass.attiva"), _t("chat.cass.attiva.testo"),
+                                   [_t("chat.cass.nuova"), _t("chat.cass.ripeti")], _t("chat.cass.attiva"))
+            if v is None:
+                return
+            if len(v[0]) < 8 or v[0] != v[1]:
+                return self._avviso_semplice(_t("chat.cass.corta"))
+            return self._cmd("CIFRA " + v[0].encode().hex())
+        d = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.INFO,
+                              buttons=Gtk.ButtonsType.NONE, text=_t("chat.cass.sblocca"))
+        d.format_secondary_text(_t("chat.cass.stato_accesa"))
+        d.add_button(_t("chat.cass.togli"), 2)
+        d.add_button(_t("chat.cass.cambia"), 1)
+        d.add_button(_t("chat.cass.annulla"), Gtk.ResponseType.CANCEL)
+        scelta = d.run()
+        d.destroy()
+        if scelta == 1:
+            v = self._chiedi_campi(_t("chat.cass.cambia"), None,
+                                   [_t("chat.cass.attuale"), _t("chat.cass.nuova"), _t("chat.cass.ripeti")], _t("chat.cass.cambia"))
+            if v is None:
+                return
+            if len(v[1]) < 8 or v[1] != v[2]:
+                return self._avviso_semplice(_t("chat.cass.corta"))
+            self._cmd("CAMBIA %s %s" % (v[0].encode().hex(), v[1].encode().hex()))
+        elif scelta == 2:
+            v = self._chiedi_campi(_t("chat.cass.togli"), _t("chat.cass.togli.testo"), [_t("chat.cass.attuale")], _t("chat.cass.togli"))
+            if v and v[0]:
+                self._cmd("DECIFRA " + v[0].encode().hex())
 
     def _cambia_riservata(self, voce):
         """Accende (con spiegazione e conferma) o spegne la modalità riservata nel motore."""
