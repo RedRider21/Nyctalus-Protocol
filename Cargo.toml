@@ -17,3 +17,7 @@ debug = "line-tables-only"
 lto = "thin"
 codegen-units = 1
 strip = true
+# Piano di sicurezza (punto 7): un intero che trabocca ferma il compito (e solo quello: niente
+# panic = "abort", che farebbe cadere tutto il nodo per un pacchetto malformato) invece di
+# proseguire con un valore sbagliato.
+overflow-checks = true

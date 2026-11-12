@@ -24,11 +24,11 @@ pub(crate) fn deriva(contesto: &str, segreto_condiviso: &[u8; 32], id_flusso: u6
 
 /// Azzera un buffer in modo che il compilatore non possa eliminare la
 /// scrittura: le chiavi non devono restare in RAM dopo l'uso.
+/// (Libreria `zeroize`, la stessa delle librerie crittografiche che usiamo: così il motore non ha
+/// nessun blocco `unsafe` suo.)
 pub(crate) fn azzera(buffer: &mut [u8]) {
-    for byte in buffer.iter_mut() {
-        unsafe { std::ptr::write_volatile(byte, 0) };
-    }
-    std::sync::atomic::compiler_fence(std::sync::atomic::Ordering::SeqCst);
+    use zeroize::Zeroize;
+    buffer.zeroize();
 }
 
 #[cfg(test)]

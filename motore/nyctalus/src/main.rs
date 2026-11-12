@@ -19,6 +19,8 @@
 //! conflux (più circuiti, guard e uscita condivisi). `status` ne mostra la
 //! configurazione effettiva.
 
+#![forbid(unsafe_code)] // nessun blocco `unsafe` nel motore (piano di sicurezza, punto 7)
+
 mod avvia;
 mod avvia_circuito;
 mod cella;

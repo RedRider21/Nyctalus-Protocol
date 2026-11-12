@@ -753,6 +753,7 @@ dependencies = [
  "snow",
  "sphinx-packet",
  "x25519-dalek",
+ "zeroize",
 ]
 
 [[package]]

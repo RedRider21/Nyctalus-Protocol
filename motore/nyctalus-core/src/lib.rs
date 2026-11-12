@@ -23,6 +23,8 @@
 //! - [`indirizzo`]: indirizzi `.nyct` dei servizi interni (la chiave pubblica
 //!   in base32 con controllo anti-errori di battitura).
 
+#![forbid(unsafe_code)] // nessun blocco `unsafe` nel motore (piano di sicurezza, punto 7)
+
 mod chiavi;
 pub mod casella;
 pub mod cifratura;
