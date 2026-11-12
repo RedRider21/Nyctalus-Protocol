@@ -14,6 +14,11 @@ cp "$BIN" "$PK/nyctalus-termux/bin/nyctalus"
 ( cd "$PK" && tar czf "$W/nyctalus-termux.tar.gz" nyctalus-termux )
 ( cd "$W" && sha256sum nyctalus-termux.tar.gz > nyctalus-termux.tar.gz.sha256 )
 cp "$ROOT/mobile/termux/installa-termux.sh" "$W/"
+# firma della release con una chiave DI PROVA (mai quella vera, che sta in privato/)
+ssh-keygen -q -t ed25519 -N "" -C prova -f "$TMP/chiave-prova"
+ssh-keygen -q -t ed25519 -N "" -C altra -f "$TMP/chiave-altra"
+NYCTALUS_CHIAVE_RELEASE="$TMP/chiave-prova" bash "$ROOT/strumenti/firma-release.sh" "$W" > /dev/null
+export NYCTALUS_FIRMA_RELEASE="release@nyctalus namespaces=\"nyctalus-release\" $(cut -d' ' -f1,2 "$TMP/chiave-prova.pub")"
 python3 -m http.server 19741 --bind 127.0.0.1 --directory "$W" > /dev/null 2>&1 & PIDS+=($!)
 H="$TMP/home"; P="$TMP/usr"; F="$TMP/finti"; mkdir -p "$H/.termux" "$P/bin" "$F"
 printf 'extra-keys = [[ESC]]\n' > "$H/.termux/termux.properties"
@@ -28,15 +33,25 @@ REPO=http://127.0.0.1:19741
 corri() { env HOME="$H" PREFIX="$P" PATH="$F:$PATH" NYCTALUS_REPO="$REPO" bash -c "curl -fsSL $REPO/installa-termux.sh | bash" > "$TMP/$1.log" 2>&1; }
 
 # 1) pacchetto alterato: rifiutato
-cp "$W/nyctalus-termux.tar.gz.sha256" "$TMP/sha.giusta"
-echo "0000000000000000000000000000000000000000000000000000000000000000  nyctalus-termux.tar.gz" > "$W/nyctalus-termux.tar.gz.sha256"
+# attacchi: pacchetto cambiato, elenco delle impronte rifatto, firma di un'altra chiave, firma assente
+cp "$W/nyctalus-termux.tar.gz" "$TMP/tar.giusto"; cp "$W/SHA256SUMS" "$TMP/sums.giusti"; cp "$W/SHA256SUMS.sig" "$TMP/sig.giusta"
+echo "codice estraneo" >> "$W/nyctalus-termux.tar.gz"
 corri alterato
-[ ! -e "$H/nyctalus" ] && grep -q "NON lo installo" "$TMP/alterato.log" && pass "impronta sbagliata: lo script NON installa niente" || fail "pacchetto alterato installato: $(tail -2 "$TMP/alterato.log")"
-cp "$TMP/sha.giusta" "$W/nyctalus-termux.tar.gz.sha256"
+[ ! -e "$H/nyctalus" ] && grep -q "impronta del pacchetto non corrisponde" "$TMP/alterato.log" && pass "pacchetto cambiato dopo la firma: NON installato" || fail "pacchetto alterato installato: $(tail -2 "$TMP/alterato.log")"
+( cd "$W" && sha256sum nyctalus-termux.tar.gz > SHA256SUMS )
+corri rifatto
+[ ! -e "$H/nyctalus" ] && grep -q "FIRMA NON VALIDA" "$TMP/rifatto.log" && pass "pacchetto cambiato con l'elenco delle impronte rifatto: la firma non torna, NON installato" || fail "elenco rifatto accettato: $(tail -2 "$TMP/rifatto.log")"
+( cd "$W" && rm -f SHA256SUMS.sig && ssh-keygen -q -Y sign -f "$TMP/chiave-altra" -n nyctalus-release SHA256SUMS )
+corri altra
+[ ! -e "$H/nyctalus" ] && grep -q "FIRMA NON VALIDA" "$TMP/altra.log" && pass "pacchetto firmato da un'altra chiave: NON installato" || fail "altra chiave accettata: $(tail -2 "$TMP/altra.log")"
+rm -f "$W/SHA256SUMS.sig"
+corri senzafirma
+[ ! -e "$H/nyctalus" ] && grep -q "pacchetto o firma" "$TMP/senzafirma.log" && pass "release senza firma: NON installata" || fail "senza firma: $(tail -2 "$TMP/senzafirma.log")"
+cp "$TMP/tar.giusto" "$W/nyctalus-termux.tar.gz"; cp "$TMP/sums.giusti" "$W/SHA256SUMS"; cp "$TMP/sig.giusta" "$W/SHA256SUMS.sig"
 
 # 2) installazione vera, in un colpo
 corri vero
-[ -x "$H/nyctalus/bin/nyctalus" ] && [ -f "$H/nyctalus/webapp/index.html" ] && pass "un solo comando: Nyctalus scaricato, verificato e installato" || fail "installazione: $(tail -4 "$TMP/vero.log")"
+[ -x "$H/nyctalus/bin/nyctalus" ] && [ -f "$H/nyctalus/webapp/index.html" ] && pass "un solo comando: Nyctalus scaricato, firma e impronta verificate, installato" || fail "installazione: $(tail -4 "$TMP/vero.log")"
 grep -q "allow-external-apps = true" "$H/.termux/termux.properties" && grep -q "^extra-keys" "$H/.termux/termux.properties" \
   && [ "$(grep -c allow-external-apps "$H/.termux/termux.properties")" = 1 ] && pass "permesso all'app acceso (una riga sola, il resto intatto)" || fail "termux.properties: $(cat "$H/.termux/termux.properties")"
 grep -q ricaricate "$TMP/reload.txt" 2>/dev/null && pass "impostazioni di Termux ricaricate (vale subito)" || fail "termux-reload-settings non chiamato"

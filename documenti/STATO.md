@@ -15,6 +15,15 @@
 8-bis. **App Android senza Termux** (scelta «prima A, poi B» dell'utente): motore e servizio dentro l'APK, riscrivendo in Rust il servizio del telefono (~1.900 righe Python). A (Termux automatizzato) è fatto.
 9. **Alla fine**: guida passo-passo (telefono, PC di casa, PC nodo su Internet), glossario dei termini e comandi, riordino organico della documentazione.
 
+## 12/11/2026 · Punto 7 · Sicurezza (in ufficio: solo commit locali) 🔧
+- ✅ Nessun `unsafe` (forbid + zeroize); overflow-checks in release.
+- ✅ Prove a raffica (fuzzing leggero deterministico) su 15 lettori: trovato e CORRETTO un crash vero dell'elenco firmato (caratteri di più byte).
+- ✅ Servizi systemd induriti (nodi dei server, aiuta, rubrica, siti), provati dentro le protezioni con una rete vera.
+- ✅ Audit RustSec: 6 avvisi in rustls/rustls-webpki/tokio/ctutils → aggiornate, 0 vulnerabilità note (`strumenti/audit.sh`).
+- ✅ Firma delle release: chiave in `privato/firma-release/`, pubblica in `firma/`; `strumenti/firma-release.sh` va eseguito su ogni cartella di release PRIMA di `gh release create` (aggiungere SHA256SUMS e SHA256SUMS.sig ai file); lo script unico di Termux richiede la firma (dalla 0.3.20).
+- ⏳ Dati locali cifrati con passphrase all'avvio (scelta dell'utente 12/11): cronologia della chat e file ricevuti. Prossimo lavoro.
+- ⏳ Fuzzing guidato (cargo-fuzz), autocontrollo d'integrità.
+
 ## 11/11/2026 notte · Misure in Shadow del punto 3 ✅
 - `velocita.py`: nuove opzioni `--siti`, `--paralleli`, `--uscite`, `--guardie` e la misura «completamento» (tempo per finire tutti gli scaricamenti di un utente). Dati grezzi in `simulazione/misure-*-2026-11-11.txt`.
 - **Uscite diverse** (nodi 10 Mbit, 4 scaricamenti paralleli da 5 MB da 4 siti, 5 semi): 1 utente 21,9 / 21,5 / 23,3 s con 1/2/4 uscite (Tor 28,2); 4 utenti 55,8 / 56,5 / 60,1 s (Tor 71,2). **Non accelera**: la strettoia è la guardia unica. Testi corretti ovunque (non promettono più velocità).

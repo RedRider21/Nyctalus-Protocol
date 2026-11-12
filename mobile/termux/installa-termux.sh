@@ -10,7 +10,8 @@
 #   1) permette all'app Nyctalus di comandare Termux (allow-external-apps), così poi non serve
 #      più toccare Termux;
 #   2) se Termux è appena installato, lo aggiorna (senza, Python può non installarsi);
-#   3) scarica da GitHub il pacchetto di Nyctalus per Termux e ne VERIFICA l'impronta SHA-256;
+#   3) scarica da GitHub il pacchetto di Nyctalus per Termux e ne VERIFICA la FIRMA (chiave della
+#      release di Nyctalus, ssh-keygen -Y) e l'impronta SHA-256;
 #   4) lo installa (il motore giusto per il processore: ARM 64/32 bit, Intel/AMD 64/32 bit);
 #   5) riapre l'app Nyctalus, che avvia il servizio.
 # Convive con gli altri progetti in Termux (vedi installa.sh): niente viene cancellato.
@@ -42,21 +43,36 @@ principale() {
   fi
   command -v curl >/dev/null 2>&1 || pkg install -y curl
 
-  # 3) il pacchetto di Nyctalus da GitHub, con l'impronta
+  # 3) il pacchetto di Nyctalus da GitHub, con l'impronta FIRMATA dalla chiave della release
   local D
   D="$(mktemp -d)"
   cd "$D" || return 1
-  say "Scarico Nyctalus da GitHub…"
-  if ! curl -fL --retry 5 --retry-delay 2 --connect-timeout 15 -o n.tar.gz "$REPO/nyctalus-termux.tar.gz" \
-     || ! curl -fsSL --retry 5 -o n.sha256 "$REPO/nyctalus-termux.tar.gz.sha256"; then
-    err "Scaricamento non riuscito: controlla la connessione e incolla di nuovo il comando."
+  # chiave pubblica della release di Nyctalus (strumenti/firma-release.sh): un pacchetto la cui
+  # impronta non è firmata da lei non si installa, nemmeno se viene da GitHub
+  printf '%s\n' "${NYCTALUS_FIRMA_RELEASE:-release@nyctalus namespaces=\"nyctalus-release\" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIH2tSuN3+IVKV6CPiXCbkdT5FCyjciRePBoxVokIiiY}" > firmatari
+  command -v ssh-keygen >/dev/null 2>&1 || pkg install -y openssh >/dev/null 2>&1 || true
+  if ! command -v ssh-keygen >/dev/null 2>&1; then
+    err "Manca ssh-keygen per verificare la firma del pacchetto (pkg install openssh): NON installo."
     return 1
   fi
-  if ! echo "$(cut -d' ' -f1 n.sha256)  n.tar.gz" | sha256sum -c --quiet; then
+  say "Scarico Nyctalus da GitHub…"
+  if ! curl -fL --retry 5 --retry-delay 2 --connect-timeout 15 -o n.tar.gz "$REPO/nyctalus-termux.tar.gz" \
+     || ! curl -fsSL --retry 5 -o SHA256SUMS "$REPO/SHA256SUMS" \
+     || ! curl -fsSL --retry 5 -o SHA256SUMS.sig "$REPO/SHA256SUMS.sig"; then
+    err "Scaricamento non riuscito (pacchetto o firma): controlla la connessione e incolla di nuovo il comando."
+    return 1
+  fi
+  if ! ssh-keygen -Y verify -f firmatari -I release@nyctalus -n nyctalus-release -s SHA256SUMS.sig < SHA256SUMS >/dev/null 2>&1; then
+    err "FIRMA NON VALIDA: questo pacchetto non viene da Nyctalus. NON lo installo."
+    return 1
+  fi
+  local atteso
+  atteso="$(awk '$2=="nyctalus-termux.tar.gz"{print $1}' SHA256SUMS)"
+  if [ -z "$atteso" ] || ! echo "$atteso  n.tar.gz" | sha256sum -c --quiet; then
     err "L'impronta del pacchetto non corrisponde: NON lo installo (scaricamento rovinato o alterato)."
     return 1
   fi
-  ok "Pacchetto scaricato e verificato"
+  ok "Pacchetto scaricato, firmato da Nyctalus e verificato"
 
   # 4) installazione
   tar xzf n.tar.gz && bash nyctalus-termux/installa.sh || { err "Installazione non riuscita: leggi i messaggi qui sopra."; return 1; }
