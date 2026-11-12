@@ -351,7 +351,16 @@ def servizio(nome, togli=False, stampa=False):
     testo = ("# Creato da nyctalus-sito: il sito .nyct «%s» sempre acceso.\n"
              "[Unit]\nDescription=Sito Nyctalus %s (%s)\nWants=network-online.target\nAfter=network-online.target\n\n"
              "[Service]\nExecStart=%s %s avvia %s\nEnvironment=NYCTALUS_BIN=%s\nEnvironment=NYCTALUS_SITI_DATI=%s\n"
-             "Restart=on-failure\nRestartSec=15\n\n[Install]\nWantedBy=default.target\n"
+             "Restart=on-failure\nRestartSec=15\n"
+             "# piano di sicurezza (punto 7): solo rete; spazio utenti separato (PrivateUsers) perché le\n"
+             "# altre protezioni funzionino anche in un servizio dell'utente\n"
+             "NoNewPrivileges=true\nPrivateUsers=true\nPrivateTmp=true\nPrivateDevices=true\nProtectKernelTunables=true\n"
+             "ProtectKernelModules=true\nProtectKernelLogs=true\nProtectControlGroups=true\nProtectClock=true\n"
+             "ProtectHostname=true\nProtectProc=invisible\nRestrictNamespaces=true\nRestrictRealtime=true\n"
+             "RestrictSUIDSGID=true\nLockPersonality=true\nSystemCallArchitectures=native\n"
+             "SystemCallFilter=@system-service\nSystemCallErrorNumber=EPERM\n"
+             "RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK\nUMask=0077\n"
+             "\n[Install]\nWantedBy=default.target\n"
              % (nome, nome, sito["indirizzo"], sys.executable, Path(__file__).resolve(), nome, binario(), DATI))
     if stampa:
         return print(testo, end="")

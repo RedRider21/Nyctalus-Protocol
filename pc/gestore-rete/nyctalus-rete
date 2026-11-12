@@ -812,7 +812,16 @@ def aiuta(args):
     testo = ("# Creato da nyctalus-rete: «Aiuta la rete», questo PC è un nodo SOLO INTERMEDIO\n"
              "# (mai uscita: il traffico degli altri non esce mai dal tuo indirizzo).\n"
              "[Unit]\nDescription=Nyctalus, aiuta la rete (nodo solo intermedio)\nWants=network-online.target\nAfter=network-online.target\n\n"
-             "[Service]\nExecStart=%s\nRestart=always\nRestartSec=10\nNice=10\n\n[Install]\nWantedBy=default.target\n"
+             "[Service]\nExecStart=%s\nRestart=always\nRestartSec=10\nNice=10\n"
+             "# piano di sicurezza (punto 7): solo rete; spazio utenti separato (PrivateUsers) perché le\n"
+             "# altre protezioni funzionino anche in un servizio dell'utente\n"
+             "NoNewPrivileges=true\nPrivateUsers=true\nPrivateTmp=true\nPrivateDevices=true\nProtectKernelTunables=true\n"
+             "ProtectKernelModules=true\nProtectKernelLogs=true\nProtectControlGroups=true\nProtectClock=true\n"
+             "ProtectHostname=true\nProtectProc=invisible\nRestrictNamespaces=true\nRestrictRealtime=true\n"
+             "RestrictSUIDSGID=true\nLockPersonality=true\nSystemCallArchitectures=native\n"
+             "SystemCallFilter=@system-service\nSystemCallErrorNumber=EPERM\n"
+             "RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK\nUMask=0077\n"
+             "MemoryDenyWriteExecute=true\n\n[Install]\nWantedBy=default.target\n"
              % " ".join(shlex.quote(c) for c in comando))
     if stampa:
         return print(testo, end="")
@@ -991,7 +1000,16 @@ def rubrica(codice=None, servizio=False, togli=False, stampa=False):
         testo = ("# Creato da nyctalus-rete: rubrica e casella cifrata della rete, sempre accese.\n"
                  "[Unit]\nDescription=Nyctalus: rubrica e casella della rete\nWants=network-online.target\n"
                  "After=network-online.target\n\n[Service]\nExecStart=%s\nEnvironment=NYCTALUS_BIN=%s\n"
-                 "Restart=always\nRestartSec=15\n\n[Install]\nWantedBy=default.target\n" % (cmd, binario()))
+                 "Restart=always\nRestartSec=15\n"
+                 "# piano di sicurezza (punto 7): solo rete; spazio utenti separato (PrivateUsers) perché le\n"
+                 "# altre protezioni funzionino anche in un servizio dell'utente\n"
+                 "NoNewPrivileges=true\nPrivateUsers=true\nPrivateTmp=true\nPrivateDevices=true\nProtectKernelTunables=true\n"
+                 "ProtectKernelModules=true\nProtectKernelLogs=true\nProtectControlGroups=true\nProtectClock=true\n"
+                 "ProtectHostname=true\nProtectProc=invisible\nRestrictNamespaces=true\nRestrictRealtime=true\n"
+                 "RestrictSUIDSGID=true\nLockPersonality=true\nSystemCallArchitectures=native\n"
+                 "SystemCallFilter=@system-service\nSystemCallErrorNumber=EPERM\n"
+                 "RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK\nUMask=0077\n"
+                 "\n[Install]\nWantedBy=default.target\n" % (cmd, binario()))
         if stampa:
             return print(testo, end="")
         if togli:
