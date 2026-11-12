@@ -21,7 +21,8 @@
 - ✅ Servizi systemd induriti (nodi dei server, aiuta, rubrica, siti), provati dentro le protezioni con una rete vera.
 - ✅ Audit RustSec: 6 avvisi in rustls/rustls-webpki/tokio/ctutils → aggiornate, 0 vulnerabilità note (`strumenti/audit.sh`).
 - ✅ Firma delle release: chiave in `privato/firma-release/`, pubblica in `firma/`; `strumenti/firma-release.sh` va eseguito su ogni cartella di release PRIMA di `gh release create` (aggiungere SHA256SUMS e SHA256SUMS.sig ai file); lo script unico di Termux richiede la firma (dalla 0.3.20).
-- ⏳ Dati locali cifrati con passphrase all'avvio (scelta dell'utente 12/11): cronologia della chat e file ricevuti. Prossimo lavoro.
+- ✅ Dati locali cifrati con passphrase all'avvio («cassaforte», `cassaforte.rs`): identità, contatti, cronologia, stati e **file ricevuti** (formato NYCS1 a pezzi); comandi SBLOCCA/CIFRA/CAMBIA/DECIFRA/APRI; interfacce telefono, chat PC, File PC, nyctalus-cli; copie in chiaro solo nella vista temporanea, svuotata alla chiusura. Prove 45–49 tutte verdi.
+- ▶ **RIPRENDERE DA QUI (cassaforte):** documentazione fatta solo nei manuali utente (CHAT §7-bis, TELEFONO §6, FILE §5, TERMINALE, GUIDA-COMPLETA §18). MANCANO: SICUREZZA.md (riga della tabella §1.2-bis ancora «⏳» + nuovo §1.2-ter), SPECIFICA.md (formati NYCF1/NYCR1/NYCS1, Argon2id 64 MiB·3·1, comandi), DEPLOY.md, README («Fatto e testato»), MANUALE-PROVE.md (righe 45–49), memoria; poi suite completa `test/esegui-tutti.sh` (non rilanciata dopo la cassaforte). Dopo: strumento `nyctalus-collaudo`.
 - ⏳ Fuzzing guidato (cargo-fuzz), autocontrollo d'integrità.
 
 ## 11/11/2026 notte · Misure in Shadow del punto 3 ✅

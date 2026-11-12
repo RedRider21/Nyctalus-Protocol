@@ -140,6 +140,7 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi **gestisce
 | [Notifiche](#3-notifiche) | sapere che è arrivato un messaggio o una chiamata | accese |
 | [Avvio all'accensione](#4-avvio-allaccensione-telefono) | ricevere anche dopo aver riacceso il telefono | spento |
 | [Modalità riservata](#5-modalita-riservata) | non far capire **quando** né **a chi** scrivi (buste ritardate e rimescolate nei nodi: chat da mixnet) | spenta |
+| [Protezione dei dati (🔐)](#18-protezione-dei-dati-con-passphrase) | cifrare sul dispositivo identità, contatti, cronologia e file ricevuti: chi ruba o apre il PC o il telefono spento non legge nulla | spenta |
 | [Copertura costante](#17-impostazioni-a-schede) | linea piatta: non si vede quando né quanto usi la rete | spenta |
 | [File: soglia, collegamenti, chat](#6-programma-file) | quanto accettare da solo, velocità, traccia in chat | 100 MB · 3 · sì |
 | [Rubrica della rete](#7-rubrica-della-rete) | farsi trovare dagli altri della rete | non iscritto |
@@ -492,3 +493,16 @@ d'ambiente si cambiano dalle **Impostazioni**, divise per area in **schede**:
 - **🌐/🔗 Rete**: la rete in uso e la sua forma del traffico. La forma (rumore, HTTP/3,
   videochiamata) vale per tutta la rete: la sceglie il gestore con `nyctalus-rete protezione`.
 
+### 18. Protezione dei dati con passphrase
+**A cosa serve:** se qualcuno prende il tuo PC o il tuo telefono (furto, riparazione,
+sequestro), senza la passphrase non legge identità, contatti, conversazioni né i file che hai
+ricevuto. Di serie è spenta: i dati stanno in chiaro, come in quasi tutti i programmi.
+
+- **PC:** chat → menu **Aspetto** → «🔐 Protezione dei dati…» → **Proteggi i dati**.
+- **Telefono / Windows:** **Impostazioni** → scheda **💬 Chat** → «Proteggi con una passphrase».
+- **Terminale:** `nyctalus-cli cassaforte attiva` (poi `sblocca` a ogni avvio).
+
+Da quel momento a ogni avvio la chat chiede la passphrase; finché non la scrivi resta chiusa
+e fuori linea. I file ricevuti si aprono come prima (copia in chiaro temporanea, cancellata
+alla chiusura). **⚠️ Se dimentichi la passphrase i dati sono persi**: non c'è recupero.
+Limiti e dettagli: `MANUALE-CHAT.md` §7-bis.

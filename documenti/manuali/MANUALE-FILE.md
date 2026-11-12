@@ -101,4 +101,8 @@ usare (3 di solito; di più = più veloce ma più carico sulla rete).
 - La proposta, l'accettazione e i comandi viaggiano nella stessa **sessione cifrata e
   autenticata** della chat; anche i collegamenti dei dati provano chi sei, quindi un estraneo
   non può chiedere pezzi dei tuoi file.
+- Con la **protezione dei dati** accesa (🔐, `MANUALE-CHAT.md` §7-bis) i file ricevuti
+  restano **cifrati sul disco**: ogni pezzo viene cifrato appena arriva e controllato, il file
+  non passa mai in chiaro dal disco, e una ricezione interrotta riprende lo stesso. «Apri» e
+  «Mostra nella cartella» lavorano su una copia in chiaro temporanea, cancellata alla chiusura.
 - Dettagli tecnici: `SPECIFICA.md` (trasferimenti), prova `22-trasferimenti` in `MANUALE-PROVE.md`.

@@ -224,3 +224,10 @@ notifiche) oppure aspettare che tu apra l'app. All'inizio è su **no**.
   lettura) e rifiuta richieste da altri siti.
 - I messaggi viaggiano cifrati da un capo all'altro e **chi ti scrive è autenticato**
   (vedi `MANUALE-CHAT.md` e `SICUREZZA.md`).
+- **🔐 Protezione dei dati con passphrase** (dalla 0.3.20): **Impostazioni** → scheda
+  **💬 Chat** → «Proteggi con una passphrase». Identità, contatti, cronologia e **file
+  ricevuti** vengono cifrati sul telefono; a ogni avvio l'app mostra «🔐 Dati protetti» e
+  chiede la passphrase (finché non la scrivi la chat resta chiusa e fuori linea). Foto, video
+  e documenti ricevuti si aprono come sempre: l'app ne prepara una copia in chiaro temporanea,
+  cancellata alla chiusura; nemmeno le miniature restano in chiaro. ⚠️ Passphrase dimenticata
+  = dati persi. Tutti i dettagli e i limiti: `MANUALE-CHAT.md` §7-bis.

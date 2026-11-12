@@ -338,6 +338,56 @@ Provarla da solo su un PC, con due finestre come due persone: `./strumenti/demo-
 
 ---
 
+## 7-bis. Protezione dei dati con passphrase (🔐 cassaforte)
+
+Di serie i dati della chat stanno sul disco **in chiaro**: chi mette le mani sul computer o
+sul telefono spento (furto, riparazione, sequestro) li legge. Con la **protezione dei dati**
+tutto viene cifrato con una passphrase che sai solo tu.
+
+**Accenderla**
+- PC: menu **Aspetto** → «🔐 Protezione dei dati…» → **Proteggi i dati** → scrivi la
+  passphrase due volte (almeno 8 caratteri).
+- Telefono e Windows: **Impostazioni** → scheda **💬 Chat** → «Proteggi con una passphrase».
+- Terminale: `nyctalus-cli cassaforte attiva`.
+
+**Cosa viene cifrato:** identità (la chiave del tuo Contact ID), contatti, cronologia di
+tutte le conversazioni, posta in coda, stato dei trasferimenti e **i file ricevuti**
+(allegati della chat e file grandi del programma File). I file già ricevuti vengono cifrati
+al momento dell'accensione; quelli nuovi arrivano **già cifrati**, pezzo per pezzo, senza
+mai passare in chiaro dal disco.
+
+**Dopo:** a ogni avvio la chat mostra «🔐 Dati protetti» e chiede la passphrase. Finché non
+la scrivi il motore resta chiuso: niente messaggi, niente identità in rete (per gli altri sei
+fuori linea). Una passphrase sbagliata viene rifiutata, con un secondo di attesa per tentativo.
+
+**Aprire un file ricevuto:** si fa come sempre (clic, «Apri», «Salva con nome», «Inoltra»).
+Il programma ne prepara al volo una **copia in chiaro temporanea** e la passa al
+visualizzatore: sul PC sta in memoria (`$XDG_RUNTIME_DIR`, mai sul disco), sul telefono
+nella cartella privata di Termux. Le copie temporanee (e le miniature) vengono cancellate
+quando chiudi il programma e comunque al prossimo avvio. «Salva con nome» crea invece una
+copia in chiaro dove dici tu: quella resta, ed è una tua scelta.
+
+**Cambiarla o toglierla:** stesso menu → «Cambia passphrase» (i file non vengono riscritti:
+è immediato) o «Togli la protezione» (tutto torna in chiaro). Da terminale:
+`nyctalus-cli cassaforte cambia` / `togli`.
+
+> ⚠️ **Se dimentichi la passphrase i dati sono persi**: non esiste recupero, nemmeno per noi.
+> Persa l'identità, perdi anche il Contact ID.
+
+**Cosa NON fa** (per onestà):
+- protegge i dati **a programma chiuso**; mentre la chat è aperta e sbloccata, un programma
+  malevolo che gira con il tuo utente può leggerli come li leggi tu;
+- non cifra i file che **mandi** tu (gli originali restano dove li tenevi), le impostazioni
+  dell'aspetto (`ui.json`) né i file della configurazione di rete;
+- se il programma viene ucciso di colpo (batteria finita, crash) le copie temporanee aperte
+  in quella sessione restano fino al prossimo avvio: sul PC sono in memoria e spariscono allo
+  spegnimento, sul telefono stanno nella cartella privata dell'app;
+- una passphrase corta o banale si indovina: usane una lunga (4-5 parole a caso vanno bene).
+
+Dettagli tecnici: `SICUREZZA.md` §1.2-ter, `SPECIFICA.md` (cassaforte); prove `45`…`49`.
+
+---
+
 ## 8. Dove stanno i tuoi dati
 
 Tutto in `~/.nyctalus-chat/`:
@@ -349,6 +399,10 @@ Tutto in `~/.nyctalus-chat/`:
 | `cronologia/<addr>.log` | lo storico dei messaggi (e degli allegati) con ciascun contatto. |
 | `allegati/<contatto>/` | i file ricevuti. |
 | `ui.json` | tema, sfondo, dimensione e posizione della finestra. |
+| `cassaforte.json` | c'è solo con la **protezione dei dati** accesa (§7-bis): sale e chiave maestra cifrata con la passphrase. Senza la passphrase non serve a nulla; **non cancellarlo**, o i dati cifrati sono persi. |
+
+Con la protezione accesa (§7-bis) `identita`, `contatti`, `cronologia/` e `allegati/` sono
+cifrati: aprendoli a mano si vede solo `NYCF1`/`NYCR1`/`NYCS1` seguito da dati illeggibili.
 
 Per **cambiare identità** da zero, chiudi la chat ed elimina `identita` (perderai
 il vecchio Contact ID). Per fare pulizia di una conversazione, cancella il

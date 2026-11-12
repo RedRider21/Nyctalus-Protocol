@@ -41,7 +41,7 @@ AIUTO = """nyctalus-cli — Nyctalus dal terminale
 
   sblocca                         apre i dati cifrati (chiede la passphrase; il motore riparte chiuso)
   cassaforte                      la protezione dei dati con passphrase: com'è adesso
-  cassaforte attiva|cambia|togli  la accende (cifra identità, contatti, cronologia), cambia la
+  cassaforte attiva|cambia|togli  la accende (cifra identità, contatti, cronologia, file ricevuti), cambia la
                                   passphrase o la toglie. ⚠ Passphrase dimenticata = dati persi
 
 <contatto> = nome (anche solo l'inizio, senza maiuscole) o indirizzo .nyct.

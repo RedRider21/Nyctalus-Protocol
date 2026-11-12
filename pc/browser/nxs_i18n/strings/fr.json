@@ -1808,7 +1808,7 @@
  "chat.cass.ripeti": "Répétez la phrase secrète",
  "chat.cass.attiva": "Protéger les données",
  "chat.cass.attiva.testo": "Identité, contacts et historique seront chiffrés sur cet ordinateur avec la phrase secrète, demandée à chaque démarrage.\n\n⚠ Si vous l'oubliez, les données sont perdues : personne ne peut les récupérer.",
- "chat.cass.stato_accesa": "La protection est active : identité, contacts et historique sont chiffrés sur cet ordinateur.",
+ "chat.cass.stato_accesa": "La protection est active : identité, contacts, historique et fichiers reçus sont chiffrés sur cet ordinateur.",
  "chat.cass.cambia": "Changer la phrase secrète",
  "chat.cass.togli": "Retirer la protection",
  "chat.cass.togli.testo": "Les données seront de nouveau en clair sur cet ordinateur : quiconque l'utilise ou copie son disque pourra les lire.",

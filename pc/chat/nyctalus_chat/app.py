@@ -138,7 +138,7 @@ _ITA = {
     "chat.cass.ripeti": "Ripeti la passphrase",
     "chat.cass.attiva": "Proteggi i dati",
     "chat.cass.attiva.testo": "Identità, contatti e cronologia verranno cifrati su questo computer con la passphrase, che servirà a ogni avvio.\n\n⚠ Se la dimentichi i dati sono persi: nessuno può recuperarli.",
-    "chat.cass.stato_accesa": "La protezione è accesa: identità, contatti e cronologia sono cifrati su questo computer.",
+    "chat.cass.stato_accesa": "La protezione è accesa: identità, contatti, cronologia e file ricevuti sono cifrati su questo computer.",
     "chat.cass.cambia": "Cambia passphrase",
     "chat.cass.togli": "Togli la protezione",
     "chat.cass.togli.testo": "I dati torneranno in chiaro su questo computer: chi lo usa o ne copia il disco potrà leggerli.",

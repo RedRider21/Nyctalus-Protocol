@@ -1808,7 +1808,7 @@
  "chat.cass.ripeti": "Repeat the passphrase",
  "chat.cass.attiva": "Protect the data",
  "chat.cass.attiva.testo": "Identity, contacts and history will be encrypted on this computer with the passphrase, needed at every start.\n\n⚠ If you forget it the data is lost: nobody can recover it.",
- "chat.cass.stato_accesa": "Protection is on: identity, contacts and history are encrypted on this computer.",
+ "chat.cass.stato_accesa": "Protection is on: identity, contacts, history and received files are encrypted on this computer.",
  "chat.cass.cambia": "Change passphrase",
  "chat.cass.togli": "Remove protection",
  "chat.cass.togli.testo": "The data will be stored in the clear on this computer again: whoever uses it or copies its disk will be able to read it.",

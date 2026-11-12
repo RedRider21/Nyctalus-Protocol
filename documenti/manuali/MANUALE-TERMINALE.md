@@ -47,6 +47,8 @@ raggiungibile con `command file`.)
 | `pausa <id>` · `riprendi <id>` · `annulla <id>` | un trasferimento |
 | `togli <id>` · `pulisci` | dall'elenco dei trasferimenti (i file restano) |
 | `impostazioni [soglia 100] [canali 3] [inchat si\|no] [riservata si\|no]` | soglia di accettazione automatica (MB), collegamenti in parallelo, file anche nella chat, **modalità riservata** (`MANUALE-CHAT.md` §3-ter·1) |
+| `sblocca` | apre i dati protetti da passphrase (la chiede senza mostrarla); va dato a ogni avvio del motore, prima di ogni altro comando |
+| `cassaforte` · `cassaforte attiva\|cambia\|togli` | **protezione dei dati con passphrase**: com'è adesso; la accende (cifra identità, contatti, cronologia e file ricevuti), cambia la passphrase, la toglie. ⚠️ Passphrase dimenticata = dati persi (`MANUALE-CHAT.md` §7-bis) |
 | `aiuto` | l'elenco dei comandi |
 
 **`<contatto>`**: il nome, anche solo l'inizio e senza maiuscole (`scrivi mar ciao` va a

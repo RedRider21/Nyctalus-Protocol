@@ -1099,7 +1099,7 @@ function sezioneCassaforte() {
   const disegna = () => {
     bott.textContent = "";
     if (S.cassaforte === "aperta") {
-      stato.textContent = "🔐 Accesa: identità, contatti e cronologia sono cifrati su questo dispositivo. All'avvio serve la passphrase.";
+      stato.textContent = "🔐 Accesa: identità, contatti, cronologia e file ricevuti sono cifrati su questo dispositivo. All'avvio serve la passphrase.";
       const bc = el("button", "", "Cambia passphrase"), bt = el("button", "pericoloso", "Togli la protezione");
       bc.onclick = () => {
         const v = campoPassword("Passphrase attuale"), n = campoPassword("Nuova passphrase (almeno 8 caratteri)"), r = campoPassword("Ripeti la nuova");

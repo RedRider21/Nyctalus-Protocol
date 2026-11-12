@@ -1808,7 +1808,7 @@
  "chat.cass.ripeti": "Passphrase wiederholen",
  "chat.cass.attiva": "Daten schützen",
  "chat.cass.attiva.testo": "Identität, Kontakte und Verlauf werden auf diesem Computer mit der Passphrase verschlüsselt, die bei jedem Start nötig ist.\n\n⚠ Wenn du sie vergisst, sind die Daten verloren: Niemand kann sie wiederherstellen.",
- "chat.cass.stato_accesa": "Der Schutz ist an: Identität, Kontakte und Verlauf sind auf diesem Computer verschlüsselt.",
+ "chat.cass.stato_accesa": "Der Schutz ist an: Identität, Kontakte, Verlauf und empfangene Dateien sind auf diesem Computer verschlüsselt.",
  "chat.cass.cambia": "Passphrase ändern",
  "chat.cass.togli": "Schutz entfernen",
  "chat.cass.togli.testo": "Die Daten liegen dann wieder unverschlüsselt auf diesem Computer: Wer ihn benutzt oder die Festplatte kopiert, kann sie lesen.",
