@@ -219,6 +219,15 @@ fn radice_di(impronte: &[[u8; 32]]) -> String {
 
 /// Impronte dei pezzi di un file (lettura a blocchi: niente file intero in memoria).
 fn calcola_impronte(percorso: &std::path::Path, dim: u64) -> Risultato<Vec<[u8; 32]>> {
+    // file ricevuto e cifrato sul disco (cassaforte): le impronte sono dei pezzi in chiaro
+    if crate::cassaforte::e_sigillato(percorso) {
+        let s = crate::cassaforte::Sigillo::da_file(percorso)?;
+        if s.lunghezza != dim || s.pezzo != PEZZO {
+            return Err("il file è cambiato mentre lo preparavo".into());
+        }
+        let mut f = std::fs::File::open(percorso)?;
+        return (0..s.npezzi()).map(|n| Ok(*blake3::hash(&s.leggi_pezzo(&mut f, n)?).as_bytes())).collect();
+    }
     let mut f = std::fs::File::open(percorso)?;
     let mut out = Vec::with_capacity(npezzi_di(dim) as usize);
     let mut buf = vec![0u8; PEZZO as usize];
@@ -362,6 +371,9 @@ impl Stato {
     pub(super) async fn x_invia(self: &Arc<Self>, addr: &str, percorso: PathBuf, mime: &str) -> Risultato<String> {
         let peer = con_suffisso(addr);
         indirizzo::in_chiave(&peer).map_err(|_| "indirizzo .nyct non valido")?;
+        // un file ricevuto e cifrato sul disco si manda dalla sua copia in chiaro (stesso nome)
+        let nome_originale = percorso.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+        let percorso = crate::cassaforte::in_chiaro(&percorso).map_err(|_| "file non trovato")?;
         let meta = tokio::fs::metadata(&percorso).await.map_err(|_| "file non trovato")?;
         if !meta.is_file() {
             return Err("non è un file".into());
@@ -374,7 +386,7 @@ impl Stato {
         if attivi >= MAX_PER_CONTATTO {
             return Err("troppi trasferimenti aperti con questo contatto".into());
         }
-        let nome = nome_sicuro(&percorso.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default());
+        let nome = nome_sicuro(&nome_originale);
         let t = Trasf {
             id: nuovo_id(),
             verso: Verso::Out,
@@ -838,9 +850,21 @@ impl Stato {
 
         // 2) il file in costruzione, già della misura giusta
         {
-            let f = std::fs::OpenOptions::new().create(true).truncate(false).write(true).open(&t.parziale)?;
-            if f.metadata()?.len() != t.dim {
-                f.set_len(t.dim)?;
+            let mut f = std::fs::OpenOptions::new().create(true).truncate(false).write(true).open(&t.parziale)?;
+            let nuovo = f.metadata()?.len() == 0;
+            match crate::cassaforte::Sigillo::nuovo(PEZZO, t.dim).filter(|_| nuovo) {
+                // cassaforte aperta: intestazione + pezzi sigillati, mai in chiaro sul disco
+                Some((s, testa)) => {
+                    f.write_all(&testa)?;
+                    f.set_len(s.dimensione_file())?;
+                }
+                // in chiaro (o un file già cominciato: resta com'è, sigillato o no)
+                None if !crate::cassaforte::e_sigillato(&t.parziale) => {
+                    if f.metadata()?.len() != t.dim {
+                        f.set_len(t.dim)?;
+                    }
+                }
+                None => {}
             }
         }
         let mappa = self.x_mappa(id, t.npezzi);
@@ -899,6 +923,8 @@ impl Stato {
         let cartella = t.parziale.parent().map(|x| x.to_path_buf()).unwrap_or_else(|| self.dati.clone());
         let finale = percorso_libero(&cartella, &t.nome);
         std::fs::rename(&t.parziale, &finale)?;
+        // cominciato in chiaro (prima della cassaforte) e finito ora: si sigilla
+        let _ = crate::cassaforte::sigilla_esistente(&finale);
         let _ = std::fs::remove_file(self.x_dir().join(format!("{id}.mappa")));
         if let Some(x) = self.trasf.elenco.lock().unwrap().get_mut(id) {
             x.percorso = finale.clone();
@@ -983,8 +1009,14 @@ impl Stato {
                         let atteso = PEZZO.min(t.dim - n * PEZZO) as usize;
                         if dati.len() == atteso && blake3::hash(&dati).as_bytes() == &impronte[n as usize] {
                             let mut f = std::fs::OpenOptions::new().write(true).open(&t.parziale)?;
-                            f.seek(SeekFrom::Start(n * PEZZO))?;
-                            f.write_all(&dati)?;
+                            if crate::cassaforte::e_sigillato(&t.parziale) {
+                                let s = crate::cassaforte::Sigillo::da_file(&t.parziale)?;
+                                f.seek(SeekFrom::Start(s.posizione(n)))?;
+                                f.write_all(&s.sigilla(n, &dati))?;
+                            } else {
+                                f.seek(SeekFrom::Start(n * PEZZO))?;
+                                f.write_all(&dati)?;
+                            }
                             self.x_mappa_segna(id, t.npezzi, n);
                             c.fatto(dati.len() as u64);
                             self.x_avanzamento(id, t, c);

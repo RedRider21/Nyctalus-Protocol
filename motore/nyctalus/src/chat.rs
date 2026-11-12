@@ -62,6 +62,8 @@ pub async fn chat(
         attendi_sblocco(controllo, segreto.clone(), &dati).await?;
         println!("Cassaforte aperta.");
     }
+    // la «vista in chiaro» dei file ricevuti cifrati: vuota a ogni avvio
+    crate::cassaforte::prepara_vista(&dati);
     let identita = carica_identita(&identita_path)?;
     let indirizzo = indirizzo::da_chiave(&identita.pubblica());
     let stato = Arc::new(Stato {
@@ -243,7 +245,8 @@ const SONDA_TEMPO: std::time::Duration = std::time::Duration::from_secs(40);
 /// definitivo solo se dimensione e impronta BLAKE3 tornano.
 struct InArrivo {
     sessione: u64, // la sessione da cui arriva: se cade quella, si butta
-    file: std::fs::File,
+    /// scrittore del file in arrivo: sigillato a pezzi se la cassaforte è aperta
+    file: crate::cassaforte::Scrittore,
     parziale: PathBuf,
     finale: PathBuf,
     nome: String,
@@ -604,6 +607,10 @@ impl Stato {
     async fn invia_file_a(self: &Arc<Self>, indirizzo_contatto: &str, percorso: &Path, mime: &str) -> Risultato<()> {
         use tokio::io::AsyncReadExt as _;
         let addr = con_suffisso(indirizzo_contatto);
+        // un file ricevuto e cifrato sul disco (es. un inoltro) si legge dalla sua copia in chiaro
+        let aperto = crate::cassaforte::in_chiaro(percorso).map_err(|_| "file non trovato")?;
+        let nome_originale = percorso.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+        let percorso = aperto.as_path();
         let meta = tokio::fs::metadata(percorso).await.map_err(|_| "file non trovato")?;
         if !meta.is_file() {
             return Err("non è un file".into());
@@ -612,7 +619,7 @@ impl Stato {
         if totale > self.max_file {
             return Err(format!("file troppo grande (massimo {} MB)", self.max_file / (1024 * 1024)).into());
         }
-        let nome = nome_sicuro(&percorso.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default());
+        let nome = nome_sicuro(&nome_originale);
         let mime = mime_sicuro(mime);
         let id = nuovo_id();
         let ts = ora();
@@ -687,7 +694,7 @@ impl Stato {
             "{}part",
             finale.extension().map(|e| format!("{}.", e.to_string_lossy())).unwrap_or_default()
         ));
-        let Ok(file) = std::fs::File::create(&parziale) else { return };
+        let Ok(file) = crate::cassaforte::Scrittore::crea(&parziale, totale) else { return };
         g.insert(
             (peer.to_string(), id.to_string()),
             InArrivo { sessione: sid, file, parziale, finale, nome, mime, totale, ricevuti: 0, impronta: blake3::Hasher::new(), ts, ultimo_avviso: 0 },
@@ -702,7 +709,6 @@ impl Stato {
     }
 
     fn ricevi_blocco(&self, peer: &str, r: &[u8]) {
-        use std::io::Write;
         let Some(sp) = r.iter().position(|&b| b == b' ') else { return };
         let Ok(id) = std::str::from_utf8(&r[..sp]) else { return };
         let dati = &r[sp + 1..];
@@ -710,7 +716,7 @@ impl Stato {
         let mut g = self.in_arrivo.lock().unwrap();
         let Some(a) = g.get_mut(&chiave) else { return };
         // più byte di quelli annunciati, o errore di scrittura: si scarta tutto
-        if a.ricevuti + dati.len() as u64 > a.totale || a.file.write_all(dati).is_err() {
+        if a.ricevuti + dati.len() as u64 > a.totale || a.file.scrivi(dati).is_err() {
             let a = g.remove(&chiave).unwrap();
             drop(g);
             let _ = std::fs::remove_file(&a.parziale);
@@ -734,11 +740,10 @@ impl Stato {
     fn ricevi_fine(&self, peer: &str, r: &[u8]) {
         let Ok(testo) = std::str::from_utf8(r) else { return };
         let Some((id, attesa)) = testo.split_once(' ') else { return };
-        let Some(mut a) = self.in_arrivo.lock().unwrap().remove(&(peer.to_string(), id.to_string())) else { return };
-        let _ = std::io::Write::flush(&mut a.file);
-        drop(a.file);
+        let Some(a) = self.in_arrivo.lock().unwrap().remove(&(peer.to_string(), id.to_string())) else { return };
+        let scritto = a.file.chiudi().is_ok();
         let calcolata = a.impronta.finalize().to_hex();
-        if a.ricevuti != a.totale || calcolata.as_str() != attesa.trim() {
+        if !scritto || a.ricevuti != a.totale || calcolata.as_str() != attesa.trim() {
             let _ = std::fs::remove_file(&a.parziale);
             self.notifica(format!("FERR {peer} {id} {}", in_esadecimale("allegato corrotto (impronta diversa), scartato".as_bytes())));
             return;
@@ -1314,7 +1319,9 @@ impl Stato {
                         }
                         ("DECIFRA", Some(attuale), None) if esiste => {
                             verifica(&attuale)?;
-                            crate::cassaforte::togli(&dati).map(|n| format!("DECIFRATA {n}")).map_err(|e| e.to_string())
+                            let r = crate::cassaforte::togli(&dati).map(|n| format!("DECIFRATA {n}")).map_err(|e| e.to_string());
+                            crate::cassaforte::svuota_vista(); // i file sono di nuovo in chiaro al loro posto
+                            r
                         }
                         _ => Err("uso: CIFRA <nuova> · CAMBIA <vecchia> <nuova> · DECIFRA <attuale> (in esadecimale)".into()),
                     }
@@ -1333,6 +1340,37 @@ impl Stato {
             }
             // l'identità per il demone `site` (che pubblica il .nyct della chat): solo a chi ha il
             // segreto del controllo, così la chiave privata non resta in chiaro su un file
+            // APRI <percorso hex>: un file ricevuto e cifrato sul disco → la sua copia in chiaro nella
+            // vista (in RAM), da cui le interfacce lo mostrano o lo aprono. Solo file sotto allegati/.
+            "APRI" => {
+                let chiesto = it.next().and_then(|h| da_hex(h).ok()).map(|b| PathBuf::from(String::from_utf8_lossy(&b).into_owned()));
+                let base = std::fs::canonicalize(self.dati.join("allegati")).ok();
+                let esito = match (chiesto.as_ref().and_then(|p| std::fs::canonicalize(p).ok()), base) {
+                    (Some(p), Some(b)) if p.starts_with(&b) => {
+                        tokio::task::spawn_blocking(move || crate::cassaforte::in_chiaro(&p).map_err(|e| e.to_string()))
+                            .await
+                            .unwrap_or_else(|e| Err(e.to_string()))
+                    }
+                    _ => Err("file non consentito".into()),
+                };
+                match (esito, chiesto) {
+                    (Ok(chiaro), Some(c)) => {
+                        let _ = tx.send(format!(
+                            "APERTO {} {}\n",
+                            in_esadecimale(c.to_string_lossy().as_bytes()),
+                            in_esadecimale(chiaro.to_string_lossy().as_bytes())
+                        ));
+                    }
+                    (Err(e), c) => {
+                        let _ = tx.send(format!(
+                            "NONAPERTO {} {}\n",
+                            c.map(|c| in_esadecimale(c.to_string_lossy().as_bytes())).unwrap_or_default(),
+                            in_esadecimale(e.as_bytes())
+                        ));
+                    }
+                    _ => {}
+                }
+            }
             "IDENTITA" => {
                 let _ = tx.send(format!("IDENTITA {}\n", in_esadecimale(&self.identita.in_byte())));
             }
