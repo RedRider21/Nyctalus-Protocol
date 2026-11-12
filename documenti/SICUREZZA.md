@@ -155,7 +155,7 @@ casi delicati sul web normale c'è Nyctalus Firefox (profilo sul modello di Tor 
 | **Servizi systemd induriti** | ✅ nodi dei server (sistema e utente), «Aiuta la rete», rubrica e casella, siti sempre accesi: niente dispositivi/kernel/cgroup/orologio, processi altrui invisibili, niente namespace, chiamate di sistema `@system-service`, solo socket di rete, W^X per i nodi, umask 077, nessuna capability sopra la porta 1024; nei servizi dell'utente `PrivateUsers` | provati davvero: rete a 3 nodi e sito `.nyct` sempre acceso fatti girare dentro le protezioni (`systemd-run --user`) |
 | Registrazione provata dei servizi, sonde mute, ripresa dai circuiti caduti | ✅ (0.3.19) | prove 43, 38, 44 |
 | **Firma delle release** | ⏳ da decidere (proposta: elenco SHA-256 firmato con una chiave della release, verificabile con strumenti standard) | — |
-| **Audit delle dipendenze** (`cargo audit`/`cargo deny`) | ⏳ serve scaricare il database delle vulnerabilità note | — |
+| **Audit delle dipendenze** (RustSec) | ✅ 12/11/2026: trovati 6 avvisi in 4 librerie (rustls 0.23.45: segreti TLS nelle stampe di debug e altri 3; rustls-webpki; tokio `AsyncFd` unsound; ctutils non a tempo costante) → aggiornate (rustls 0.23.46, rustls-webpki 0.103.16, tokio 1.54.1, ctutils 0.4.8); **0 vulnerabilità note** su 164 librerie | `strumenti/audit.sh` (non scarica nulla da solo; database in `~/.local/share/nyctalus-strumenti`) |
 | **Dati locali cifrati** (cronologia della chat, file ricevuti) | ⏳ da decidere dove tenere la chiave (passphrase all'avvio o portachiavi del sistema) | — |
 | Fuzzing guidato (`cargo-fuzz`, libFuzzer) | ⏳ serve installare strumenti (nightly) | — |
 | Autocontrollo d'integrità dei programmi installati | ⏳ dopo la firma delle release | — |
