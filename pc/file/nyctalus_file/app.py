@@ -128,6 +128,50 @@ def icona_mime(mime):
     return "text-x-generic-template"
 
 
+# --- file ricevuti cifrati dalla cassaforte ---------------------------------------------
+SIGILLO = b"NYCS1"               # così comincia un file ricevuto e cifrato sul disco
+_APERTI = {}
+
+
+def e_cifrato(percorso):
+    try:
+        with open(percorso, "rb") as f:
+            return f.read(len(SIGILLO)) == SIGILLO
+    except OSError:
+        return False
+
+
+def in_chiaro(percorso, attesa=180):
+    """Da dove LEGGERE un file ricevuto: lui stesso se è in chiaro; se la cassaforte lo tiene
+    cifrato, si chiede al motore «APRI», che ne mette una copia decifrata nella cartella
+    temporanea (in RAM, svuotata alla chiusura) e ne dà il percorso. Se non si riesce torna
+    il percorso com'è (il file resta chiuso: nessun danno)."""
+    if not percorso or not e_cifrato(percorso):
+        return percorso
+    noto = _APERTI.get(percorso)
+    if noto and os.path.isfile(noto):
+        return noto
+    import socket
+    porta, segreto = collegamento()
+    try:
+        with socket.create_connection((os.environ.get("NYCTALUS_CHAT_HOST", "127.0.0.1"), int(porta or 1091)), timeout=5) as c:
+            c.settimeout(attesa)
+            c.sendall((("AUTH %s\n" % segreto if segreto else "") + "APRI %s\n" % percorso.encode().hex()).encode())
+            for riga in c.makefile("r", encoding="utf-8", errors="replace"):
+                p = riga.split()
+                if p and p[0] == "APERTO" and len(p) >= 3:
+                    chiaro = bytes.fromhex(p[2]).decode("utf-8", "replace")
+                    if os.path.isfile(chiaro):
+                        _APERTI[percorso] = chiaro
+                        return chiaro
+                    break
+                if p and p[0] in ("NONAPERTO", "CHIUSA", "ERR"):
+                    break
+    except (OSError, ValueError):
+        pass
+    return percorso
+
+
 def collegamento():
     """(porta, segreto) del motore: dall'ambiente, oppure dal file privato scritto dall'avvio."""
     porta = os.environ.get("NYCTALUS_CHAT_PORT")
@@ -510,11 +554,12 @@ class FileApp(Gtk.Window):
         dlg.destroy()
 
     def apri(self, percorso):
+        percorso = in_chiaro(percorso)            # cifrato dalla cassaforte → copia temporanea
         if shutil.which("xdg-open"):
             subprocess.Popen(["xdg-open", percorso], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def mostra_cartella(self, percorso):
-        self.apri(str(Path(percorso).parent))
+        self.apri(str(Path(in_chiaro(percorso)).parent))
 
     def _notifica(self, testo):
         if self.is_active() or not shutil.which("notify-send"):

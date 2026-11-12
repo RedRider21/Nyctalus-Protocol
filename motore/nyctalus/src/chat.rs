@@ -64,6 +64,28 @@ pub async fn chat(
     }
     // la «vista in chiaro» dei file ricevuti cifrati: vuota a ogni avvio
     crate::cassaforte::prepara_vista(&dati);
+    // …e vuota anche quando il programma viene fermato (Esci, spegnimento, Ctrl+C): le copie in
+    // chiaro dei file aperti non restano in giro
+    tokio::spawn(async {
+        #[cfg(unix)]
+        {
+            use tokio::signal::unix::{signal, SignalKind};
+            match (signal(SignalKind::terminate()), signal(SignalKind::interrupt()), signal(SignalKind::hangup())) {
+                (Ok(mut t), Ok(mut i), Ok(mut h)) => {
+                    tokio::select! { _ = t.recv() => {}, _ = i.recv() => {}, _ = h.recv() => {} }
+                }
+                _ => return,
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            if tokio::signal::ctrl_c().await.is_err() {
+                return;
+            }
+        }
+        crate::cassaforte::svuota_vista();
+        std::process::exit(0);
+    });
     let identita = carica_identita(&identita_path)?;
     let indirizzo = indirizzo::da_chiave(&identita.pubblica());
     let stato = Arc::new(Stato {

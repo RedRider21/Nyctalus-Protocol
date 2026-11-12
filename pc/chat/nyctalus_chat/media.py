@@ -240,6 +240,57 @@ class CerchioFile(Gtk.DrawingArea):
         return False
 
 
+
+# --- file ricevuti cifrati dalla cassaforte ---------------------------------------------
+SIGILLO = b"NYCS1"               # così comincia un file ricevuto e cifrato sul disco
+_APERTI = {}
+
+
+def e_cifrato(percorso):
+    try:
+        with open(percorso, "rb") as f:
+            return f.read(len(SIGILLO)) == SIGILLO
+    except OSError:
+        return False
+
+
+def in_chiaro(percorso, attesa=180):
+    """Da dove LEGGERE un file ricevuto: lui stesso se è in chiaro; se la cassaforte lo tiene
+    cifrato, si chiede al motore «APRI», che ne mette una copia decifrata nella cartella
+    temporanea (in RAM, svuotata alla chiusura) e ne dà il percorso. Se non si riesce torna
+    il percorso com'è (il file resta chiuso: nessun danno)."""
+    if not percorso or not e_cifrato(percorso):
+        return percorso
+    noto = _APERTI.get(percorso)
+    if noto and os.path.isfile(noto):
+        return noto
+    import socket
+    porta, segreto = os.environ.get("NYCTALUS_CHAT_PORT"), os.environ.get("NYCTALUS_CHAT_TOKEN")
+    if not (porta and segreto):
+        try:
+            p, s = (Path.home() / ".nyctalus-chat" / "controllo").read_text().split()[:2]
+            porta, segreto = porta or p, segreto or s
+        except (OSError, ValueError):
+            pass
+    try:
+        with socket.create_connection((os.environ.get("NYCTALUS_CHAT_HOST", "127.0.0.1"), int(porta or 1091)), timeout=5) as c:
+            c.settimeout(attesa)
+            c.sendall((("AUTH %s\n" % segreto if segreto else "") + "APRI %s\n" % percorso.encode().hex()).encode())
+            for riga in c.makefile("r", encoding="utf-8", errors="replace"):
+                p = riga.split()
+                if p and p[0] == "APERTO" and len(p) >= 3:
+                    chiaro = bytes.fromhex(p[2]).decode("utf-8", "replace")
+                    if os.path.isfile(chiaro):
+                        _APERTI[percorso] = chiaro
+                        return chiaro
+                    break
+                if p and p[0] in ("NONAPERTO", "CHIUSA", "ERR"):
+                    break
+    except (OSError, ValueError):
+        pass
+    return percorso
+
+
 # --- miniature e durata dei video (ffmpeg/ffprobe, in sottofondo, con cache) ---------
 def _ffprobe_durata(percorso):
     if not shutil.which("ffprobe"):
@@ -268,7 +319,9 @@ def miniatura_video_subito(percorso):
     try:
         st = os.stat(percorso)
         chiave = hashlib.sha1(("%s|%d|%d" % (percorso, st.st_size, int(st.st_mtime))).encode()).hexdigest()
-        cartella = CACHE / "miniature"
+        originale, percorso = percorso, in_chiaro(percorso)
+        # file cifrato: anche la miniatura resta nella cartella temporanea, mai sul disco
+        cartella = Path(percorso).parent if percorso != originale else CACHE / "miniature"
         cartella.mkdir(parents=True, exist_ok=True)
         dest = cartella / (chiave + ".jpg")
         durata = _ffprobe_durata(percorso)
@@ -286,7 +339,7 @@ def miniatura_video_subito(percorso):
 
 def durata_in_sottofondo(percorso, pronto):
     def lavoro():
-        d = _ffprobe_durata(percorso)
+        d = _ffprobe_durata(in_chiaro(percorso))
         GLib.idle_add(lambda: (pronto(d), False)[1])
     threading.Thread(target=lavoro, daemon=True).start()
 

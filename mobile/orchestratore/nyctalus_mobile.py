@@ -679,14 +679,17 @@ def miniatura_exif(percorso):
     return None
 
 
-def miniatura(percorso):
+def miniatura(percorso, cache=None):
     """JPEG piccolo (lato ~360 px) di una foto o di un video, in cache. In ordine:
     miniatura EXIF già nel file (istantanea: con migliaia di foto conta) → Pillow → ffmpeg.
-    None se non si riesce: la web-app mostra un'icona invece della foto intera."""
+    None se non si riesce: la web-app mostra un'icona invece della foto intera.
+    «cache»: dove tenerla (per i file della cassaforte è la vista in chiaro, in RAM: una
+    miniatura è pur sempre il contenuto, e sul disco non deve restare)."""
+    cache = cache or CACHE
     st = percorso.stat()
     chiave = hashlib.sha1(("%s|%d|%d" % (percorso, st.st_size, int(st.st_mtime))).encode()).hexdigest()
-    CACHE.mkdir(parents=True, exist_ok=True)
-    dest = CACHE / (chiave + ".jpg")
+    cache.mkdir(parents=True, exist_ok=True)
+    dest = cache / (chiave + ".jpg")
     if dest.exists():
         return dest
     video = (mimetypes.guess_type(str(percorso))[0] or "").startswith("video/")
@@ -1015,6 +1018,62 @@ def _da_hex(h):
         return ""
 
 
+SIGILLO = b"NYCS1"               # così comincia un file ricevuto e cifrato dalla cassaforte
+MINI_RICEVUTI = CACHE / "ricevuti"   # miniature dei file ricevuti quando la cassaforte è spenta
+_miniature_ripulite = False
+
+
+def sigillato(f):
+    try:
+        with open(f, "rb") as h:
+            return h.read(len(SIGILLO)) == SIGILLO
+    except OSError:
+        return False
+
+
+def e_ricevuto(f):
+    try:
+        Path(f).resolve().relative_to((DATI_CHAT / "allegati").resolve())
+        return True
+    except Exception:            # noqa: BLE001
+        return False
+
+
+async def in_chiaro(f, attesa=180):
+    """Da dove LEGGERE un file: lui stesso se è in chiaro; se la cassaforte lo tiene cifrato
+    (comincia con NYCS1) si chiede al motore «APRI», che ne mette una copia decifrata nella
+    vista temporanea (in RAM dove c'è) e ne dà il percorso. None se non si può aprire."""
+    global _miniature_ripulite
+    if not f or not e_ricevuto(f) or not sigillato(f):
+        return f
+    if not _miniature_ripulite:
+        # la cassaforte è accesa: le miniature fatte PRIMA (in chiaro sul disco) si buttano
+        _miniature_ripulite = True
+        shutil.rmtree(MINI_RICEVUTI, ignore_errors=True)
+    try:
+        lett, scritt = await asyncio.wait_for(asyncio.open_connection(*CONTROLLO, limit=RIGA_MOTORE_MAX), 5)
+    except (OSError, asyncio.TimeoutError):
+        return None
+    try:
+        scritt.write(("AUTH %s\nAPRI %s\n" % (SERVIZI.segreto_motore, str(f).encode().hex())).encode())
+        await scritt.drain()
+        fine = time.time() + attesa
+        while time.time() < fine:
+            riga = (await asyncio.wait_for(lett.readline(), max(1, fine - time.time()))).decode("utf-8", "replace").split()
+            if not riga:
+                return None
+            if riga[0] == "APERTO" and len(riga) >= 3:
+                c = Path(bytes.fromhex(riga[2]).decode("utf-8", "replace"))
+                return c if c.is_file() else None
+            if riga[0] in ("NONAPERTO", "CHIUSA", "ERR"):
+                return None
+        return None
+    except (OSError, ValueError, asyncio.TimeoutError):
+        return None
+    finally:
+        scritt.close()
+
+
 async def comando_motore(riga, attesa=5):
     """Un comando secco al motore (es. «CALLNO addr id» dal pulsante Rifiuta della notifica)."""
     try:
@@ -1178,13 +1237,17 @@ async def instrada(req, lettore, scrittore):
         SERVIZI.ferma()
         return await rispondi_json(scrittore, SERVIZI.info())
     if p == "/api/file":
-        f = leggibile(bytes.fromhex(req.query.get("p", "")).decode("utf-8", "replace"))
+        f = await in_chiaro(leggibile(bytes.fromhex(req.query.get("p", "")).decode("utf-8", "replace")))
         if not f:
             return await rispondi(scrittore, "404 Not Found", "file non disponibile")
         return await servi_file(scrittore, req, f)
     if p == "/api/miniatura":
-        f = leggibile(bytes.fromhex(req.query.get("p", "")).decode("utf-8", "replace"))
-        m = await asyncio.get_running_loop().run_in_executor(MINIATURE, miniatura, f) if f else None
+        orig = leggibile(bytes.fromhex(req.query.get("p", "")).decode("utf-8", "replace"))
+        f = await in_chiaro(orig)
+        # miniature dei file ricevuti: nella vista in chiaro se il file è cifrato (mai sul disco),
+        # altrimenti in una cartella a parte, che si butta quando si accende la cassaforte
+        dove = None if not f else f.parent if f != orig else MINI_RICEVUTI if e_ricevuto(f) else None
+        m = await asyncio.get_running_loop().run_in_executor(MINIATURE, miniatura, f, dove) if f else None
         if not m:
             return await rispondi(scrittore, "404 Not Found", "nessuna miniatura")
         # le miniature non cambiano (la chiave dipende da file, dimensione e data): la
@@ -1203,7 +1266,7 @@ async def instrada(req, lettore, scrittore):
         return await rispondi_json(scrittore, {"disponibile": any(g.exists() for g in cartelle_galleria()),
                                                "voci": voci, "altre": da + quante < len(tutte)})
     if p == "/api/apri" and req.metodo == "POST":
-        f = leggibile(bytes.fromhex(req.query.get("p", "")).decode("utf-8", "replace"))
+        f = await in_chiaro(leggibile(bytes.fromhex(req.query.get("p", "")).decode("utf-8", "replace")))
         return await rispondi_json(scrittore, {"ok": bool(f and apri_con_app(f))})
     if p == "/api/carica" and req.metodo == "POST":
         return await carica(lettore, scrittore, req)
@@ -1232,7 +1295,7 @@ async def instrada(req, lettore, scrittore):
             return await rispondi_json(scrittore, {"ok": False, "errore": str(e)})
         return await rispondi_json(scrittore, {"ok": True})
     if p == "/api/condividi" and req.metodo == "POST":
-        f = nell_archivio(req.query.get("p", ""))
+        f = await in_chiaro(nell_archivio(req.query.get("p", "")))
         return await rispondi_json(scrittore, {"ok": bool(f and condividi_con_app(f))})
     return await servi_statico(scrittore, req)
 

@@ -1480,7 +1480,7 @@ class Chat(Gtk.Window):
         d.set_do_overwrite_confirmation(True)
         if d.run() == Gtk.ResponseType.ACCEPT:
             try:
-                shutil.copy2(percorso, d.get_filename())
+                shutil.copy2(media.in_chiaro(percorso), d.get_filename())
             except Exception as e:   # noqa: BLE001
                 self._avviso_inline("⚠ %s" % e)
         d.destroy()
@@ -1616,9 +1616,11 @@ class Chat(Gtk.Window):
         visuale = esiste and (mime in TIPI_ANTEPRIMA or mime.startswith("video/"))
         riga, bolla = self._nuova_bolla(direzione, ts, "foto" if visuale else "allegato")
         riga.grezza, riga.allegato = grezza, (percorso, mime, nome)
-        if visuale and mime in TIPI_ANTEPRIMA and media.dimensione_logica(percorso):
-            w, h = media.dimensione_logica(percorso)
-            img = media.ImmagineArrotondata(percorso, w, h, ora=ora)
+        # foto cifrata dalla cassaforte: per mostrarla serve la copia in chiaro (temporanea)
+        vista = media.in_chiaro(percorso) if visuale and mime in TIPI_ANTEPRIMA else percorso
+        if visuale and mime in TIPI_ANTEPRIMA and media.dimensione_logica(vista):
+            w, h = media.dimensione_logica(vista)
+            img = media.ImmagineArrotondata(vista, w, h, ora=ora)
             self._cliccabile(img, lambda: self._apri_allegato(percorso, mime))
             img.set_tooltip_text("%s · %s" % (nome, dimensione_leggibile(dim)))
             bolla.pack_start(img, False, False, 0)
@@ -1665,7 +1667,7 @@ class Chat(Gtk.Window):
                     d.set_text(dettagli)
             media.durata_in_sottofondo(percorso, lambda s: s and d.set_text(
                 "%s · %s" % (media.durata_leggibile(s), dimensione_leggibile(dim))))
-            self._cliccabile(cerchio, lambda: self.lettore.alterna(percorso, aggiorna))
+            self._cliccabile(cerchio, lambda: self.lettore.alterna(media.in_chiaro(percorso), aggiorna))
         elif esiste:
             self._cliccabile(cerchio, lambda: self._apri_allegato(percorso, mime))
         self._chiudi_bolla(riga, bolla, ts)
@@ -1722,6 +1724,7 @@ class Chat(Gtk.Window):
             return
         if not apribile(mime):
             return self._mostra_cartella(percorso)
+        percorso = media.in_chiaro(percorso)      # cifrato dalla cassaforte → copia temporanea
         try:
             Gtk.show_uri_on_window(self, GLib.filename_to_uri(percorso, None), Gdk.CURRENT_TIME)
         except Exception:        # noqa: BLE001
@@ -1729,7 +1732,7 @@ class Chat(Gtk.Window):
 
     def _mostra_cartella(self, percorso):
         try:
-            Gtk.show_uri_on_window(self, GLib.filename_to_uri(os.path.dirname(percorso), None), Gdk.CURRENT_TIME)
+            Gtk.show_uri_on_window(self, GLib.filename_to_uri(os.path.dirname(media.in_chiaro(percorso)), None), Gdk.CURRENT_TIME)
         except Exception:        # noqa: BLE001
             pass
 
