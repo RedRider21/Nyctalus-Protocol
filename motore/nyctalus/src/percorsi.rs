@@ -297,7 +297,7 @@ fn leggi_guardia(rete: &str) -> Option<([u8; 32], u64)> {
     let mut campi = testo.split_whitespace();
     let chiave = campi.next()?;
     let scadenza: u64 = campi.next()?.parse().ok()?;
-    if chiave.len() != 64 {
+    if chiave.len() != 64 || !chiave.is_ascii() {
         return None;
     }
     let mut k = [0u8; 32];

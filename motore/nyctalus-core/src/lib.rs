@@ -39,3 +39,4 @@ pub mod rendezvous;
 pub mod ricomposizione;
 pub mod socks5;
 pub mod stretta;
+mod raffica;

@@ -183,7 +183,9 @@ fn esadecimale(byte: &[u8]) -> String {
 }
 
 fn da_esadecimale(testo: &str) -> Option<Vec<u8>> {
-    if !testo.len().is_multiple_of(2) {
+    // solo ASCII: con un carattere di più byte (es. «è») il taglio a coppie cadeva a metà carattere
+    // e il programma andava in crash leggendo un elenco rovinato (trovato dalle prove a raffica)
+    if !testo.len().is_multiple_of(2) || !testo.is_ascii() {
         return None;
     }
     (0..testo.len()).step_by(2).map(|i| u8::from_str_radix(&testo[i..i + 2], 16).ok()).collect()
@@ -275,6 +277,9 @@ mod test {
         // «guardia=si» senza «intermedio» non vale (un nodo pieno è già guardia)
         let solo = analizza_voce("127.0.0.1:1 0101010101010101010101010101010101010101010101010101010101010101 0202020202020202020202020202020202020202020202020202020202020202 guardia=si").unwrap();
         assert!(!solo.guardia && !solo.intermedio);
+        // un carattere di più byte dove ci si aspetta l'esadecimale: rifiutato, non crash
+        assert!(verifica_elenco("firma ab\u{e8}c", &pubblica).is_err());
+        assert!(analizza_voce("127.0.0.1:1 01\u{e8}0 02").is_err());
         // un campo che questo motore non conosce non rompe la lettura
         assert!(analizza_voce("127.0.0.1:1 0101010101010101010101010101010101010101010101010101010101010101 0202020202020202020202020202020202020202020202020202020202020202 futuro=1").is_ok());
     }
