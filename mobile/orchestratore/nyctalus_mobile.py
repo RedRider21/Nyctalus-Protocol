@@ -252,7 +252,9 @@ class Servizi:
         return {"stato": self.stato, "dettaglio": self.dettaglio, "modalita": self.modalita,
                 "rete": leggi_config().get("nome_rete", ""),
                 "socks_browser": int(PORTE["socks_browser"]),
-                "indirizzo": self.indirizzo, "binario": bool(trova_binario())}
+                "indirizzo": self.indirizzo, "binario": bool(trova_binario()),
+                # dati cifrati e chat non ancora sbloccata: la pagina si collega lo stesso e chiede la passphrase
+                "chiusa": bool(getattr(self, "chiusa", False) and not self.indirizzo)}
 
     def _lancia(self, argomenti, log_file, env=None):
         f = open(log_file, "ab")
@@ -309,11 +311,23 @@ class Servizi:
             self._lancia([binario, "chat", "--data", str(DATI_CHAT), "--backend", BACKEND,
                           "--control", "%s:%d" % CONTROLLO, "--socks", socks] + extra,
                          lavoro / "chat.log", env=env)
-            addr = self._attendi(lavoro / "chat.log", r"[a-z2-7]{56}\.nyct", 10)
-            if not addr:
+            # l'indirizzo, oppure «aspetto la passphrase» se i dati sono cifrati (la chat la chiede
+            # all'utente; rete e servizio .nyct partono lo stesso e il servizio aspetta lo sblocco)
+            primo = self._attendi(lavoro / "chat.log", r"[a-z2-7]{56}\.nyct|aspetto la passphrase", 10)
+            if not primo:
                 raise RuntimeError("il motore della chat non è partito")
-            self.indirizzo = addr
             scrivi_collegamento(self.segreto_motore)    # per nyctalus-cli (anche da Termux a mano)
+            self.chiusa = False
+            if primo.endswith(".nyct"):
+                self.indirizzo = primo
+            else:
+                log("dati cifrati: la chat aspetta la passphrase")
+                self.chiusa = True
+                def _dopo(f=lavoro / "chat.log"):
+                    a = self._attendi(f, r"[a-z2-7]{56}\.nyct", 24 * 3600)
+                    if a:
+                        self.indirizzo = a
+                threading.Thread(target=_dopo, daemon=True).start()
 
             # 2) la rete
             if pubblica:

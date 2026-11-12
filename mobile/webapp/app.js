@@ -178,7 +178,8 @@ async function controllaServizi() {
     barra.classList.remove("nascosto"); btn.classList.remove("nascosto");
     testo.textContent = info.stato === "errore" ? "⚠ " + info.dettaglio : "Nyctalus è fermo";
   }
-  if (info.indirizzo && !S.ws) connetti();
+  // anche a chat chiusa (dati cifrati): ci si collega per mandare la passphrase
+  if ((info.indirizzo || info.chiusa) && !S.ws) connetti();
   if (info.stato === "pronto" && info.rete !== S.reteVista) { S.reteVista = info.rete; leggiRubrica(); }
   if (info.stato !== "pronto") setTimeout(controllaServizi, 1500);
 }
@@ -376,6 +377,19 @@ function evento(riga) {
     // RISERVATA <0|1> <casella 0|1> <in coda> <finte spedite> <finte tornate>
     S.riservata = { accesa: p[1] === "1", possibile: p[2] === "1", coda: +p[3] || 0 };
     document.querySelectorAll(".interr-riservata").forEach((c) => { c.checked = S.riservata.accesa; c.disabled = !S.riservata.possibile; });
+  }
+  // --- cassaforte dei dati (passphrase) ---
+  else if (t === "CASSAFORTE") {
+    S.cassaforte = p[1];
+    if (p[1] === "chiusa") chiediPassphrase();
+    document.querySelectorAll(".stato-cassaforte").forEach((x) => x.dispatchEvent(new Event("aggiorna")));
+  }
+  else if (t === "SBLOCCATA") { S.cassaforte = "aperta"; S.sblocco = false; toast("🔓 Dati sbloccati"); }
+  else if (t === "BLOCCATA") { /* il motore aspetta la passphrase: la schermata è già aperta */ }
+  else if (t === "ERR" && S.sblocco) chiediPassphrase(riga.slice(4));
+  else if (t === "CIFRATA" || t === "CAMBIATA" || t === "DECIFRATA") {
+    toast({ CIFRATA: "🔐 Protezione accesa: i dati sono cifrati", CAMBIATA: "🔐 Passphrase cambiata", DECIFRATA: "🔓 Protezione tolta: i dati sono di nuovo in chiaro" }[t]);
+    manda("CASSAFORTE");
   }
   else if (t === "ERR" && /motore non raggiungibile/.test(riga)) segnalaMotoreGiu();
   else if (t === "ERR") avviso(erroreLeggibile(riga.slice(4)));
@@ -1063,6 +1077,62 @@ function dialogoRinomina(addr) {
 // sezione «App» (notifiche ad app chiusa, avvio all'accensione), che vive nell'app Android.
 window.nyctApriImpostazioni = () => impostazioni(true);
 const SPIEGA_RISERVATA = "I messaggi non vanno più in diretta: passano dalla casella cifrata a ritmo casuale, insieme a buste finte tutte uguali, così chi osserva non capisce quando né a chi scrivi. Arrivano con qualche decina di secondi di ritardo; non mandi le spunte di consegna e lettura e non risulti «in linea» ai contatti. Chiamate e file restano diretti. Anche i contatti devono avere Nyctalus 0.3.3 o successivo.";
+// ---------- cassaforte: passphrase dei dati locali ----------------------------------------
+// I dati della chat (identità, contatti, cronologia…) possono essere cifrati sul dispositivo con una
+// passphrase: il motore parte «chiuso» e qui si sblocca. La passphrase viaggia in esadecimale.
+function campoPassword(segnaposto) {
+  const c = el("input"); c.type = "password"; c.placeholder = segnaposto; c.autocomplete = "off"; c.className = "campo-codice";
+  return c;
+}
+function chiediPassphrase(errore) {
+  S.sblocco = true;
+  const c = campoPassword("Passphrase");
+  const nota = el("p", "nota-rete", errore ? "✗ " + (/sbagliata/.test(errore) ? "Passphrase sbagliata, riprova." : errore) : "I dati di Nyctalus su questo dispositivo sono cifrati: scrivi la passphrase per aprirli.");
+  const vai = () => { if (c.value) { manda("SBLOCCA " + inHex(c.value)); c.value = ""; } };
+  c.onkeydown = (e) => { if (e.key === "Enter") { $("dialogo").classList.add("nascosto"); vai(); } };
+  dialogo("🔐 Dati protetti", [nota, c], [["Sblocca", vai, "primario"]]);
+  setTimeout(() => c.focus(), 50);
+}
+function sezioneCassaforte() {
+  const stato = el("p", "nota-rete stato-cassaforte", "…");
+  const bott = el("div", "pulsanti"); bott.style.justifyContent = "flex-start";
+  const disegna = () => {
+    bott.textContent = "";
+    if (S.cassaforte === "aperta") {
+      stato.textContent = "🔐 Accesa: identità, contatti e cronologia sono cifrati su questo dispositivo. All'avvio serve la passphrase.";
+      const bc = el("button", "", "Cambia passphrase"), bt = el("button", "pericoloso", "Togli la protezione");
+      bc.onclick = () => {
+        const v = campoPassword("Passphrase attuale"), n = campoPassword("Nuova passphrase (almeno 8 caratteri)"), r = campoPassword("Ripeti la nuova");
+        dialogo("🔐 Cambia passphrase", [v, n, r], [["Annulla", null], ["Cambia", () => {
+          if (n.value.length < 8 || n.value !== r.value) return toast("✗ La nuova passphrase è troppo corta o non coincide");
+          manda("CAMBIA " + inHex(v.value) + " " + inHex(n.value));
+        }, "primario"]]);
+      };
+      bt.onclick = () => {
+        const v = campoPassword("Passphrase attuale");
+        dialogo("Togliere la protezione?", [el("p", "", "I dati torneranno in chiaro su questo dispositivo: chi lo usa o ne copia la memoria potrà leggerli."), v],
+          [["Annulla", null], ["Togli", () => manda("DECIFRA " + inHex(v.value)), "pericoloso"]]);
+      };
+      bott.append(bc, bt);
+    } else {
+      stato.textContent = "Spenta: i dati di Nyctalus su questo dispositivo sono in chiaro.";
+      const ba = el("button", "", "🔐 Proteggi con una passphrase");
+      ba.onclick = () => {
+        const n = campoPassword("Passphrase (almeno 8 caratteri)"), r = campoPassword("Ripeti la passphrase");
+        dialogo("🔐 Proteggi i dati", [el("p", "", "Identità, contatti e cronologia verranno cifrati su questo dispositivo con la passphrase, che servirà a ogni avvio. ⚠ Se la dimentichi i dati sono persi: nessuno può recuperarli."), n, r],
+          [["Annulla", null], ["Proteggi", () => {
+            if (n.value.length < 8 || n.value !== r.value) return toast("✗ La passphrase è troppo corta o non coincide");
+            manda("CIFRA " + inHex(n.value)); toast("Cifro i dati…");
+          }, "primario"]]);
+      };
+      bott.append(ba);
+    }
+  };
+  stato.addEventListener("aggiorna", disegna);
+  disegna(); manda("CASSAFORTE");
+  return [el("p", "", "Protezione dei dati"), stato, bott];
+}
+
 function impostazioni(solo) {
   const id = el("div", "codice-id", S.me || "…");
   const bott = el("div", "pulsanti"); bott.style.justifyContent = "flex-start"; bott.style.marginTop = "0";
@@ -1275,7 +1345,7 @@ function impostazioni(solo) {
   // --- i tab: aspetto, chat, chiamate, rete, prestazioni, app — separati per area ------------------
   const profilo = [el("p", "", "Il tuo Contact ID — dallo agli amici perché ti scrivano (non è segreto):"), id, bott];
   const aspetto = [el("p", "", "Tema"), temi, pers, el("p", "", "Sfondo della chat"), sfondi, l];
-  const chat = [el("p", "", "Riservatezza"), lr, notaRis];
+  const chat = [el("p", "", "Riservatezza"), lr, notaRis, ...sezioneCassaforte()];
   const rete = [el("p", "", "Rete Nyctalus"), statoRete, servizi, el("p", "", "Rete condivisa"), quale, condivisa];
   const schede = [
     ["👤 Profilo", profilo],
