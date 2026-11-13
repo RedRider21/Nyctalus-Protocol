@@ -1,0 +1,210 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+"""nyctalus-integrita — i programmi di Nyctalus installati sono quelli pubblicati?
+
+Ogni pacchetto di Nyctalus contiene INTEGRITA (l'impronta SHA-256 di ogni suo file) e
+INTEGRITA.sig, la firma di quell'elenco con la chiave della release (la stessa delle release
+firmate, chiave pubblica in firma/ del repository e qui sotto). Questo comando:
+
+  nyctalus-integrita                 controlla l'installazione di questo dispositivo
+  nyctalus-integrita verifica DIR    controlla una cartella (installata o un pacchetto scompattato)
+  nyctalus-integrita firma DIR       (per chi pubblica) crea INTEGRITA e lo firma con la chiave privata
+
+Esiti: file IDENTICI, MODIFICATI (✗), MANCANTI (!), file di programma ESTRANEI aggiunti (✗).
+Codice d'uscita 0 se è tutto a posto, 1 altrimenti. Solo libreria standard + ssh-keygen.
+
+Limite onesto: chi può scrivere nei file di Nyctalus può cambiare anche questo controllo. Per
+un controllo che non dipende dal dispositivo, usa il comando preso dalla release (o dal
+repository) e la chiave pubblica pubblicata, non quelli installati.
+"""
+import hashlib
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+NOME = "INTEGRITA"
+SPAZIO = "nyctalus-integrita"          # «namespace» della firma: diverso da quello delle release
+IDENTITA = "release@nyctalus"
+# la chiave pubblica della release (firma/nyctalus-release.pub); NYCTALUS_FIRMA_INTEGRITA la
+# sostituisce SOLO per le prove
+CHIAVE = os.environ.get("NYCTALUS_FIRMA_INTEGRITA") or \
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIH2tSuN3+IVKV6CPiXCbkdT5FCyjciRePBoxVokIiiY"
+# file creati dal programma mentre funziona: non contano
+IGNORA_DIR = {"__pycache__", ".compilazione"}
+IGNORA_SUFFISSI = (".pyc", ".pyo")
+# un file nuovo con queste estensioni (o eseguibile) in una cartella di programma è sospetto
+PROGRAMMA = (".py", ".sh", ".js", ".html", ".so", ".exe", ".dll", ".cmd", ".bat")
+COLORI = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+
+
+def col(c, t):
+    return "\033[%sm%s\033[0m" % (c, t) if COLORI else t
+
+
+def impronta(p):
+    h = hashlib.sha256()
+    with open(p, "rb") as f:
+        for blocco in iter(lambda: f.read(1 << 20), b""):
+            h.update(blocco)
+    return h.hexdigest()
+
+
+def tutti_i_file(radice):
+    radice = Path(radice)
+    for cartella, sotto, files in os.walk(radice):
+        sotto[:] = sorted(d for d in sotto if d not in IGNORA_DIR)
+        for n in sorted(files):
+            if n in (NOME, NOME + ".sig", NOME + ".mappa") or n.endswith(IGNORA_SUFFISSI):
+                continue
+            p = Path(cartella) / n
+            if p.is_symlink():
+                continue
+            yield p.relative_to(radice).as_posix()
+
+
+def firma(radice, chiave_privata):
+    radice = Path(radice)
+    righe = ["%s  %s" % (impronta(radice / r), r) for r in tutti_i_file(radice)]
+    (radice / NOME).write_text("\n".join(righe) + "\n")
+    sig = radice / (NOME + ".sig")
+    if sig.exists():
+        sig.unlink()
+    subprocess.run(["ssh-keygen", "-q", "-Y", "sign", "-f", str(chiave_privata), "-n", SPAZIO, str(radice / NOME)],
+                   check=True)
+    print("✓ %s: %d file, firmato" % (radice / NOME, len(righe)))
+
+
+def firma_valida(radice):
+    """(vero/falso, motivo)"""
+    radice = Path(radice)
+    elenco, sig = radice / NOME, radice / (NOME + ".sig")
+    if not elenco.exists() or not sig.exists():
+        return False, "manca %s o %s.sig (installazione da sorgenti o di una versione prima della 0.3.21?)" % (NOME, NOME)
+    if not shutil.which("ssh-keygen"):
+        return False, "manca ssh-keygen (pacchetto openssh) per verificare la firma"
+    with tempfile.TemporaryDirectory() as t:
+        firmatari = Path(t) / "firmatari"
+        firmatari.write_text('%s namespaces="%s" %s\n' % (IDENTITA, SPAZIO, CHIAVE))
+        with open(elenco, "rb") as dati:
+            p = subprocess.run(["ssh-keygen", "-Y", "verify", "-f", str(firmatari), "-I", IDENTITA, "-n", SPAZIO,
+                                "-s", str(sig)], stdin=dati, capture_output=True, text=True)
+    return p.returncode == 0, (p.stdout + p.stderr).strip().splitlines()[-1] if p.returncode else "firma valida"
+
+
+def verifica(radice, solo=None, motore_locale=False):
+    """→ dizionario con gli esiti. `solo`: prefissi da controllare (le parti che l'installatore
+    copia davvero); `motore_locale`: il motore è stato compilato su questo dispositivo."""
+    radice = Path(radice)
+    ok_firma, motivo = firma_valida(radice)
+    esito = {"firma": ok_firma, "motivo": motivo, "uguali": 0, "modificati": [], "mancanti": [], "estranei": [],
+             "non_verificabili": []}
+    if not ok_firma:
+        return esito
+    attese = {}
+    for riga in (radice / NOME).read_text().splitlines():
+        if "  " in riga:
+            h, r = riga.split("  ", 1)
+            attese[r] = h
+    # INTEGRITA.mappa (scritta dall'installatore, non firmata): «installato<TAB>file del pacchetto»,
+    # per i file copiati con un altro nome (il motore del telefono: bin/<processore>/nyctalus →
+    # bin/nyctalus). Non può far passare un file qualsiasi: l'impronta attesa resta quella FIRMATA
+    # di un file vero del pacchetto.
+    mappa = radice / (NOME + ".mappa")
+    if mappa.exists():
+        for riga in mappa.read_text().splitlines():
+            if "\t" in riga:
+                installato, origine = riga.split("\t", 1)
+                if origine in attese and ".." not in installato.split("/"):
+                    attese[installato] = attese[origine]
+    dentro = (lambda r: True) if not solo else (lambda r: any(r == s or r.startswith(s.rstrip("/") + "/") for s in solo))
+    for r, h in sorted(attese.items()):
+        if not dentro(r):
+            continue
+        p = radice / r
+        if motore_locale and r in ("bin/nyctalus", "bin/nyctalus.exe"):
+            esito["non_verificabili"].append(r)
+        elif not p.exists():
+            # con la mappa i motori del pacchetto (uno per processore) non si copiano tutti
+            if not (mappa.exists() and r.startswith("bin/")):
+                esito["mancanti"].append(r)
+        elif impronta(p) != h:
+            esito["modificati"].append(r)
+        else:
+            esito["uguali"] += 1
+    for r in tutti_i_file(radice):
+        if r in attese or not dentro(r):
+            continue
+        p = radice / r
+        if r.endswith(PROGRAMMA) or (os.access(p, os.X_OK) and not r.startswith("bin/nyctalus.")):
+            esito["estranei"].append(r)
+    return esito
+
+
+def installazione():
+    """(cartella, parti copiate dall'installatore, motore compilato qui) del dispositivo."""
+    casa = Path.home()
+    tel = casa / "nyctalus"
+    if (tel / "orchestratore").is_dir() and (tel / NOME).exists():
+        return tel, ["orchestratore", "webapp", "cli", "nyctalus-mobile", "disinstalla.sh", "bin"], \
+            (tel / ".compilazione").exists() or (tel / "bin" / ".sorgenti").exists()
+    pc = Path(os.environ.get("XDG_DATA_HOME") or casa / ".local" / "share") / "nyctalus"
+    if pc.is_dir():
+        return pc, ["bin", "browser", "chat", "file", "cli", "firefox", "launcher", "gestore-rete", "logo.svg",
+                    "avvia-launcher.sh", "avvia-browser.sh", "avvia-chat.sh", "avvia-file.sh", "avvia-terminale.sh",
+                    "avvia-firefox.sh", "LICENSE", "disinstalla.sh", "Manuali"], False
+    if (tel / "orchestratore").is_dir():
+        return tel, ["orchestratore", "webapp", "cli", "nyctalus-mobile", "disinstalla.sh", "bin"], True
+    return None, None, False
+
+
+def stampa(esito, radice):
+    print(col("1", "Integrità di Nyctalus") + col("2", "  ·  %s" % radice))
+    if not esito["firma"]:
+        print("  %s firma dell'elenco: %s" % (col("1;31", "✗"), esito["motivo"]))
+        return False
+    print("  %s elenco delle impronte firmato con la chiave della release" % col("1;32", "✓"))
+    print("  %s %d file identici a quelli pubblicati" % (col("1;32", "✓"), esito["uguali"]))
+    for r in esito["modificati"]:
+        print("  %s MODIFICATO: %s" % (col("1;31", "✗"), r))
+    for r in esito["estranei"]:
+        print("  %s file di programma NON pubblicato, aggiunto: %s" % (col("1;31", "✗"), r))
+    for r in esito["mancanti"]:
+        print("  %s mancante: %s" % (col("1;33", "!"), r))
+    for r in esito["non_verificabili"]:
+        print("  %s %s compilato su questo dispositivo dai sorgenti: non confrontabile con la firma" % (col("2", "–"), r))
+    buono = not esito["modificati"] and not esito["estranei"]
+    print(col("1;32", "✓ INTEGRITÀ CONFERMATA") if buono and not esito["mancanti"] else
+          col("1;33", "! integrità confermata, con file mancanti") if buono else
+          col("1;31", "✗ FILE DIVERSI DA QUELLI PUBBLICATI: reinstalla Nyctalus dalla release ufficiale"))
+    return buono
+
+
+def main():
+    a = sys.argv[1:]
+    if a[:1] == ["firma"] and len(a) >= 2:
+        chiave = os.environ.get("NYCTALUS_CHIAVE_RELEASE") or \
+            str(Path(__file__).resolve().parents[2] / "privato" / "firma-release" / "nyctalus-release")
+        if not Path(chiave).exists():
+            print("chiave privata della release non trovata (%s): pacchetto NON firmato" % chiave, file=sys.stderr)
+            sys.exit(2)
+        firma(a[1], chiave)
+        return
+    if a[:1] == ["verifica"] and len(a) >= 2:
+        radice, solo, locale = Path(a[1]), None, False
+    elif not a:
+        radice, solo, locale = installazione()
+        if radice is None:
+            print("Nyctalus non risulta installato su questo dispositivo (usa: nyctalus-integrita verifica CARTELLA)")
+            sys.exit(1)
+    else:
+        print(__doc__)
+        sys.exit(0 if a[:1] in (["-h"], ["--help"], ["aiuto"]) else 1)
+    sys.exit(0 if stampa(verifica(radice, solo, locale), radice) else 1)
+
+
+if __name__ == "__main__":
+    main()
