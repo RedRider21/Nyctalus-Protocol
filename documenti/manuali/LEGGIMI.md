@@ -21,6 +21,7 @@ Tutto passa cifrato attraverso **3 nodi**: nessuno vede chi parla con chi, nemme
 | **provare con un amico via Internet** | [Guida: con un amico via Internet](GUIDA-INTERNET.md), 7 passi | 30 min |
 | **una rete vera** con server (anche di amici, anche Raspberry) | [Server](MANUALE-SERVER.md) per i nodi + [Gestore della rete](MANUALE-GESTORE-RETE.md) per l'elenco e il codice | 1 ora |
 | **pubblicare un sito `.nyct`** | [Siti .nyct](MANUALE-SITI.md) | 10 min |
+| **controllare che la mia rete funzioni davvero** (nodi, IP nascosto, DNS, velocità) | [Collaudo](MANUALE-COLLAUDO.md): `nyctalus-collaudo` | 3 min |
 | **capire e accendere le opzioni** (modalità riservata, protezione, famiglie…) | [Guida completa](GUIDA-COMPLETA.md), Parte 3 | 5 min |
 
 ## Come si usa

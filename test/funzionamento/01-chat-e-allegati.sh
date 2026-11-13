@@ -36,9 +36,11 @@ for f in "dati 3MB.bin:application/octet-stream" "foto.png:image/png"; do
   R=$(NYCT_FINO="^(OK|ERR)" controllo 19321 "$SA" 60 "SENDFILE $BOB $(printf %s "$TMP/$n" | xxd -p | tr -d '\n') $m")
   echo "$R" | grep -q '^OK' && pass "allegato «$n» inviato" || fail "invio di «$n» fallito: $R"
 done
-sleep 3
-wait_eventi() { for _ in $(seq 1 40); do [ "$(grep -c '^FILE ' "$TMP/bob-eventi.txt")" -ge 2 ] && break; sleep 0.5; done; }
+# fino a 90 s: su un PC carico il circuito di prova può metterci più del solito (si esce appena arrivano)
+T0=$(date +%s)
+wait_eventi() { for _ in $(seq 1 180); do [ "$(grep -c '^FILE ' "$TMP/bob-eventi.txt")" -ge 2 ] && break; sleep 0.5; done; }
 wait_eventi
+[ -n "${NYCT_TEMPI:-}" ] && echo "  (allegati arrivati in $(( $(date +%s) - T0 )) s)"
 
 # --- verifiche ---
 grep -q "^ST $ALICE 1" "$TMP/bob-eventi.txt" && pass "Bob vede Alice in linea (identità autenticata)" || fail "Bob non vede Alice in linea"

@@ -188,6 +188,11 @@ Alcune cose **non** si possono provare in locale (dove client, nodi e uscita son
 tutti sul tuo PC: l'uscita vede il tuo IP perché *sei tu* l'uscita). Servono nodi
 su macchine diverse.
 
+> **In automatico:** `nyctalus-collaudo` fa i controlli 2.1 (IP), 2.2 (DNS, se può ascoltare
+> la rete) e la parte «sonde» del 2.4, più nodi, velocità e chat, e guida quelli a mano
+> (`--guidato`). Vedi `MANUALE-COLLAUDO.md`. Quello che segue resta il modo di verificarli
+> da sé, con strumenti indipendenti.
+
 ### 2.1 L'IP è davvero nascosto (niente leak)
 Con lo **Stealth attivo** e una rete con **uscita su un'altra macchina**:
 ```sh

@@ -68,7 +68,7 @@ cp -r "$ROOT/pc/browser/nyctalus_browser" "$ROOT/pc/browser/nxs_i18n" "$ROOT/pc/
 cp -r "$ROOT/pc/launcher/nyctalus_launcher" "$P/launcher/"
 cp -r "$ROOT/pc/chat/nyctalus_chat" "$P/chat/"
 cp -r "$ROOT/pc/file/nyctalus_file" "$P/file/"
-cp "$ROOT/pc/cli/nyctalus-cli" "$P/cli/"
+cp "$ROOT/pc/cli/nyctalus-cli" "$ROOT/pc/cli/nyctalus-collaudo" "$P/cli/"
 cp "$ROOT/pc/firefox/user.js" "$ROOT/pc/firefox/inizio.html" "$P/firefox/"
 cp -r "$ROOT/pc/gestore-rete" "$P/"
 mkdir -p "$P/server"
@@ -264,7 +264,7 @@ if [ -f "$M_WIN" ] && [ -n "$PY_WIN" ]; then
   cp "$M_WIN" "$W/bin/nyctalus.exe"
   ( cd "$W/python" && unzip -q "$PY_WIN" )
   cp -r "$ROOT/mobile/orchestratore" "$ROOT/mobile/webapp" "$W/"
-  mkdir -p "$W/cli"; cp "$ROOT/pc/cli/nyctalus-cli" "$W/cli/"
+  mkdir -p "$W/cli"; cp "$ROOT/pc/cli/nyctalus-cli" "$ROOT/pc/cli/nyctalus-collaudo" "$W/cli/"
   cp "$ROOT/pc/windows/nyctalus-windows.py" "$W/windows/"
   cp "$ROOT/pc/windows/Nyctalus.cmd" "$W/"
   cp "$ROOT"/documenti/manuali/{LEGGIMI,MANUALE-WINDOWS,MANUALE-CHAT,GUIDA-RETE-DI-CASA,GUIDA-INTERNET}.md "$W/Manuali/"

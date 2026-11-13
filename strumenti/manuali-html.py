@@ -19,7 +19,7 @@ SORGENTI = sorted((RADICE / "documenti" / "manuali").glob("*.md")) + \
 GRUPPI = [("", ["LEGGIMI", "GUIDA-COMPLETA"]),
           ("Guide passo passo", ["MANUALE-INSTALLAZIONE", "GUIDA-RETE-DI-CASA", "GUIDA-INTERNET"]),
           ("Usare Nyctalus", ["MANUALE-CHAT", "MANUALE-FILE", "MANUALE-TERMINALE", "MANUALE-TELEFONO", "MANUALE-PC", "MANUALE-WINDOWS", "MANUALE-SITI"]),
-          ("Gestire una rete", ["MANUALE-SERVER", "MANUALE-GESTORE-RETE"]),
+          ("Gestire una rete", ["MANUALE-SERVER", "MANUALE-GESTORE-RETE", "MANUALE-COLLAUDO"]),
           ("Approfondire", ["PIANO-ANONIMATO", "SICUREZZA", "MANUALE-PROVE", "DEPLOY"])]
 ORDINE = [n for _g, nomi in GRUPPI for n in nomi]
 

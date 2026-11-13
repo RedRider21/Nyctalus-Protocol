@@ -138,6 +138,9 @@ e tocca 📲.
    vocale) → **videochiamata** (⋮ → Videochiamata, oppure 📹 durante la chiamata).
 4. Annotate, per le chiamate: ritardo percepito, qualità (📶) e se la voce si interrompe.
    Su Internet ogni pacchetto fa 3 salti fra i nodi, quindi un piccolo ritardo è normale.
+5. **Collaudo**: su ciascun PC (e sul telefono, nel ⌨ Terminale) lanciate
+   `nyctalus-collaudo --guidato --rapporto collaudo.txt`: controlla nodi, IP, DNS, velocità e
+   chat e vi fa le domande sulle prove a mano. Dettagli: [Collaudo](MANUALE-COLLAUDO.md).
 
 
 ## Passo 8 (facoltativo) · Anche il tuo amico ospita dei nodi

@@ -1,0 +1,708 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+"""nyctalus-collaudo — il collaudo della TUA rete Nyctalus, su Internet vero.
+
+Controlla, uno dopo l'altro: la configurazione, i nodi dell'elenco (firma e raggiungibilità),
+che i nodi non rispondano a chi non ha la chiave della rete, che il tuo indirizzo IP sia
+nascosto, che i nomi dei siti non escano fuori dal tunnel (DNS), la velocità, la chat e i
+servizi della rete. Con --guidato aggiunge i passi da fare a mano (browser, chiamata, file).
+Alla fine stampa un rapporto con ✓ / ✗ / – e, con --rapporto FILE, lo salva.
+
+Si usa su PC, server e telefono (Termux). Solo libreria standard di Python.
+Non cambia nulla: legge la configurazione, usa il tunnel acceso (o ne accende uno
+temporaneo) e si ferma. Per sapere se l'IP è nascosto chiede «che IP vedi?» a due servizi
+pubblici, una volta in diretta e una volta dal tunnel (--senza-diretto per non farlo).
+"""
+import argparse
+import json
+import os
+import re
+import shutil
+import socket
+import ssl
+import statistics
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.request
+from pathlib import Path
+
+VERSIONE = "1"
+CASA = Path.home()
+# servizi «che IP vedi?»: i primi due in diretta e dal tunnel; l'ultimo SOLO dal tunnel, durante
+# l'ascolto del DNS (il suo nome non deve comparire mai nelle richieste DNS di questo computer)
+SERVIZI_IP = [("api.ipify.org", "/"), ("icanhazip.com", "/")]
+SERVIZIO_SOLO_TUNNEL = ("checkip.amazonaws.com", "/")
+SCARICO = ("speed.cloudflare.com", "/__down?bytes=%d")
+COLORI = sys.stdout.isatty() and not os.environ.get("NO_COLOR")
+
+
+def col(codice, testo):
+    return "\033[%sm%s\033[0m" % (codice, testo) if COLORI else testo
+
+
+class Rapporto:
+    """Gli esiti, nell'ordine: ok (✓), ko (✗), nota (!), saltata (–)."""
+    SEGNI = {"ok": ("1;32", "✓"), "ko": ("1;31", "✗"), "nota": ("1;33", "!"), "saltata": ("2", "–")}
+
+    def __init__(self):
+        self.voci = []
+        self.sezione = ""
+
+    def titolo(self, testo):
+        self.sezione = testo
+        print("\n" + col("1;36", "── " + testo))
+
+    def _metti(self, esito, testo, dettaglio=""):
+        self.voci.append({"sezione": self.sezione, "esito": esito, "testo": testo, "dettaglio": dettaglio})
+        colore, segno = self.SEGNI[esito]
+        print("  %s %s%s" % (col(colore, segno), testo, ("\n      " + col("2", dettaglio)) if dettaglio else ""))
+
+    def ok(self, t, d=""):
+        self._metti("ok", t, d)
+
+    def ko(self, t, d=""):
+        self._metti("ko", t, d)
+
+    def nota(self, t, d=""):
+        self._metti("nota", t, d)
+
+    def saltata(self, t, d=""):
+        self._metti("saltata", t, d)
+
+    def conta(self, esito):
+        return sum(1 for v in self.voci if v["esito"] == esito)
+
+    def testo(self):
+        righe, sez = ["Collaudo Nyctalus — %s" % time.strftime("%d/%m/%Y %H:%M"), ""], None
+        for v in self.voci:
+            if v["sezione"] != sez:
+                sez = v["sezione"]
+                righe.append("── " + sez)
+            righe.append("  %s %s" % (self.SEGNI[v["esito"]][1], v["testo"]))
+            if v["dettaglio"]:
+                righe.append("      " + v["dettaglio"])
+        righe += ["", "Esito: %d superate, %d fallite, %d da guardare, %d saltate" % (
+            self.conta("ok"), self.conta("ko"), self.conta("nota"), self.conta("saltata"))]
+        return "\n".join(righe) + "\n"
+
+
+# --- configurazione ---------------------------------------------------------------------
+def leggi_json(p):
+    try:
+        return json.loads(Path(p).read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def trova_configurazione(scelta):
+    """(dove, config, porta SOCKS abituale). PC: ~/.nyctalus-browser; telefono/Windows:
+    ~/.nyctalus-mobile (stessi campi, più le porte)."""
+    pc, tel = CASA / ".nyctalus-browser" / "config.json", CASA / ".nyctalus-mobile" / "config.json"
+    if scelta:
+        c = leggi_json(scelta)
+        return str(scelta), c, int((c.get("porte") or {}).get("socks", 1080))
+    c_pc, c_tel = leggi_json(pc), leggi_json(tel)
+    if c_tel.get("directory_url") and not c_pc.get("directory_url"):
+        return str(tel), c_tel, int((c_tel.get("porte") or {}).get("socks", 18080))
+    return str(pc), c_pc, 1080
+
+
+def trova_motore():
+    qui = Path(__file__).resolve().parent
+    candidati = [os.environ.get("NYCTALUS_BIN"), qui / "bin" / "nyctalus", qui.parent / "bin" / "nyctalus",
+                 qui.parents[1] / "target" / "release" / "nyctalus", shutil.which("nyctalus")]
+    for c in candidati:
+        if c and Path(c).is_file() and os.access(c, os.X_OK):
+            return str(c)
+    return None
+
+
+def opzioni_protezione(cfg):
+    """Le stesse opzioni che gli avvii passano al motore per la forma del traffico."""
+    cam = str(cfg.get("camuffamento", ""))
+    if not re.fullmatch(r"[0-9a-f]{64}", cam):
+        return [], "nessuna (rete senza camuffamento)"
+    op, nome = ["--obfuscation", cam], "camuffamento (rumore)"
+    if cfg.get("forma") == "h3":
+        op.append("--mimic")
+        nome = "HTTP/3 (sembra un sito)"
+        if re.fullmatch(r"[A-Za-z0-9.-]{1,253}", str(cfg.get("nome_h3", ""))):
+            op += ["--mimic-name", cfg["nome_h3"]]
+    elif cfg.get("forma") == "webrtc":
+        op.append("--webrtc")
+        nome = "videochiamata (WebRTC)"
+    return op, nome
+
+
+# --- SOCKS5 e HTTPS dentro il tunnel -------------------------------------------------------
+def porta_aperta(host, porta, attesa=1.0):
+    try:
+        with socket.create_connection((host, porta), timeout=attesa):
+            return True
+    except OSError:
+        return False
+
+
+def socks_connetti(socks, host, porta, attesa=40):
+    """Collegamento attraverso il tunnel. Il NOME viaggia dentro il tunnel (lo risolve l'uscita):
+    questo computer non fa nessuna richiesta DNS."""
+    s = socket.create_connection(socks, timeout=attesa)
+    s.settimeout(attesa)
+    s.sendall(b"\x05\x01\x00")
+    if s.recv(2) != b"\x05\x00":
+        s.close()
+        raise OSError("il proxy SOCKS non risponde come previsto")
+    nome = host.encode("idna")
+    s.sendall(b"\x05\x01\x00\x03" + bytes([len(nome)]) + nome + porta.to_bytes(2, "big"))
+    r = b""
+    while len(r) < 4:
+        d = s.recv(4 - len(r))
+        if not d:
+            raise OSError("il tunnel ha chiuso il collegamento")
+        r += d
+    if r[1] != 0:
+        s.close()
+        raise OSError("il tunnel non raggiunge %s (codice SOCKS %d)" % (host, r[1]))
+    resto = {1: 6, 4: 18}.get(r[3])
+    if resto is None:
+        resto = s.recv(1)[0] + 2
+    while resto > 0:
+        resto -= len(s.recv(resto))
+    return s
+
+
+def https(host, percorso, socks=None, attesa=40, massimo=None):
+    """GET https://host/percorso, in diretta o dal tunnel. → (stato, corpo, secondi al primo
+    byte, secondi totali)."""
+    t0 = time.time()
+    grezzo = socks_connetti(socks, host, 443, attesa) if socks else socket.create_connection((host, 443), timeout=attesa)
+    grezzo.settimeout(attesa)
+    s = ssl.create_default_context().wrap_socket(grezzo, server_hostname=host)
+    try:
+        s.sendall(("GET %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: curl/8.5.0\r\nAccept: */*\r\nConnection: close\r\n\r\n"
+                   % (percorso, host)).encode())
+        dati, primo = b"", None
+        while True:
+            d = s.recv(65536)
+            if not d:
+                break
+            primo = primo or time.time() - t0
+            dati += d
+            if massimo and len(dati) > massimo:
+                break
+    finally:
+        s.close()
+    testa, _, corpo = dati.partition(b"\r\n\r\n")
+    stato = int(testa.split()[1]) if len(testa.split()) > 1 and testa.split()[1].isdigit() else 0
+    if b"chunked" in testa.lower():
+        intero, resto = b"", corpo
+        while resto:
+            riga, _, resto = resto.partition(b"\r\n")
+            try:
+                n = int(riga.split(b";")[0], 16)
+            except ValueError:
+                break
+            if n == 0:
+                break
+            intero, resto = intero + resto[:n], resto[n + 2:]
+        corpo = intero
+    return stato, corpo, primo or 0.0, time.time() - t0
+
+
+def che_ip(socks=None):
+    """L'indirizzo che i servizi vedono (in diretta o dal tunnel): insieme di risposte valide."""
+    visti, errori = set(), []
+    for host, percorso in SERVIZI_IP:
+        try:
+            stato, corpo, _p, _t = https(host, percorso, socks)
+            ip = corpo.decode("ascii", "replace").strip()
+            if stato == 200 and re.fullmatch(r"[0-9a-fA-F:.]{3,45}", ip):
+                visti.add(ip)
+            else:
+                errori.append("%s: risposta %s" % (host, stato))
+        except (OSError, ssl.SSLError) as e:
+            errori.append("%s: %s" % (host, e))
+    return visti, errori
+
+
+def maschera(ip):
+    """Il tuo indirizzo vero non finisce intero nel rapporto."""
+    if ":" in ip:
+        return ":".join(ip.split(":")[:2]) + ":…"
+    p = ip.split(".")
+    return "%s.%s.x.x" % (p[0], p[1]) if len(p) == 4 else "…"
+
+
+# --- ascolto del DNS (serve dumpcap o tcpdump con i permessi di cattura) ---------------------
+class AscoltoDns:
+    def __init__(self, cartella):
+        self.file, self.proc, self.motivo = Path(cartella) / "dns.pcap", None, ""
+
+    def avvia(self):
+        filtro = "port 53 or port 853 or port 5353"
+        for cmd in (["dumpcap", "-q", "-i", "any", "-f", filtro, "-w", str(self.file)],
+                    ["tcpdump", "-i", "any", "-U", "-w", str(self.file), filtro]):
+            if not shutil.which(cmd[0]):
+                continue
+            try:
+                p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            except OSError as e:
+                self.motivo = str(e)
+                continue
+            time.sleep(1.5)
+            if p.poll() is None:
+                self.proc = p
+                return True
+            self.motivo = (p.stderr.read() or b"").decode("utf-8", "replace").strip().splitlines()[-1:] or [""]
+            self.motivo = self.motivo[0][:160]
+        if not self.motivo:
+            self.motivo = "né dumpcap né tcpdump installati"
+        return False
+
+    def ferma(self):
+        """→ i byte catturati (le richieste DNS in chiaro contengono i nomi così come sono)."""
+        if not self.proc:
+            return b""
+        time.sleep(1.0)
+        self.proc.terminate()
+        try:
+            self.proc.wait(5)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+        try:
+            return self.file.read_bytes()
+        except OSError:
+            return b""
+
+
+def nome_nel_dns(cattura, host):
+    """Il nome compare in una richiesta DNS catturata? (formato DNS: lunghezza + etichetta)"""
+    codificato = b"".join(bytes([len(e)]) + e.encode() for e in host.split("."))
+    return codificato in cattura or codificato.lower() in cattura.lower()
+
+
+# --- i controlli -----------------------------------------------------------------------------
+def controllo_configurazione(r, dove, cfg, motore):
+    r.titolo("1 · Configurazione")
+    if motore:
+        r.ok("motore trovato", motore)
+    else:
+        r.ko("motore «nyctalus» non trovato", "installa Nyctalus o indica il programma con NYCTALUS_BIN=/percorso/nyctalus")
+    url, aut = str(cfg.get("directory_url", "")), str(cfg.get("authority", ""))
+    if url and re.fullmatch(r"[0-9a-f]{64}", aut):
+        r.ok("rete configurata: %s" % (cfg.get("nome_rete") or cfg.get("nome") or "senza nome"),
+             "%s · elenco dei nodi: %s" % (dove, url))
+    else:
+        r.ko("nessuna rete pubblica configurata in %s" % dove,
+             "incolla il codice di rete (NYCT1:…) nelle Impostazioni, poi rilancia il collaudo")
+        return False
+    _op, forma = opzioni_protezione(cfg)
+    (r.ok if _op else r.nota)("forma del traffico: %s" % forma,
+                               "" if _op else "chi osserva la linea riconosce Nyctalus: valuta «nyctalus-rete protezione»")
+    for k, cosa in (("rubrica", "rubrica della rete"), ("casella", "casella dei messaggi")):
+        if re.fullmatch(r"[a-z2-7]{56}\.nyct", str(cfg.get(k, ""))):
+            r.ok("%s configurata" % cosa)
+        else:
+            r.nota("%s non configurata" % cosa, "i messaggi a chi non è in linea non partono" if k == "casella" else "")
+    return bool(motore)
+
+
+def scarica_elenco(url, cartella):
+    dest = Path(cartella) / "elenco.txt"
+    if os.path.isfile(url):
+        shutil.copy(url, dest)
+    else:
+        with urllib.request.urlopen(url, timeout=25) as risposta:
+            dest.write_bytes(risposta.read(4 * 1024 * 1024))
+    return dest
+
+
+def sonda(motore, elenco, aut, opzioni, attesa=4):
+    """`nyctalus nodes --probe` → (codice, raggiungibili, totale, [ms], uscita)."""
+    try:
+        p = subprocess.run([motore, "nodes", "--directory", str(elenco), "--authority", aut, "--probe",
+                            "--timeout", str(attesa)] + opzioni, capture_output=True, text=True, timeout=180)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return 1, 0, 0, [], str(e)
+    m = re.search(r"(\d+)/(\d+) nodes reachable", p.stdout)
+    tempi = [int(x) for x in re.findall(r"online\s+(\d+) ms", p.stdout)]
+    return p.returncode, int(m.group(1)) if m else 0, int(m.group(2)) if m else 0, tempi, (p.stdout + p.stderr).strip()
+
+
+def controllo_nodi(r, cfg, motore, cartella):
+    r.titolo("2 · Nodi della rete")
+    aut = cfg["authority"]
+    try:
+        elenco = scarica_elenco(cfg["directory_url"], cartella)
+    except Exception as e:      # noqa: BLE001
+        r.ko("l'elenco dei nodi non si scarica", str(e))
+        return None
+    op, _forma = opzioni_protezione(cfg)
+    codice, vivi, totale, tempi, uscita = sonda(motore, elenco, aut, op)
+    if codice != 0 or totale == 0:
+        r.ko("elenco dei nodi non valido (firma dell'autorità o formato)", uscita.splitlines()[-1][:200] if uscita else "")
+        return None
+    r.ok("elenco firmato dall'autorità della rete: %d nodi" % totale)
+    dett = "tempo di risposta: mediana %d ms, peggiore %d ms" % (statistics.median(tempi), max(tempi)) if tempi else ""
+    r.nodi_spenti = re.findall(r"^\s*\d+\s+(\S+)\s+\S+\s+\S+\s+○", uscita, re.M)
+    if vivi == totale:
+        r.ok("tutti i %d nodi rispondono" % totale, dett)
+    elif vivi >= 3:
+        r.nota("%d nodi su %d rispondono (ne bastano 3 per un circuito)" % (vivi, totale),
+               "spenti o irraggiungibili: " + ", ".join(r.nodi_spenti)[:200])
+    else:
+        r.ko("solo %d nodi su %d rispondono: servono almeno 3" % (vivi, totale),
+             "controlla che i nodi siano accesi e le porte aperte (UDP e TCP) sul router/firewall")
+    # sonde mute: chi NON ha la chiave della rete non deve ottenere risposta dai nodi
+    if "--obfuscation" in op:
+        if "--mimic" in op:
+            r.saltata("sonde senza chiave", "forma HTTP/3: a chi sonda i nodi rispondono come un sito qualunque (è voluto)")
+        else:
+            _c, vivi_senza, tot, _t, _u = sonda(motore, elenco, aut, [], attesa=3)
+            if vivi_senza == 0:
+                r.ok("a chi non ha la chiave della rete i nodi non rispondono (%d su %d muti)" % (tot, tot))
+            else:
+                r.ko("%d nodi rispondono anche SENZA la chiave della rete" % vivi_senza,
+                     "quei nodi girano senza --obfuscation: riavviali con la protezione della rete")
+    else:
+        r.saltata("sonde senza chiave", "la rete non ha camuffamento")
+    return elenco if vivi >= 3 else None
+
+
+def prepara_tunnel(r, cfg, motore, elenco, cartella, porta_abituale, scelta):
+    """Usa il tunnel acceso; se non c'è ne accende uno temporaneo. → ((host, porta), processo)"""
+    r.titolo("3 · Tunnel")
+    if scelta:
+        host, _, p = scelta.rpartition(":")
+        socks = (host or "127.0.0.1", int(p))
+        if porta_aperta(*socks):
+            r.ok("uso il tunnel indicato: %s:%d" % socks)
+            return socks, None
+        r.ko("nessun tunnel in ascolto su %s:%d" % socks)
+        return None, None
+    if porta_aperta("127.0.0.1", porta_abituale):
+        r.ok("tunnel già acceso (porta %d): uso quello" % porta_abituale)
+        return ("127.0.0.1", porta_abituale), None
+    if not elenco:
+        r.ko("tunnel spento e nodi insufficienti per accenderne uno")
+        return None, None
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        libera = s.getsockname()[1]
+    op, _f = opzioni_protezione(cfg)
+    ambiente = dict(os.environ)
+    ponti = (cfg.get("ponti") or {}).get(cfg.get("authority", ""), [])
+    if ponti:
+        ambiente["NYCTALUS_PONTI"] = ";".join(ponti)
+    # se l'entrata scelta a caso è un nodo spento il motore rinuncia: si riprova (altra entrata)
+    coda = []
+    for giro in range(1, 6):
+        diario = open(Path(cartella) / "tunnel.log", "wb")
+        proc = subprocess.Popen([motore, "start", "--directory", str(elenco), "--authority", cfg["authority"],
+                                 "--socks", "127.0.0.1:%d" % libera] + op, stdout=diario, stderr=subprocess.STDOUT, env=ambiente)
+        for _ in range(120):
+            if porta_aperta("127.0.0.1", libera, 0.3):
+                time.sleep(1.0)
+                if proc.poll() is None:
+                    if giro == 1:
+                        r.ok("tunnel temporaneo acceso per il collaudo (porta %d)" % libera, "viene spento alla fine")
+                    else:
+                        r.nota("tunnel temporaneo acceso al tentativo n. %d (porta %d)" % (giro, libera),
+                               "ai tentativi prima l'entrata scelta era un nodo spento: " + " · ".join(coda)[:160])
+                    return ("127.0.0.1", libera), proc
+            if proc.poll() is not None:
+                break
+            time.sleep(0.5)
+        diario.close()
+        coda = (Path(cartella) / "tunnel.log").read_text(errors="replace").strip().splitlines()[-2:]
+        if proc.poll() is None:
+            proc.kill()
+            break
+    # l'entrata fissa (guardia, ricordata in ~/.nyctalus/guardie come fa Tor) è un nodo spento?
+    spenti = getattr(r, "nodi_spenti", [])
+    guardia = next((n for n in spenti if any(n in riga for riga in coda)), None)
+    if guardia:
+        r.ko("il tunnel non parte: la tua ENTRATA FISSA (guardia) è %s, che è spento" % guardia,
+             "il motore usa sempre la stessa entrata (come Tor, per l'anonimato): riaccendi quel nodo; "
+             "solo se è spento per sempre cancella ~/.nyctalus/guardie e ne verrà scelta un'altra")
+    else:
+        r.ko("il tunnel non parte", " · ".join(coda)[:240])
+    return None, None
+
+
+def controllo_ip(r, socks, senza_diretto):
+    r.titolo("4 · Indirizzo IP")
+    dal_tunnel, errori = che_ip(socks)
+    if not dal_tunnel:
+        r.ko("dal tunnel non si raggiunge Internet", "; ".join(errori)[:240])
+        return False
+    r.ok("dal tunnel Internet si raggiunge: i siti vedono %s" % ", ".join(sorted(dal_tunnel)), "è l'indirizzo dell'uscita")
+    if senza_diretto:
+        r.saltata("confronto con il tuo indirizzo vero", "--senza-diretto")
+        return True
+    diretto, errori = che_ip(None)
+    if not diretto:
+        r.nota("non riesco a leggere il tuo indirizzo vero in diretta (confronto saltato)", "; ".join(errori)[:200])
+    elif diretto & dal_tunnel:
+        r.ko("i siti vedono il TUO indirizzo anche dal tunnel (%s)" % ", ".join(maschera(i) for i in diretto & dal_tunnel),
+             "l'uscita della rete sta sulla tua stessa linea: per nascondere l'IP serve un'uscita su un'altra macchina/linea")
+    else:
+        r.ok("il tuo indirizzo vero (%s) NON è quello che vedono i siti" % ", ".join(maschera(i) for i in sorted(diretto)))
+    return True
+
+
+def controllo_dns(r, socks, cartella):
+    r.titolo("5 · Nomi dei siti (DNS)")
+    ascolto = AscoltoDns(cartella)
+    if not ascolto.avvia():
+        r.saltata("ascolto delle richieste DNS",
+                  "serve dumpcap o tcpdump con il permesso di catturare (%s). Su Linux: «sudo setcap cap_net_raw,cap_net_admin+eip $(command -v dumpcap)» "
+                  "o lancia il collaudo con sudo -E" % (ascolto.motivo or "non disponibile"))
+        return
+    host, percorso = SERVIZIO_SOLO_TUNNEL
+    try:
+        stato, _c, _p, _t = https(host, percorso, socks)
+        riuscita = stato == 200
+    except (OSError, ssl.SSLError):
+        riuscita = False
+    # controprova: una richiesta DNS vera, per essere sicuri che l'ascolto veda qualcosa
+    spia = "collaudo-%d.example.com" % int(time.time())
+    try:
+        socket.getaddrinfo(spia, 80)
+    except OSError:
+        pass
+    cattura = ascolto.ferma()
+    if not riuscita:
+        r.nota("la richiesta di prova dal tunnel non è riuscita: controllo DNS non conclusivo")
+    elif not nome_nel_dns(cattura, spia):
+        r.saltata("ascolto delle richieste DNS", "l'ascolto non vede il DNS di questo computer (resolver locale cifrato o cattura limitata)")
+    elif nome_nel_dns(cattura, host):
+        r.ko("il nome del sito visitato dal tunnel è uscito in una richiesta DNS di questo computer",
+             "il programma risolve i nomi da sé: va configurato «DNS attraverso il proxy» (SOCKS5 con nomi remoti)")
+    else:
+        r.ok("nessuna richiesta DNS per il sito visitato dal tunnel: il nome lo risolve l'uscita",
+             "vale per i programmi di Nyctalus e per chi usa il proxy con i nomi remoti (socks5h)")
+
+
+def controllo_velocita(r, socks, megabyte):
+    r.titolo("6 · Velocità")
+    primi = []
+    for _ in range(3):
+        try:
+            _s, _c, primo, _t = https(SERVIZI_IP[0][0], "/", socks)
+            primi.append(primo)
+        except (OSError, ssl.SSLError):
+            pass
+    if primi:
+        mediana = statistics.median(primi)
+        (r.ok if mediana < 4 else r.nota)("apertura di una pagina (primo byte): %.1f s" % mediana,
+                                          "" if mediana < 4 else "lento: guarda i tempi dei nodi al punto 2")
+    else:
+        r.ko("nessuna pagina si apre dal tunnel")
+        return
+    quanti = int(megabyte * 1000 * 1000)
+    try:
+        stato, corpo, _primo, totale = https(SCARICO[0], SCARICO[1] % quanti, socks, attesa=90)
+    except (OSError, ssl.SSLError) as e:
+        r.nota("scaricamento di prova non riuscito", str(e)[:200])
+        return
+    if stato != 200 or len(corpo) < quanti * 0.95:
+        r.nota("scaricamento di prova incompleto (%d di %d byte, risposta %d)" % (len(corpo), quanti, stato))
+        return
+    v = len(corpo) / totale / 1e6
+    esito = r.ok if v >= 0.1 else r.nota
+    esito("scaricati %.0f MB in %.1f s: %.2f MB/s (%.1f Mbit/s)" % (megabyte, totale, v, v * 8),
+          "" if v >= 0.1 else "molto lento: un nodo del circuito ha poca banda («nyctalus-rete banda»)")
+
+
+def controllo_chat(r, cfg, socks, contatto):
+    r.titolo("7 · Chat e servizi della rete")
+    porta, segreto = os.environ.get("NYCTALUS_CHAT_PORT"), os.environ.get("NYCTALUS_CHAT_TOKEN")
+    if not (porta and segreto):
+        try:
+            p, s = (CASA / ".nyctalus-chat" / "controllo").read_text().split()[:2]
+            porta, segreto = porta or p, segreto or s
+        except (OSError, ValueError):
+            pass
+    if not porta:
+        r.saltata("motore della chat", "non è acceso: apri la chat (o «nyctalus-cli avvia») e rilancia per controllarlo")
+    else:
+        try:
+            with socket.create_connection(("127.0.0.1", int(porta)), timeout=5) as c:
+                c.settimeout(6)
+                c.sendall(("AUTH %s\nCASSAFORTE\nWHOAMI\nLIST\n" % segreto).encode())
+                buf, fine = b"", time.time() + 6
+                while time.time() < fine and b"ENDC" not in buf and b"CASSAFORTE chiusa" not in buf:
+                    try:
+                        d = c.recv(65536)
+                    except socket.timeout:
+                        break
+                    if not d:
+                        break
+                    buf += d
+            righe = buf.decode("utf-8", "replace").splitlines()
+            if "CASSAFORTE chiusa" in righe:
+                r.nota("motore della chat acceso ma CHIUSO: aspetta la passphrase", "sbloccalo dalla chat o con «nyctalus-cli sblocca»")
+            else:
+                io = next((x.split()[1] for x in righe if x.startswith("ME ")), "")
+                if io:
+                    r.ok("motore della chat acceso: %s…%s" % (io[:8], io[-10:]),
+                         "%d contatti in rubrica" % sum(1 for x in righe if x.startswith("C ")))
+                else:
+                    r.ko("il motore della chat non risponde ai comandi")
+                stato = next((x.split()[1] for x in righe if x.startswith("CASSAFORTE ") and len(x.split()) > 1), "")
+                if stato == "aperta":
+                    r.ok("dati della chat protetti da passphrase (cassaforte accesa)")
+                elif stato:
+                    r.nota("dati della chat in chiaro sul disco", "puoi proteggerli: «nyctalus-cli cassaforte attiva» o dalle Impostazioni")
+        except OSError as e:
+            r.ko("il motore della chat non risponde sulla porta %s" % porta, str(e))
+    for k, cosa in (("rubrica", "rubrica della rete"), ("casella", "casella dei messaggi")):
+        ind = str(cfg.get(k, ""))
+        if not re.fullmatch(r"[a-z2-7]{56}\.nyct", ind):
+            continue
+        t0, errore_rete = time.time(), None
+        for _giro in range(3):          # un circuito può passare da un nodo appena caduto: si riprova
+            try:
+                socks_connetti(socks, ind, 80, 60).close()
+                errore_rete = None
+                break
+            except OSError as e:
+                errore_rete = e
+                time.sleep(4)
+        if errore_rete is None:
+            r.ok("%s raggiungibile dentro la rete (%.1f s)" % (cosa, time.time() - t0))
+        else:
+            e = errore_rete
+            r.ko("%s NON raggiungibile (%s)" % (cosa, str(e)[:120]), "sul PC del gestore: «nyctalus-rete stato»")
+    if contatto:
+        cli = Path(__file__).resolve().parent / "nyctalus-cli"
+        try:
+            p = subprocess.run([sys.executable, str(cli), "scrivi", contatto,
+                                "collaudo Nyctalus %s" % time.strftime("%H:%M:%S")], capture_output=True, text=True, timeout=90)
+            (r.ok if p.returncode == 0 else r.ko)("messaggio di prova a «%s»" % contatto,
+                                                  (p.stdout + p.stderr).strip().splitlines()[-1][:200] if (p.stdout + p.stderr).strip() else "")
+        except (OSError, subprocess.TimeoutExpired) as e:
+            r.ko("messaggio di prova a «%s»" % contatto, str(e))
+
+
+PASSI_GUIDATI = [
+    ("Apri il browser di Nyctalus (schede 🦇 o Nyctalus Firefox) e visita un sito «qual è il mio IP».\n"
+     "    Mostra l'indirizzo dell'uscita, NON quello di casa tua?", "browser: i siti non vedono il tuo IP"),
+    ("Nello stesso browser apri un sito pesante (un giornale, un video).\n    Si carica in un tempo accettabile?",
+     "browser: navigazione usabile"),
+    ("Scrivi a un contatto in linea su un ALTRO dispositivo.\n    Il messaggio arriva e compaiono le due spunte?",
+     "chat: messaggio consegnato"),
+    ("Manda un messaggio a un contatto SPENTO, poi fallo riaccendere.\n    Lo riceve quando torna (casella)?",
+     "chat: posta per chi non è in linea"),
+    ("Chiama un contatto (📞) e parlate 30 secondi.\n    La voce è continua nei due sensi?", "chiamata vocale"),
+    ("Fai una videochiamata (📹) di 30 secondi.\n    Il video scorre nei due sensi?", "videochiamata"),
+    ("Manda una foto e un file grande (programma File, oltre 20 MB).\n    Arrivano interi e si aprono?",
+     "file: foto e file grande"),
+    ("Spegni un nodo intermedio mentre scarichi un file.\n    Lo scaricamento continua da solo?",
+     "ripresa dai circuiti caduti"),
+    ("Chiudi e riapri la chat (se hai la protezione dei dati accesa).\n    Chiede la passphrase e riapre tutto?",
+     "cassaforte: riapertura con passphrase"),
+]
+
+
+def passi_guidati(r):
+    r.titolo("8 · Passi da fare a mano")
+    if not sys.stdin.isatty():
+        r.saltata("passi guidati", "serve un terminale interattivo")
+        return
+    print("  Rispondi s (sì), n (no) o invio per saltare.\n")
+    for domanda, nome in PASSI_GUIDATI:
+        try:
+            risposta = input("  ▸ %s [s/n/invio] " % domanda).strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+        if risposta.startswith("s"):
+            r.ok(nome)
+        elif risposta.startswith("n"):
+            try:
+                cosa = input("      cosa è successo? ").strip()
+            except (EOFError, KeyboardInterrupt):
+                cosa = ""
+            r.ko(nome, cosa[:300])
+        else:
+            r.saltata(nome)
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="nyctalus-collaudo", description="Il collaudo della tua rete Nyctalus su Internet vero.")
+    ap.add_argument("--config", help="file di configurazione (di solito lo trova da solo)")
+    ap.add_argument("--socks", help="tunnel già acceso da usare, es. 127.0.0.1:1080")
+    ap.add_argument("--senza-diretto", action="store_true", help="non chiedere in diretta il tuo indirizzo vero (niente confronto)")
+    ap.add_argument("--solo-rete", action="store_true", help="solo nodi, tunnel e servizi interni: niente prove verso Internet (IP, DNS, velocità)")
+    ap.add_argument("--senza-velocita", action="store_true", help="salta la prova di velocità")
+    ap.add_argument("--mb", type=float, default=3, help="megabyte da scaricare nella prova di velocità (3)")
+    ap.add_argument("--contatto", help="manda anche un messaggio di prova a questo contatto")
+    ap.add_argument("--guidato", action="store_true", help="aggiunge i passi da fare a mano (browser, chiamata, file…)")
+    ap.add_argument("--rapporto", help="salva il rapporto in questo file di testo")
+    ap.add_argument("--json", action="store_true", help="stampa gli esiti anche in JSON (ultima riga)")
+    a = ap.parse_args()
+
+    print(col("1", "Collaudo della rete Nyctalus") + col("2", "  ·  %s" % time.strftime("%d/%m/%Y %H:%M")))
+    r = Rapporto()
+    dove, cfg, porta_abituale = trova_configurazione(a.config)
+    motore = trova_motore()
+    proc = None
+    with tempfile.TemporaryDirectory(prefix="nyctalus-collaudo-") as cartella:
+        try:
+            if controllo_configurazione(r, dove, cfg, motore):
+                elenco = controllo_nodi(r, cfg, motore, cartella)
+                socks, proc = prepara_tunnel(r, cfg, motore, elenco, cartella, porta_abituale, a.socks)
+                if socks and a.solo_rete:
+                    r.titolo("4-6 · Internet (IP, DNS, velocità)")
+                    r.saltata("prove verso Internet", "--solo-rete")
+                elif socks and controllo_ip(r, socks, a.senza_diretto):
+                    controllo_dns(r, socks, cartella)
+                    if a.senza_velocita:
+                        r.titolo("6 · Velocità")
+                        r.saltata("prova di velocità", "--senza-velocita")
+                    else:
+                        controllo_velocita(r, socks, max(0.2, min(a.mb, 200)))
+                if socks:
+                    controllo_chat(r, cfg, socks, a.contatto)
+            if a.guidato:
+                passi_guidati(r)
+        except KeyboardInterrupt:
+            print("\n  interrotto")
+        finally:
+            if proc:
+                proc.terminate()
+                try:
+                    proc.wait(5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+
+    ko, note = r.conta("ko"), r.conta("nota")
+    print("\n" + col("1", "═" * 60))
+    riga = "%d superate · %d fallite · %d da guardare · %d saltate" % (r.conta("ok"), ko, note, r.conta("saltata"))
+    if ko:
+        print(col("1;31", "✗ COLLAUDO NON SUPERATO") + "   " + riga)
+        for v in r.voci:
+            if v["esito"] == "ko":
+                print("   ✗ %s" % v["testo"])
+    elif note:
+        print(col("1;33", "✓ COLLAUDO SUPERATO, con cose da guardare") + "   " + riga)
+    else:
+        print(col("1;32", "✓ COLLAUDO SUPERATO") + "   " + riga)
+    if a.rapporto:
+        try:
+            Path(a.rapporto).write_text(r.testo())
+            print("  rapporto salvato in %s" % a.rapporto)
+        except OSError as e:
+            print("  rapporto non salvato: %s" % e)
+    if a.json:
+        print(json.dumps({"versione": VERSIONE, "voci": r.voci}, ensure_ascii=False))
+    sys.exit(1 if ko else 0)
+
+
+if __name__ == "__main__":
+    main()

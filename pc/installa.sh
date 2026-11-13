@@ -106,12 +106,14 @@ for c in launcher browser chat file firefox; do
     ln -sf "$DEST/avvia-$c.sh" "$L"
   fi
 done
-L="$BIN_DIR/nyctalus-cli"                    # chat e file dal terminale
-if [ -e "$L" ] && [ "$(readlink "$L" 2>/dev/null)" != "$DEST/cli/nyctalus-cli" ]; then
-  avv "$L esiste già e non è di Nyctalus: non lo tocco"
-else
-  chmod +x "$DEST/cli/nyctalus-cli"; ln -sf "$DEST/cli/nyctalus-cli" "$L"
-fi
+for c in cli collaudo; do                    # chat e file dal terminale; collaudo della rete
+  L="$BIN_DIR/nyctalus-$c"
+  if [ -e "$L" ] && [ "$(readlink "$L" 2>/dev/null)" != "$DEST/cli/nyctalus-$c" ]; then
+    avv "$L esiste già e non è di Nyctalus: non lo tocco"
+  elif [ -f "$DEST/cli/nyctalus-$c" ]; then
+    chmod +x "$DEST/cli/nyctalus-$c"; ln -sf "$DEST/cli/nyctalus-$c" "$L"
+  fi
+done
 for c in rete sito; do                       # nyctalus-rete (reti) e nyctalus-sito (siti .nyct)
   L="$BIN_DIR/nyctalus-$c"
   if [ -e "$L" ] && [ "$(readlink "$L" 2>/dev/null)" != "$DEST/gestore-rete/nyctalus-$c" ]; then
@@ -120,7 +122,7 @@ for c in rete sito; do                       # nyctalus-rete (reti) e nyctalus-s
     chmod +x "$DEST/gestore-rete/nyctalus-$c"; ln -sf "$DEST/gestore-rete/nyctalus-$c" "$L"
   fi
 done
-ok "Comandi: nyctalus-launcher, nyctalus-browser, nyctalus-chat, nyctalus-file, nyctalus-firefox, nyctalus-cli, nyctalus-rete, nyctalus-sito"
+ok "Comandi: nyctalus-launcher, nyctalus-browser, nyctalus-chat, nyctalus-file, nyctalus-firefox, nyctalus-cli, nyctalus-collaudo, nyctalus-rete, nyctalus-sito"
 case ":$PATH:" in *":$BIN_DIR:"*) ;; *) avv "$BIN_DIR non è nel PATH: i comandi funzioneranno dopo il prossimo accesso (o usa il menu)";; esac
 
 # --- 4) voci nel menu delle applicazioni -----------------------------------------

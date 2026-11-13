@@ -128,6 +128,15 @@ elif [ -f "$DEST/cli/nyctalus-cli" ]; then
   chmod +x "$LINK"
   ok "Comando: nyctalus-cli"
 fi
+# comando "nyctalus-collaudo": il collaudo della rete vera (MANUALE-COLLAUDO.md)
+LINK="$PREFIX/bin/nyctalus-collaudo"
+if [ -e "$LINK" ] && ! grep -q "Nyctalus Protocol" "$LINK" 2>/dev/null; then
+  avv "$LINK esiste già e non è nostro: non lo tocco. Usa python3 $DEST/cli/nyctalus-collaudo"
+elif [ -f "$DEST/cli/nyctalus-collaudo" ]; then
+  printf '#!%s/bin/sh\n# Parte di Nyctalus Protocol: collaudo della rete\nNYCTALUS_BIN="%s/bin/nyctalus" exec python3 "%s/cli/nyctalus-collaudo" "$@"\n' "$PREFIX" "$DEST" "$DEST" > "$LINK"
+  chmod +x "$LINK"
+  ok "Comando: nyctalus-collaudo"
+fi
 
 # --- 5) permesso per l'app Nyctalus (intent RUN_COMMAND) ---------------------------
 PROP="$HOME/.termux/termux.properties"

@@ -1,6 +1,6 @@
 # Nyctalus Protocol — Stato dei lavori
 
-> Aggiornato all'8 novembre 2026 (versione 0.3.15). Cronologia sotto, dalla più recente.
+> Aggiornato al 13 novembre 2026 (versione 0.3.20 in preparazione). Cronologia sotto, dalla più recente.
 
 
 ## 🗂 SCALETTA (aggiornata 10/11/2026, dopo la 0.3.18) — ▶ alla ripresa: chiedere all'utente da quale punto partire
@@ -22,7 +22,9 @@
 - ✅ Audit RustSec: 6 avvisi in rustls/rustls-webpki/tokio/ctutils → aggiornate, 0 vulnerabilità note (`strumenti/audit.sh`).
 - ✅ Firma delle release: chiave in `privato/firma-release/`, pubblica in `firma/`; `strumenti/firma-release.sh` va eseguito su ogni cartella di release PRIMA di `gh release create` (aggiungere SHA256SUMS e SHA256SUMS.sig ai file); lo script unico di Termux richiede la firma (dalla 0.3.20).
 - ✅ Dati locali cifrati con passphrase all'avvio («cassaforte», `cassaforte.rs`): identità, contatti, cronologia, stati e **file ricevuti** (formato NYCS1 a pezzi); comandi SBLOCCA/CIFRA/CAMBIA/DECIFRA/APRI; interfacce telefono, chat PC, File PC, nyctalus-cli; copie in chiaro solo nella vista temporanea, svuotata alla chiusura. Prove 45–49 tutte verdi.
-- ▶ **RIPRENDERE DA QUI (cassaforte):** documentazione fatta solo nei manuali utente (CHAT §7-bis, TELEFONO §6, FILE §5, TERMINALE, GUIDA-COMPLETA §18). MANCANO: SICUREZZA.md (riga della tabella §1.2-bis ancora «⏳» + nuovo §1.2-ter), SPECIFICA.md (formati NYCF1/NYCR1/NYCS1, Argon2id 64 MiB·3·1, comandi), DEPLOY.md, README («Fatto e testato»), MANUALE-PROVE.md (righe 45–49), memoria; poi suite completa `test/esegui-tutti.sh` (non rilanciata dopo la cassaforte). Dopo: strumento `nyctalus-collaudo`.
+- ✅ Cassaforte documentata ovunque (manuali utente, SICUREZZA §1.2-ter, SPECIFICA, DEPLOY, README, MANUALE-PROVE). Suite 13/11: 792 superate, 4 fallite tutte nella 01 per attesa troppo corta sotto carico (allungata a 90 s: 8/8).
+- ✅ **nyctalus-collaudo** (`pc/cli/nyctalus-collaudo`, MANUALE-COLLAUDO.md, prova 50): configurazione, nodi e sonde mute, tunnel, IP (confronto mascherato), DNS (dumpcap/tcpdump con controprova), velocità, chat/cassaforte/rubrica/casella, passi guidati, rapporto e JSON; installato su PC, pacchetti, Windows, Termux.
+- ⚠️ **Trovato dal collaudo**: se l'ENTRATA FISSA (guardia ricordata in `~/.nyctalus/guardie`) è spenta, il client non costruisce il tunnel (nessuna guardia di riserva). Da fare con attenzione all'anonimato: più guardie primarie come Tor (2-3, si passa alla seguente solo se la prima è irraggiungibile, senza ruotare a ogni errore). Oggi il collaudo lo diagnostica per nome.
 - ⏳ Fuzzing guidato (cargo-fuzz), autocontrollo d'integrità.
 
 ## 11/11/2026 notte · Misure in Shadow del punto 3 ✅
