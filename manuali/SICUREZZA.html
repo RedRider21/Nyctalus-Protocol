@@ -19,7 +19,7 @@
   <button class="btn-icona" id="tema" title="Tema">🌓</button>
 </div></div>
 <main class="wrap manuale-doc">
-<nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html">Piano verso una rete anonima</a><a href="SICUREZZA.html" class="qui">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-COLLAUDO.html">Manuale del collaudo (nyctalus-collaudo)</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html">Piano verso una rete anonima</a><a href="SICUREZZA.html" class="qui">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
 <h1 id="verificare-sicurezza-e-anonimato">Verificare sicurezza e anonimato</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-verifiche-automatiche-subito-in-locale">1. Verifiche automatiche (subito, in locale)</a><a href="#2-verifiche-manuali-su-rete-reale-con-unuscita-remota">2. Verifiche manuali su rete reale (con un'uscita remota)</a><a href="#3-cosa-serve-luno-e-cosa-non-basta-da-soli">3. Cosa serve l'uno (e cosa non basta da soli)</a><a href="#4-riferimenti-rapidi-agli-strumenti">4. Riferimenti rapidi agli strumenti</a></nav>
 <p>Questo documento spiega <strong>cosa si può verificare da soli</strong> (con gli strumenti
@@ -243,10 +243,98 @@ casi delicati sul web normale c'è Nyctalus Firefox (profilo sul modello di Tor 
 <li>Verificato da <code>03-webapp</code> (passi del Terminale, compresa l'iniezione) e <code>24-cli</code>.</li>
 </ul>
 <hr />
+<h3 id="12-bis-piano-di-sicurezza-punto-7-della-scaletta-stato-al-12112026">1.2-bis Piano di sicurezza (punto 7 della scaletta) — stato al 12/11/2026</h3>
+<table>
+<thead>
+<tr>
+<th>Misura</th>
+<th>Stato</th>
+<th>Come si verifica</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Nessun <code>unsafe</code></strong> nel motore</td>
+<td>✅ <code>#![forbid(unsafe_code)]</code> in <code>nyctalus-core</code> e <code>nyctalus</code>; chiavi azzerate con <code>zeroize</code></td>
+<td>il compilatore rifiuta qualunque <code>unsafe</code></td>
+</tr>
+<tr>
+<td><strong>Controlli di overflow</strong> nella versione release</td>
+<td>✅ <code>overflow-checks = true</code> (un intero che trabocca ferma solo quel compito, non il nodo)</td>
+<td><code>Cargo.toml</code></td>
+</tr>
+<tr>
+<td><strong>Prove a raffica</strong> (fuzzing leggero, deterministico)</td>
+<td>✅ 8 serie, decine di migliaia di input casuali e messaggi validi rovinati su: elenco firmato, SOCKS5, Sphinx, Noise, casella, offuscamento, indirizzi, celle, ragnatela e riordino, codifica, videochiamata (STUN/SRTP), punto d'incontro, indirizzi dei salti. <strong>Hanno trovato e fatto correggere un crash vero</strong>: l'elenco firmato con un carattere di più byte faceva cadere chi lo leggeva</td>
+<td><code>cargo test raffica</code> (anche in <code>test/esegui-tutti.sh</code>)</td>
+</tr>
+<tr>
+<td><strong>Servizi systemd induriti</strong></td>
+<td>✅ nodi dei server (sistema e utente), «Aiuta la rete», rubrica e casella, siti sempre accesi: niente dispositivi/kernel/cgroup/orologio, processi altrui invisibili, niente namespace, chiamate di sistema <code>@system-service</code>, solo socket di rete, W^X per i nodi, umask 077, nessuna capability sopra la porta 1024; nei servizi dell'utente <code>PrivateUsers</code></td>
+<td>provati davvero: rete a 3 nodi e sito <code>.nyct</code> sempre acceso fatti girare dentro le protezioni (<code>systemd-run --user</code>)</td>
+</tr>
+<tr>
+<td>Registrazione provata dei servizi, sonde mute, ripresa dai circuiti caduti</td>
+<td>✅ (0.3.19)</td>
+<td>prove 43, 38, 44</td>
+</tr>
+<tr>
+<td><strong>Firma delle release</strong></td>
+<td>✅ <code>SHA256SUMS</code> + <code>SHA256SUMS.sig</code> (chiave Ed25519 della release, <code>ssh-keygen -Y</code>; privata in <code>privato/</code>, mai su GitHub; pubblica in <code>firma/</code>). Lo script unico di Termux verifica firma e impronta e non installa nulla altrimenti (attacchi provati: pacchetto cambiato, elenco rifatto, altra chiave, firma assente). L'APK è protetto anche dalla firma Android</td>
+<td><code>strumenti/firma-release.sh</code>, <code>strumenti/verifica-release.sh</code>, prova 37</td>
+</tr>
+<tr>
+<td><strong>Audit delle dipendenze</strong> (RustSec)</td>
+<td>✅ 12/11/2026: trovati 6 avvisi in 4 librerie (rustls 0.23.45: segreti TLS nelle stampe di debug e altri 3; rustls-webpki; tokio <code>AsyncFd</code> unsound; ctutils non a tempo costante) → aggiornate (rustls 0.23.46, rustls-webpki 0.103.16, tokio 1.54.1, ctutils 0.4.8); <strong>0 vulnerabilità note</strong> su 164 librerie</td>
+<td><code>strumenti/audit.sh</code> (non scarica nulla da solo; database in <code>~/.local/share/nyctalus-strumenti</code>)</td>
+</tr>
+<tr>
+<td><strong>Dati locali cifrati</strong> (identità, contatti, cronologia, file ricevuti)</td>
+<td>✅ «cassaforte» con passphrase all'avvio, a scelta dell'utente: Argon2id (64 MiB, 3 passaggi) → XChaCha20-Poly1305; file ricevuti cifrati a pezzi con una chiave per file, mai in chiaro sul disco; vedi §1.2-ter</td>
+<td>prove 45–49</td>
+</tr>
+<tr>
+<td>Fuzzing guidato (<code>cargo-fuzz</code>, libFuzzer)</td>
+<td>⏳ serve installare strumenti (nightly)</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Autocontrollo d'integrità dei programmi installati</td>
+<td>⏳ dopo la firma delle release</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="12-ter-la-cassaforte-dei-dati-locali-cosa-protegge-e-cosa-no">1.2-ter La cassaforte dei dati locali: cosa protegge e cosa no</h3>
+<p><strong>Protegge da</strong> chi ottiene il disco a programma chiuso: furto o smarrimento del PC o del
+telefono, riparazione, copia del disco, sequestro del dispositivo spento. Senza la passphrase
+non si leggono identità, contatti, conversazioni né file ricevuti, e un file alterato non si
+apre (cifratura autenticata). A motore chiuso l'identità non è nemmeno in rete.</p>
+<p><strong>Non protegge da:</strong></p>
+<ul>
+<li>un programma malevolo che gira con il tuo utente <strong>mentre la chat è sbloccata</strong> (la chiave è
+  in memoria, le copie temporanee dei file aperti sono leggibili dal tuo utente);</li>
+<li>una passphrase debole: Argon2id rallenta i tentativi (circa mezzo secondo l'uno, 64 MiB di
+  memoria) ma non salva una parola del dizionario;</li>
+<li>le copie che fai tu («Salva con nome», condivisione verso un'altra app), i file che mandi
+  (gli originali restano dov'erano), le impostazioni dell'aspetto e della rete;</li>
+<li>sul telefono le copie temporanee stanno nella cartella privata di Termux (non in memoria):
+  se l'app viene uccisa di colpo restano fino al prossimo avvio. Sul PC stanno in
+  <code>$XDG_RUNTIME_DIR</code> (memoria) e spariscono comunque allo spegnimento;</li>
+<li>la memoria di scambio (swap) e l'ibernazione del sistema, che possono contenere pezzi della
+  memoria del programma: su un PC a rischio usa anche la cifratura del disco del sistema.</li>
+</ul>
+<p>Non c'è recupero: dimenticata la passphrase, i dati sono persi (nessuna chiave di riserva).</p>
 <h2 id="2-verifiche-manuali-su-rete-reale-con-unuscita-remota">2. Verifiche manuali su <strong>rete reale</strong> (con un'uscita remota)</h2>
 <p>Alcune cose <strong>non</strong> si possono provare in locale (dove client, nodi e uscita sono
 tutti sul tuo PC: l'uscita vede il tuo IP perché <em>sei tu</em> l'uscita). Servono nodi
 su macchine diverse.</p>
+<blockquote>
+<p><strong>In automatico:</strong> <code>nyctalus-collaudo</code> fa i controlli 2.1 (IP), 2.2 (DNS, se può ascoltare
+la rete) e la parte «sonde» del 2.4, più nodi, velocità e chat, e guida quelli a mano
+(<code>--guidato</code>). Vedi <a href="MANUALE-COLLAUDO.html"><code>MANUALE-COLLAUDO.md</code></a>. Quello che segue resta il modo di verificarli
+da sé, con strumenti indipendenti.</p>
+</blockquote>
 <h3 id="21-lip-e-davvero-nascosto-niente-leak">2.1 L'IP è davvero nascosto (niente leak)</h3>
 <p>Con lo <strong>Stealth attivo</strong> e una rete con <strong>uscita su un'altra macchina</strong>:</p>
 <pre><code class="language-sh"># IP reale (senza proxy)

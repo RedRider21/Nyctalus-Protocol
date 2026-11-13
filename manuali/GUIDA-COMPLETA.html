@@ -19,7 +19,7 @@
   <button class="btn-icona" id="tema" title="Tema">🌓</button>
 </div></div>
 <main class="wrap manuale-doc">
-<nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html" class="qui">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html" class="qui">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-COLLAUDO.html">Manuale del collaudo (nyctalus-collaudo)</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
 <h1 id="guida-completa-scaricare-configurare-opzioni">Guida completa: scaricare, configurare, opzioni</h1><nav class="sommario"><b>In questa pagina</b><a href="#parte-1-cosa-scaricare">Parte 1 · Cosa scaricare</a><a href="#parte-2-i-tre-ruoli-client-nodo-gestore">Parte 2 · I tre ruoli: client, nodo, gestore</a><a href="#parte-3-le-opzioni">Parte 3 · Le opzioni</a></nav>
 <p>Tutto in un posto, con passi brevi:</p>
@@ -194,6 +194,11 @@ terminale. Le prime sono per chi usa la chat; quelle in fondo per chi <strong>ge
 <tr>
 <td><a href="#5-modalita-riservata">Modalità riservata</a></td>
 <td>non far capire <strong>quando</strong> né <strong>a chi</strong> scrivi (buste ritardate e rimescolate nei nodi: chat da mixnet)</td>
+<td>spenta</td>
+</tr>
+<tr>
+<td><a href="#18-protezione-dei-dati-con-passphrase">Protezione dei dati (🔐)</a></td>
+<td>cifrare sul dispositivo identità, contatti, cronologia e file ricevuti: chi ruba o apre il PC o il telefono spento non legge nulla</td>
 <td>spenta</td>
 </tr>
 <tr>
@@ -704,6 +709,19 @@ d'ambiente si cambiano dalle <strong>Impostazioni</strong>, divise per area in <
 <li><strong>🌐/🔗 Rete</strong>: la rete in uso e la sua forma del traffico. La forma (rumore, HTTP/3,
   videochiamata) vale per tutta la rete: la sceglie il gestore con <code>nyctalus-rete protezione</code>.</li>
 </ul>
+<h3 id="18-protezione-dei-dati-con-passphrase">18. Protezione dei dati con passphrase</h3>
+<p><strong>A cosa serve:</strong> se qualcuno prende il tuo PC o il tuo telefono (furto, riparazione,
+sequestro), senza la passphrase non legge identità, contatti, conversazioni né i file che hai
+ricevuto. Di serie è spenta: i dati stanno in chiaro, come in quasi tutti i programmi.</p>
+<ul>
+<li><strong>PC:</strong> chat → menu <strong>Aspetto</strong> → «🔐 Protezione dei dati…» → <strong>Proteggi i dati</strong>.</li>
+<li><strong>Telefono / Windows:</strong> <strong>Impostazioni</strong> → scheda <strong>💬 Chat</strong> → «Proteggi con una passphrase».</li>
+<li><strong>Terminale:</strong> <code>nyctalus-cli cassaforte attiva</code> (poi <code>sblocca</code> a ogni avvio).</li>
+</ul>
+<p>Da quel momento a ogni avvio la chat chiede la passphrase; finché non la scrivi resta chiusa
+e fuori linea. I file ricevuti si aprono come prima (copia in chiaro temporanea, cancellata
+alla chiusura). <strong>⚠️ Se dimentichi la passphrase i dati sono persi</strong>: non c'è recupero.
+Limiti e dettagli: <a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a> §7-bis.</p>
 </article>
 </main>
 <button class="torna-su" id="torna-su" type="button" title="Torna su" aria-label="Torna su">↑</button>

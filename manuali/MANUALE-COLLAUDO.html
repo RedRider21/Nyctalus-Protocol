@@ -1,0 +1,243 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuale del collaudo (nyctalus-collaudo) · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-COLLAUDO.html" class="qui">Manuale del collaudo (nyctalus-collaudo)</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
+<article>
+<h1 id="manuale-del-collaudo-nyctalus-collaudo">Manuale del collaudo (nyctalus-collaudo)</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-lanciarlo">1. Lanciarlo</a><a href="#2-che-cosa-controlla">2. Che cosa controlla</a><a href="#3-opzioni">3. Opzioni</a><a href="#4-leggere-il-rapporto">4. Leggere il rapporto</a><a href="#5-cosa-non-dimostra">5. Cosa NON dimostra</a></nav>
+<p>Le prove automatiche del progetto (<a href="MANUALE-PROVE.html"><code>MANUALE-PROVE.md</code></a>) girano tutte <strong>sul tuo PC</strong>, con una
+rete finta. <strong>nyctalus-collaudo</strong> fa l'altra metà del lavoro: controlla la <strong>tua rete vera</strong>,
+su Internet, dal dispositivo da cui lo lanci, e alla fine ti dice con ✓ e ✗ che cosa funziona
+e che cosa no.</p>
+<p>Non cambia nulla: legge la configurazione, usa il tunnel acceso (se è spento ne accende uno
+temporaneo e lo spegne alla fine) e stampa un rapporto.</p>
+<hr />
+<h2 id="1-lanciarlo">1. Lanciarlo</h2>
+<pre><code>nyctalus-collaudo                 # il collaudo automatico (2-3 minuti)
+nyctalus-collaudo --guidato       # …più i passi da fare a mano (browser, chiamata, file)
+nyctalus-collaudo --rapporto collaudo.txt     # salva anche il rapporto in un file
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Dove</th>
+<th>Come</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PC Linux (installato)</td>
+<td><code>nyctalus-collaudo</code> in un terminale</td>
+</tr>
+<tr>
+<td>Dalla cartella scaricata, senza installare</td>
+<td><code>cli/nyctalus-collaudo</code></td>
+</tr>
+<tr>
+<td>Telefono</td>
+<td>nel <strong>⌨ Terminale</strong> dell'app o in Termux: <code>nyctalus-collaudo</code></td>
+</tr>
+<tr>
+<td>Server / nodo via SSH</td>
+<td><code>nyctalus-collaudo --solo-rete</code> (vedi §3)</td>
+</tr>
+</tbody>
+</table>
+<p>Conviene lanciarlo <strong>da ogni dispositivo</strong> che usa la rete (PC di casa, telefono sulla rete
+mobile, PC dell'amico): ognuno vede Internet da un punto diverso, e un nodo raggiungibile da
+casa può non esserlo dal telefono.</p>
+<hr />
+<h2 id="2-che-cosa-controlla">2. Che cosa controlla</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Controllo</th>
+<th>Cosa vuol dire ✓</th>
+<th>Se è ✗</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Configurazione</strong></td>
+<td>c'è il motore, la rete è configurata (codice <code>NYCT1:</code>), si vede la forma del traffico, rubrica e casella</td>
+<td>incolla il codice di rete nelle Impostazioni</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Nodi</strong></td>
+<td>l'elenco è firmato dall'autorità della rete; i nodi rispondono (con i tempi)</td>
+<td>nodi spenti, porte chiuse sul router (UDP <strong>e</strong> TCP), nome No-IP non aggiornato</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Sonde senza chiave</strong></td>
+<td>a chi <strong>non</strong> ha la chiave della rete i nodi non rispondono affatto</td>
+<td>quel nodo gira senza la protezione della rete: va riavviato con il codice aggiornato</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Tunnel</strong></td>
+<td>il circuito a 3 salti si costruisce</td>
+<td>meno di 3 nodi vivi, o chiave/forma diverse fra te e i nodi</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Indirizzo IP</strong></td>
+<td>dal tunnel Internet si raggiunge, e i siti vedono l'indirizzo dell'<strong>uscita</strong>, non il tuo</td>
+<td>l'uscita è sulla tua stessa linea (rete tutta in casa): serve un'uscita altrove</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Nomi dei siti (DNS)</strong></td>
+<td>mentre navighi dal tunnel, dal tuo computer non esce nessuna richiesta DNS per quel sito</td>
+<td>il programma risolve i nomi da sé: va usato il proxy «con i nomi remoti»</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Velocità</strong></td>
+<td>tempo per aprire una pagina e MB/s di uno scaricamento di prova</td>
+<td>un nodo del circuito ha poca banda (<code>nyctalus-rete banda</code>)</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Chat e servizi</strong></td>
+<td>il motore della chat risponde, i dati sono protetti o no, rubrica e casella si raggiungono dentro la rete</td>
+<td>servizi del gestore spenti (<code>nyctalus-rete stato</code>)</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Passi a mano</strong> (<code>--guidato</code>)</td>
+<td>browser, messaggio, posta per chi è spento, chiamata, videochiamata, file, nodo spento a metà, cassaforte</td>
+<td>rispondi «n» e scrivi cosa è successo: finisce nel rapporto</td>
+</tr>
+</tbody>
+</table>
+<p>I segni: <strong>✓</strong> superato · <strong>✗</strong> fallito · <strong>!</strong> funziona ma c'è qualcosa da guardare ·
+<strong>–</strong> saltato (con il motivo).</p>
+<h3 id="note-sui-singoli-controlli">Note sui singoli controlli</h3>
+<ul>
+<li><strong>IP (4).</strong> Per sapere quale indirizzo vedono i siti, lo strumento lo chiede a due servizi
+  pubblici («che IP vedi?»), una volta dal tunnel e una volta in diretta, e confronta. La
+  domanda in diretta rivela a quei servizi soltanto che il tuo indirizzo ha chiesto il suo
+  indirizzo; se non la vuoi fare: <code>--senza-diretto</code> (resta il controllo che dal tunnel si
+  esce, senza il confronto). Nel rapporto il tuo indirizzo vero compare <strong>mascherato</strong>.</li>
+<li><strong>Rete tutta in casa.</strong> Se i nodi stanno tutti sulla tua linea, l'uscita sei tu: il
+  controllo 4 fallisce <strong>giustamente</strong>. Non è un guasto: è il limite di una rete di un solo
+  soggetto (<a href="PIANO-ANONIMATO.html"><code>PIANO-ANONIMATO.md</code></a>).</li>
+<li><strong>DNS (5).</strong> Serve poter ascoltare la rete del proprio computer: <code>dumpcap</code> (Wireshark) o
+  <code>tcpdump</code> con il permesso di cattura. Senza, il controllo risulta «saltato» e lo strumento
+  dice come abilitarlo. Lo strumento fa anche una controprova: se l'ascolto non vede nemmeno
+  una richiesta DNS fatta apposta, lo dichiara invece di dare un ✓ che non vale nulla.
+  Sul telefono (Termux senza root) questo controllo è sempre saltato.</li>
+<li><strong>Sonde (2).</strong> Con la forma <strong>HTTP/3</strong> i nodi rispondono apposta a chiunque come un sito
+  qualsiasi: lì il controllo è saltato, non è un difetto.</li>
+<li><strong>Velocità (6).</strong> <code>--mb 20</code> per uno scaricamento più lungo (di serie 3 MB);
+  <code>--senza-velocita</code> per saltarla (rete a consumo).</li>
+</ul>
+<hr />
+<h2 id="3-opzioni">3. Opzioni</h2>
+<table>
+<thead>
+<tr>
+<th>Opzione</th>
+<th>A cosa serve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--guidato</code></td>
+<td>aggiunge le domande sui passi da fare a mano</td>
+</tr>
+<tr>
+<td><code>--rapporto FILE</code></td>
+<td>salva il rapporto (testo) da conservare o mandare a chi ti aiuta</td>
+</tr>
+<tr>
+<td><code>--solo-rete</code></td>
+<td>solo nodi, sonde, tunnel e servizi interni: <strong>niente</strong> verso Internet (per una rete di casa senza uscita pubblica, o da un server)</td>
+</tr>
+<tr>
+<td><code>--senza-diretto</code></td>
+<td>non chiede in diretta il tuo indirizzo vero</td>
+</tr>
+<tr>
+<td><code>--senza-velocita</code> · <code>--mb N</code></td>
+<td>salta la prova di velocità · megabyte da scaricare</td>
+</tr>
+<tr>
+<td><code>--contatto NOME</code></td>
+<td>manda anche un messaggio di prova a quel contatto (serve la chat accesa)</td>
+</tr>
+<tr>
+<td><code>--socks 127.0.0.1:PORTA</code></td>
+<td>usa proprio quel tunnel</td>
+</tr>
+<tr>
+<td><code>--config FILE</code></td>
+<td>un file di configurazione diverso da quello trovato</td>
+</tr>
+<tr>
+<td><code>--json</code></td>
+<td>in fondo, gli esiti anche in JSON (per gli script)</td>
+</tr>
+</tbody>
+</table>
+<p>Il comando esce con <strong>0</strong> se non c'è nessun ✗, con <strong>1</strong> altrimenti: si può usare in uno
+script o in un controllo periodico (<code>nyctalus-collaudo --solo-rete --senza-diretto || avvisami</code>).</p>
+<hr />
+<h2 id="4-leggere-il-rapporto">4. Leggere il rapporto</h2>
+<pre><code>── 2 · Nodi della rete
+  ✓ elenco firmato dall'autorità della rete: 6 nodi
+  ! 5 nodi su 6 rispondono (ne bastano 3 per un circuito)
+      spenti o irraggiungibili: casa.example.net:4603
+  ✓ a chi non ha la chiave della rete i nodi non rispondono (6 su 6 muti)
+…
+════════════════════════════════════════════════════════════
+✓ COLLAUDO SUPERATO, con cose da guardare   14 superate · 0 fallite · 1 da guardare · 2 saltate
+</code></pre>
+<p>Ordine consigliato per sistemare: prima i ✗ del punto 2 (senza nodi non funziona niente),
+poi il 3, poi il resto. Il rapporto salvato non contiene chiavi, segreti né il tuo indirizzo
+intero: lo puoi mandare a chi gestisce la rete.</p>
+<hr />
+<h2 id="5-cosa-non-dimostra">5. Cosa NON dimostra</h2>
+<p>Un collaudo superato dice che la rete <strong>funziona</strong> e che gli errori grossolani non ci sono
+(IP in chiaro, DNS fuori dal tunnel, nodi che rispondono a chiunque). <strong>Non</strong> dimostra
+l'anonimato contro chi osserva molti punti di Internet, né sostituisce una revisione
+indipendente: per questo vedi <a href="SICUREZZA.html"><code>SICUREZZA.md</code></a> §2 (verifiche manuali su rete reale) e
+<a href="PIANO-ANONIMATO.html"><code>PIANO-ANONIMATO.md</code></a>.</p>
+</article>
+</main>
+<button class="torna-su" id="torna-su" type="button" title="Torna su" aria-label="Torna su">↑</button>
+<script>
+(function(){var b=document.getElementById('torna-su');
+function aggiorna(){b.classList.toggle('visibile',window.scrollY>250);}
+window.addEventListener('scroll',aggiorna,{passive:true});aggiorna();
+b.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});})();
+</script>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>
