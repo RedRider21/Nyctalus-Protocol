@@ -156,9 +156,31 @@ casi delicati sul web normale c'è Nyctalus Firefox (profilo sul modello di Tor 
 | Registrazione provata dei servizi, sonde mute, ripresa dai circuiti caduti | ✅ (0.3.19) | prove 43, 38, 44 |
 | **Firma delle release** | ✅ `SHA256SUMS` + `SHA256SUMS.sig` (chiave Ed25519 della release, `ssh-keygen -Y`; privata in `privato/`, mai su GitHub; pubblica in `firma/`). Lo script unico di Termux verifica firma e impronta e non installa nulla altrimenti (attacchi provati: pacchetto cambiato, elenco rifatto, altra chiave, firma assente). L'APK è protetto anche dalla firma Android | `strumenti/firma-release.sh`, `strumenti/verifica-release.sh`, prova 37 |
 | **Audit delle dipendenze** (RustSec) | ✅ 12/11/2026: trovati 6 avvisi in 4 librerie (rustls 0.23.45: segreti TLS nelle stampe di debug e altri 3; rustls-webpki; tokio `AsyncFd` unsound; ctutils non a tempo costante) → aggiornate (rustls 0.23.46, rustls-webpki 0.103.16, tokio 1.54.1, ctutils 0.4.8); **0 vulnerabilità note** su 164 librerie | `strumenti/audit.sh` (non scarica nulla da solo; database in `~/.local/share/nyctalus-strumenti`) |
-| **Dati locali cifrati** (cronologia della chat, file ricevuti) | ⏳ da decidere dove tenere la chiave (passphrase all'avvio o portachiavi del sistema) | — |
+| **Dati locali cifrati** (identità, contatti, cronologia, file ricevuti) | ✅ «cassaforte» con passphrase all'avvio, a scelta dell'utente: Argon2id (64 MiB, 3 passaggi) → XChaCha20-Poly1305; file ricevuti cifrati a pezzi con una chiave per file, mai in chiaro sul disco; vedi §1.2-ter | prove 45–49 |
 | Fuzzing guidato (`cargo-fuzz`, libFuzzer) | ⏳ serve installare strumenti (nightly) | — |
 | Autocontrollo d'integrità dei programmi installati | ⏳ dopo la firma delle release | — |
+
+### 1.2-ter La cassaforte dei dati locali: cosa protegge e cosa no
+
+**Protegge da** chi ottiene il disco a programma chiuso: furto o smarrimento del PC o del
+telefono, riparazione, copia del disco, sequestro del dispositivo spento. Senza la passphrase
+non si leggono identità, contatti, conversazioni né file ricevuti, e un file alterato non si
+apre (cifratura autenticata). A motore chiuso l'identità non è nemmeno in rete.
+
+**Non protegge da:**
+- un programma malevolo che gira con il tuo utente **mentre la chat è sbloccata** (la chiave è
+  in memoria, le copie temporanee dei file aperti sono leggibili dal tuo utente);
+- una passphrase debole: Argon2id rallenta i tentativi (circa mezzo secondo l'uno, 64 MiB di
+  memoria) ma non salva una parola del dizionario;
+- le copie che fai tu («Salva con nome», condivisione verso un'altra app), i file che mandi
+  (gli originali restano dov'erano), le impostazioni dell'aspetto e della rete;
+- sul telefono le copie temporanee stanno nella cartella privata di Termux (non in memoria):
+  se l'app viene uccisa di colpo restano fino al prossimo avvio. Sul PC stanno in
+  `$XDG_RUNTIME_DIR` (memoria) e spariscono comunque allo spegnimento;
+- la memoria di scambio (swap) e l'ibernazione del sistema, che possono contenere pezzi della
+  memoria del programma: su un PC a rischio usa anche la cifratura del disco del sistema.
+
+Non c'è recupero: dimenticata la passphrase, i dati sono persi (nessuna chiave di riserva).
 
 ## 2. Verifiche manuali su **rete reale** (con un'uscita remota)
 
