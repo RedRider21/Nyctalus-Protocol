@@ -196,7 +196,7 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 
 ## A che punto siamo
 
-**Fatto e testato** (141 test automatici del motore, 815 verifiche di funzionamento e sicurezza con `test/esegui-tutti.sh`):
+**Fatto e testato** (141 test automatici del motore, 816 verifiche di funzionamento e sicurezza con `test/esegui-tutti.sh`):
 - **L2 — nucleo del protocollo:** frammentazione, etichette segrete rotanti (BLAKE3), cifratura end-to-end (ChaCha20-Poly1305) con pacchetti di lunghezza fissa, ricomposizione con limiti anti-DoS.
 - **Stretta di mano Noise NK:** i due estremi si accordano sul segreto senza farlo mai viaggiare; forward secrecy; il mittente resta anonimo.
 - **Indirizzi `.nyct`:** la chiave pubblica di un servizio in base32, con controllo anti-errori di battitura.
@@ -239,7 +239,7 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 - **Registrazione provata dei servizi `.nyct`** (0.3.19): solo chi ha la chiave privata di un servizio può registrarlo ai punti d'incontro; un impostore non può più renderlo irraggiungibile.
 - **Impostazioni a schede** (0.3.19): tutte le regolazioni, anche quelle del motore e la qualità di chiamate e videochiamate, dalle Impostazioni divise per area: telefono (Profilo, Aspetto, Chat, Chiamate, Rete, Prestazioni, App), launcher PC (Rete, Prestazioni, Chiamate) e browser (Browser, Rete, Prestazioni).
 - **Dati protetti da passphrase** («cassaforte», 0.3.20, a scelta): identità, contatti, cronologia e **file ricevuti** cifrati sul dispositivo (Argon2id + XChaCha20-Poly1305); la passphrase si chiede a ogni avvio e finché manca la chat resta chiusa e fuori linea; i file arrivano già cifrati a pezzi e si aprono al volo in una copia temporanea. Chi ruba o apre il PC o il telefono spento non legge nulla. Limiti dichiarati in [MANUALE-CHAT](documenti/manuali/MANUALE-CHAT.md) §7-bis.
-- **Guardie di riserva** (0.3.21): il client ricorda 3 entrate fisse (guardie primarie, come Tor) e usa sempre la prima; se è spenta entra dalla seconda invece di fermarsi, e torna alla prima appena risponde. Mai un'entrata a caso: chi blocca la tua entrata può spostarti solo fra queste tre. Anche i siti `.nyct` reggono un nodo spento ancora in elenco (si riprova lo stesso punto d'incontro con un altro percorso).
+- **Guardie di riserva** (0.3.21): il client ricorda 3 entrate fisse (guardie primarie, come Tor) e usa sempre la prima; se è spenta entra dalla seconda invece di fermarsi, e torna alla prima appena risponde; se l'entrata cade a tunnel acceso, il tunnel si ricostruisce da solo. Mai un'entrata a caso: chi blocca la tua entrata può spostarti solo fra queste tre. Anche i siti `.nyct` reggono un nodo spento ancora in elenco (si riprova lo stesso punto d'incontro con un altro percorso).
 - **Collaudo della rete vera** (0.3.20, `nyctalus-collaudo`): da PC, telefono o server controlla elenco firmato e nodi vivi (con i tempi), che i nodi restino muti a chi non ha la chiave, che i siti vedano l'uscita e non il tuo IP, che nessun nome di sito esca in DNS, velocità, chat, rubrica e casella; con `--guidato` anche i passi a mano; rapporto ✓/✗ salvabile ([MANUALE-COLLAUDO](documenti/manuali/MANUALE-COLLAUDO.md)).
 - **Piano di sicurezza** (0.3.20): nessun `unsafe`, prove a raffica, servizi systemd induriti, audit delle dipendenze, **release firmate** (`SHA256SUMS.sig`, chiave pubblica in `firma/`).
 

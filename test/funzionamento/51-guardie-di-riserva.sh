@@ -77,10 +77,19 @@ avvia_nodo "$P1"; attendi_regex "$TMP/n$P1.log" "127\.0\.0\.1:$P1," 20 > /dev/nu
 tunnel 4
 E4=$(entrata "$TMP/c4.log")
 cmp -s "$TMP/www/f.bin" "$TMP/giu.bin" && [ "$E4" = "$P1" ] && pass "la prima guardia è tornata: il client rientra da lei ($P1)" || fail "ritorno: entrata $E4 (attesa $P1)"
+
+# 4-bis) la guardia si spegne A TUNNEL ACCESO: il tunnel si ricostruisce da solo, stessa porta SOCKS
+kill "${PIDN[$P1]}"; wait "${PIDN[$P1]}" 2>/dev/null
+for _ in $(seq 1 120); do grep -q "Tunnel rebuilt" "$TMP/c4.log" && break; sleep 0.5; done
+rm -f "$TMP/giu.bin"; curl -s -m 40 --socks5-hostname 127.0.0.1:$((B+10)) http://127.0.0.1:$((B+20))/f.bin -o "$TMP/giu.bin"
+NUOVA=$(grep -oE "Tunnel rebuilt: entry 127\.0\.0\.1:[0-9]+" "$TMP/c4.log" | grep -oE "[0-9]+$" | tail -1)
+cmp -s "$TMP/www/f.bin" "$TMP/giu.bin" && [ "$NUOVA" = "$P2" ] && grep -q "entry guard 127.0.0.1:$P1 lost" "$TMP/c4.log" \
+  && pass "guardia spenta a tunnel acceso: ricostruito da solo dalla seconda ($P2), stessa porta SOCKS, scaricamento identico" \
+  || fail "a tunnel acceso: nuova entrata «$NUOVA» (attesa $P2) · $(grep -E 'lost|rebuil' "$TMP/c4.log" | tail -2 | tr '\n' ' ')"
 ferma
 
 # 5) tutte e tre spente: nessun ripiego su altri nodi
-for p in $P1 $P2 $P3; do kill "${PIDN[$p]}" 2>/dev/null; wait "${PIDN[$p]}" 2>/dev/null; done; sleep 1
+for p in $P2 $P3; do kill "${PIDN[$p]}" 2>/dev/null; wait "${PIDN[$p]}" 2>/dev/null; done; sleep 1
 "$BIN" circuit --directory "$DIR" --authority "$PUB" --socks 127.0.0.1:$((B+10)) --control 127.0.0.1:$((B+11)) --hops 3 > "$TMP/c5.log" 2>&1 & CPID=$!; PIDS+=($CPID)
 for _ in $(seq 1 120); do kill -0 $CPID 2>/dev/null || break; sleep 0.5; done
 USATE=$(grep -oE "circuit 0: 127\.0\.0\.1:[0-9]+" "$TMP/c5.log" | grep -oE "[0-9]+$" | sort -u | tr '\n' ' ')

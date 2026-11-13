@@ -60,11 +60,83 @@ pub async fn avvia_circuito(
         return Err(format!("need at least {salti} nodes in the directory").into());
     }
 
+    // Il tunnel si costruisce (guardia, fasci, circuiti) e si RICOSTRUISCE da solo se il
+    // collegamento con la guardia cade mentre è acceso: la porta SOCKS resta la stessa.
+    let tunnel = costruisci_tunnel(&nodi, circuiti, salti, offusca, copertura).await?;
+    let gruppi_tot = tunnel.circuiti_tot;
+    let corrente: Arc<std::sync::RwLock<Arc<Tunnel>>> = Arc::new(std::sync::RwLock::new(Arc::new(tunnel)));
+    let scelte: Arc<Mutex<HashMap<String, usize>>> = Arc::new(Mutex::new(HashMap::new()));
+    tokio::spawn(custode_guardia(corrente.clone(), scelte.clone(), nodi.clone(), circuiti, salti, offusca, copertura));
+
+    // Metriche + porta di controllo per `monitor`.
+    let metriche = Arc::new(crate::metriche::Metriche::nuovo());
+    let tot_circuiti: usize = gruppi_tot;
+    metriche.circuiti.store(tot_circuiti as u64, std::sync::atomic::Ordering::Relaxed);
+    avvia_controllo(controllo, metriche.clone());
+
+    let ascoltatore = TcpListener::bind(socks).await?;
+    let n_fasci = corrente.read().unwrap().fasci.len();
+    if n_fasci > 1 {
+        println!(
+            "SOCKS5 proxy on {socks} — {n_fasci} exits (each site keeps its own), conflux over {circuiti} circuits each (shared guard, {salti} hops)"
+        );
+    } else {
+        println!(
+            "SOCKS5 proxy on {socks} — conflux over {tot_circuiti} circuits (shared guard and exit, {salti} hops)"
+        );
+    }
+    if let Some((r, sempre)) = crate::costante::scelto() {
+        println!("Constant cover: {r} cells/s each way, {}", if sempre { "always" } else { "while in use" });
+    }
+    println!("Monitor:  nyctalus monitor --control {controllo}");
+    println!("Try:  curl --socks5-hostname {socks} http://example.com\n");
+
+    // Nodi utilizzabili come punto d'incontro (e come tappe del circuito verso
+    // di esso) per i siti `.nyct`: lo stesso elenco firmato che alimenta i
+    // circuiti d'uscita.
+    let punti_incontro: Arc<Vec<crate::incontro::Punto>> = Arc::new(crate::percorsi::pieni(&nodi));
+
+    let mut prossimo_flusso: u16 = 0;
+    loop {
+        let (cliente, _) = ascoltatore.accept().await?;
+        let flusso = prossimo_flusso;
+        prossimo_flusso = prossimo_flusso.wrapping_add(1);
+        let fasci = corrente.read().unwrap().fasci.clone();
+        let scelte = scelte.clone();
+        let metriche = metriche.clone();
+        let punti_incontro = punti_incontro.clone();
+        tokio::spawn(async move {
+            if let Err(e) = gestisci_flusso(cliente, flusso, &fasci, &scelte, &metriche, &punti_incontro, offusca, salti).await {
+                eprintln!("flow {flusso} closed: {e}");
+            }
+        });
+    }
+}
+
+/// Un tunnel acceso: i fasci (uscite) sopra UN collegamento con la guardia.
+struct Tunnel {
+    fasci: Arc<Vec<Arc<Fascio>>>,
+    connessione: Arc<quinn::Connection>,
+    _endpoint: quinn::Endpoint,
+    guardia: NodoRete,
+    circuiti_tot: usize,
+}
+
+/// Costruisce guardia, fasci e circuiti (con le guardie primarie di riserva se l'entrata non
+/// risponde) e il rumore di fondo del primo fascio.
+async fn costruisci_tunnel(
+    nodi: &[NodoRete],
+    circuiti: usize,
+    salti: usize,
+    offusca: Option<[u8; 32]>,
+    copertura: f64,
+) -> Risultato<Tunnel> {
+    let nodi: Vec<NodoRete> = nodi.to_vec();
     // Percorsi: una guardia per tutti; uno o più fasci, ognuno con la sua uscita. Se la guardia
     // non risponde si passa alla guardia PRIMARIA seguente (al massimo GUARDIE_PRIMARIE, sempre
     // le stesse: mai un'entrata a caso).
     let mut tentativo = 0;
-    let (gruppi, chiave_entrata, _endpoint, connessione) = loop {
+    let (gruppi, chiave_entrata, endpoint, connessione) = loop {
         tentativo += 1;
         let gruppi = seleziona_fasci(&nodi, uscite_volute(), circuiti, salti)?;
         if !crate::percorsi::ponti().is_empty() {
@@ -146,7 +218,6 @@ pub async fn avvia_circuito(
         fasci.push(Arc::new(Fascio { tx_out, flussi, attivi }));
     }
     let fasci: Arc<Vec<Arc<Fascio>>> = Arc::new(fasci);
-    let scelte: Arc<Mutex<HashMap<String, usize>>> = Arc::new(Mutex::new(HashMap::new()));
 
     // Rumore di fondo (H2): se richiesto, inietta celle fittizie a ritmo di
     // Poisson nel flusso in uscita. Hanno la stessa lunghezza delle vere e
@@ -164,49 +235,48 @@ pub async fn avvia_circuito(
         });
         println!("Cover traffic: ON (~{copertura:.1} dummy cells/s, uplink)");
     }
+    let circuiti_tot: usize = gruppi.iter().map(Vec::len).sum();
+    let guardia = gruppi[0][0][0];
+    Ok(Tunnel { fasci, connessione, _endpoint: endpoint, guardia, circuiti_tot })
 
-    // Metriche + porta di controllo per `monitor`.
-    let metriche = Arc::new(crate::metriche::Metriche::nuovo());
-    let tot_circuiti: usize = gruppi.iter().map(Vec::len).sum();
-    metriche.circuiti.store(tot_circuiti as u64, std::sync::atomic::Ordering::Relaxed);
-    avvia_controllo(controllo, metriche.clone());
+}
 
-    let ascoltatore = TcpListener::bind(socks).await?;
-    if fasci.len() > 1 {
-        println!(
-            "SOCKS5 proxy on {socks} — {} exits (each site keeps its own), conflux over {circuiti} circuits each (shared guard, {salti} hops)",
-            fasci.len()
-        );
-    } else {
-        println!(
-            "SOCKS5 proxy on {socks} — conflux over {tot_circuiti} circuits (shared guard and exit, {salti} hops)"
-        );
-    }
-    if let Some((r, sempre)) = crate::costante::scelto() {
-        println!("Constant cover: {r} cells/s each way, {}", if sempre { "always" } else { "while in use" });
-    }
-    println!("Monitor:  nyctalus monitor --control {controllo}");
-    println!("Try:  curl --socks5-hostname {socks} http://example.com\n");
-
-    // Nodi utilizzabili come punto d'incontro (e come tappe del circuito verso
-    // di esso) per i siti `.nyct`: lo stesso elenco firmato che alimenta i
-    // circuiti d'uscita.
-    let punti_incontro: Arc<Vec<crate::incontro::Punto>> = Arc::new(crate::percorsi::pieni(&nodi));
-
-    let mut prossimo_flusso: u16 = 0;
+/// Segue il collegamento con la guardia: se cade (guardia spenta o irraggiungibile) ricostruisce
+/// il tunnel, dalla stessa guardia se torna o dalla primaria seguente, e lo sostituisce a quello
+/// vecchio. I flussi aperti sul vecchio si chiudono (i programmi riprovano); la porta SOCKS resta.
+async fn custode_guardia(
+    corrente: Arc<std::sync::RwLock<Arc<Tunnel>>>,
+    scelte: Arc<Mutex<HashMap<String, usize>>>,
+    nodi: Vec<NodoRete>,
+    circuiti: usize,
+    salti: usize,
+    offusca: Option<[u8; 32]>,
+    copertura: f64,
+) {
     loop {
-        let (cliente, _) = ascoltatore.accept().await?;
-        let flusso = prossimo_flusso;
-        prossimo_flusso = prossimo_flusso.wrapping_add(1);
-        let fasci = fasci.clone();
-        let scelte = scelte.clone();
-        let metriche = metriche.clone();
-        let punti_incontro = punti_incontro.clone();
-        tokio::spawn(async move {
-            if let Err(e) = gestisci_flusso(cliente, flusso, &fasci, &scelte, &metriche, &punti_incontro, offusca, salti).await {
-                eprintln!("flow {flusso} closed: {e}");
+        let (conn, guardia) = {
+            let t = corrente.read().unwrap();
+            (t.connessione.clone(), t.guardia)
+        };
+        let motivo = conn.closed().await;
+        eprintln!("entry guard {} lost ({motivo}): rebuilding the tunnel", guardia.0);
+        crate::percorsi::segna_guardia_irraggiungibile(&guardia.1);
+        let mut attesa = 1u64;
+        loop {
+            match costruisci_tunnel(&nodi, circuiti, salti, offusca, copertura).await {
+                Ok(t) => {
+                    println!("Tunnel rebuilt: entry {}", t.guardia.0);
+                    scelte.lock().unwrap().clear(); // le uscite sono nuove: ogni sito si riassegna
+                    *corrente.write().unwrap() = Arc::new(t);
+                    break;
+                }
+                Err(e) => {
+                    eprintln!("tunnel rebuild failed ({e}): retrying in {attesa} s");
+                    tokio::time::sleep(std::time::Duration::from_secs(attesa)).await;
+                    attesa = (attesa * 2).min(60);
+                }
             }
-        });
+        }
     }
 }
 
