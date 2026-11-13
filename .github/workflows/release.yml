@@ -2,14 +2,14 @@
 # Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 #
 # Compila l'eseguibile `nyctalus` per i principali sistemi operativi.
-# - Su un tag `v*`  -> pubblica i binari come Release di GitHub.
-# - Su avvio manuale -> carica solo gli artefatti (per verificare la build).
+# Solo su avvio manuale: carica gli artefatti, che chi pubblica scarica, impacchetta e FIRMA
+# (strumenti/firma-release.sh) prima di creare la release. Dalla 0.3.20 un tag `v*` NON avvia
+# più nulla: ricompilare e caricare i binari su una release già firmata cambierebbe le impronte
+# e renderebbe falso il SHA256SUMS.
 
 name: Eseguibili
 
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
