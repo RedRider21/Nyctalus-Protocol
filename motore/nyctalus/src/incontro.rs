@@ -280,7 +280,14 @@ async fn canale_onion(percorso: &[NodoRete], offusca: Option<[u8; 32]>, mix: boo
         Some(fp) => crate::tls::config_client(fp)?,
         None => crate::tls::config_client_insicuro()?,
     };
-    let (endpoint, conn) = crate::trasporto::collega_entrata(guard, chiave_entrata, config, impronta_guard).await?;
+    let (endpoint, conn) = match crate::trasporto::collega_entrata(guard, chiave_entrata, config, impronta_guard).await {
+        Ok(c) => c,
+        Err(e) => {
+            // l'entrata non risponde: il prossimo percorso parte dalla guardia primaria seguente
+            crate::percorsi::segna_guardia_irraggiungibile(&percorso[0].1);
+            return Err(e);
+        }
+    };
     let (mut invio, ricezione) = crate::trasporto::apri_flusso(&conn, chiave_entrata).await?;
     // 1º quadro = pacchetto di apertura Sphinx; poi i quadri onion (n da 0).
     scrivi_quadro(&mut invio, &circuito.pacchetto).await?;
@@ -293,6 +300,40 @@ async fn canale_onion(percorso: &[NodoRete], offusca: Option<[u8; 32]>, mix: boo
         _conn: conn,
         _endpoint: endpoint,
     })
+}
+
+/// Percorsi diversi da provare verso lo stesso punto d'incontro prima di passare al seguente.
+const PERCORSI_PER_PUNTO: usize = 2;
+
+/// Canale onion verso `elenco[idx]` (punto d'incontro). Se a non rispondere è l'ENTRATA (una
+/// guardia primaria, appena scartata), si riprova lo STESSO punto d'incontro dalla guardia
+/// seguente: la colpa non è sua, e servizio e visitatore devono trovarsi sullo stesso.
+async fn canale_verso(
+    elenco: &[NodoRete],
+    idx: usize,
+    salti: usize,
+    offusca: Option<[u8; 32]>,
+    mix: bool,
+) -> Risultato<(Canale, Vec<NodoRete>)> {
+    let mut tentativo = 0;
+    loop {
+        tentativo += 1;
+        let percorso = percorso_onion(elenco, idx, salti)?;
+        match canale_onion(&percorso, offusca, mix).await {
+            Ok(c) => return Ok((c, percorso)),
+            Err(e) => {
+                let entrata = percorso[0].1;
+                if tentativo < crate::percorsi::GUARDIE_PRIMARIE
+                    && percorso.len() > 1
+                    && crate::percorsi::guardia_scartata(&entrata)
+                    && crate::percorsi::guardia(elenco).1 != entrata
+                {
+                    continue;
+                }
+                return Err(e);
+            }
+        }
+    }
 }
 
 /// Client serviti insieme da un servizio .nyct (oltre, i nuovi aspettano che se ne liberi uno).
@@ -432,22 +473,33 @@ async fn collega_al_servizio(
     let epoca = rendezvous::epoca_attuale();
     let mut ultimo = String::from("no rendezvous candidates");
     for idx in rendezvous::ordine_con_ricambio(chiave, elenco.len(), epoca) {
-        let percorso = percorso_onion(elenco, idx, salti)?;
-        let nodo = percorso.last().unwrap().0;
-        let mut canale = match canale_onion(&percorso, offusca, mix).await {
-            Ok(c) => c,
-            Err(e) => {
-                ultimo = format!("rendezvous {nodo}: {e}");
+        let nodo = elenco[idx].0;
+        // un circuito che cade può avere un nodo INTERMEDIO spento (ancora nell'elenco): prima di
+        // dare la colpa al punto d'incontro lo si riprova con un altro percorso (come Tor)
+        for giro in 0..PERCORSI_PER_PUNTO {
+            let mut canale = match canale_verso(elenco, idx, salti, offusca, mix).await {
+                Ok((c, _)) => c,
+                Err(e) => {
+                    ultimo = format!("rendezvous {nodo}: {e}");
+                    crate::diagnosi(|| format!("client: {ultimo} (percorso {})", giro + 1));
+                    continue;
+                }
+            };
+            if canale.invia(&controllo(COLLEGA, chiave)).await.is_err() {
+                ultimo = format!("rendezvous {nodo} closed the stream");
                 continue;
             }
-        };
-        if canale.invia(&controllo(COLLEGA, chiave)).await.is_err() {
-            continue;
-        }
-        match canale.ricevi().await? {
-            Some(r) if r == b"OK" => return Ok(canale),
-            Some(r) if r == b"NO" => ultimo = format!("service not registered at {nodo}"),
-            _ => ultimo = format!("rendezvous {nodo} closed the stream"),
+            match canale.ricevi().await {
+                Ok(Some(r)) if r == b"OK" => return Ok(canale),
+                Ok(Some(r)) if r == b"NO" => {
+                    // risposta del punto d'incontro: il servizio lì non c'è, si passa al prossimo
+                    ultimo = format!("service not registered at {nodo}");
+                    crate::diagnosi(|| format!("client: {ultimo}"));
+                    break;
+                }
+                _ => ultimo = format!("rendezvous {nodo} closed the stream"),
+            }
+            crate::diagnosi(|| format!("client: {ultimo} (percorso {})", giro + 1));
         }
     }
     Err(format!("could not reach the service ({ultimo})").into())
@@ -877,21 +929,37 @@ async fn registra_onion_e_canale(
     let epoca = rendezvous::epoca_attuale();
     let mut ultimo = String::from("no candidates");
     for idx in rendezvous::ordine(chiave_pub, elenco.len(), epoca) {
-        let percorso = percorso_onion(elenco, idx, salti)?;
-        let nodo = percorso.last().unwrap().0;
-        let mut canale = match canale_onion(&percorso, offusca, false).await {
-            Ok(c) => c,
-            Err(e) => {
-                ultimo = format!("rendezvous {nodo}: {e}");
+        let nodo = elenco[idx].0;
+        // come per i visitatori: un circuito caduto si riprova con un altro percorso, così
+        // servizio e visitatori restano sullo stesso punto d'incontro anche con nodi spenti
+        for giro in 0..PERCORSI_PER_PUNTO {
+            let (mut canale, percorso) = match canale_verso(elenco, idx, salti, offusca, false).await {
+                Ok(c) => c,
+                Err(e) => {
+                    ultimo = format!("rendezvous {nodo}: {e}");
+                    crate::diagnosi(|| format!("servizio: {ultimo} (percorso {})", giro + 1));
+                    continue;
+                }
+            };
+            if canale.invia(&registrazione(identita, &percorso.last().unwrap().1)).await.is_err() {
+                ultimo = format!("rendezvous {nodo} closed the stream");
                 continue;
             }
-        };
-        if canale.invia(&registrazione(identita, &percorso.last().unwrap().1)).await.is_err() {
-            continue;
-        }
-        match canale.ricevi().await? {
-            Some(r) if r == b"OK" => return Ok(canale),
-            _ => ultimo = format!("rendezvous {nodo} refused the registration"),
+            match canale.ricevi().await {
+                Ok(Some(r)) if r == b"OK" => {
+                    crate::diagnosi(|| format!("servizio: registrato al punto d'incontro {nodo}"));
+                    return Ok(canale);
+                }
+                Ok(Some(_)) => {
+                    ultimo = format!("rendezvous {nodo} refused the registration");
+                    crate::diagnosi(|| format!("servizio: {ultimo}"));
+                    break;
+                }
+                _ => {
+                    ultimo = format!("rendezvous {nodo} closed the stream");
+                    crate::diagnosi(|| format!("servizio: {ultimo} (percorso {})", giro + 1));
+                }
+            }
         }
     }
     Err(ultimo.into())

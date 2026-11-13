@@ -29,6 +29,13 @@ use crate::Risultato;
 /// Durata di una guardia: fra 30 e 60 giorni, a caso.
 const GUARDIA_MIN_GIORNI: u64 = 30;
 const GUARDIA_MAX_GIORNI: u64 = 60;
+/// Guardie PRIMARIE ricordate per rete (come le «primary guards» di Tor): si usa sempre la
+/// prima; la seguente solo se la prima non risponde. Mai nodi a caso al posto di una guardia
+/// irraggiungibile: chi blocca l'entrata può spostare l'utente solo fra queste, sempre le stesse.
+pub const GUARDIE_PRIMARIE: usize = 3;
+/// Per quanto una guardia che non ha risposto resta scartata in questo processo (poi si riprova:
+/// appena torna, si torna a lei).
+const SCARTO_SECONDI: u64 = 10 * 60;
 /// Tentativi di scelta casuale prima di dichiarare la regola impossibile.
 const TENTATIVI: usize = 64;
 
@@ -38,8 +45,12 @@ struct Contesto {
     rete: String,
     /// famiglia dichiarata, per chiave X25519 del nodo
     famiglie: HashMap<[u8; 32], String>,
-    /// guardia già scelta in questo processo (chiave X25519)
+    /// guardia già scelta in questo processo (chiave X25519): l'ultima usata, per le stampe
     guardia: Option<[u8; 32]>,
+    /// guardie primarie della rete (dal file, poi tenute qui): (rete, [(chiave, scadenza)])
+    primarie: Option<(String, Vec<([u8; 32], u64)>)>,
+    /// guardie che non hanno risposto (chiave → istante): scartate per SCARTO_SECONDI
+    scartate: HashMap<[u8; 32], std::time::Instant>,
     /// avvisi già stampati (uno per tipo)
     avvisato: bool,
     /// solo per le prove: cartella delle guardie e modalità rigida senza toccare l'ambiente
@@ -122,6 +133,8 @@ pub fn imposta_ponti(ponti: Vec<(NodoRete, [u8; 32])>) {
     let mut c = contesto().lock().unwrap();
     if c.ponti.iter().map(|p| p.0.1).ne(ponti.iter().map(|p| p.0.1)) {
         c.guardia = None;
+        c.primarie = None;
+        c.scartate.clear();
     }
     c.ponti = ponti;
 }
@@ -148,6 +161,8 @@ pub fn imposta_rete(autorita: &[u8; 32], famiglie: Vec<([u8; 32], String)>) {
     let mut c = contesto().lock().unwrap();
     if c.rete != rete {
         c.guardia = None;
+        c.primarie = None;
+        c.scartate.clear();
     }
     c.rete = rete;
     c.famiglie = famiglie.into_iter().collect();
@@ -216,7 +231,17 @@ fn casuale(n: usize) -> usize {
 
 /// Sceglie `quanti` nodi a caso fra `nodi`, diversi e non parenti fra loro né con `gia`.
 /// `None` se non è possibile.
+/// I `nodi` senza quelli appena scartati perché non rispondevano (spenti ma ancora nell'elenco),
+/// se ne restano abbastanza per sceglierne `quanti` oltre a quelli in `gia`; altrimenti tutti.
+fn senza_scartati(nodi: &[NodoRete], gia: &[NodoRete], quanti: usize) -> Vec<NodoRete> {
+    let vivi: Vec<NodoRete> = nodi.iter().copied().filter(|n| !guardia_scartata(&n.1)).collect();
+    let liberi = vivi.iter().filter(|n| gia.iter().all(|g| g.1 != n.1)).count();
+    if liberi >= quanti { vivi } else { nodi.to_vec() }
+}
+
 pub fn scegli_non_parenti(nodi: &[NodoRete], gia: &[NodoRete], quanti: usize) -> Option<Vec<NodoRete>> {
+    let vivi = senza_scartati(nodi, gia, quanti);
+    let nodi = vivi.as_slice();
     for _ in 0..TENTATIVI {
         let indici = ordine_pesato(nodi);
         let mut scelti: Vec<NodoRete> = Vec::with_capacity(quanti);
@@ -238,6 +263,8 @@ pub fn scegli_non_parenti(nodi: &[NodoRete], gia: &[NodoRete], quanti: usize) ->
 
 /// Ripiego: `quanti` nodi a caso, solo diversi da quelli in `gia` (senza la regola).
 fn scegli_diversi(nodi: &[NodoRete], gia: &[NodoRete], quanti: usize) -> Vec<NodoRete> {
+    let vivi = senza_scartati(nodi, gia, quanti);
+    let nodi = vivi.as_slice();
     let liberi: Vec<NodoRete> = nodi.iter().copied().filter(|n| gia.iter().all(|g| g.1 != n.1)).collect();
     ordine_pesato(&liberi).into_iter().take(quanti).map(|i| liberi[i]).collect()
 }
@@ -291,10 +318,16 @@ fn esadecimale(b: &[u8]) -> String {
     b.iter().map(|x| format!("{x:02x}")).collect()
 }
 
-/// Guardia salvata per questa rete: (chiave X25519, scadenza).
-fn leggi_guardia(rete: &str) -> Option<([u8; 32], u64)> {
-    let testo = std::fs::read_to_string(cartella_guardie()?.join(rete)).ok()?;
-    let mut campi = testo.split_whitespace();
+/// Guardie salvate per questa rete, nell'ordine: (chiave X25519, scadenza). Una per riga
+/// (i file di prima, con una sola riga, si leggono uguali).
+fn leggi_guardie(rete: &str) -> Vec<([u8; 32], u64)> {
+    let Some(dir) = cartella_guardie() else { return Vec::new() };
+    let Ok(testo) = std::fs::read_to_string(dir.join(rete)) else { return Vec::new() };
+    testo.lines().filter_map(leggi_riga_guardia).take(GUARDIE_PRIMARIE).collect()
+}
+
+fn leggi_riga_guardia(riga: &str) -> Option<([u8; 32], u64)> {
+    let mut campi = riga.split_whitespace();
     let chiave = campi.next()?;
     let scadenza: u64 = campi.next()?.parse().ok()?;
     if chiave.len() != 64 || !chiave.is_ascii() {
@@ -307,7 +340,20 @@ fn leggi_guardia(rete: &str) -> Option<([u8; 32], u64)> {
     Some((k, scadenza))
 }
 
+/// La prima guardia salvata (per le prove).
+#[cfg(test)]
+fn leggi_guardia(rete: &str) -> Option<([u8; 32], u64)> {
+    leggi_guardie(rete).into_iter().next()
+}
+
+/// Salva una sola guardia (per le prove).
+#[cfg(test)]
 fn salva_guardia(rete: &str, chiave: &[u8; 32], scadenza: u64) {
+    contesto().lock().unwrap().primarie = None;
+    salva_guardie(rete, &[(*chiave, scadenza)]);
+}
+
+fn salva_guardie(rete: &str, guardie: &[([u8; 32], u64)]) {
     let Some(dir) = cartella_guardie() else { return };
     if std::fs::create_dir_all(&dir).is_err() {
         return;
@@ -317,8 +363,9 @@ fn salva_guardia(rete: &str, chiave: &[u8; 32], scadenza: u64) {
         use std::os::unix::fs::PermissionsExt;
         let _ = std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700));
     }
+    let testo: String = guardie.iter().map(|(k, s)| format!("{} {s}\n", esadecimale(k))).collect();
     let tmp = dir.join(format!(".{rete}.{}", std::process::id()));
-    if std::fs::write(&tmp, format!("{} {scadenza}\n", esadecimale(chiave))).is_ok() {
+    if std::fs::write(&tmp, testo).is_ok() {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -328,34 +375,97 @@ fn salva_guardia(rete: &str, chiave: &[u8; 32], scadenza: u64) {
     }
 }
 
-/// La guardia (nodo d'entrata) per questa rete: quella salvata se è ancora nell'elenco e
-/// non è scaduta, altrimenti una nuova a caso, tenuta 30-60 giorni.
-pub fn guardia(nodi: &[NodoRete]) -> NodoRete {
-    let (gia, rete, ponti) = {
+fn durata_guardia() -> u64 {
+    (GUARDIA_MIN_GIORNI + casuale((GUARDIA_MAX_GIORNI - GUARDIA_MIN_GIORNI + 1) as usize) as u64) * 86_400
+}
+
+/// Le guardie primarie della rete fra i `nodi` candidati, nell'ordine: quelle salvate ancora
+/// valide (nell'elenco e non scadute), completate fino a [`GUARDIE_PRIMARIE`] con nodi nuovi
+/// (scelti pesati per banda, possibilmente di famiglie diverse da quelle già in lista).
+fn primarie(nodi: &[NodoRete], rete: &str) -> Vec<NodoRete> {
+    let ora = adesso();
+    let in_memoria = {
+        let c = contesto().lock().unwrap();
+        c.primarie.as_ref().filter(|(r, _)| r == rete).map(|(_, v)| v.clone())
+    };
+    let mut lista: Vec<([u8; 32], u64)> = in_memoria.unwrap_or_else(|| leggi_guardie(rete));
+    let prima = lista.clone();
+    lista.retain(|(k, scadenza)| *scadenza > ora && nodi.iter().any(|n| n.1 == *k));
+    while lista.len() < GUARDIE_PRIMARIE.min(nodi.len()) {
+        let liberi: Vec<NodoRete> = nodi.iter().copied().filter(|n| !lista.iter().any(|(k, _)| *k == n.1)).collect();
+        if liberi.is_empty() {
+            break;
+        }
+        // di famiglia diversa da quelle già in lista, se si può
+        let famiglie: Vec<Option<String>> = lista.iter().map(|(k, _)| famiglia_di(k)).collect();
+        let diversi: Vec<NodoRete> = liberi
+            .iter()
+            .copied()
+            .filter(|n| famiglia_di(&n.1).is_none_or(|f| !famiglie.contains(&Some(f))))
+            .collect();
+        let pool = if diversi.is_empty() { liberi } else { diversi };
+        let n = pool[ordine_pesato(&pool)[0]];
+        lista.push((n.1, ora + durata_guardia()));
+    }
+    if lista != prima {
+        salva_guardie(rete, &lista);
+    }
+    contesto().lock().unwrap().primarie = Some((rete.to_string(), lista.clone()));
+    lista.iter().filter_map(|(k, _)| nodi.iter().find(|n| n.1 == *k).copied()).collect()
+}
+
+fn rete_e_candidati(nodi: &[NodoRete]) -> (Vec<NodoRete>, String) {
+    let (rete, ponti) = {
         let c = contesto().lock().unwrap();
         let rete = if c.rete.is_empty() { "manuale".to_string() } else { c.rete.clone() };
-        (c.guardia, rete, c.ponti.iter().map(|p| p.0).collect::<Vec<_>>())
+        (rete, c.ponti.iter().map(|p| p.0).collect::<Vec<_>>())
     };
-    // con i ponti la guardia è uno dei ponti (ricordato a parte), mai un nodo dell'elenco
-    let (nodi, rete) = if ponti.is_empty() { (candidati_guardia(nodi), rete) } else { (ponti, rete + "-ponte") };
-    let nodi = nodi.as_slice();
-    if let Some(n) = gia.and_then(|k| nodi.iter().find(|n| n.1 == k)) {
-        return *n;
+    // con i ponti le guardie sono i ponti (ricordati a parte), mai nodi dell'elenco
+    if ponti.is_empty() {
+        (candidati_guardia(nodi), rete)
+    } else {
+        (ponti, rete + "-ponte")
     }
-    let salvata = leggi_guardia(&rete)
-        .filter(|(_, scadenza)| *scadenza > adesso())
-        .and_then(|(k, _)| nodi.iter().find(|n| n.1 == k).copied());
-    let scelta = match salvata {
-        Some(n) => n,
-        None => {
-            let n = nodi[ordine_pesato(nodi)[0]];
-            let giorni = GUARDIA_MIN_GIORNI + casuale((GUARDIA_MAX_GIORNI - GUARDIA_MIN_GIORNI + 1) as usize) as u64;
-            salva_guardia(&rete, &n.1, adesso() + giorni * 86_400);
-            n
-        }
-    };
-    contesto().lock().unwrap().guardia = Some(scelta.1);
+}
+
+/// La guardia (nodo d'entrata) per questa rete: la PRIMA delle guardie primarie che non ha
+/// appena fallito; se hanno fallito tutte, comunque la prima (non si ripiega mai su nodi a caso).
+/// Le primarie restano 30-60 giorni ciascuna (ricordate in `~/.nyctalus/guardie`).
+pub fn guardia(nodi: &[NodoRete]) -> NodoRete {
+    let (candidati, rete) = rete_e_candidati(nodi);
+    let lista = primarie(&candidati, &rete);
+    let mut c = contesto().lock().unwrap();
+    let ora = std::time::Instant::now();
+    c.scartate.retain(|_, quando| ora.duration_since(*quando).as_secs() < SCARTO_SECONDI);
+    let scelta = lista
+        .iter()
+        .find(|n| !c.scartate.contains_key(&n.1))
+        .or(lista.first())
+        .copied()
+        .unwrap_or_else(|| candidati[0]);
+    c.guardia = Some(scelta.1);
     scelta
+}
+
+/// L'entrata `chiave` è fra quelle appena scartate perché non rispondevano?
+pub fn guardia_scartata(chiave: &[u8; 32]) -> bool {
+    let c = contesto().lock().unwrap();
+    c.scartate.get(chiave).is_some_and(|quando| quando.elapsed().as_secs() < SCARTO_SECONDI)
+}
+
+/// L'entrata `chiave` non ha risposto: per un po' si usa la guardia primaria seguente. Vero se
+/// ne resta almeno un'altra da provare.
+pub fn segna_guardia_irraggiungibile(chiave: &[u8; 32]) -> bool {
+    let mut c = contesto().lock().unwrap();
+    let Some((_, lista)) = c.primarie.clone() else { return false };
+    if !lista.iter().any(|(k, _)| k == chiave) {
+        return false;
+    }
+    c.scartate.insert(*chiave, std::time::Instant::now());
+    if c.guardia == Some(*chiave) {
+        c.guardia = None;
+    }
+    lista.iter().any(|(k, _)| !c.scartate.contains_key(k))
 }
 
 /// Percorso di `salti` nodi che finisce in `ultimo` (punto d'incontro): la guardia come
@@ -369,8 +479,10 @@ pub fn percorso_verso(nodi: &[NodoRete], ultimo: NodoRete, salti: usize) -> Risu
     let g = guardia(nodi);
     let ponti = ponti();
     // se la guardia è parente del punto d'incontro si entra da un'altra (fra i ponti, se ci sono)
-    let pieni_nodi = candidati_guardia(nodi);
-    let candidati: &[NodoRete] = if ponti.is_empty() { &pieni_nodi } else { &ponti };
+    // (mai un'entrata appena scartata perché non rispondeva, se ce ne sono altre)
+    let tutti: Vec<NodoRete> = if ponti.is_empty() { candidati_guardia(nodi) } else { ponti };
+    let vivi: Vec<NodoRete> = tutti.iter().copied().filter(|n| !guardia_scartata(&n.1)).collect();
+    let candidati: &[NodoRete] = if vivi.len() > 1 { &vivi } else { &tutti };
     let entrata = if parenti(&g, &ultimo) {
         scegli(candidati, &[ultimo], 1)?.0.into_iter().next().or(Some(g))
     } else {
@@ -490,6 +602,8 @@ pub(crate) mod test {
         imposta_rete(&[7; 32], famiglie);
         let mut c = contesto().lock().unwrap();
         c.guardia = None;
+        c.primarie = None;
+        c.scartate.clear();
         c.avvisato = false;
         c.cartella_prova = Some(cartella.to_path_buf());
         c.rigida_prova = Some(false);
@@ -613,6 +727,72 @@ pub(crate) mod test {
         contesto().lock().unwrap().guardia = None;
         let _ = guardia(&nodi);
         assert!(leggi_guardia(&rete).unwrap().1 > adesso());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn guardie_primarie_in_ordine_e_di_riserva() {
+        let _b = blocco();
+        let dir = cartella("gp");
+        reimposta(vec![], &dir);
+        let nodi: Vec<NodoRete> = (1..=6).map(|i| nodo(&format!("{}.1.0.1", 40 + i), i)).collect();
+        let prima = guardia(&nodi);
+        let rete = contesto().lock().unwrap().rete.clone();
+        let salvate = leggi_guardie(&rete);
+        assert_eq!(salvate.len(), GUARDIE_PRIMARIE, "si ricordano {GUARDIE_PRIMARIE} guardie primarie");
+        assert_eq!(salvate[0].0, prima.1, "si usa la prima");
+        // un altro processo ritrova le stesse, nello stesso ordine
+        contesto().lock().unwrap().primarie = None;
+        assert_eq!(guardia(&nodi).1, prima.1);
+        assert_eq!(leggi_guardie(&rete), salvate);
+        // la prima non risponde → la seconda (mai un nodo fuori dalle primarie)
+        assert!(segna_guardia_irraggiungibile(&prima.1), "restano altre primarie");
+        assert_eq!(guardia(&nodi).1, salvate[1].0);
+        for _ in 0..20 {
+            assert_eq!(percorso_verso(&nodi, nodi[5], 3).unwrap()[0].1 == salvate[1].0 || nodi[5].1 == salvate[1].0, true);
+        }
+        // fallisce anche la seconda → la terza; poi tutte → di nuovo la prima, mai un'altra
+        assert!(segna_guardia_irraggiungibile(&salvate[1].0));
+        assert_eq!(guardia(&nodi).1, salvate[2].0);
+        assert!(!segna_guardia_irraggiungibile(&salvate[2].0), "finite le primarie");
+        assert_eq!(guardia(&nodi).1, prima.1);
+        // un nodo che non è fra le primarie non si segna
+        let estranea = nodi.iter().find(|n| !salvate.iter().any(|(k, _)| *k == n.1)).unwrap();
+        assert!(!segna_guardia_irraggiungibile(&estranea.1));
+        // passato lo scarto si torna alla prima
+        {
+            let mut c = contesto().lock().unwrap();
+            let vecchio = std::time::Instant::now() - std::time::Duration::from_secs(SCARTO_SECONDI + 1);
+            for v in c.scartate.values_mut() {
+                *v = vecchio;
+            }
+        }
+        assert_eq!(guardia(&nodi).1, prima.1);
+        // il file d'una volta (una sola guardia) si legge e si completa tenendola per prima
+        salva_guardie(&rete, &[(nodi[4].1, adesso() + 86_400 * 40)]);
+        contesto().lock().unwrap().primarie = None;
+        assert_eq!(guardia(&nodi).1, nodi[4].1);
+        let nuove = leggi_guardie(&rete);
+        assert_eq!(nuove.len(), GUARDIE_PRIMARIE);
+        assert_eq!(nuove[0].0, nodi[4].1);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn guardie_primarie_di_famiglie_diverse() {
+        let _b = blocco();
+        let dir = cartella("gf");
+        let nodi: Vec<NodoRete> = (1..=6).map(|i| nodo(&format!("{}.1.0.1", 40 + i), i)).collect();
+        // tre famiglie da due nodi: le tre primarie devono essere una per famiglia
+        let fam: Vec<([u8; 32], String)> = nodi.iter().enumerate().map(|(i, n)| (n.1, format!("f{}", i / 2))).collect();
+        for _ in 0..10 {
+            reimposta(fam.clone(), &dir);
+            let _ = std::fs::remove_dir_all(&dir);
+            let _ = guardia(&nodi);
+            let rete = contesto().lock().unwrap().rete.clone();
+            let f: std::collections::HashSet<_> = leggi_guardie(&rete).iter().map(|(k, _)| famiglia_di(k)).collect();
+            assert_eq!(f.len(), GUARDIE_PRIMARIE, "una guardia per famiglia");
+        }
         let _ = std::fs::remove_dir_all(&dir);
     }
 

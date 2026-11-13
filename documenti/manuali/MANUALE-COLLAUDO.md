@@ -43,7 +43,7 @@ casa può non esserlo dal telefono.
 | 1 | **Configurazione** | c'è il motore, la rete è configurata (codice `NYCT1:`), si vede la forma del traffico, rubrica e casella | incolla il codice di rete nelle Impostazioni |
 | 2 | **Nodi** | l'elenco è firmato dall'autorità della rete; i nodi rispondono (con i tempi) | nodi spenti, porte chiuse sul router (UDP **e** TCP), nome No-IP non aggiornato |
 | 2 | **Sonde senza chiave** | a chi **non** ha la chiave della rete i nodi non rispondono affatto | quel nodo gira senza la protezione della rete: va riavviato con il codice aggiornato |
-| 3 | **Tunnel** | il circuito a 3 salti si costruisce | meno di 3 nodi vivi, o chiave/forma diverse fra te e i nodi |
+| 3 | **Tunnel** | il circuito a 3 salti si costruisce | meno di 3 nodi vivi, le tue 3 entrate fisse (guardie primarie) tutte spente, o chiave/forma diverse fra te e i nodi. Se è spenta solo la prima il tunnel parte dalla seconda: compare come «!» |
 | 4 | **Indirizzo IP** | dal tunnel Internet si raggiunge, e i siti vedono l'indirizzo dell'**uscita**, non il tuo | l'uscita è sulla tua stessa linea (rete tutta in casa): serve un'uscita altrove |
 | 5 | **Nomi dei siti (DNS)** | mentre navighi dal tunnel, dal tuo computer non esce nessuna richiesta DNS per quel sito | il programma risolve i nomi da sé: va usato il proxy «con i nomi remoti» |
 | 6 | **Velocità** | tempo per aprire una pagina e MB/s di uno scaricamento di prova | un nodo del circuito ha poca banda (`nyctalus-rete banda`) |

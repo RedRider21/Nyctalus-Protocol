@@ -60,32 +60,47 @@ pub async fn avvia_circuito(
         return Err(format!("need at least {salti} nodes in the directory").into());
     }
 
-    // Percorsi: una guardia per tutti; uno o più fasci, ognuno con la sua uscita.
-    let gruppi = seleziona_fasci(&nodi, uscite_volute(), circuiti, salti)?;
-    if !crate::percorsi::ponti().is_empty() {
-        println!("  entry: hidden bridge (not in the public directory)");
-    }
-    for (f, percorsi) in gruppi.iter().enumerate() {
-        for (i, p) in percorsi.iter().enumerate() {
-            let strada: Vec<String> = p.iter().map(|n| n.0.to_string()).collect();
-            if gruppi.len() > 1 {
-                println!("  exit {f}, circuit {i}: {}", strada.join(" → "));
-            } else {
-                println!("  circuit {i}: {}", strada.join(" → "));
+    // Percorsi: una guardia per tutti; uno o più fasci, ognuno con la sua uscita. Se la guardia
+    // non risponde si passa alla guardia PRIMARIA seguente (al massimo GUARDIE_PRIMARIE, sempre
+    // le stesse: mai un'entrata a caso).
+    let mut tentativo = 0;
+    let (gruppi, chiave_entrata, _endpoint, connessione) = loop {
+        tentativo += 1;
+        let gruppi = seleziona_fasci(&nodi, uscite_volute(), circuiti, salti)?;
+        if !crate::percorsi::ponti().is_empty() {
+            println!("  entry: hidden bridge (not in the public directory)");
+        }
+        for (f, percorsi) in gruppi.iter().enumerate() {
+            for (i, p) in percorsi.iter().enumerate() {
+                let strada: Vec<String> = p.iter().map(|n| n.0.to_string()).collect();
+                if gruppi.len() > 1 {
+                    println!("  exit {f}, circuit {i}: {}", strada.join(" → "));
+                } else {
+                    println!("  circuit {i}: {}", strada.join(" → "));
+                }
             }
         }
-    }
 
-    // Un solo collegamento QUIC verso la guardia condivisa (da tutti i fasci).
-    let (guardiano, _, impronta_guard) = gruppi[0][0][0];
-    // all'entrata con la chiave del ponte, se è un ponte nascosto
-    let chiave_entrata = crate::percorsi::chiave_entrata(&gruppi[0][0][0], offusca);
-    let config = match impronta_guard {
-        Some(fp) => crate::tls::config_client(fp)?,
-        None => crate::tls::config_client_insicuro()?,
+        // Un solo collegamento QUIC verso la guardia condivisa (da tutti i fasci).
+        let (guardiano, chiave_guard, impronta_guard) = gruppi[0][0][0];
+        // all'entrata con la chiave del ponte, se è un ponte nascosto
+        let chiave_entrata = crate::percorsi::chiave_entrata(&gruppi[0][0][0], offusca);
+        let config = match impronta_guard {
+            Some(fp) => crate::tls::config_client(fp)?,
+            None => crate::tls::config_client_insicuro()?,
+        };
+        // UDP, oppure (se UDP è bloccato) TCP alla stessa porta
+        match crate::trasporto::collega_entrata(guardiano, chiave_entrata, config, impronta_guard).await {
+            Ok((endpoint, connessione)) => break (gruppi, chiave_entrata, endpoint, connessione),
+            Err(e) => {
+                let altre = crate::percorsi::segna_guardia_irraggiungibile(&chiave_guard);
+                if !altre || tentativo >= crate::percorsi::GUARDIE_PRIMARIE {
+                    return Err(e);
+                }
+                eprintln!("entry guard {guardiano} not reachable ({e}): trying the next primary guard");
+            }
+        }
     };
-    // UDP, oppure (se UDP è bloccato) TCP alla stessa porta
-    let (_endpoint, connessione) = crate::trasporto::collega_entrata(guardiano, chiave_entrata, config, impronta_guard).await?;
 
     // Ogni fascio: i suoi circuiti (strade), uno schedulatore in andata e un collettore del
     // ritorno. Le strade cadute si rimpiazzano (ripresa dai circuiti caduti).

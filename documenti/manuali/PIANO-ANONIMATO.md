@@ -64,7 +64,11 @@ Prima ogni circuito usava **il primo nodo dell'elenco come entrata e il secondo 
 uscita**, e verso i siti `.nyct` (chat, file) l'entrata cambiava a ogni collegamento. Ora:
 
 - **entrata scelta a caso** e poi tenuta a lungo (come le «guardie» di Tor), così non si
-  ricomincia ogni volta il rischio di pescare un'entrata malevola;
+  ricomincia ogni volta il rischio di pescare un'entrata malevola. Dalla 0.3.21 le entrate
+  ricordate sono **3 guardie primarie** in ordine fisso, di famiglie diverse quando si può: si usa
+  sempre la prima, la seconda e la terza solo se quelle prima non rispondono (per 10 minuti, poi
+  si riprova la prima). Mai un'entrata a caso al posto di una guardia spenta: chi blocca la tua
+  entrata può spostarti al massimo fra queste tre, sempre le stesse. Prova `51-guardie-di-riserva`;
 - **uscita** e **nodi intermedi** scelti a caso;
 - **regola di parentela:** mai due nodi dello stesso fornitore o della stessa sottorete nello
   stesso percorso, e mai due nodi che il gestore ha dichiarato «della stessa persona»;

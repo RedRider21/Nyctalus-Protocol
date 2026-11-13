@@ -54,7 +54,7 @@ printf '{"directory_url": "%s", "authority": "%s", "camuffamento": "%s"}' "$DIR"
 HOME="$H" NYCTALUS_BIN="$BIN" NO_COLOR=1 timeout 240 python3 "$COLLAUDO" --solo-rete --config "$TMP/senza-rubrica.json" > "$TMP/c2.txt" 2>&1; E2=$?
 # esito giusto in entrambi i casi: la rete regge (codice 0) oppure il nodo spento era proprio
 # l'ENTRATA FISSA del client (guardia ricordata, come Tor) e il collaudo lo dice per nome
-if [ "$E2" -eq 0 ] || grep -q "✗ il tunnel non parte: la tua ENTRATA FISSA (guardia) è 127.0.0.1:23703" "$TMP/c2.txt"; then g2=1; else g2=0; fi
+if [ "$E2" -eq 0 ] || grep -q "✗ il tunnel non parte: le tue ENTRATE FISSE (guardie primarie) sono spente" "$TMP/c2.txt"; then g2=1; else g2=0; fi
 grep -q "! 3 nodi su 4 rispondono" "$TMP/c2.txt" && grep -q "127.0.0.1:23703" "$TMP/c2.txt" && [ "$g2" -eq 1 ] \
   && pass "un nodo spento: segnalato per nome (e, se era l'entrata fissa, spiegato)" || fail "nodo spento: codice $E2 · $(grep -A4 '2 · ' "$TMP/c2.txt" | tr '\n' '|')"
 # due nodi spenti: non basta più

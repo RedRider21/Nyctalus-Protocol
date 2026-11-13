@@ -425,9 +425,9 @@ def prepara_tunnel(r, cfg, motore, elenco, cartella, porta_abituale, scelta):
     spenti = getattr(r, "nodi_spenti", [])
     guardia = next((n for n in spenti if any(n in riga for riga in coda)), None)
     if guardia:
-        r.ko("il tunnel non parte: la tua ENTRATA FISSA (guardia) è %s, che è spento" % guardia,
-             "il motore usa sempre la stessa entrata (come Tor, per l'anonimato): riaccendi quel nodo; "
-             "solo se è spento per sempre cancella ~/.nyctalus/guardie e ne verrà scelta un'altra")
+        r.ko("il tunnel non parte: le tue ENTRATE FISSE (guardie primarie) sono spente, per esempio %s" % guardia,
+             "il motore entra solo dalle sue 3 guardie primarie, sempre le stesse (come Tor, per l'anonimato): "
+             "riaccendine almeno una; solo se sono spente per sempre cancella ~/.nyctalus/guardie e ne verranno scelte altre")
     else:
         r.ko("il tunnel non parte", " · ".join(coda)[:240])
     return None, None
