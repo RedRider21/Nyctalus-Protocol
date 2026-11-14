@@ -36,6 +36,7 @@ nyctalus-sito crea mio-blog          # sito nuovo con una pagina d'esempio; stam
 nyctalus-sito avvia mio-blog         # online finché non premi Ctrl-C
 nyctalus-sito servizio mio-blog      # oppure: sempre acceso, anche dopo un riavvio
 nyctalus-sito elenco                 # i tuoi siti, con indirizzo e stato (online / spento)
+nyctalus-sito indirizzo mio-blog     # solo l'indirizzo .nyct (comodo negli script)
 ```
 - **Il contenuto** sta in `~/.nyctalus-siti/mio-blog/www/`. Modifica `index.html` e
   `stile.css`, aggiungi pagine, cartelle e immagini: si vedono subito, senza riavviare.

@@ -57,20 +57,10 @@ non è una rete reale condivisa (vedi §3).
 
 ## 2. I componenti e i comandi
 
-Il binario `nyctalus` fa tutto, con sotto-comandi (`nyctalus help` per l'elenco):
-
-| Comando | A cosa serve |
-|---|---|
-| `nyctalus authority` | crea una **autorità** di directory (una chiave segreta + pubblica). Si fa **una volta sola**. |
-| `nyctalus node --listen IP:PORTA` | avvia un **nodo-relè**. Stampa la sua *riga d'elenco* (indirizzo, chiave, impronta). |
-| `nyctalus directory --authority-secret SEG --entries '...'` | **firma** l'elenco dei nodi con l'autorità → `directory.txt`. |
-| `nyctalus nodes --directory FILE --authority PUB [--probe]` | mostra i nodi e, con `--probe`, quali sono raggiungibili ora. |
-| `nyctalus start` / `nyctalus circuit` | il **demone**: proxy SOCKS5 che instrada attraverso la rete. |
-| `nyctalus site --dir ./sito` / `--backend IP:PORTA` | pubblica un **sito `.nyct`** (cartella o web server esterno). |
-| `nyctalus browse ADDR.nyct` | visita un sito `.nyct` da terminale. |
-| `nyctalus chat` | **motore della chat `.nyct`** (senza server, senza metadati): parla con l'interfaccia grafica su una porta di controllo locale. |
-| `nyctalus exec -- PROGRAMMA` | lancia un programma instradandolo nella rete (stile torsocks). |
-| `nyctalus monitor` | cruscotto testuale delle metriche del demone. |
+Il binario `nyctalus` fa tutto, con sotto-comandi (`nyctalus help`); intorno ci sono i comandi
+per le persone (`nyctalus-cli`, `nyctalus-rete`, `nyctalus-sito`, `nyctalus-collaudo`,
+`nyctalus-integrita`, `nyctalus-server`…). L'elenco completo, con tutte le opzioni, è in
+**`COMANDI.md`**; qui sotto come funzionano le opzioni del motore.
 
 ### Opzioni principali (chi le usa)
 - `--hops N` (demone): nodi per percorso. **Min 1, max 5, default 3.** Sotto 3 niente vero anonimato.

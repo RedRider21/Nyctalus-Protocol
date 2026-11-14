@@ -10,7 +10,8 @@ finestre. Usa lo stesso motore della chat: stesso anonimato, stessi contatti, st
 conversazione (quello che scrivi dal terminale lo vedi anche nella chat, e viceversa).
 
 Serve quando vuoi fare in fretta, su un server o un Raspberry senza schermo, via SSH, o per
-automatizzare qualcosa con uno script.
+automatizzare qualcosa con uno script. Gli altri comandi di Nyctalus (rete, siti, server,
+collaudo, motore…) sono tutti in `COMANDI.md`.
 
 ## 1. Aprirlo
 

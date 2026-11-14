@@ -204,6 +204,8 @@ stesso attacco, 3 ripetizioni (velocità: `simulazione/velocita.py`, file da 5 M
 | … con il 2% di pacchetti persi | 0,47 Mbit/s | **1,24 · ×2,6** |
 | … nodi tutti saturi, 4 utenti (20 ripetizioni) | 2,66 Mbit/s | **3,32 · +25%** |
 | … nodi tutti saturi, 8 utenti | 1,47 Mbit/s | **2,08 · +41%** |
+| 4 scaricamenti insieme da 4 siti (nodi da 10 Mbit, 5 ripetizioni): tempo per finirli | 28,2 s | **21,9 s · −22%** |
+| … 4 utenti insieme | 71,2 s (mediana 63,5) | **55,8 s · −22%** (mediana 61,3: quasi alla pari) |
 | Primo byte | 0,49 s | 0,50 s · alla pari |
 | Avversario che vede tutte le linee: scaricamenti attribuiti a chi li ha fatti | 91% | 80% · alla pari (limite di tutte le reti in tempo reale) |
 | Chat: lo stesso avversario scopre chi scrive a chi | — (Tor non ha una chat sua) | normale 100%; **modalità riservata al livello del caso** (17-33%, a caso 20%) |

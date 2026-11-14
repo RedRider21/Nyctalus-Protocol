@@ -93,6 +93,8 @@ Le righe **non cambiano** tra un riavvio e l'altro: ogni nodo conserva la sua id
   di sistema: il servizio riceve il permesso di usare le porte basse senza essere root).
 - `--http3 SITO`: **forma HTTP/3**, i nodi sembrano il sito SITO (di solito arriva già dal
   `--codice` della rete); propone da sola la porta 443.
+- `--webrtc`: **forma videochiamata**, il traffico sembra una chiamata WebRTC (STUN + SRTP);
+  anche questa di solito arriva già dal `--codice` della rete. Esclude `--http3`.
 - `--nuova-identita`: rifà chiavi e certificato dei nodi (il certificato nuovo ha dati normali e,
   nella forma HTTP/3, il nome del sito). Cambiano le righe: rimandale al gestore.
 - Per cambiare IP o opzioni: modifica `/etc/nyctalus/server.conf`, poi

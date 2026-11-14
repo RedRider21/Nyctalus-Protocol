@@ -451,28 +451,11 @@ NYCTALUS_PARENTELA=rigida nyctalus-chat          # o davanti a qualunque comando
 ```
 
 ### 16. Opzioni avanzate del motore
-Per chi usa il motore a mano (`nyctalus start`, `nyctalus circuit`…). Tutte in `DEPLOY.md`.
-
-| Opzione | A cosa serve | Valori |
-|---|---|---|
-| `--hops N` | nodi per percorso; sotto 3 niente anonimato | 1-5, di serie 3 |
-| `--circuits N` | strade parallele (più veloce) | 1-8, di serie 2 |
-| `--cover HZ` | rumore di fondo (celle finte al secondo) | di serie 0, o quello della rete |
-| `--obfuscation HEX` | camuffamento con la chiave della rete | quella del codice |
-| `--bridge RIGA` / `NYCTALUS_PONTI` | entrare da un ponte nascosto | nessuno |
-| `--mimic [--mimic-name SITO]` / `NYCTALUS_MIMETICO=1` | forma HTTP/3 (con `--obfuscation`) | spenta |
-| `--webrtc` / `NYCTALUS_WEBRTC=1` | forma videochiamata: STUN + SRTP (con `--obfuscation`) | spenta |
-| `--constant-rate N [--constant-always]` / `NYCTALUS_COSTANTE`, `NYCTALUS_COSTANTE_SEMPRE=1` | copertura costante: N celle/s per verso, vere o finte, durante l'uso (o sempre) | spenta |
-| `NYCTALUS_MIX_MS` | ritardo medio per salto delle buste della modalità riservata (chat da mixnet) | 800 |
-| `--exits N` / `NYCTALUS_USCITE` / `exits = N` | uscite diverse (1-4): ogni sito resta sulla sua, i siti nuovi vanno alla più libera; ogni uscita vede solo i suoi siti, ma più uscite = più nodi che vedono un tuo sito; misurato: non accelera (la strettoia è la guardia) | 1 |
-| `--hidden-bridge` (nodo) | il nodo fa da ponte nascosto | spento |
-| `--middle-only` (nodo) | solo intermedio: mai uscita («Aiuta la rete») | spento |
-| `--max-rate MBIT` (nodo) | tetto della banda inoltrata | nessuno |
-| `NYCTALUS_TCP=1` / `=0` | entrata sempre in TCP / mai (di serie: TCP solo se UDP non risponde) | automatico |
-| `NYCTALUS_RIUSO=0` (nodo) | un collegamento per circuito invece di uno per coppia di nodi | riuso acceso |
-| `NYCTALUS_FINESTRA_KB` | finestra per circuito (KB): più piccola = la ragnatela sente prima le strade lente | 256 |
-| `NYCTALUS_CONGESTIONE` | controllo di congestione: `bbr`, `cubic`, `newreno` | bbr |
-| `NYCTALUS_CODIFICA=8,2` | ragnatela codificata **sperimentale** (k celle + r riserve); misurata: non accelera | spenta |
+Per chi usa il motore a mano (`nyctalus start`, `nyctalus circuit`, `nyctalus node`…): tutte le
+opzioni (salti, circuiti, rumore, camuffamento, ponti, forme HTTP/3 e videochiamata, copertura
+costante, uscite diverse, nodi solo intermedi) e le variabili d'ambiente sono in
+**`COMANDI.md`** §9-10; come funzionano, in `DEPLOY.md` §2. Di serie: 3 salti, 2 circuiti,
+1 uscita, rumore e camuffamento quelli della rete.
 
 ### 17. Impostazioni a schede
 Tutte le regolazioni che prima stavano solo nei file di configurazione o nelle variabili

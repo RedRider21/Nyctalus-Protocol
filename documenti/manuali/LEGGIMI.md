@@ -34,6 +34,7 @@ Tutto passa cifrato attraverso **3 nodi**: nessuno vede chi parla con chi, nemme
 | chat e file **scrivendo comandi** (terminale, SSH, server, script) | [Terminale](MANUALE-TERMINALE.md) |
 | il PC: mini menu, browser, dove stanno i dati | [PC Linux](MANUALE-PC.md) |
 | Windows (anteprima) | [Windows](MANUALE-WINDOWS.md) |
+| **tutti i comandi**, divisi per tipologia (programmi, terminale, rete, siti, server, telefono, motore, variabili) | [Tutti i comandi](COMANDI.md) |
 
 ## Le parole da sapere
 

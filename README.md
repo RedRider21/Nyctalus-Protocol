@@ -67,7 +67,9 @@ ricomporsi solo a destinazione.
 
 **Misurato** con Shadow (il simulatore usato nella ricerca su Tor): Tor 0.4.9 e Nyctalus veri
 sulla stessa Internet simulata (30 ms fra due computer, linee 50/20 Mbit), stessi utenti e
-stesso attacco, 3 ripetizioni (velocità: `simulazione/velocita.py`, file da 5 MB). Come rifarla: [simulazione/LEGGIMI.md](simulazione/LEGGIMI.md).
+stesso attacco, 3 ripetizioni salvo dove indicato (velocità: `simulazione/velocita.py`, file da 5 MB; ultime misure 11/11/2026, dati grezzi in `simulazione/misure-*.txt`). Come rifarla: [simulazione/LEGGIMI.md](simulazione/LEGGIMI.md).
+
+Misure interne (Nyctalus contro Nyctalus, 11/11): i PC che aiutano la rete promossi a **guardie** accorciano i tempi del **18%** con 8 utenti (+8% con 4); **più uscite** per lo stesso utente **non** accelerano (la strettoia è l'entrata), quindi di serie resta una.
 
 | Misura | Tor 0.4.9 | Nyctalus |
 |---|---|---|
@@ -78,6 +80,8 @@ stesso attacco, 3 ripetizioni (velocità: `simulazione/velocita.py`, file da 5 M
 | … con il 2% di pacchetti persi | 0,47 Mbit/s | **1,24 · ×2,6** |
 | … nodi tutti saturi, 4 utenti (20 ripetizioni) | 2,66 Mbit/s | **3,32 · +25%** |
 | … nodi tutti saturi, 8 utenti | 1,47 Mbit/s | **2,08 · +41%** |
+| 4 scaricamenti insieme da 4 siti (nodi da 10 Mbit, 5 ripetizioni): tempo per finirli | 28,2 s | **21,9 s · −22%** |
+| … 4 utenti insieme | 71,2 s (mediana 63,5) | **55,8 s · −22%** (mediana 61,3: quasi alla pari) |
 | Primo byte | 0,49 s | 0,50 s · alla pari |
 | Avversario che vede tutte le linee: scaricamenti attribuiti a chi li ha fatti | 91% | 80% · alla pari (limite di tutte le reti in tempo reale) |
 | Chat: lo stesso avversario scopre chi scrive a chi | — (Tor non ha una chat sua) | normale 100%; **modalità riservata al livello del caso** (17-33%, a caso 20%) |
@@ -287,172 +291,34 @@ cargo build --release   # produce target/release/nyctalus
 
 ## Uso da terminale
 
-Nyctalus è, come Tor, un demone con interfaccia a riga di comando (in inglese);
-il browser è solo uno dei client. Per **chattare e mandare file da terminale** c'è
-`nyctalus-cli` ([MANUALE-TERMINALE.md](documenti/manuali/MANUALE-TERMINALE.md)). I comandi (`start`, `status`, `nodes`, `site`,
-`browse`, `monitor`, `exec`, `node`, `authority`, `directory`, …) sono elencati
-da `nyctalus help`. Per **installare, configurare e mettere in piedi una rete**
-vedi **[DEPLOY.md](documenti/DEPLOY.md)**; per **verificare** sicurezza e anonimato
-**[SICUREZZA.md](documenti/SICUREZZA.md)**. Esempi:
+Tutti i comandi, divisi per tipologia (programmi, chat e file da terminale, rete, siti,
+collaudo e integrità, server, telefono, motore, variabili d'ambiente):
+**[Tutti i comandi](documenti/manuali/COMANDI.md)**. In breve:
 
-### Proxy SOCKS5 (un salto — non ancora anonimo)
+| Per… | Comando | Manuale |
+|---|---|---|
+| chattare e mandare file scrivendo comandi | `nyctalus-cli` | [MANUALE-TERMINALE](documenti/manuali/MANUALE-TERMINALE.md) |
+| collegarsi a una rete o gestirne una | `nyctalus-rete` | [MANUALE-GESTORE-RETE](documenti/manuali/MANUALE-GESTORE-RETE.md) |
+| pubblicare un sito `.nyct` | `nyctalus-sito` | [MANUALE-SITI](documenti/manuali/MANUALE-SITI.md) |
+| controllare la propria rete · i programmi installati | `nyctalus-collaudo` · `nyctalus-integrita` | [MANUALE-COLLAUDO](documenti/manuali/MANUALE-COLLAUDO.md) |
+| i nodi su un server | `installa.sh`, `nyctalus-server` | [MANUALE-SERVER](documenti/manuali/MANUALE-SERVER.md) |
+| il motore a mano (come `tor`, `nyx`, `torsocks`) | `nyctalus start`, `monitor`, `exec`, `node`… | [COMANDI §9](documenti/manuali/COMANDI.md#9-il-motore-per-esperti-nyctalus), [DEPLOY](documenti/DEPLOY.md) |
 
-Sul nodo di uscita:
-```sh
-nyctalus exit --listen 0.0.0.0:4600
-```
-Stampa il comando `single-hop` completo, con l'impronta del certificato. Sul client:
-```sh
-nyctalus single-hop --to IP-USCITA:4600 --fingerprint <FINGERPRINT> --socks 127.0.0.1:1080
-curl --socks5-hostname 127.0.0.1:1080 https://example.com
-```
-
-> Questo è un **solo salto** (client → uscita): serve a rendere la CLI usabile
-> subito. L'uscita vede l'IP del client: **non è ancora anonimo**. I nodi
-> intermedi e la cipolla lo trasformeranno in un percorso anonimo.
-
-### Circuito anonimo a 3 salti (autenticato)
+Una rete anonima a 3 salti tutta a mano, per vedere come funziona (spiegata passo passo in
+[DEPLOY §3](documenti/DEPLOY.md)):
 
 ```sh
-# 1) crea un'autorità per firmare l'elenco dei nodi
-nyctalus authority                      # stampa segreto + pubblica
-
-# 2) avvia i nodi (stampano la loro riga per l'elenco)
-nyctalus node --listen 0.0.0.0:4601 --directory directory.txt --authority <PUB>
-nyctalus node --listen 0.0.0.0:4602 --directory directory.txt --authority <PUB>
-nyctalus node --listen 0.0.0.0:4603 --directory directory.txt --authority <PUB>
-
-# 3) firma l'elenco con le righe stampate dai nodi
-nyctalus directory --authority-secret <SECRET> \
-  --entries 'addr,x,fp;addr,x,fp;addr,x,fp' > directory.txt
-
-# 4) proxy SOCKS5 attraverso il circuito a 3 salti
-nyctalus circuit --directory directory.txt --authority <PUB> --socks 127.0.0.1:1080 \
-  --circuits 2 --hops 3
-curl --socks5-hostname 127.0.0.1:1080 http://example.com
+nyctalus authority                                   # chiavi dell'autorità: segreto + pubblica
+nyctalus node --listen 0.0.0.0:4601                  # su ogni nodo (4601, 4602, 4603…): stampa la sua riga
+nyctalus directory --authority-secret <SEGRETO> --entries 'riga1;riga2;riga3' > directory.txt
+nyctalus circuit --directory directory.txt --authority <PUB> --socks 127.0.0.1:1080
+curl --socks5-hostname 127.0.0.1:1080 https://example.com           # attraverso la rete
+nyctalus site --dir ./mio-sito --identity sito.key --directory directory.txt --authority <PUB>  # un sito .nyct
 ```
 
-Con l'elenco firmato ogni collegamento è autenticato: un elenco manomesso o
-firmato da un'autorità diversa viene rifiutato.
-
-### Demone da configurazione
-
-Invece di passare tutto a riga di comando, si può usare un file
-`~/.config/nyctalus/config`:
-
-```ini
-directory = /percorso/directory.txt
-authority = <PUB>
-socks     = 127.0.0.1:1080
-circuits  = 2
-hops      = 3
-```
-
-```sh
-nyctalus status     # mostra la configurazione e valida l'elenco
-nyctalus start      # avvia il proxy SOCKS5 attraverso la ragnatela conflux
-```
-
-### Elenco dei nodi e scelta del target
-
-```sh
-nyctalus nodes                      # elenco firmato dei nodi (indirizzo, chiave, impronta)
-nyctalus nodes --probe              # + verifica quali sono raggiungibili ora, con il tempo di risposta
-nyctalus nodes --probe --timeout 2  # tempo massimo di attesa per nodo (secondi)
-```
-
-`nodes` legge `directory`/`authority` dal config (o da `--directory`/`--authority`).
-Senza `--probe` non contatta nessuno: mostra solo l'elenco. Con `--probe` apre
-verso ogni nodo la stessa connessione QUIC autenticata di un circuito e segna
-`online`/`offline`. I valori `address` e `fingerprint` stampati si incollano
-direttamente in `single-hop`, `send` o `circuit` per **scegliere un target**.
-
-### Programmi e monitoraggio
-
-```sh
-# lancia un programma instradandone il traffico nella rete (stile torsocks)
-nyctalus exec -- curl https://example.com
-nyctalus exec --socks 127.0.0.1:1080 -- git clone https://…
-
-# cruscotto testuale con le metriche del demone (stile nyx), aggiornato ogni secondo
-nyctalus monitor --control 127.0.0.1:1090
-```
-
-`exec` funziona con i programmi che rispettano le variabili `ALL_PROXY`/`http_proxy` (curl, git, wget…); il demone pubblica le metriche sulla porta di controllo (`--control`, default `127.0.0.1:1090`).
-
-**Impostazioni del percorso:**
-- `--circuits N` (o `circuits` nel config) — strade parallele usate contemporaneamente. **Minimo 1, massimo 8**, default **2**.
-- `--hops N` (o `hops`) — nodi per percorso (guard + intermedi + uscita). **Minimo 1, massimo 5** (limite di Sphinx), default **3**. Sotto i 3 salti non c'è vero anonimato.
-- `--cover HZ` (o `cover`) — **rumore di fondo**: celle fittizie (indistinguibili dalle vere, perché tutte le celle hanno lunghezza fissa) iniettate a ritmo di Poisson per mascherare *quando* invii davvero. Default **0** (spento); un valore basso (es. `5`) è un compromesso fra copertura e banda.
-
-**Affidabilità:** il trasporto è QUIC (su UDP), che **recupera da solo i pacchetti persi** e li riconsegna in ordine; un pacchetto perso non blocca gli altri flussi (niente head-of-line blocking fra flussi).
-
-### Siti interni `.nyct`
-
-Un nodo fa da **punto d'incontro**; il sito vi si registra e il visitatore vi si
-collega. Il nodo fa solo da ponte: fra sito e visitatore c'è una sessione
-cifrata end-to-end, e nessuno dei due conosce l'IP dell'altro.
-
-Con un elenco firmato dei nodi, il punto d'incontro si **sceglie da solo** (non
-serve indicarlo): sito e visitatore lo ricavano dall'indirizzo `.nyct` e
-dall'elenco, in modo deterministico.
-
-```sh
-# pubblica una cartella come sito .nyct (stampa l'indirizzo <ADDR>.nyct)
-nyctalus site --dir ./mio-sito --identity sito.key --directory directory.txt --authority <PUB>
-
-# visita il sito (HTML, CSS, JS, immagini…) — nessun punto d'incontro da indicare
-nyctalus browse <ADDR>.nyct --directory directory.txt --authority <PUB>
-nyctalus browse <ADDR>.nyct --path /pagina.html --directory directory.txt --authority <PUB>
-```
-
-Sito e visitatore raggiungono il punto d'incontro con un **circuito a più salti**
-(`--hops`, default 3), come l'uscita verso Internet: così nemmeno quel nodo
-conosce gli IP di sito e visitatore — vede solo l'ultimo relè. Il punto
-d'incontro **ruota nel tempo** (cambia con il giorno). Lo si può forzare a mano,
-in modo diretto a salto singolo, con `--rendezvous IP:PORT --fingerprint <FP>`
-(utile per prove con un solo nodo).
-
-I siti `.nyct` sono normali pagine **HTML5 + JavaScript**: una cartella di file
-servita dal sito. In alternativa, con `site --backend IP:PORT` il demone fa da
-proxy a un **web server esistente** (Nginx, Apache…), che gestisce lui tutto
-l'HTTP:
-
-```sh
-nyctalus site --backend 127.0.0.1:8080 --directory directory.txt --authority <PUB>
-```
-
-**Dal browser.** Il demone SOCKS (`start`/`circuit`) riconosce gli host `.nyct` e
-li instrada al punto d'incontro invece che all'uscita: basta puntare il browser
-(o `curl`) al proxy SOCKS e aprire `http://<ADDR>.nyct`.
-
-```sh
-nyctalus circuit --directory directory.txt --authority <PUB> --socks 127.0.0.1:1080 --hops 3
-curl --socks5-hostname 127.0.0.1:1080 http://<ADDR>.nyct/
-```
-
-### Trasferimento di un file (test del livello L2)
-
-Sul ricevitore:
-```sh
-nyctalus receive --out received.bin --identity my.key
-```
-Stampa il comando `invia` con l'indirizzo `.nyct` del ricevitore. Sul mittente:
-```sh
-nyctalus send --to IP:4433 --fingerprint <FINGERPRINT> --recipient <ADDRESS>.nyct file
-```
-
-### Client grafici (browser, chat, launcher)
-
-I client grafici sono in Python+GTK3 e stanno in `pc/browser/`, `pc/chat/`, `pc/launcher/`.
-```sh
-./strumenti/demo-locale.sh     # browser stealth su un sito .nyct di prova
-./strumenti/demo-chat.sh       # chat: due finestre (due identità) in locale
-./pc/launcher/nyctalus-launcher # il pannello da cui lanci browser e chat
-```
-Per l'uso reale (rete condivisa) usa `avvia-chat.sh`; la guida passo-passo della
-chat è in [MANUALE-CHAT.md](documenti/manuali/MANUALE-CHAT.md). Dentro la chat, il pulsante **?**
-apre il manuale nel browser.
+Prove in locale senza installare nulla: `./strumenti/demo-locale.sh` (browser e sito `.nyct`),
+`./strumenti/demo-chat.sh` (due chat). Per **verificare** sicurezza e anonimato:
+[SICUREZZA.md](documenti/SICUREZZA.md).
 
 ## Cosa promette e cosa no
 
@@ -476,6 +342,7 @@ chi si identifica da solo (login, dati personali).
 - [STATO.md](documenti/STATO.md) — punto dei lavori e cose da fare
 - [DEPLOY.md](documenti/DEPLOY.md) — installare, configurare, mettere in piedi una rete, opzioni
 - [SICUREZZA.md](documenti/SICUREZZA.md) — come verificare sicurezza e anonimato (e cosa serve un audit)
+- [COMANDI.md](documenti/manuali/COMANDI.md) — **tutti i comandi**, divisi per tipologia
 - [MANUALE-COLLAUDO.md](documenti/manuali/MANUALE-COLLAUDO.md) — `nyctalus-collaudo`: il controllo della TUA rete vera (nodi, IP nascosto, DNS, velocità, chat), con rapporto ✓/✗
 - [GUIDA-COMPLETA.md](documenti/manuali/GUIDA-COMPLETA.md) — cosa scaricare, come configurare client, nodo e gestore, tutte le opzioni spiegate
 - [PIANO-ANONIMATO.md](documenti/manuali/PIANO-ANONIMATO.md) — dove siamo davvero con l'anonimato e le tappe per arrivarci (nodi di soggetti diversi, percorsi casuali, più utenti, misure, revisione)
