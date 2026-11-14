@@ -20,6 +20,7 @@ done
 mkdir -p "$TMP/pc" && unzip -q "$I/PC-Linux/Nyctalus-PC-Linux.zip" -d "$TMP/pc"
 N="$TMP/pc/Nyctalus"
 [ -x "$N/bin/nyctalus" ] && "$N/bin/nyctalus" help >/dev/null 2>&1 && pass "PC: il motore parte" || fail "PC: motore assente o non parte"
+[ "$(cat "$N/VERSIONE" 2>/dev/null)" = "$(cat "$ROOT/VERSIONE")" ] && pass "PC: file VERSIONE ($(cat "$ROOT/VERSIONE"), mostrato nel menu ⚙ del mini menu)" || fail "PC: VERSIONE assente o diversa"
 # i moduli comuni del PC: traduzioni e tema globale (mini menu, chat, browser)
 ( cd "$N/browser" && python3 -c "import nxs_i18n, nxs_tema; assert 'notte' in nxs_tema.TEMI" ) 2>/dev/null \
   && pass "PC: moduli comuni presenti (traduzioni, tema globale)" || fail "PC: manca nxs_i18n o nxs_tema nel pacchetto"

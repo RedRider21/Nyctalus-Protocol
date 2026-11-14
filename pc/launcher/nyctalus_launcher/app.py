@@ -79,6 +79,23 @@ LOG_FINESTRA = DATI_RETE / "finestra.log"
 UNITA_CASA = os.environ.get("NYCTALUS_UNITA_CASA", "nyctalus-casa.service")
 
 
+CODICE_RE = re.compile(r"NYCT1:[A-Za-z0-9_=+/-]+")
+
+
+def codice_nel_testo(testo):
+    """Il codice di rete (NYCT1:…) nel testo stampato da nyctalus-rete, o ""."""
+    m = CODICE_RE.search(testo or "")
+    return m.group(0) if m else ""
+
+
+def versione():
+    """La versione installata (file VERSIONE del pacchetto, o della radice del progetto)."""
+    try:
+        return _cerca("VERSIONE").read_text().strip() or "?"
+    except OSError:
+        return "?"
+
+
 def comando_casa(scelte):
     """Le scelte della finestra → gli argomenti di `nyctalus-rete` (senza il nome del programma).
     ValueError se il nome pubblico o i numeri non vanno."""
@@ -869,6 +886,21 @@ class Launcher(Gtk.Window):
         cmd.set_line_wrap(True)
         cmd.set_max_width_chars(70)
         box.add(cmd)
+        riga_codice = Gtk.Box(spacing=8)
+        campo_codice = Gtk.Entry(editable=False)
+        campo_codice.set_tooltip_text(_t("lau.miarete.codice_suggerimento"))
+        copia = Gtk.Button(label="📋 " + _t("lau.miarete.copia"))
+        riga_codice.pack_start(Gtk.Label(label=_t("lau.miarete.codice")), False, False, 0)
+        riga_codice.pack_start(campo_codice, True, True, 0)
+        riga_codice.pack_start(copia, False, False, 0)
+        riga_codice.set_no_show_all(True)
+
+        def copia_codice(_b):
+            Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).set_text(campo_codice.get_text(), -1)
+            copia.set_label("✓ " + _t("lau.miarete.copiato"))
+            GLib.timeout_add(2500, lambda: (copia.set_label("📋 " + _t("lau.miarete.copia")), False)[1])
+        copia.connect("clicked", copia_codice)
+        box.add(riga_codice)
         uscita = Gtk.TextView(editable=False, monospace=True, wrap_mode=Gtk.WrapMode.WORD_CHAR)
         scorri = Gtk.ScrolledWindow(min_content_height=160)
         scorri.add(uscita)
@@ -902,6 +934,10 @@ class Launcher(Gtk.Window):
 
         def scrivi(testo):
             uscita.get_buffer().set_text(testo)
+            codice = codice_nel_testo(testo)
+            campo_codice.set_text(codice)
+            for w in riga_codice.get_children() + [riga_codice]:   # set_no_show_all: a mano
+                w.set_visible(bool(codice))
 
         def in_sottofondo(lavoro, fine):
             for b in pulsanti:
@@ -975,6 +1011,18 @@ class Launcher(Gtk.Window):
             scrivi((r.stdout + r.stderr).strip())
         d.show_all()
 
+    def _info_versione(self):
+        v = versione()
+        f = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.INFO,
+                              buttons=Gtk.ButtonsType.OK, text="Nyctalus " + v)
+        f.format_secondary_text(_t("lau.versione.corpo", cartella=str(RADICE),
+                                   novita="https://github.com/RedRider21/Nyctalus-Protocol/releases/tag/v" + v))
+        for w in f.get_message_area().get_children():
+            if isinstance(w, Gtk.Label):
+                w.set_selectable(True)
+        f.run()
+        f.destroy()
+
     def _apri_terminale(self):
         """⌨ Terminale: il terminale del sistema pronto per nyctalus-cli (chat e file da riga di comando)."""
         for candidato in (RADICE / "avvia-terminale.sh", RADICE.parent / "strumenti" / "avvia-terminale.sh"):
@@ -992,6 +1040,8 @@ class Launcher(Gtk.Window):
             mi.connect("activate", lambda _w: cb())
             menu.append(mi)
 
+        voce("🦇 Nyctalus " + versione(), self._info_versione)            # la versione installata
+        menu.append(Gtk.SeparatorMenuItem())
         voce("🏠 " + _t("lau.miarete") + "…", self._mia_rete)              # accendere la PROPRIA rete, a spunte
         voce("🔗 " + _t("lau.collegati") + "…", self._collegati_rete)   # incolla il codice di rete (NYCT1:…)
         voce("⚙ " + _t("lau.imp.titolo") + "…", self._impostazioni_finestra)  # finestra a schede: rete, prestazioni, chiamate

@@ -92,13 +92,19 @@ messaggi, allegati, fotocamera, menu del tasto destro, temi, **chiamate 📞 e v
 
 ---
 
+### Quale versione ho?
+La **prima voce del menu ⚙** del mini menu è **🦇 Nyctalus 0.3.x**: la versione installata
+(file `VERSIONE` del pacchetto). Toccandola si vedono la cartella dell'installazione e il link alle
+novità di quella versione.
+
 ### Accendere la propria rete (🏠 La mia rete)
 Dal **mini menu → ⚙ → 🏠 La mia rete…** (dalla 0.3.23) si accende la **propria** rete senza
 terminale: «Solo in casa» oppure «Anche da Internet» con il nome o l'IP pubblico; spunte **Senza
 uscita verso Internet** (consigliata) e **Sempre accesa** (servizio che riparte da solo dopo un
 riavvio); in «Avanzate» numero di nodi e porte. In fondo la finestra mostra il **comando
 equivalente** (`nyctalus-rete casa …`, utilizzabile anche nel terminale), poi **▶ Accendi** lo
-esegue e mostra codice di rete e passi; **■ Spegni** ferma la rete (in entrambi i modi);
+esegue e mostra codice di rete e passi (il codice compare in un campo a parte con **📋 Copia
+il codice**: si incolla così com'è in un messaggio agli amici); **■ Spegni** ferma la rete (in entrambi i modi);
 **🔓 Apri il firewall** apre le porte con `ufw` (chiede la password). Le scelte si ricordano.
 Senza «Sempre accesa» la rete resta accesa anche chiudendo il mini menu, fino a «Spegni» o allo
 spegnimento del PC.

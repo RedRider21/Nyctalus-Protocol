@@ -82,7 +82,7 @@ cp -r "$ROOT/pc/gestore-rete" "$P/"
 mkdir -p "$P/server"
 cp "$ROOT/server/installa-nodo.sh" "$P/server/installa.sh"; cp "$ROOT/server/nyctalus-server" "$ROOT/server/disinstalla.sh" "$P/server/"
 cp "$ROOT/strumenti/avvia-chat.sh" "$ROOT/strumenti/avvia-file.sh" "$ROOT/strumenti/avvia-terminale.sh" "$ROOT/strumenti/avvia-firefox.sh" "$ROOT/pc/installa.sh" "$ROOT/pc/disinstalla.sh" "$P/"
-cp "$ROOT/logo.svg" "$ROOT/LICENSE" "$P/"
+cp "$ROOT/logo.svg" "$ROOT/LICENSE" "$ROOT/VERSIONE" "$P/"
 manuali_in "$P/Manuali"
 find "$P" -name __pycache__ -type d -prune -exec rm -rf {} +
 

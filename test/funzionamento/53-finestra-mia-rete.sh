@@ -77,4 +77,22 @@ grep -q "VIVA None" "$TMP/sp.txt" && ! kill -0 "$P2" 2>/dev/null && ! curl -sf -
   && pass "«Spegni»: rete, pagina e nodi fermati" || fail "spegnimento: $(cat "$TMP/sp.txt")"
 grep -q '_mia_rete' "$ROOT/pc/launcher/nyctalus_launcher/app.py" && for l in it en es fr de; do grep -q '"lau.miarete.senza_uscita"' "$ROOT/pc/browser/nxs_i18n/strings/$l.json" || echo "$l"; done | grep -q . \
   && fail "testi della finestra mancanti in qualche lingua" || pass "voce «🏠 La mia rete» nel menu ⚙, testi in 5 lingue"
+# codice pronto da copiare e versione nel menu ⚙
+PY <<'EOF2' > "$TMP/ver.txt" 2>&1
+import gi; gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk
+import nyctalus_launcher.app as l
+print("COD", l.codice_nel_testo("  Codice di rete, se serve a mano: NYCT1:eyJ2Ijox_-LC=J\n  dopo") or "-", l.codice_nel_testo("niente") or "-")
+print("VER", l.versione())
+voci = []
+Gtk.Menu.popup_at_pointer = lambda self, ev: voci.extend(c.get_label() for c in self.get_children() if isinstance(c, Gtk.MenuItem) and not isinstance(c, Gtk.SeparatorMenuItem))
+try:
+    w = l.Launcher(); w._menu_impostazioni(); print("PRIMA", voci[0])
+except Exception as e:
+    print("PRIMA errore", e)
+EOF2
+grep -q "COD NYCT1:eyJ2Ijox_-LC=J -" "$TMP/ver.txt" && pass "il codice di rete si estrae dal testo, pronto per «📋 Copia il codice»" || fail "codice: $(cat "$TMP/ver.txt")"
+V=$(cat "$ROOT/VERSIONE")
+grep -qx "VER $V" "$TMP/ver.txt" && { grep -qx "PRIMA 🦇 Nyctalus $V" "$TMP/ver.txt" || grep -q "PRIMA errore" "$TMP/ver.txt"; } \
+  && pass "versione $V letta dal file VERSIONE; è la prima voce del menu ⚙ (se c'è uno schermo)" || fail "versione: $(cat "$TMP/ver.txt")"
 [ "$KO" -eq 0 ]
