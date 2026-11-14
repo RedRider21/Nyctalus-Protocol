@@ -147,6 +147,7 @@ cp "$ROOT/target/release/nyctalus" "$V/bin/nyctalus"
 cp "$ROOT/server/installa-nodo.sh" "$V/installa.sh"; cp "$ROOT/server/nyctalus-server" "$ROOT/server/disinstalla.sh" "$V/"
 cp "$ROOT/pc/gestore-rete/nyctalus-sito" "$V/"        # un sito .nyct sempre acceso sul server
 mkdir -p "$V/cli"; cp "$ROOT/pc/cli/nyctalus-collaudo" "$ROOT/pc/cli/nyctalus-integrita" "$V/cli/"   # collaudo e integrità
+cp "$ROOT/server/rete-raspberry.sh" "$V/"               # la propria rete, sempre accesa, in un colpo (Raspberry Pi)
 mkdir -p "$V/gestore-rete"                              # rubrica e casella della rete sul server
 cp "$ROOT/pc/gestore-rete/nyctalus-rete" "$ROOT/pc/gestore-rete/rubrica.py" "$V/gestore-rete/"
 cp "$ROOT/documenti/manuali/MANUALE-SERVER.md" "$ROOT/documenti/manuali/LEGGIMI.md" "$ROOT/documenti/manuali/GUIDA-INTERNET.md" "$ROOT/documenti/manuali/MANUALE-SITI.md" "$ROOT/LICENSE" "$V/" 2>/dev/null || true

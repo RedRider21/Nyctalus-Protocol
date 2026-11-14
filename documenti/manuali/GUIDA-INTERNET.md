@@ -186,6 +186,9 @@ di 3 gestori diversi. Il perché, in `PIANO-ANONIMATO.md` (Tappa 3).
   da esperti esterni. Non affidateci segreti veri.
 - Con tutti i nodi sul tuo PC la rete **funziona**, ma verso di **te** non è anonima: tu
   ospiti ogni salto. Per l'anonimato vero servono nodi su macchine e linee diverse.
+- **Sempre accesa, senza tenere acceso il PC:** su un Raspberry Pi basta `./rete-raspberry.sh
+  --nome NOME` (`MANUALE-SERVER.md` §6-ter); su un PC sempre acceso
+  `nyctalus-rete casa --internet NOME --servizio`.
 - **La navigazione degli amici esce da casa tua.** Con i nodi sul tuo PC, chi naviga sui siti
   normali con il browser 🦇 lo fa con il **tuo** indirizzo. Se non vuoi, accendi la rete con
   `nyctalus-rete casa --internet NOME --senza-uscita` (dalla 0.3.22): chat, chiamate, file e

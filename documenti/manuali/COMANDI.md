@@ -94,6 +94,7 @@ da lì. Guida: `MANUALE-GESTORE-RETE.md`.
 |---|---|
 | `casa [--nodi 4]` | rete di casa tutta su questo PC, con il codice per il telefono (Ctrl-C ferma) |
 | `casa --internet NOME` | la stessa, raggiungibile da Internet (NOME = No-IP/DuckDNS o IP pubblico) |
+| `casa … --servizio [--stampa \| --togli]` | la rete sempre accesa come servizio (Raspberry, PC sempre acceso), riparte da sola · rivede codice e stato · la spegne |
 | `casa … --senza-uscita` · `--con-uscita` | i nodi di questo PC non fanno da uscita verso Internet (chat, file e siti `.nyct` sì) · tornano a farla; la scelta si ricorda |
 | `ospite aggiungi RIGA… --famiglia NOME [--internet]` | aggiunge il nodo di un amico |
 | `ospite togli IP:PORTA [--internet]` · `ospite elenco [--internet]` | toglie / elenca i nodi ospiti |
@@ -175,6 +176,15 @@ Esce con 0 = tutto a posto, 1 = qualcosa non torna, 3 = controllo non possibile.
 | `--ponte` | ponte nascosto: fuori dall'elenco, stampa la riga segreta |
 | `--senza-uscita` | i nodi non fanno mai da uscita verso Internet (server o Raspberry di casa); righe già segnate |
 | `--nuova-identita` | rifà chiavi e certificato (cambiano le righe: rimandale al gestore) |
+
+**La tua rete su un Raspberry Pi, in un colpo** (`./rete-raspberry.sh` del pacchetto server; `MANUALE-SERVER.md` §6-ter)
+
+| Opzione | Cosa fa |
+|---|---|
+| `--nome NOME` | nome DuckDNS/No-IP o IP pubblico (senza: lo chiede) |
+| `--nodi N` · `--porta-base 4701` · `--porta 18800` | quanti nodi e su quali porte |
+| `--con-uscita` | i nodi fanno anche da uscita verso Internet (di serie no) |
+| `--si` · `--togli` | nessuna domanda · spegne e toglie il servizio della rete |
 
 **Gestire i nodi installati** (`nyctalus-server`)
 

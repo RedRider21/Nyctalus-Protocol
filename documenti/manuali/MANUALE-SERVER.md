@@ -116,6 +116,36 @@ Quando l'IP cambia non serve fare nulla: client e nodi risolvono il nome a ogni 
 Nota: alcuni router non permettono ai dispositivi di casa di raggiungere il proprio nome
 pubblico; in quel caso in casa si usano gli altri nodi della rete.
 
+## 6-ter. La TUA rete su un Raspberry Pi, sempre accesa (dalla 0.3.22)
+
+Se vuoi che la rete per te e i tuoi amici resti accesa senza tenere acceso il PC, un Raspberry
+Pi 3, 4 o 5 con sistema **a 64 bit** basta e avanza. Un solo comando fa tutto: nodi, elenco
+firmato, rubrica, casella, pagina del codice, come `nyctalus-rete casa --internet`, ma come
+**servizio che riparte da solo** dopo un riavvio o una caduta.
+
+1. Sul Raspberry scarica e scompatta `Nyctalus-Server-Linux-arm64.zip`, poi, **da utente
+   normale** (non con sudo):
+   ```sh
+   cd Nyctalus-Server
+   ./rete-raspberry.sh --nome miacasa.duckdns.org      # o l'IP pubblico, se non cambia
+   ```
+   Lo script controlla il motore e l'integrità del pacchetto, copia il programma in
+   `~/.local/share/nyctalus-server`, apre il firewall (se c'è ufw chiede la password), tiene i
+   servizi accesi anche senza login, accende la rete e stampa il **codice di rete** e
+   l'**impronta**.
+2. Sul **router**: inoltra verso il Raspberry **UDP e TCP 4701-4704** e **TCP 18800**, e
+   dagli un indirizzo fisso (DHCP statico).
+3. Prova da un telefono con i **dati mobili**: `http://miacasa.duckdns.org:18800/`.
+
+**Di serie i nodi NON fanno da uscita verso Internet** (§3, `--senza-uscita`): chat, chiamate,
+file e siti `.nyct` funzionano, la navigazione degli altri non esce dal tuo indirizzo.
+Per permetterla: `./rete-raspberry.sh --nome … --con-uscita`.
+
+Dopo: `nyctalus-rete casa --internet NOME --servizio --stampa` (codice e stato),
+`journalctl --user -u nyctalus-casa -f` (messaggi), `nyctalus-collaudo --solo-rete` (collaudo),
+`./rete-raspberry.sh --togli` (spegne e toglie il servizio). Su un PC sempre acceso vale lo
+stesso comando: `nyctalus-rete casa --internet NOME --senza-uscita --servizio`.
+
 ## 6-bis. Rubrica e casella della rete (facoltativo)
 Rubrica (chi usa la rete) e casella cifrata (messaggi a chi non è in linea) devono stare su una
 macchina sempre accesa: il server va benissimo.

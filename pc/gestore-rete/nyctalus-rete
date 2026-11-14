@@ -28,6 +28,9 @@ Per il GESTORE della rete (chi la tiene in piedi):
                                          codice per il telefono (Ctrl-C per fermare)
   nyctalus-rete casa --internet NOME     la stessa, raggiungibile DA INTERNET (NOME = No-IP/
                                          DuckDNS o IP pubblico; porte da inoltrare sul router)
+  nyctalus-rete casa … --servizio [--stampa | --togli]
+                                         la rete SEMPRE ACCESA come servizio (Raspberry, PC
+                                         sempre acceso): riparte da sola; --stampa rivede il codice
   nyctalus-rete casa … --senza-uscita | --con-uscita
                                          i nodi di questo PC NON fanno da uscita verso Internet
                                          (la navigazione degli amici non esce dal tuo indirizzo;
@@ -68,8 +71,8 @@ import http.server
 import json
 import os
 import re
-import shutil
 import shlex
+import shutil
 import signal
 import socket
 import subprocess
@@ -963,6 +966,8 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None, uscita=Non
         srv, url = servitore(r, porta_web, ip)
         cod = r.codice(url)
         imp = impronta(r.autorita()["pubblica"])
+        # per «casa --servizio»: codice, impronta e pagina, da rileggere senza la finestra
+        scrivi_privato(r.dir / "servizio-codice.txt", "%s\nimpronta %s\npagina %s\n" % (cod, imp, url.rsplit("/", 1)[0] + "/"))
         if internet:
             apri_firewall_internet(porta_web, [porta_base + i for i in range(nodi)], r.dir)
         else:
@@ -1015,29 +1020,96 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None, uscita=Non
         print("\n%s fermata." % ("Rete Internet di prova" if internet else "Rete di casa"))
 
 
+# (NYCTALUS_UNITA_CASA: un altro nome, solo per le prove)
+UNITA_CASA = Path.home() / ".config" / "systemd" / "user" / os.environ.get("NYCTALUS_UNITA_CASA", "nyctalus-casa.service")
+
+
+def casa_servizio(args, togli=False, stampa=False):
+    """«casa … --servizio»: la rete di casa (o Internet) SEMPRE ACCESA come servizio dell'utente
+    (riparte da sola dopo un riavvio o una caduta), per un Raspberry o un PC sempre acceso."""
+    if togli:
+        subprocess.run(["systemctl", "--user", "disable", "--now", UNITA_CASA.name], capture_output=True)
+        UNITA_CASA.unlink(missing_ok=True)
+        subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True)
+        return ok("la rete non è più un servizio sempre acceso")
+    internet = opzione(list(args), "--internet")
+    cartella = DATI / ("internet" if internet else "casa")
+    if stampa:
+        attivo = subprocess.run(["systemctl", "--user", "is-active", UNITA_CASA.name], capture_output=True, text=True).stdout.strip()
+        print("Servizio %s: %s" % (UNITA_CASA.name, attivo or "assente"))
+        f = cartella / "servizio-codice.txt"
+        if f.exists():
+            righe = f.read_text().splitlines()
+            print("Codice di rete (solo per chi usa la rete): %s\n%s · %s" % (righe[0], righe[1], righe[2]))
+        return
+    argv = [sys.executable, Path(__file__).resolve(), "casa"] + list(args) + ([] if "--non-importare" in args else ["--non-importare"])
+    # una cartella dati o porte della rubrica diverse da quelle di serie valgono anche per il servizio
+    ambiente = [(k, os.environ[k]) for k in ("NYCTALUS_RETE_DATI", "NYCTALUS_RUBRICA_PORTE") if os.environ.get(k)]
+    testo = unita_utente("Nyctalus: rete %s sempre accesa" % ("raggiungibile da Internet" if internet else "di casa"), argv,
+                         "la rete di casa sempre accesa (nodi, elenco firmato, rubrica, casella, pagina del codice).", ambiente)
+    UNITA_CASA.parent.mkdir(parents=True, exist_ok=True)
+    UNITA_CASA.write_text(testo)
+    (cartella / "servizio-codice.txt").unlink(missing_ok=True)
+    subprocess.run(["systemctl", "--user", "daemon-reload"], check=False)
+    subprocess.run(["systemctl", "--user", "stop", UNITA_CASA.name], capture_output=True)
+    r = subprocess.run(["systemctl", "--user", "enable", "--now", UNITA_CASA.name], capture_output=True, text=True)
+    if r.returncode != 0:
+        esci("systemd non l'ha avviata: %s" % r.stderr.strip())
+    print("» rete in avvio come servizio (%s)…" % UNITA_CASA.name, flush=True)
+    for _ in range(600):                          # la rubrica può metterci un paio di minuti
+        if (cartella / "servizio-codice.txt").exists():
+            break
+        time.sleep(0.5)
+    else:
+        esci("la rete non è partita: journalctl --user -u %s" % UNITA_CASA.name)
+    righe = (cartella / "servizio-codice.txt").read_text().splitlines()
+    ok("rete sempre accesa (riparte da sola dopo un riavvio)")
+    print("  Codice di rete da dare agli amici (contiene il tuo indirizzo: solo a loro):\n  %s" % righe[0])
+    print("  %s · %s (dal telefono: apri la pagina e tocca «📲 Collega l'app Nyctalus»)" % (righe[1], righe[2]))
+    print("  Rivederlo: nyctalus-rete casa%s --servizio --stampa  ·  messaggi: journalctl --user -u %s -f"
+          % (" --internet " + internet if internet else "", UNITA_CASA.name))
+    print("  Spegnerlo: nyctalus-rete casa --servizio --togli")
+    print("  Acceso anche senza essere collegati: sudo loginctl enable-linger %s" % os.environ.get("USER", "$USER"))
+
+
 # --- rubrica + casella di una rete (anche fuori dalla rete di casa) ---------------------
 UNITA_RUBRICA = Path.home() / ".config" / "systemd" / "user" / "nyctalus-rubrica.service"
 AGGIORNA_ELENCO = 6 * 3600
+
+
+def tra_virgolette(x):
+    """Un argomento o un valore per un file di systemd: fra virgolette, così valgono anche i
+    percorsi con spazi (es. «~/nyctalus protocol/…»)."""
+    return '"%s"' % str(x).replace("\\", "\\\\").replace('"', '\\"')
+
+
+def unita_utente(descrizione, argv, intestazione, ambiente=()):
+    """Testo di un servizio systemd dell'utente, sempre acceso e con le protezioni del piano di
+    sicurezza (punto 7). `argv`: il comando, un argomento per voce; `ambiente`: (nome, valore)."""
+    cmd = " ".join(tra_virgolette(a) for a in argv)
+    env = "".join("Environment=%s\n" % tra_virgolette("%s=%s" % kv) for kv in [("NYCTALUS_BIN", binario())] + list(ambiente))
+    return ("# Creato da nyctalus-rete: %s\n"
+            "[Unit]\nDescription=%s\nWants=network-online.target\n"
+            "After=network-online.target\n\n[Service]\nExecStart=%s\n%s"
+            "Restart=always\nRestartSec=15\n"
+            "# piano di sicurezza (punto 7): solo rete; spazio utenti separato (PrivateUsers) perché le\n"
+            "# altre protezioni funzionino anche in un servizio dell'utente\n"
+            "NoNewPrivileges=true\nPrivateUsers=true\nPrivateTmp=true\nPrivateDevices=true\nProtectKernelTunables=true\n"
+            "ProtectKernelModules=true\nProtectKernelLogs=true\nProtectControlGroups=true\nProtectClock=true\n"
+            "ProtectHostname=true\nProtectProc=invisible\nRestrictNamespaces=true\nRestrictRealtime=true\n"
+            "RestrictSUIDSGID=true\nLockPersonality=true\nSystemCallArchitectures=native\n"
+            "SystemCallFilter=@system-service\nSystemCallErrorNumber=EPERM\n"
+            "RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK\nUMask=0077\n"
+            "\n[Install]\nWantedBy=default.target\n" % (intestazione, descrizione, cmd, env))
 
 
 def rubrica(codice=None, servizio=False, togli=False, stampa=False):
     """Rubrica e casella cifrata per una rete vera: per quella che gestisci su questo PC, o per
     quella di un codice (es. sul server, che non ha la chiave dell'autorità)."""
     if servizio:
-        cmd = "%s %s rubrica%s" % (sys.executable, Path(__file__).resolve(), " --codice " + codice if codice else "")
-        testo = ("# Creato da nyctalus-rete: rubrica e casella cifrata della rete, sempre accese.\n"
-                 "[Unit]\nDescription=Nyctalus: rubrica e casella della rete\nWants=network-online.target\n"
-                 "After=network-online.target\n\n[Service]\nExecStart=%s\nEnvironment=NYCTALUS_BIN=%s\n"
-                 "Restart=always\nRestartSec=15\n"
-                 "# piano di sicurezza (punto 7): solo rete; spazio utenti separato (PrivateUsers) perché le\n"
-                 "# altre protezioni funzionino anche in un servizio dell'utente\n"
-                 "NoNewPrivileges=true\nPrivateUsers=true\nPrivateTmp=true\nPrivateDevices=true\nProtectKernelTunables=true\n"
-                 "ProtectKernelModules=true\nProtectKernelLogs=true\nProtectControlGroups=true\nProtectClock=true\n"
-                 "ProtectHostname=true\nProtectProc=invisible\nRestrictNamespaces=true\nRestrictRealtime=true\n"
-                 "RestrictSUIDSGID=true\nLockPersonality=true\nSystemCallArchitectures=native\n"
-                 "SystemCallFilter=@system-service\nSystemCallErrorNumber=EPERM\n"
-                 "RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK\nUMask=0077\n"
-                 "\n[Install]\nWantedBy=default.target\n" % (cmd, binario()))
+        argv = [sys.executable, Path(__file__).resolve(), "rubrica"] + (["--codice", codice] if codice else [])
+        testo = unita_utente("Nyctalus: rubrica e casella della rete", argv,
+                             "rubrica e casella cifrata della rete, sempre accese.")
         if stampa:
             return print(testo, end="")
         if togli:
@@ -1276,6 +1348,9 @@ def principale(args):
         ok("pubblico l'elenco su %s (Ctrl-C per smettere)" % url)
         print("  Codice di rete: %s" % rete.f_codice.read_text().strip())
         aspetta_ctrl_c()
+    elif cmd == "casa" and "--servizio" in args:
+        casa_servizio([a for a in args if a not in ("--servizio", "--togli", "--stampa")],
+                      "--togli" in args, "--stampa" in args)
     elif cmd == "casa":
         internet = opzione(args, "--internet")
         if internet is not None and not re.fullmatch(r"[A-Za-z0-9.-]{3,253}", internet):
