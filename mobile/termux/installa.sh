@@ -62,6 +62,17 @@ if [ "$ERA_ACCESO" = 1 ]; then
   sleep 3
 fi
 
+# integrità del pacchetto (impronte firmate con la chiave della release): alterato = non si installa
+if [ -f "$QUI/INTEGRITA" ] && [ -f "$QUI/cli/nyctalus-integrita" ]; then
+  E=0; ESITO="$(NO_COLOR=1 python3 "$QUI/cli/nyctalus-integrita" verifica "$QUI" 2>&1)" || E=$?
+  if [ "$E" = 1 ]; then
+    printf '%s\n' "$ESITO"
+    err "controllo d'integrità fallito: il pacchetto NON è quello pubblicato. Non installo nulla."
+    exit 1
+  fi
+  [ "$E" = 0 ] && ok "Integrità del pacchetto confermata" || avv "Integrità del pacchetto non verificabile (manca ssh-keygen: pkg install openssh)"
+fi
+
 say "Copio Nyctalus in $DEST"
 mkdir -p "$DEST/bin"
 rm -rf "$DEST/orchestratore" "$DEST/webapp"
@@ -84,8 +95,13 @@ PRONTO=""
 if [ -n "$BERSAGLIO" ] && [ -x "$QUI/bin/$BERSAGLIO/nyctalus" ]; then PRONTO="$QUI/bin/$BERSAGLIO/nyctalus"
 elif [ -x "$QUI/bin/nyctalus" ]; then PRONTO="$QUI/bin/nyctalus"   # pacchetti vecchi (un solo motore): la verifica sotto dice se parte
 fi
+# l'elenco firmato va con l'installazione (per «nyctalus-integrita»); la mappa dice da quale
+# motore del pacchetto viene bin/nyctalus
+rm -f "$DEST/INTEGRITA" "$DEST/INTEGRITA.sig" "$DEST/INTEGRITA.mappa"
+[ -f "$QUI/INTEGRITA" ] && cp "$QUI/INTEGRITA" "$QUI/INTEGRITA.sig" "$DEST/" 2>/dev/null
 if [ -n "$PRONTO" ]; then
   cp "$PRONTO" "$DEST/bin/nyctalus.nuovo" && mv -f "$DEST/bin/nyctalus.nuovo" "$DEST/bin/nyctalus"
+  [ -f "$DEST/INTEGRITA" ] && printf 'bin/nyctalus\t%s\n' "${PRONTO#"$QUI/"}" > "$DEST/INTEGRITA.mappa"
   ok "Motore precompilato installato (processore: $ARCH)"
 else
   [ -n "$BERSAGLIO" ] || avv "Processore «$ARCH» senza motore pronto: lo compilo qui"
@@ -136,6 +152,15 @@ elif [ -f "$DEST/cli/nyctalus-collaudo" ]; then
   printf '#!%s/bin/sh\n# Parte di Nyctalus Protocol: collaudo della rete\nNYCTALUS_BIN="%s/bin/nyctalus" exec python3 "%s/cli/nyctalus-collaudo" "$@"\n' "$PREFIX" "$DEST" "$DEST" > "$LINK"
   chmod +x "$LINK"
   ok "Comando: nyctalus-collaudo"
+fi
+# comando "nyctalus-integrita": i programmi installati sono quelli pubblicati?
+LINK="$PREFIX/bin/nyctalus-integrita"
+if [ -e "$LINK" ] && ! grep -q "Nyctalus Protocol" "$LINK" 2>/dev/null; then
+  avv "$LINK esiste già e non è nostro: non lo tocco. Usa python3 $DEST/cli/nyctalus-integrita"
+elif [ -f "$DEST/cli/nyctalus-integrita" ]; then
+  printf '#!%s/bin/sh\n# Parte di Nyctalus Protocol: controllo d'"'"'integrità\nexec python3 "%s/cli/nyctalus-integrita" "$@"\n' "$PREFIX" "$DEST" > "$LINK"
+  chmod +x "$LINK"
+  ok "Comando: nyctalus-integrita"
 fi
 
 # --- 5) permesso per l'app Nyctalus (intent RUN_COMMAND) ---------------------------

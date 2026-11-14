@@ -11,12 +11,17 @@ W="$TMP/release"; PK="$TMP/pk"; mkdir -p "$W" "$PK/nyctalus-termux/bin"
 cp -r "$ROOT/mobile/orchestratore" "$ROOT/mobile/webapp" "$PK/nyctalus-termux/"
 cp "$ROOT/mobile/termux/installa.sh" "$ROOT/mobile/termux/disinstalla.sh" "$ROOT/mobile/termux/nyctalus-mobile" "$PK/nyctalus-termux/"
 cp "$BIN" "$PK/nyctalus-termux/bin/nyctalus"
+mkdir -p "$PK/nyctalus-termux/cli"; cp "$ROOT/pc/cli/nyctalus-integrita" "$PK/nyctalus-termux/cli/"
+# firme con chiavi DI PROVA (mai quella vera, che sta in privato/)
+ssh-keygen -q -t ed25519 -N "" -C prova -f "$TMP/chiave-prova"
+ssh-keygen -q -t ed25519 -N "" -C altra -f "$TMP/chiave-altra"
+# elenco d'integrità del pacchetto (impronte di ogni file), firmato
+NYCTALUS_CHIAVE_RELEASE="$TMP/chiave-prova" python3 "$ROOT/pc/cli/nyctalus-integrita" firma "$PK/nyctalus-termux" > /dev/null
+export NYCTALUS_FIRMA_INTEGRITA="$(cut -d' ' -f1,2 "$TMP/chiave-prova.pub")"
 ( cd "$PK" && tar czf "$W/nyctalus-termux.tar.gz" nyctalus-termux )
 ( cd "$W" && sha256sum nyctalus-termux.tar.gz > nyctalus-termux.tar.gz.sha256 )
 cp "$ROOT/mobile/termux/installa-termux.sh" "$W/"
-# firma della release con una chiave DI PROVA (mai quella vera, che sta in privato/)
-ssh-keygen -q -t ed25519 -N "" -C prova -f "$TMP/chiave-prova"
-ssh-keygen -q -t ed25519 -N "" -C altra -f "$TMP/chiave-altra"
+# firma della release
 NYCTALUS_CHIAVE_RELEASE="$TMP/chiave-prova" bash "$ROOT/strumenti/firma-release.sh" "$W" > /dev/null
 export NYCTALUS_FIRMA_RELEASE="release@nyctalus namespaces=\"nyctalus-release\" $(cut -d' ' -f1,2 "$TMP/chiave-prova.pub")"
 python3 -m http.server 19741 --bind 127.0.0.1 --directory "$W" > /dev/null 2>&1 & PIDS+=($!)
@@ -47,11 +52,22 @@ corri altra
 rm -f "$W/SHA256SUMS.sig"
 corri senzafirma
 [ ! -e "$H/nyctalus" ] && grep -q "pacchetto o firma" "$TMP/senzafirma.log" && pass "release senza firma: NON installata" || fail "senza firma: $(tail -2 "$TMP/senzafirma.log")"
+# un file del pacchetto cambiato e la release RIFIRMATA (per esempio da chi ha rubato la chiave della
+# release ma non ha rifatto l'elenco d'integrità): l'installatore lo ferma lo stesso
+cp -r "$PK" "$TMP/pk2"; echo "# codice estraneo" >> "$TMP/pk2/nyctalus-termux/orchestratore/nyctalus_mobile.py"
+( cd "$TMP/pk2" && tar czf "$W/nyctalus-termux.tar.gz" nyctalus-termux ); rm -f "$W/SHA256SUMS" "$W/SHA256SUMS.sig"
+NYCTALUS_CHIAVE_RELEASE="$TMP/chiave-prova" bash "$ROOT/strumenti/firma-release.sh" "$W" > /dev/null
+corri integrita
+[ ! -d "$H/nyctalus/orchestratore" ] && grep -q "controllo d'integrità fallito" "$TMP/integrita.log" && grep -q "MODIFICATO: orchestratore/nyctalus_mobile.py" "$TMP/integrita.log" \
+  && pass "file del pacchetto cambiato (release rifirmata): l'elenco d'integrità lo scopre, NON installato" || fail "integrità: $(tail -3 "$TMP/integrita.log")"
 cp "$TMP/tar.giusto" "$W/nyctalus-termux.tar.gz"; cp "$TMP/sums.giusti" "$W/SHA256SUMS"; cp "$TMP/sig.giusta" "$W/SHA256SUMS.sig"
 
 # 2) installazione vera, in un colpo
 corri vero
 [ -x "$H/nyctalus/bin/nyctalus" ] && [ -f "$H/nyctalus/webapp/index.html" ] && pass "un solo comando: Nyctalus scaricato, firma e impronta verificate, installato" || fail "installazione: $(tail -4 "$TMP/vero.log")"
+grep -q "Integrità del pacchetto confermata" "$TMP/vero.log" && [ -f "$H/nyctalus/INTEGRITA.mappa" ] \
+  && HOME="$H" NO_COLOR=1 python3 "$H/nyctalus/cli/nyctalus-integrita" > "$TMP/inst-int.txt" 2>&1 && grep -q "INTEGRITÀ CONFERMATA" "$TMP/inst-int.txt" \
+  && pass "integrità del pacchetto verificata all'installazione; «nyctalus-integrita» conferma i file installati" || fail "integrità installata: $(tail -4 "$TMP/inst-int.txt" 2>/dev/null) $(grep -i integrit "$TMP/vero.log")"
 grep -q "allow-external-apps = true" "$H/.termux/termux.properties" && grep -q "^extra-keys" "$H/.termux/termux.properties" \
   && [ "$(grep -c allow-external-apps "$H/.termux/termux.properties")" = 1 ] && pass "permesso all'app acceso (una riga sola, il resto intatto)" || fail "termux.properties: $(cat "$H/.termux/termux.properties")"
 grep -q ricaricate "$TMP/reload.txt" 2>/dev/null && pass "impostazioni di Termux ricaricate (vale subito)" || fail "termux-reload-settings non chiamato"

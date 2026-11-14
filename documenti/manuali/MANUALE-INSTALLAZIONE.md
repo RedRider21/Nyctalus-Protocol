@@ -51,6 +51,11 @@ All'inizio l'installatore chiede **cosa stai installando**:
 **3) Nodo server** (la macchina fa da nodo: vedi `MANUALE-SERVER.md`). Senza domande:
 `./installa.sh --ruolo client --si`.
 
+Prima di copiare qualunque cosa l'installatore controlla l'**integrità** del pacchetto: ogni file
+deve avere l'impronta scritta nell'elenco firmato dalla release (`firma/LEGGIMI.md`). Se un file è
+stato cambiato o aggiunto si ferma con «controllo d'integrità fallito» e non installa nulla:
+riscarica il pacchetto dalla release ufficiale. Dopo, in ogni momento: `nyctalus-integrita`.
+
 ### 1.3 Avviare
 | Comando | Cosa fa |
 |---|---|

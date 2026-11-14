@@ -37,6 +37,7 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 
 | Prova | Cosa verifica |
 |---|---|
+| `12-integrita` | **autocontrollo d'integrità** (chiave di prova): pacchetto firmato e intatto ✓; un file cambiato, un programma aggiunto, l'elenco ritoccato, la firma di un'altra chiave o assente ✗; la chiave vera non accetta quella di prova; il motore del telefono copiato con un altro nome si riconosce dalla mappa ma un motore sostituito no; l'installatore del PC installa il pacchetto intatto e rifiuta quello alterato |
 | `01-directory-firmata` | l'elenco dei nodi firmato è accettato; manomesso o firmato da un'altra autorità è **rifiutato** |
 | `02-offuscamento` | con la chiave di rete il nodo risponde, senza resta muto (trasporto camuffato) |
 | `03-segreto-controllo` | la porta di controllo della chat risponde solo a chi ha il **segreto** (sbagliato o assente → rifiutato) |
@@ -86,7 +87,7 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 | `40-uscite-diverse` | **uscite diverse** (`--exits N`): ogni sito sulla sua uscita, ogni uscita vede solo i suoi |
 | `39-guardie-promosse` | **PC stabili promossi a guardia**: scelti dalla stabilità misurata, mai uscite |
 | `38-forma-videochiamata` | **forma «videochiamata»** del traffico (`--webrtc`) e sonde mute |
-| `37-script-unico-termux` | **lo script unico** `installa-termux.sh` eseguito come lo incolla l'utente (`curl … \| bash`) in una Termux simulata: pacchetto alterato rifiutato, installazione in un colpo, permesso all'app (una riga), impostazioni ricaricate, app riaperta, niente aggiornamento se Termux è pronto, rilanciabile |
+| `37-script-unico-termux` | (anche: un file del pacchetto cambiato con la release RIFIRMATA viene fermato dall'elenco d'integrità; dopo l'installazione `nyctalus-integrita` conferma i file) **lo script unico** `installa-termux.sh` eseguito come lo incolla l'utente (`curl … \| bash`) in una Termux simulata: pacchetto alterato rifiutato, installazione in un colpo, permesso all'app (una riga), impostazioni ricaricate, app riaperta, niente aggiornamento se Termux è pronto, rilanciabile |
 | `36-ripiego-tcp` | **UDP bloccato**: il nodo ascolta anche in TCP; `NYCTALUS_TCP=1` scarica 1 MB identico in TCP; un ponte raggiungibile solo in TCP → il client passa **da solo** a TCP; una sonda TCP con byte a caso non riceve niente e il nodo non chiude |
 | `35-aiuta-la-rete` | **nodi solo intermedi**: forzato come uscita il nodo rifiuta; 16 circuiti senza mai guardia/uscita sui PC degli utenti; navigazione; `nyctalus-rete aiuta` (servizio con `--middle-only --max-rate`) e `aggiungi --intermedio --banda` (ruolo e banda conservati) |
 | `34-banda` | **banda dei nodi**: `nyctalus-rete banda`, la banda nell'elenco firmato (alterarla rompe la firma), il motore la legge; famiglia e banda insieme |

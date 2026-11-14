@@ -18,4 +18,8 @@ Oppure, dai sorgenti: `strumenti/verifica-release.sh CARTELLA`.
 
 - Lo **script unico di Termux** fa questa verifica da solo e non installa nulla se la firma o l'impronta non tornano.
 - L'**APK** è firmato anche dalla chiave Android: il telefono accetta un aggiornamento solo se è firmato con la stessa chiave.
+- Dalla 0.3.21 ogni **pacchetto** contiene anche `INTEGRITA` (impronta di ogni suo file) e `INTEGRITA.sig`
+  (firmato con la stessa chiave, namespace `nyctalus-integrita`): gli installatori lo controllano e, dopo
+  l'installazione, `nyctalus-integrita` verifica che i programmi installati siano ancora quelli pubblicati.
+  A mano, nella cartella scompattata: `python3 cli/nyctalus-integrita verifica .`
 - La chiave privata non è mai su GitHub.

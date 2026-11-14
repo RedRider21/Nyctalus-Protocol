@@ -35,6 +35,23 @@ chiedi() { [ "$SI" = 1 ] && return 0; printf '%s [s/N] ' "$1"; read -r r; [ "$r"
 
 [ -x "$QUI/bin/nyctalus" ] || { echo "✗ lancia installa.sh dalla cartella scompattata di Nyctalus"; exit 1; }
 
+# --- integrità del pacchetto: le impronte firmate con la chiave della release ------------
+# (un file cambiato o un programma aggiunto dopo la pubblicazione = non si installa)
+if [ -f "$QUI/INTEGRITA" ] && [ -f "$QUI/cli/nyctalus-integrita" ]; then
+  E=0; ESITO="$(NO_COLOR=1 python3 "$QUI/cli/nyctalus-integrita" verifica "$QUI" 2>&1)" || E=$?
+  if [ "$E" = 1 ]; then
+    printf '%s\n' "$ESITO"
+    echo "✗ controllo d'integrità fallito: il pacchetto NON è quello pubblicato. Non installo nulla."
+    echo "  Riscaricalo dalla release ufficiale (e verifica SHA256SUMS.sig, vedi firma/LEGGIMI.md)."
+    exit 1
+  fi
+  [ "$E" = 0 ] && ok "Integrità del pacchetto confermata (impronte firmate dalla release)" \
+    || avv "Integrità non verificabile:$(printf '%s' "$ESITO" | grep -o 'controllo non possibile: .*' | cut -d: -f2-)"
+else
+  avv "Pacchetto senza firma d'integrità (compilato in proprio?): nessun controllo dei file"
+fi
+[ "${NYCTALUS_SOLO_VERIFICA:-}" = 1 ] && exit 0
+
 # --- 0) che cosa stai installando? ---------------------------------------------------
 if [ -z "$RUOLO" ]; then
   if [ "$SI" = 1 ]; then RUOLO=client; else
@@ -88,7 +105,7 @@ fi
 # --- 2) il programma -------------------------------------------------------------
 say "Copio Nyctalus in $DEST"
 mkdir -p "$DEST"
-for x in bin browser chat file cli firefox launcher gestore-rete logo.svg avvia-launcher.sh avvia-browser.sh avvia-chat.sh avvia-file.sh avvia-terminale.sh avvia-firefox.sh LICENSE disinstalla.sh Manuali; do
+for x in bin browser chat file cli firefox launcher gestore-rete logo.svg avvia-launcher.sh avvia-browser.sh avvia-chat.sh avvia-file.sh avvia-terminale.sh avvia-firefox.sh LICENSE disinstalla.sh Manuali INTEGRITA INTEGRITA.sig; do
   [ -e "$QUI/$x" ] || continue
   rm -rf "${DEST:?}/$x"; cp -r "$QUI/$x" "$DEST/"
 done
@@ -106,7 +123,7 @@ for c in launcher browser chat file firefox; do
     ln -sf "$DEST/avvia-$c.sh" "$L"
   fi
 done
-for c in cli collaudo; do                    # chat e file dal terminale; collaudo della rete
+for c in cli collaudo integrita; do          # chat e file dal terminale; collaudo; integrità
   L="$BIN_DIR/nyctalus-$c"
   if [ -e "$L" ] && [ "$(readlink "$L" 2>/dev/null)" != "$DEST/cli/nyctalus-$c" ]; then
     avv "$L esiste già e non è di Nyctalus: non lo tocco"
@@ -122,7 +139,7 @@ for c in rete sito; do                       # nyctalus-rete (reti) e nyctalus-s
     chmod +x "$DEST/gestore-rete/nyctalus-$c"; ln -sf "$DEST/gestore-rete/nyctalus-$c" "$L"
   fi
 done
-ok "Comandi: nyctalus-launcher, nyctalus-browser, nyctalus-chat, nyctalus-file, nyctalus-firefox, nyctalus-cli, nyctalus-collaudo, nyctalus-rete, nyctalus-sito"
+ok "Comandi: nyctalus-launcher, nyctalus-browser, nyctalus-chat, nyctalus-file, nyctalus-firefox, nyctalus-cli, nyctalus-collaudo, nyctalus-integrita, nyctalus-rete, nyctalus-sito"
 case ":$PATH:" in *":$BIN_DIR:"*) ;; *) avv "$BIN_DIR non è nel PATH: i comandi funzioneranno dopo il prossimo accesso (o usa il menu)";; esac
 
 # --- 4) voci nel menu delle applicazioni -----------------------------------------

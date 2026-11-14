@@ -40,6 +40,7 @@ casa può non esserlo dal telefono.
 
 | # | Controllo | Cosa vuol dire ✓ | Se è ✗ |
 |---|---|---|---|
+| 0 | **Integrità dei programmi** | i programmi installati sono identici a quelli pubblicati (elenco `INTEGRITA` firmato dalla release, `nyctalus-integrita`) | un file è stato cambiato o aggiunto: reinstalla dalla release ufficiale (`--senza-integrita` per saltarlo) |
 | 1 | **Configurazione** | c'è il motore, la rete è configurata (codice `NYCT1:`), si vede la forma del traffico, rubrica e casella | incolla il codice di rete nelle Impostazioni |
 | 2 | **Nodi** | l'elenco è firmato dall'autorità della rete; i nodi rispondono (con i tempi) | nodi spenti, porte chiuse sul router (UDP **e** TCP), nome No-IP non aggiornato |
 | 2 | **Sonde senza chiave** | a chi **non** ha la chiave della rete i nodi non rispondono affatto | quel nodo gira senza la protezione della rete: va riavviato con il codice aggiornato |

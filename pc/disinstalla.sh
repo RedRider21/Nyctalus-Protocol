@@ -15,7 +15,7 @@ for c in launcher browser chat file firefox; do
   L="$HOME/.local/bin/nyctalus-$c"
   [ "$(readlink "$L" 2>/dev/null)" = "$DEST/avvia-$c.sh" ] && rm -f "$L"
 done
-for c in cli collaudo; do
+for c in cli collaudo integrita; do
   [ "$(readlink "$HOME/.local/bin/nyctalus-$c" 2>/dev/null)" = "$DEST/cli/nyctalus-$c" ] && rm -f "$HOME/.local/bin/nyctalus-$c"
 done
 for c in rete sito; do

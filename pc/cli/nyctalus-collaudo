@@ -285,6 +285,31 @@ def nome_nel_dns(cattura, host):
 
 
 # --- i controlli -----------------------------------------------------------------------------
+def controllo_integrita(r):
+    """I programmi installati sono quelli pubblicati? (nyctalus-integrita, accanto a questo)"""
+    r.titolo("0 · Integrità dei programmi")
+    ver = Path(__file__).resolve().parent / "nyctalus-integrita"
+    if not ver.exists():
+        r.saltata("controllo d'integrità", "nyctalus-integrita non installato (versione prima della 0.3.21?)")
+        return
+    try:
+        p = subprocess.run([sys.executable, str(ver)], capture_output=True, text=True, timeout=300,
+                           env=dict(os.environ, NO_COLOR="1"))
+    except (OSError, subprocess.TimeoutExpired) as e:
+        r.nota("controllo d'integrità non riuscito", str(e))
+        return
+    righe = [x.strip() for x in p.stdout.splitlines()]
+    if p.returncode == 0:
+        quanti = next((x.split()[1] for x in righe if "file identici" in x), "?")
+        r.ok("programmi installati identici a quelli pubblicati (%s file, elenco firmato dalla release)" % quanti)
+    elif p.returncode == 3:
+        r.nota("integrità non verificabile", next((x for x in righe if "non possibile" in x or "non risulta" in x), "")[:200])
+    else:
+        diversi = [x for x in righe if x.startswith("✗")][:4]
+        r.ko("programmi installati DIVERSI da quelli pubblicati", " · ".join(diversi)[:300] +
+             " — reinstalla dalla release ufficiale")
+
+
 def controllo_configurazione(r, dove, cfg, motore):
     r.titolo("1 · Configurazione")
     if motore:
@@ -638,6 +663,7 @@ def main():
     ap.add_argument("--config", help="file di configurazione (di solito lo trova da solo)")
     ap.add_argument("--socks", help="tunnel già acceso da usare, es. 127.0.0.1:1080")
     ap.add_argument("--senza-diretto", action="store_true", help="non chiedere in diretta il tuo indirizzo vero (niente confronto)")
+    ap.add_argument("--senza-integrita", action="store_true", help="salta il controllo d'integrità dei programmi installati")
     ap.add_argument("--solo-rete", action="store_true", help="solo nodi, tunnel e servizi interni: niente prove verso Internet (IP, DNS, velocità)")
     ap.add_argument("--senza-velocita", action="store_true", help="salta la prova di velocità")
     ap.add_argument("--mb", type=float, default=3, help="megabyte da scaricare nella prova di velocità (3)")
@@ -654,6 +680,8 @@ def main():
     proc = None
     with tempfile.TemporaryDirectory(prefix="nyctalus-collaudo-") as cartella:
         try:
+            if not a.senza_integrita:
+                controllo_integrita(r)
             if controllo_configurazione(r, dove, cfg, motore):
                 elenco = controllo_nodi(r, cfg, motore, cartella)
                 socks, proc = prepara_tunnel(r, cfg, motore, elenco, cartella, porta_abituale, a.socks)

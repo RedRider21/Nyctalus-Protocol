@@ -12,7 +12,8 @@ firmate, chiave pubblica in firma/ del repository e qui sotto). Questo comando:
   nyctalus-integrita firma DIR       (per chi pubblica) crea INTEGRITA e lo firma con la chiave privata
 
 Esiti: file IDENTICI, MODIFICATI (✗), MANCANTI (!), file di programma ESTRANEI aggiunti (✗).
-Codice d'uscita 0 se è tutto a posto, 1 altrimenti. Solo libreria standard + ssh-keygen.
+Codice d'uscita 0 se è tutto a posto, 1 se qualcosa non torna (firma o file), 3 se il controllo
+non si può fare (pacchetto senza INTEGRITA, o manca ssh-keygen). Solo libreria standard + ssh-keygen.
 
 Limite onesto: chi può scrivere nei file di Nyctalus può cambiare anche questo controllo. Per
 un controllo che non dipende dal dispositivo, usa il comando preso dalla release (o dal
@@ -83,9 +84,9 @@ def firma_valida(radice):
     radice = Path(radice)
     elenco, sig = radice / NOME, radice / (NOME + ".sig")
     if not elenco.exists() or not sig.exists():
-        return False, "manca %s o %s.sig (installazione da sorgenti o di una versione prima della 0.3.21?)" % (NOME, NOME)
+        return None, "manca %s o %s.sig (installazione da sorgenti o di una versione prima della 0.3.21?)" % (NOME, NOME)
     if not shutil.which("ssh-keygen"):
-        return False, "manca ssh-keygen (pacchetto openssh) per verificare la firma"
+        return None, "manca ssh-keygen (pacchetto openssh) per verificare la firma"
     with tempfile.TemporaryDirectory() as t:
         firmatari = Path(t) / "firmatari"
         firmatari.write_text('%s namespaces="%s" %s\n' % (IDENTITA, SPAZIO, CHIAVE))
@@ -149,8 +150,9 @@ def installazione():
     casa = Path.home()
     tel = casa / "nyctalus"
     if (tel / "orchestratore").is_dir() and (tel / NOME).exists():
+        # motore compilato sul telefono (non c'è la mappa verso un motore del pacchetto)
         return tel, ["orchestratore", "webapp", "cli", "nyctalus-mobile", "disinstalla.sh", "bin"], \
-            (tel / ".compilazione").exists() or (tel / "bin" / ".sorgenti").exists()
+            not (tel / (NOME + ".mappa")).exists()
     pc = Path(os.environ.get("XDG_DATA_HOME") or casa / ".local" / "share") / "nyctalus"
     if pc.is_dir():
         return pc, ["bin", "browser", "chat", "file", "cli", "firefox", "launcher", "gestore-rete", "logo.svg",
@@ -163,6 +165,9 @@ def installazione():
 
 def stampa(esito, radice):
     print(col("1", "Integrità di Nyctalus") + col("2", "  ·  %s" % radice))
+    if esito["firma"] is None:
+        print("  %s controllo non possibile: %s" % (col("1;33", "!"), esito["motivo"]))
+        return None
     if not esito["firma"]:
         print("  %s firma dell'elenco: %s" % (col("1;31", "✗"), esito["motivo"]))
         return False
@@ -199,11 +204,12 @@ def main():
         radice, solo, locale = installazione()
         if radice is None:
             print("Nyctalus non risulta installato su questo dispositivo (usa: nyctalus-integrita verifica CARTELLA)")
-            sys.exit(1)
+            sys.exit(3)
     else:
         print(__doc__)
         sys.exit(0 if a[:1] in (["-h"], ["--help"], ["aiuto"]) else 1)
-    sys.exit(0 if stampa(verifica(radice, solo, locale), radice) else 1)
+    esito = stampa(verifica(radice, solo, locale), radice)
+    sys.exit(3 if esito is None else 0 if esito else 1)
 
 
 if __name__ == "__main__":

@@ -158,7 +158,7 @@ casi delicati sul web normale c'è Nyctalus Firefox (profilo sul modello di Tor 
 | **Audit delle dipendenze** (RustSec) | ✅ 12/11/2026: trovati 6 avvisi in 4 librerie (rustls 0.23.45: segreti TLS nelle stampe di debug e altri 3; rustls-webpki; tokio `AsyncFd` unsound; ctutils non a tempo costante) → aggiornate (rustls 0.23.46, rustls-webpki 0.103.16, tokio 1.54.1, ctutils 0.4.8); **0 vulnerabilità note** su 164 librerie | `strumenti/audit.sh` (non scarica nulla da solo; database in `~/.local/share/nyctalus-strumenti`) |
 | **Dati locali cifrati** (identità, contatti, cronologia, file ricevuti) | ✅ «cassaforte» con passphrase all'avvio, a scelta dell'utente: Argon2id (64 MiB, 3 passaggi) → XChaCha20-Poly1305; file ricevuti cifrati a pezzi con una chiave per file, mai in chiaro sul disco; vedi §1.2-ter | prove 45–49 |
 | Fuzzing guidato (`cargo-fuzz`, libFuzzer) | ⏳ serve installare strumenti (nightly) | — |
-| Autocontrollo d'integrità dei programmi installati | ⏳ dopo la firma delle release | — |
+| **Autocontrollo d'integrità** dei programmi installati | ✅ (0.3.21) ogni pacchetto porta `INTEGRITA` (impronta SHA-256 di ogni file) firmato con la chiave della release (namespace `nyctalus-integrita`); gli installatori (PC, server, Termux) rifiutano un pacchetto con un file cambiato o un programma aggiunto, anche se la release fosse stata rifirmata; `nyctalus-integrita` (e il collaudo, punto 0) ricontrolla i file installati in ogni momento. Limite: chi può scrivere nei file di Nyctalus può cambiare anche il controllo: per un controllo indipendente usare il comando e la chiave presi dalla release | prove `12-integrita`, `37-script-unico-termux` |
 
 ### 1.2-ter La cassaforte dei dati locali: cosa protegge e cosa no
 

@@ -29,4 +29,8 @@ for t in aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686
 done
 chmod +x "$A/installa.sh" "$A/disinstalla.sh" "$A/nyctalus-mobile"
 cp "$ROOT/LICENSE" "$A/"
+cp "$ROOT/pc/cli/nyctalus-integrita" "$A/cli/"
+# autocontrollo d'integrità: impronte di ogni file firmate con la chiave della release (se c'è)
+rm -f "$A/INTEGRITA" "$A/INTEGRITA.sig"
+python3 "$ROOT/pc/cli/nyctalus-integrita" firma "$A" >/dev/null 2>&1 || echo "! pacchetto Termux SENZA firma d'integrità (manca la chiave della release)"
 ( cd "$OUT" && tar czf nyctalus-termux.tar.gz nyctalus-termux )

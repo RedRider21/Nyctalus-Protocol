@@ -55,6 +55,15 @@ chiedi() { # chiedi "domanda" predefinito → valore
 }
 
 MOTORE="$QUI/bin/nyctalus"; [ -x "$MOTORE" ] || MOTORE="$QUI/../bin/nyctalus"      # pacchetto server o pacchetto PC
+# integrità del pacchetto (impronte firmate con la chiave della release): alterato = non si installa
+for PAC in "$QUI" "$QUI/.."; do
+  [ -f "$PAC/INTEGRITA" ] || continue
+  VER="$PAC/cli/nyctalus-integrita"; [ -f "$VER" ] || break
+  E=0; python3 "$VER" verifica "$PAC" > /dev/null 2>&1 || E=$?
+  [ "$E" = 1 ] && err "controllo d'integrità fallito: il pacchetto NON è quello pubblicato (riscaricalo; dettagli: python3 $VER verifica $PAC)"
+  [ "$E" = 0 ] && ok "Integrità del pacchetto confermata (impronte firmate dalla release)" || avv "Integrità del pacchetto non verificabile (manca ssh-keygen?)"
+  break
+done
 [ -x "$MOTORE" ] || err "manca bin/nyctalus: lancia lo script dalla cartella scompattata"
 "$MOTORE" help >/dev/null 2>&1 || err "il motore non parte su questo server (architettura diversa? serve x86_64 Linux)"
 if [ "$UTENTE" = 0 ] && [ "$(id -u)" != 0 ] && [ -z "$R" ]; then

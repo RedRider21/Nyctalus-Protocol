@@ -47,6 +47,8 @@ head -c 200000 /dev/urandom > "$I/bin/nyctalus"
   cp "$ROOT/pc/installa.sh" "$Q/"; mkdir -p "$Q/cli" "$Q/bin"; cp "$INT" "$Q/cli/"
   printf '#!/bin/sh\nexit 0\n' > "$Q/bin/nyctalus"; chmod +x "$Q/bin/nyctalus"
   python3 "$INT" firma "$Q" > /dev/null
+  ( cd "$Q" && HOME="$TMP/casa0" XDG_DATA_HOME="$TMP/casa0/dati" NYCTALUS_SOLO_VERIFICA=1 bash ./installa.sh > "$TMP/inst0.log" 2>&1 ) \
+    && grep -q "Integrità del pacchetto confermata" "$TMP/inst0.log" && pass "installatore del PC: pacchetto intatto, integrità confermata" || fail "installatore, pacchetto intatto: $(tail -3 "$TMP/inst0.log")"
   echo "# alterato" >> "$Q/cli/nyctalus-integrita"
   H="$TMP/casa"; mkdir -p "$H"
   ( cd "$Q" && HOME="$H" XDG_DATA_HOME="$H/dati" NYCTALUS_SOLO_VERIFICA=1 bash ./installa.sh > "$TMP/inst.log" 2>&1 ); E=$?

@@ -52,6 +52,14 @@ manuali_in() { # copia i manuali in una cartella
   cp "$ROOT"/documenti/manuali/*.md "$ROOT/documenti/DEPLOY.md" "$ROOT/documenti/SICUREZZA.md" "$1/"
 }
 
+# autocontrollo d'integrità: INTEGRITA (impronta di ogni file) + INTEGRITA.sig (chiave della release);
+# senza la chiave privata (chi compila per sé) il pacchetto resta senza firma, con un avviso
+firma_integrita() {
+  rm -f "$1/INTEGRITA" "$1/INTEGRITA.sig"
+  python3 "$ROOT/pc/cli/nyctalus-integrita" firma "$1" >/dev/null 2>&1 \
+    || printf '\033[1;33m! %s: pacchetto SENZA firma d'"'"'integrità (manca la chiave della release)\033[0m\n' "$(basename "$1")"
+}
+
 say "Compilo il motore per il PC (release)…"
 ( cd "$ROOT" && cargo build --release -p nyctalus )
 
@@ -68,7 +76,7 @@ cp -r "$ROOT/pc/browser/nyctalus_browser" "$ROOT/pc/browser/nxs_i18n" "$ROOT/pc/
 cp -r "$ROOT/pc/launcher/nyctalus_launcher" "$P/launcher/"
 cp -r "$ROOT/pc/chat/nyctalus_chat" "$P/chat/"
 cp -r "$ROOT/pc/file/nyctalus_file" "$P/file/"
-cp "$ROOT/pc/cli/nyctalus-cli" "$ROOT/pc/cli/nyctalus-collaudo" "$P/cli/"
+cp "$ROOT/pc/cli/nyctalus-cli" "$ROOT/pc/cli/nyctalus-collaudo" "$ROOT/pc/cli/nyctalus-integrita" "$P/cli/"
 cp "$ROOT/pc/firefox/user.js" "$ROOT/pc/firefox/inizio.html" "$P/firefox/"
 cp -r "$ROOT/pc/gestore-rete" "$P/"
 mkdir -p "$P/server"
@@ -127,6 +135,7 @@ DISINSTALLARE
 
 Manuali nella cartella Manuali/: inizia da LEGGIMI.md («Inizia qui»: cosa installare e dove).
 EOF
+firma_integrita "$P"
 crea_zip "$P" "$OUT/PC-Linux/Nyctalus-PC-Linux.zip"
 cp "$P/LEGGIMI.txt" "$OUT/PC-Linux/LEGGIMI.txt"
 
@@ -137,6 +146,7 @@ mkdir -p "$V/bin" "$V/Manuali"
 cp "$ROOT/target/release/nyctalus" "$V/bin/nyctalus"
 cp "$ROOT/server/installa-nodo.sh" "$V/installa.sh"; cp "$ROOT/server/nyctalus-server" "$ROOT/server/disinstalla.sh" "$V/"
 cp "$ROOT/pc/gestore-rete/nyctalus-sito" "$V/"        # un sito .nyct sempre acceso sul server
+mkdir -p "$V/cli"; cp "$ROOT/pc/cli/nyctalus-collaudo" "$ROOT/pc/cli/nyctalus-integrita" "$V/cli/"   # collaudo e integrità
 mkdir -p "$V/gestore-rete"                              # rubrica e casella della rete sul server
 cp "$ROOT/pc/gestore-rete/nyctalus-rete" "$ROOT/pc/gestore-rete/rubrica.py" "$V/gestore-rete/"
 cp "$ROOT/documenti/manuali/MANUALE-SERVER.md" "$ROOT/documenti/manuali/LEGGIMI.md" "$ROOT/documenti/manuali/GUIDA-INTERNET.md" "$ROOT/documenti/manuali/MANUALE-SITI.md" "$ROOT/LICENSE" "$V/" 2>/dev/null || true
@@ -174,6 +184,7 @@ DISINSTALLARE
 Passi completi: Manuali/MANUALE-SERVER.md · inizia da: Manuali/LEGGIMI.md
 EOF
 mkdir -p "$OUT/Server-Linux"
+firma_integrita "$V"
 crea_zip "$V" "$OUT/Server-Linux/Nyctalus-Server-Linux.zip"
 cp "$V/LEGGIMI.txt" "$OUT/Server-Linux/LEGGIMI.txt"
 # lo stesso pacchetto per i server ARM a 64 bit (Raspberry Pi), se c'è il motore arm64
@@ -181,6 +192,7 @@ cp "$V/LEGGIMI.txt" "$OUT/Server-Linux/LEGGIMI.txt"
 M_ARM="$ROOT/target/aarch64-unknown-linux-gnu/release/nyctalus"
 if [ -x "$M_ARM" ]; then
   cp "$M_ARM" "$V/bin/nyctalus"
+  firma_integrita "$V"
   crea_zip "$V" "$OUT/Server-Linux/Nyctalus-Server-Linux-arm64.zip"
   say "Server-Linux: anche il pacchetto arm64 (Raspberry Pi)"
 fi
@@ -264,7 +276,7 @@ if [ -f "$M_WIN" ] && [ -n "$PY_WIN" ]; then
   cp "$M_WIN" "$W/bin/nyctalus.exe"
   ( cd "$W/python" && unzip -q "$PY_WIN" )
   cp -r "$ROOT/mobile/orchestratore" "$ROOT/mobile/webapp" "$W/"
-  mkdir -p "$W/cli"; cp "$ROOT/pc/cli/nyctalus-cli" "$ROOT/pc/cli/nyctalus-collaudo" "$W/cli/"
+  mkdir -p "$W/cli"; cp "$ROOT/pc/cli/nyctalus-cli" "$ROOT/pc/cli/nyctalus-collaudo" "$ROOT/pc/cli/nyctalus-integrita" "$W/cli/"
   cp "$ROOT/pc/windows/nyctalus-windows.py" "$W/windows/"
   cp "$ROOT/pc/windows/Nyctalus.cmd" "$W/"
   cp "$ROOT"/documenti/manuali/{LEGGIMI,MANUALE-WINDOWS,MANUALE-CHAT,GUIDA-RETE-DI-CASA,GUIDA-INTERNET}.md "$W/Manuali/"
@@ -290,6 +302,7 @@ SPEGNERE
 Dati in %USERPROFILE%\.nyctalus-mobile e .nyctalus-chat. Manuale: Manuali\MANUALE-WINDOWS.md
 EOF
   mkdir -p "$OUT/Windows"
+  firma_integrita "$W"
   crea_zip "$W" "$OUT/Windows/Nyctalus-Windows.zip"
   cp "$W/LEGGIMI.txt" "$OUT/Windows/LEGGIMI.txt"
 fi
