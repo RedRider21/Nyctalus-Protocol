@@ -95,6 +95,11 @@ Le righe **non cambiano** tra un riavvio e l'altro: ogni nodo conserva la sua id
   `--codice` della rete); propone da sola la porta 443.
 - `--webrtc`: **forma videochiamata**, il traffico sembra una chiamata WebRTC (STUN + SRTP);
   anche questa di solito arriva già dal `--codice` della rete. Esclude `--http3`.
+- `--senza-uscita` (dalla 0.3.22): i nodi **non fanno mai da uscita verso Internet** (la
+  navigazione degli altri non esce dal tuo indirizzo), ma restano guardia, intermedio e punto
+  d'incontro: chat, file e siti `.nyct` funzionano. Le righe stampate sono già segnate
+  (`…,,,noexit`): il gestore le aggiunge così come sono. Consigliato su un server o Raspberry
+  **di casa**; un'uscita su una VPS dedicata, invece, si installa senza questa opzione.
 - `--nuova-identita`: rifà chiavi e certificato dei nodi (il certificato nuovo ha dati normali e,
   nella forma HTTP/3, il nome del sito). Cambiano le righe: rimandale al gestore.
 - Per cambiare IP o opzioni: modifica `/etc/nyctalus/server.conf`, poi

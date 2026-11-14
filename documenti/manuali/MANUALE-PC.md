@@ -94,7 +94,10 @@ messaggi, allegati, fotocamera, menu del tasto destro, temi, **chiamate 📞 e v
 
 ### Collegarsi a una rete condivisa
 Senza configurazione chat e browser usano una rete di prova solo sul PC. Per una rete
-condivisa serve il **codice di rete** dato da chi la gestisce:
+condivisa serve il **codice di rete** dato da chi la gestisce. Dal **mini menu → ⚙ → 🔗
+Collegati a una rete…**: incolli il codice (se l'hai copiato è già proposto), tocchi **Collegati**
+e ti mostra l'**impronta** da confrontare con chi gestisce la rete; c'è anche «Torna alla rete di
+prova». Oppure da terminale:
 ```sh
 nyctalus-rete importa NYCT1:…     # poi chiudi e riapri chat e browser
 nyctalus-rete stato               # a quale rete sei collegato

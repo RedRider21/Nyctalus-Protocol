@@ -199,3 +199,27 @@ Non accelera: la strettoia è la guardia (una sola per utente, comune a tutti i 
 | 8 utenti | 22,3 s | 18,3 s (−18%) |
 
 Con più utenti le entrate diventano la strettoia e i PC promossi la allargano.
+
+## Risultati (14/11/2026): le misure della tabella con la 0.3.21
+
+Stessi scenari e stessi semi delle misure pubblicate, con il motore della release 0.3.21
+(congelato in una copia, `NYCTALUS_BIN=…` per `velocita.py`). Tor non cambia (stesso Tor 0.4.9,
+Shadow deterministico): i suoi valori restano quelli di prima. 48 corse, **nessuno scaricamento
+fallito**. Dati grezzi: `misure-0.3.21-2026-11-14.txt` (`SCENARIO=…` davanti a ogni riga).
+
+| Scenario | Tor | fino alla 0.3.19 | **0.3.21** |
+|---|---|---|---|
+| linea pulita (Mbit/s) | 6,4 | 12,6 | **13,6** |
+| nodi diversi, 1 utente | 6,2 | 10,0 | **11,2** |
+| nodi diversi, 4 utenti | 2,6 | 5,7 | **5,1** |
+| 1% di perdite | 2,0-2,3 | 2,4 | **2,4** |
+| 2% di perdite | 0,47 | 1,24 | **1,11** |
+| nodi saturi, 4 utenti (20 semi) | 2,66 | 3,32 | **3,24** |
+| nodi saturi, 8 utenti | 1,47 | 2,08 | **2,02** |
+| 4 scaricamenti da 4 siti, 1 utente (s) | 28,2 | 21,9 | **21,5** |
+| … 4 utenti (s, media / mediana) | 71,2 / 63,5 | 55,8 / 61,3 | **57,0 / 52,8** |
+| primo byte (s) | 0,49 | 0,50 | **0,48** |
+
+Le differenze fra le versioni stanno nel rumore della misura: le novità di 0.3.20 e 0.3.21
+(cassaforte, collaudo, guardie di riserva, integrità) non toccano il trasporto dei dati.
+

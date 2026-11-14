@@ -17,6 +17,9 @@
 #          --webrtc  FORMA VIDEOCHIAMATA: il traffico sembra una chiamata WebRTC (STUN + SRTP);
 #                    anche questa di solito arriva dal --codice della rete
 #          --nuova-identita  rifà chiavi e certificato dei nodi (cambiano le righe: rimandale)
+#          --senza-uscita  i nodi NON fanno da uscita verso Internet (server o Raspberry di casa: la
+#                    navigazione degli altri non esce dal tuo indirizzo); guardia, intermedio e
+#                    punto d'incontro sì (chat, file, siti .nyct). Le righe escono già segnate
 #          --ponte   PONTE NASCOSTO: i nodi non vanno nell'elenco pubblico; ognuno ha una sua
 #                    chiave e stampa una RIGA DEL PONTE segreta, da dare solo a chi lo usa
 #
@@ -25,7 +28,7 @@
 set -euo pipefail
 QUI="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 R="${NYCTALUS_RADICE:-}"            # solo per le prove: radice finta al posto di /
-IP=""; NODI=""; PORTA=""; CAMUFFA=""; RUMORE="0"; UTENTE=0; SI=0; CODICE=""; PONTE=0; FORMA=""; NOME_H3=""; NUOVA=0
+IP=""; NODI=""; PORTA=""; CAMUFFA=""; RUMORE="0"; UTENTE=0; SI=0; CODICE=""; PONTE=0; FORMA=""; NOME_H3=""; NUOVA=0; SENZA_USCITA=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --ip) IP="$2"; shift ;;
@@ -39,6 +42,7 @@ while [ $# -gt 0 ]; do
     --http3) FORMA=h3; NOME_H3="$2"; shift ;;
     --webrtc) FORMA=webrtc ;;
     --nuova-identita) NUOVA=1 ;;
+    --senza-uscita) SENZA_USCITA=1 ;;
     --si) SI=1 ;;
     *) echo "opzione sconosciuta: $1"; exit 2 ;;
   esac
@@ -135,6 +139,7 @@ fi
 OPZIONI="--cover $RUMORE"
 [ -n "$CAMUFFA" ] && OPZIONI="$OPZIONI --obfuscation $CAMUFFA"
 [ "$PONTE" = 1 ] && OPZIONI="$OPZIONI --hidden-bridge"
+[ "$SENZA_USCITA" = 1 ] && OPZIONI="$OPZIONI --no-exit"
 if [ "$FORMA" = h3 ]; then
   [ -n "$CAMUFFA" ] || err "la forma HTTP/3 usa la chiave della rete: indica --codice NYCT1:… (o --camuffamento)"
   [ -z "$NOME_H3" ] || [[ "$NOME_H3" =~ ^[A-Za-z0-9.-]{1,253}$ ]] || err "--http3: un nome di sito (es. www.miosito.it)"
@@ -259,7 +264,10 @@ fi
 
 # --- le righe da mandare al gestore -----------------------------------------------------
 RIGHE="$(dirname "$CONF")/righe-nodi.txt"
-cat "$STATO"/nodo-*/riga-elenco.txt > "$RIGHE"
+# senza uscita: le righe portano già il segno (il gestore non deve ricordarselo)
+if [ "$SENZA_USCITA" = 1 ]; then sed 's/$/,,,noexit/' "$STATO"/nodo-*/riga-elenco.txt > "$RIGHE"
+else cat "$STATO"/nodo-*/riga-elenco.txt > "$RIGHE"; fi
+[ "$SENZA_USCITA" = 1 ] && ok "Nodi SENZA USCITA verso Internet: la navigazione degli altri non esce da qui (chat, file e siti .nyct sì)"
 echo
 ok "Nodi installati. Manda queste righe a chi gestisce la rete (sono pubbliche, non segrete):"
 echo

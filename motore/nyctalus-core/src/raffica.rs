@@ -81,8 +81,8 @@ const GIRI: u64 = 20_000;
 fn raffica_elenco_firmato() {
     let (segreto, pubblica) = elenco::genera_autorita();
     let voci = vec![
-        elenco::VoceElenco { indirizzo: "81.10.0.1:4601".into(), x25519: [1; 32], impronta_tls: [2; 32], famiglia: Some("a".into()), banda: Some(10), intermedio: true, guardia: true },
-        elenco::VoceElenco { indirizzo: "nodo.esempio.it:4601".into(), x25519: [3; 32], impronta_tls: [4; 32], famiglia: None, banda: None, intermedio: false, guardia: false },
+        elenco::VoceElenco { indirizzo: "81.10.0.1:4601".into(), x25519: [1; 32], impronta_tls: [2; 32], famiglia: Some("a".into()), banda: Some(10), intermedio: true, guardia: true, senza_uscita: false },
+        elenco::VoceElenco { indirizzo: "nodo.esempio.it:4601".into(), x25519: [3; 32], impronta_tls: [4; 32], famiglia: None, banda: None, intermedio: false, guardia: false, senza_uscita: true },
     ];
     let buono = elenco::firma_elenco(&voci, &segreto).into_bytes();
     let mut c = Caso::nuovo(1);

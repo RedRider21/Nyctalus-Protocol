@@ -64,11 +64,25 @@ struct Contesto {
     intermedi: std::collections::HashSet<[u8; 32]>,
     /// intermedi PROMOSSI a guardia dal gestore (stabili nel tempo): entrata sì, uscita mai
     guardie_promosse: std::collections::HashSet<[u8; 32]>,
+    /// nodi SENZA USCITA verso Internet (`uscita=no`): guardia, intermedio e punto d'incontro sì
+    senza_uscita: std::collections::HashSet<[u8; 32]>,
 }
 
 /// Imposta i nodi **solo intermedi** (dall'elenco firmato: `ruolo=intermedio`).
 pub fn imposta_intermedi(nodi: Vec<[u8; 32]>) {
     contesto().lock().unwrap().intermedi = nodi.into_iter().collect();
+}
+
+/// Imposta i nodi **senza uscita** verso Internet (dall'elenco firmato: `uscita=no`).
+pub fn imposta_senza_uscita(nodi: Vec<[u8; 32]>) {
+    contesto().lock().unwrap().senza_uscita = nodi.into_iter().collect();
+}
+
+/// I nodi che possono fare da USCITA verso Internet: i pieni, tranne quelli «senza uscita».
+/// Può essere vuoto: allora la rete serve solo chat, file e siti `.nyct`.
+pub fn uscite(nodi: &[NodoRete]) -> Vec<NodoRete> {
+    let senza = contesto().lock().unwrap().senza_uscita.clone();
+    pieni(nodi).into_iter().filter(|n| !senza.contains(&n.1)).collect()
 }
 
 /// Imposta gli intermedi **promossi a guardia** (dall'elenco firmato: `guardia=si`).
@@ -611,6 +625,7 @@ pub(crate) mod test {
         c.bande.clear();
         c.intermedi.clear();
         c.guardie_promosse.clear();
+        c.senza_uscita.clear();
     }
 
     fn cartella(nome: &str) -> std::path::PathBuf {
@@ -794,6 +809,24 @@ pub(crate) mod test {
             assert_eq!(f.len(), GUARDIE_PRIMARIE, "una guardia per famiglia");
         }
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn nodi_senza_uscita_mai_scelti_come_uscita() {
+        let _b = blocco();
+        reimposta(vec![], &cartella("su"));
+        let nodi: Vec<NodoRete> = (1..=5).map(|i| nodo(&format!("{}.1.0.1", 40 + i), i)).collect();
+        imposta_senza_uscita(vec![nodi[0].1, nodi[1].1, nodi[2].1]);
+        let u = uscite(&nodi);
+        assert_eq!(u.len(), 2, "uscite: solo i nodi senza «uscita=no»");
+        assert!(u.iter().all(|n| n.1 != nodi[0].1 && n.1 != nodi[1].1 && n.1 != nodi[2].1));
+        // possono comunque fare da guardia e da punto d'incontro (chat, siti .nyct)
+        assert_eq!(pieni(&nodi).len(), 5);
+        assert!(candidati_guardia(&nodi).iter().any(|n| n.1 == nodi[0].1));
+        // tutti senza uscita: nessuna uscita (la rete serve solo i siti .nyct)
+        imposta_senza_uscita(nodi.iter().map(|n| n.1).collect());
+        assert!(uscite(&nodi).is_empty());
+        imposta_senza_uscita(vec![]);
     }
 
     #[test]

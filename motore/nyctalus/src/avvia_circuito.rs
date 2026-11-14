@@ -76,7 +76,9 @@ pub async fn avvia_circuito(
 
     let ascoltatore = TcpListener::bind(socks).await?;
     let n_fasci = corrente.read().unwrap().fasci.len();
-    if n_fasci > 1 {
+    if n_fasci == 0 {
+        println!("SOCKS5 proxy on {socks} — only .nyct sites (this network has no Internet exit)");
+    } else if n_fasci > 1 {
         println!(
             "SOCKS5 proxy on {socks} — {n_fasci} exits (each site keeps its own), conflux over {circuiti} circuits each (shared guard, {salti} hops)"
         );
@@ -153,10 +155,17 @@ async fn costruisci_tunnel(
             }
         }
 
-        // Un solo collegamento QUIC verso la guardia condivisa (da tutti i fasci).
-        let (guardiano, chiave_guard, impronta_guard) = gruppi[0][0][0];
+        // Un solo collegamento QUIC verso la guardia condivisa (da tutti i fasci). Senza uscite
+        // nella rete il collegamento serve lo stesso: tiene viva l'entrata per il custode.
+        let entrata = if gruppi.is_empty() {
+            println!("  no Internet exit in this network: only .nyct sites and chat (Internet connections are refused)");
+            crate::percorsi::guardia(&nodi)
+        } else {
+            gruppi[0][0][0]
+        };
+        let (guardiano, chiave_guard, impronta_guard) = entrata;
         // all'entrata con la chiave del ponte, se è un ponte nascosto
-        let chiave_entrata = crate::percorsi::chiave_entrata(&gruppi[0][0][0], offusca);
+        let chiave_entrata = crate::percorsi::chiave_entrata(&entrata, offusca);
         let config = match impronta_guard {
             Some(fp) => crate::tls::config_client(fp)?,
             None => crate::tls::config_client_insicuro()?,
@@ -223,7 +232,7 @@ async fn costruisci_tunnel(
     // Poisson nel flusso in uscita. Hanno la stessa lunghezza delle vere e
     // l'uscita le scarta: mascherano QUANDO l'utente invia davvero. (Nel primo fascio:
     // passa dalla stessa guardia di tutti, ed è lì che si vede il ritmo dell'utente.)
-    if copertura > 0.0 {
+    if copertura > 0.0 && !fasci.is_empty() {
         let tx = fasci[0].tx_out.clone();
         tokio::spawn(async move {
             loop {
@@ -236,7 +245,7 @@ async fn costruisci_tunnel(
         println!("Cover traffic: ON (~{copertura:.1} dummy cells/s, uplink)");
     }
     let circuiti_tot: usize = gruppi.iter().map(Vec::len).sum();
-    let guardia = gruppi[0][0][0];
+    let guardia = gruppi.first().map(|g| g[0][0]).unwrap_or_else(|| crate::percorsi::guardia(&nodi));
     Ok(Tunnel { fasci, connessione, _endpoint: endpoint, guardia, circuiti_tot })
 
 }
@@ -551,14 +560,17 @@ fn seleziona_fasci(nodi: &[NodoRete], fasci: usize, circuiti: usize, salti: usiz
     if salti == 1 {
         // Guard = uscita: nessun anonimato, ma valido. Una guardia «promossa» (intermedio stabile)
         // non fa mai da uscita: in quel caso si esce da un nodo pieno.
-        let pieni = crate::percorsi::pieni(nodi);
-        let unico = if pieni.iter().any(|n| n.1 == guard.1) { guard } else { *pieni.first().unwrap_or(&guard) };
+        let uscite = crate::percorsi::uscite(nodi);
+        if uscite.is_empty() {
+            return Ok(Vec::new()); // nessuna uscita nella rete: solo siti .nyct
+        }
+        let unico = if uscite.iter().any(|n| n.1 == guard.1) { guard } else { uscite[0] };
         return Ok(vec![vec![vec![unico]; circuiti]]);
     }
-    // uscite: mai un nodo «solo intermedio», mai la guardia, tutte diverse fra loro
+    // uscite: mai un nodo «solo intermedio» o «senza uscita», mai la guardia, tutte diverse fra loro
     let mut uscite: Vec<NodoRete> = Vec::new();
     for _ in 0..fasci {
-        let candidati: Vec<NodoRete> = crate::percorsi::pieni(nodi)
+        let candidati: Vec<NodoRete> = crate::percorsi::uscite(nodi)
             .into_iter()
             .filter(|n| n.1 != guard.1 && uscite.iter().all(|u| u.1 != n.1))
             .collect();
@@ -572,6 +584,9 @@ fn seleziona_fasci(nodi: &[NodoRete], fasci: usize, circuiti: usize, salti: usiz
         }
     }
     if uscite.is_empty() {
+        if crate::percorsi::uscite(nodi).is_empty() {
+            return Ok(Vec::new()); // nessuna uscita nella rete: solo siti .nyct
+        }
         return Err("need at least 2 nodes in the directory".into());
     }
     let interni = salti - 2;
@@ -680,6 +695,11 @@ async fn gestisci_flusso(
     };
     let destinazione = format!("{host}:{}", richiesta.porta);
 
+    // nessuna uscita nella rete (tutti i nodi «senza uscita»): solo siti .nyct
+    if fasci.is_empty() {
+        cliente.write_all(&socks5::risposta_richiesta(Esito::ConnessioneRifiutata)).await?;
+        return Err(format!("{destinazione}: this network has no Internet exit (only .nyct sites)").into());
+    }
     // il fascio (cioè l'uscita) di questo sito; il flusso si registra lì per il ritorno
     let i = fascio_per(fasci, scelte, &host);
     let fascio = &fasci[i];

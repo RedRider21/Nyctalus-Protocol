@@ -67,22 +67,22 @@ ricomporsi solo a destinazione.
 
 **Misurato** con Shadow (il simulatore usato nella ricerca su Tor): Tor 0.4.9 e Nyctalus veri
 sulla stessa Internet simulata (30 ms fra due computer, linee 50/20 Mbit), stessi utenti e
-stesso attacco, 3 ripetizioni salvo dove indicato (velocità: `simulazione/velocita.py`, file da 5 MB; ultime misure 11/11/2026, dati grezzi in `simulazione/misure-*.txt`). Come rifarla: [simulazione/LEGGIMI.md](simulazione/LEGGIMI.md).
+stesso attacco, 3 ripetizioni salvo dove indicato (velocità: `simulazione/velocita.py`, file da 5 MB). **Velocità rimisurata con la versione attuale, la 0.3.21, il 14/11/2026**: 48 scaricamenti, nessuno fallito; dati grezzi in `simulazione/misure-0.3.21-2026-11-14.txt`. In Mbit/s più alto è meglio; nei tempi, più basso è meglio. Come rifarla: [simulazione/LEGGIMI.md](simulazione/LEGGIMI.md).
 
 Misure interne (Nyctalus contro Nyctalus, 11/11): i PC che aiutano la rete promossi a **guardie** accorciano i tempi del **18%** con 8 utenti (+8% con 4); **più uscite** per lo stesso utente **non** accelerano (la strettoia è l'entrata), quindi di serie resta una.
 
 | Misura | Tor 0.4.9 | Nyctalus |
 |---|---|---|
-| Scaricare 5 MB, linea pulita | 6,4 Mbit/s | **12,6 · +98%** |
-| … nodi di velocità diverse (da 5 a 50 Mbit) | 6,2 Mbit/s | **10,0 · +61%** |
-| … nodi diversi, 4 utenti insieme | 2,6 Mbit/s | **5,7 · +119%** |
+| Scaricare 5 MB, linea pulita | 6,4 Mbit/s | **13,6 · +113%** |
+| … nodi di velocità diverse (da 5 a 50 Mbit) | 6,2 Mbit/s | **11,2 · +81%** |
+| … nodi diversi, 4 utenti insieme | 2,6 Mbit/s | **5,1 · +95%** |
 | … con l'1% di pacchetti persi (Wi-Fi, rete mobile) | 2,0-2,3 Mbit/s | **2,4 · alla pari o meglio** |
-| … con il 2% di pacchetti persi | 0,47 Mbit/s | **1,24 · ×2,6** |
-| … nodi tutti saturi, 4 utenti (20 ripetizioni) | 2,66 Mbit/s | **3,32 · +25%** |
-| … nodi tutti saturi, 8 utenti | 1,47 Mbit/s | **2,08 · +41%** |
-| 4 scaricamenti insieme da 4 siti (nodi da 10 Mbit, 5 ripetizioni): tempo per finirli | 28,2 s | **21,9 s · −22%** |
-| … 4 utenti insieme | 71,2 s (mediana 63,5) | **55,8 s · −22%** (mediana 61,3: quasi alla pari) |
-| Primo byte | 0,49 s | 0,50 s · alla pari |
+| … con il 2% di pacchetti persi | 0,47 Mbit/s | **1,11 · ×2,4** |
+| … nodi tutti saturi, 4 utenti (20 ripetizioni) | 2,66 Mbit/s | **3,24 · +22%** |
+| … nodi tutti saturi, 8 utenti | 1,47 Mbit/s | **2,02 · +37%** |
+| 4 scaricamenti insieme da 4 siti (nodi da 10 Mbit, 5 ripetizioni): tempo per finirli | 28,2 s | **21,5 s · 24% più rapido** |
+| … 4 utenti insieme | 71,2 s (mediana 63,5) | **57,0 s · 20% più rapido** (mediana 52,8: 17% più rapido) |
+| Primo byte | 0,49 s | 0,48 s · alla pari |
 | Avversario che vede tutte le linee: scaricamenti attribuiti a chi li ha fatti | 91% | 80% · alla pari (limite di tutte le reti in tempo reale) |
 | Chat: lo stesso avversario scopre chi scrive a chi | — (Tor non ha una chat sua) | normale 100%; **modalità riservata al livello del caso** (17-33%, a caso 20%) |
 | Un gestore di nodi disonesto collega entrata e uscita | no (famiglie e guardie) | no: 0% (famiglie e guardie, dalla 0.3.3) |
@@ -103,7 +103,7 @@ Misure interne (Nyctalus contro Nyctalus, 11/11): i PC che aiutano la rete promo
 | Linguaggio | C | Rust (meno errori di memoria) |
 
 In breve: **velocità**: in simulazione Nyctalus è più veloce di Tor in **tutti** gli scenari
-misurati (+25% con i nodi tutti saturi, fino a +119% con nodi di velocità diverse). **Anonimato** sul tempo reale alla pari; sulla
+misurati (+22% con i nodi tutti saturi, fino a +113% sulla linea pulita; misure con la 0.3.21). **Anonimato** sul tempo reale alla pari; sulla
 **chat**, con la modalità riservata, va oltre. Tor resta avanti in maturità, numero di utenti e
 camuffamento collaudato.
 
@@ -232,7 +232,7 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 - **Windows (anteprima)**: `Nyctalus-Windows.zip`, doppio clic su `Nyctalus.cmd` (Python incluso): la finestra è come l'app del telefono, chat e rubrica nelle loro finestre, Firefox per navigare. Guida: [MANUALE-WINDOWS.md](documenti/manuali/MANUALE-WINDOWS.md).
 - **Mini-launcher da desktop**: pannello senza bordi, trascinabile, con bottoni quadrati (orizzontale/verticale), **dimensione regolabile** e **tasti rapidi configurabili**, per lanciare Browser, Chat e Rubrica. Client grafici (browser, launcher, chat) in **Python+GTK3**; il motore resta in **Rust**.
 
-- **Più veloce di Tor, misurato**: in simulazione (Shadow, contro Tor 0.4.9) più veloce in tutti gli scenari misurati, da +25% (nodi saturi) a +119% (nodi di velocità diverse): BBR, scelta dei nodi pesata per banda, ragnatela con distributore intelligente, celle piene, collegamenti riusati. Tabella sopra e in [PIANO-ANONIMATO.md](documenti/manuali/PIANO-ANONIMATO.md).
+- **Più veloce di Tor, misurato**: in simulazione (Shadow, contro Tor 0.4.9) più veloce in tutti gli scenari misurati, da +22% (nodi saturi) a +113% (linea pulita), rimisurato con la 0.3.21: BBR, scelta dei nodi pesata per banda, ragnatela con distributore intelligente, celle piene, collegamenti riusati. Tabella sopra e in [PIANO-ANONIMATO.md](documenti/manuali/PIANO-ANONIMATO.md).
 - **Impronta TLS comune** (0.3.15): la stretta di mano TLS sul TCP ha l'impronta comune dei programmi rustls (JA4 `t13d1011h2`), non una propria; misura con `simulazione/impronta_tls.py`.
 - **Forma «videochiamata»** (0.3.19, a scelta della rete): il traffico sembra una chiamata WebRTC, con controlli STUN della linea e pacchetti video SRTP da ~1200 byte autenticati con la chiave della rete; chi sonda un nodo non riceve niente, e se l'UDP è bloccato il ripiego su TCP è un vero TLS (`nyctalus-rete protezione si --forma webrtc`; verificato da un osservatore che classifica ogni pacchetto, prova 38).
 - **PC stabili promossi a guardia** (0.3.19): i PC che aiutano la rete e restano accesi diventano anche entrate (mai uscite), decise dalla stabilità misurata dal gestore (`nyctalus-rete stabilita`), come il contrassegno «Guard» di Tor.
@@ -243,6 +243,8 @@ banda contro beneficio), cosa che richiede una rete di nodi vera. Vedi
 - **Registrazione provata dei servizi `.nyct`** (0.3.19): solo chi ha la chiave privata di un servizio può registrarlo ai punti d'incontro; un impostore non può più renderlo irraggiungibile.
 - **Impostazioni a schede** (0.3.19): tutte le regolazioni, anche quelle del motore e la qualità di chiamate e videochiamate, dalle Impostazioni divise per area: telefono (Profilo, Aspetto, Chat, Chiamate, Rete, Prestazioni, App), launcher PC (Rete, Prestazioni, Chiamate) e browser (Browser, Rete, Prestazioni).
 - **Dati protetti da passphrase** («cassaforte», 0.3.20, a scelta): identità, contatti, cronologia e **file ricevuti** cifrati sul dispositivo (Argon2id + XChaCha20-Poly1305); la passphrase si chiede a ogni avvio e finché manca la chat resta chiusa e fuori linea; i file arrivano già cifrati a pezzi e si aprono al volo in una copia temporanea. Chi ruba o apre il PC o il telefono spento non legge nulla. Limiti dichiarati in [MANUALE-CHAT](documenti/manuali/MANUALE-CHAT.md) §7-bis.
+- **Nodi senza uscita** (0.3.22): i nodi di casa (PC o Raspberry) possono fare da guardia, intermedio e punto d'incontro **senza mai far uscire su Internet** la navigazione degli altri dal tuo indirizzo (`nyctalus-rete casa --senza-uscita`, `installa.sh --senza-uscita`); chat, chiamate, file e siti `.nyct` funzionano lo stesso.
+- **«🔗 Collegati a una rete»** nel mini menu del PC (0.3.22): si incolla il codice di rete e si confronta l'impronta, senza terminale.
 - **Autocontrollo d'integrità** (0.3.21): ogni pacchetto porta l'elenco firmato delle impronte dei suoi file; gli installatori rifiutano un pacchetto con un file cambiato o aggiunto, e `nyctalus-integrita` (anche nel collaudo) verifica in ogni momento che i programmi installati siano quelli pubblicati.
 - **Guardie di riserva** (0.3.21): il client ricorda 3 entrate fisse (guardie primarie, come Tor) e usa sempre la prima; se è spenta entra dalla seconda invece di fermarsi, e torna alla prima appena risponde; se l'entrata cade a tunnel acceso, il tunnel si ricostruisce da solo. Mai un'entrata a caso: chi blocca la tua entrata può spostarti solo fra queste tre. Anche i siti `.nyct` reggono un nodo spento ancora in elenco (si riprova lo stesso punto d'incontro con un altro percorso).
 - **Collaudo della rete vera** (0.3.20, `nyctalus-collaudo`): da PC, telefono o server controlla elenco firmato e nodi vivi (con i tempi), che i nodi restino muti a chi non ha la chiave, che i siti vedano l'uscita e non il tuo IP, che nessun nome di sito esca in DNS, velocità, chat, rubrica e casella; con `--guidato` anche i passi a mano; rapporto ✓/✗ salvabile ([MANUALE-COLLAUDO](documenti/manuali/MANUALE-COLLAUDO.md)).

@@ -63,6 +63,24 @@ Un utente che attiva «🦇 Aiuta la rete» ti manda la riga del suo PC. Aggiung
 `nyctalus-rete aggiungi 'RIGA' --intermedio --banda MBIT --famiglia NOME`: quel nodo sarà usato
 solo come intermedio (mai guardia, uscita o punto d'incontro). Serve la 0.3.11 su tutti i client.
 
+### Nodi senza uscita: i nodi di casa (dalla 0.3.22)
+L'**uscita** è il nodo che parla con i siti di Internet: i siti vedono **il suo indirizzo**. Se
+un nodo sta a casa tua, la navigazione degli altri (browser 🦇) uscirebbe dalla tua linea, e
+reclami o richieste per quello che fanno gli altri arriverebbero a te. Per questo un nodo può
+essere **senza uscita**: fa da guardia, da intermedio e da **punto d'incontro** (chat, chiamate,
+file e siti `.nyct` funzionano), ma **non fa mai uscire** traffico verso Internet.
+
+- Un nodo tuo o di un amico: `nyctalus-rete aggiungi 'RIGA' --senza-uscita` (e il nodo va
+  avviato senza uscita: `installa.sh --senza-uscita`, che stampa le righe già segnate).
+- La rete di casa: `nyctalus-rete casa … --senza-uscita` (la scelta si ricorda;
+  `--con-uscita` per tornare indietro).
+- Nell'elenco firmato il nodo porta `uscita=no` e i client non lo scelgono mai come uscita; se
+  un client vecchio ci prova, il nodo **rifiuta** lo stesso.
+- Se **nessun** nodo della rete fa da uscita, la rete serve solo chat, file e siti `.nyct`: la
+  navigazione su Internet riceve subito un errore chiaro. Per offrirla, metti un'uscita su un
+  server dedicato (una VPS) o da chi se ne assume consapevolmente la responsabilità.
+- Serve la 0.3.22 su tutti: aggiorna client e nodi insieme.
+
 ### PC stabili promossi a guardia (dalla 0.3.19)
 Un PC che aiuta la rete e resta acceso con continuità può fare anche da **guardia** (il nodo
 d'entrata, come il contrassegno «Guard» di Tor): così la rete ha più entrate senza nuovi server.
@@ -111,7 +129,7 @@ Stampa `NYCT1:…` e lo salva in `~/.nyctalus-rete/codice.txt`.
 
 ## 6. Rete di casa (prove senza server)
 ```sh
-nyctalus-rete casa            # opzioni: --nodi 4  --ip IP  --porta 18800  --porta-base 4701
+nyctalus-rete casa            # opzioni: --nodi 4  --ip IP  --porta 18800  --porta-base 4701  --senza-uscita
 ```
 Fa tutto da solo su questo PC:
 - accende i nodi (porte UDP 4701-4704);

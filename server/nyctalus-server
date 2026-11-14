@@ -28,7 +28,9 @@ case "${1:-stato}" in
     for u in "${UNITA[@]}"; do
       s=$("${SC[@]}" is-active "$u" 2>/dev/null); printf '  %-24s %s\n' "$u" "${s:-sconosciuto}"
     done ;;
-  righe) cat "$NYCTALUS_STATO"/nodo-*/riga-elenco.txt 2>/dev/null
+  righe) if [[ " ${NYCTALUS_OPZIONI:-} " == *" --no-exit "* ]]; then    # nodi senza uscita: righe già segnate
+           sed 's/$/,,,noexit/' "$NYCTALUS_STATO"/nodo-*/riga-elenco.txt 2>/dev/null
+         else cat "$NYCTALUS_STATO"/nodo-*/riga-elenco.txt 2>/dev/null; fi
          if ls "$NYCTALUS_STATO"/nodo-*/riga-ponte.txt >/dev/null 2>&1; then
            echo "# PONTI NASCOSTI: righe SEGRETE, solo per chi entra da qui" >&2
            cat "$NYCTALUS_STATO"/nodo-*/riga-ponte.txt

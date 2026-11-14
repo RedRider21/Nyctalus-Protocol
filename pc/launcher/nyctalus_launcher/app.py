@@ -10,6 +10,7 @@ orientamento vengono ricordati (`~/.nyctalus-launcher/config.json`).
 """
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -47,6 +48,18 @@ except Exception:                # noqa: BLE001
 
 RADICE = Path(__file__).resolve().parents[2]      # radice del pacchetto, o pc/ nel progetto
 CARTELLA_BROWSER = RADICE / "browser"
+
+
+def importa_codice(rete, codice):
+    """«🔗 Collegati a una rete»: `nyctalus-rete importa CODICE`. → (riuscito, testo da mostrare,
+    impronta o "")."""
+    codice = "".join(codice.split())                # incollato da un messaggio: niente spazi né a capo
+    if not codice.startswith("NYCT1:"):
+        return False, "", ""
+    r = subprocess.run([sys.executable, str(rete), "importa", codice], capture_output=True, text=True, timeout=120)
+    testo = (r.stdout + r.stderr).strip()
+    m = re.search(r"impronta ([0-9A-Fa-f-]{4,})", testo)
+    return r.returncode == 0, testo, m.group(1) if m else ""
 
 
 def _cerca(*relativi):
@@ -628,6 +641,69 @@ class Launcher(Gtk.Window):
         f.run()
         f.destroy()
 
+    def _collegati_rete(self):
+        """🔗 Collegati a una rete: incolli il codice di rete (NYCT1:…) avuto da chi la gestisce;
+        poi l'impronta da confrontare con lui. Come `nyctalus-rete importa`, senza terminale."""
+        rete = RADICE / "gestore-rete" / "nyctalus-rete"
+        if not rete.exists():
+            return self._avviso(_t("lau.collegati"), _t("lau.in_arrivo_corpo"))
+        try:
+            stato = subprocess.run([sys.executable, str(rete), "stato"], capture_output=True, text=True, timeout=30).stdout
+        except (OSError, subprocess.TimeoutExpired):
+            stato = ""
+        d = Gtk.Dialog(title=_t("lau.collegati"), transient_for=self, modal=True)
+        d.set_default_size(520, -1)
+        box = d.get_content_area()
+        box.set_spacing(8)
+        box.set_border_width(14)
+        for testo, dim in ((_t("lau.collegati.spiega"), False), (stato.strip().splitlines()[0] if stato.strip() else "", True)):
+            if not testo:
+                continue
+            et = Gtk.Label(label=testo, xalign=0)
+            et.set_line_wrap(True)
+            et.set_max_width_chars(64)
+            if dim:
+                et.get_style_context().add_class("dim-label")
+            box.add(et)
+        campo = Gtk.Entry()
+        campo.set_placeholder_text("NYCT1:…")
+        campo.set_activates_default(True)
+        # se nella clipboard c'è già un codice, è proposto
+        try:
+            appunti = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).wait_for_text() or ""
+            if appunti.strip().startswith("NYCT1:"):
+                campo.set_text(appunti.strip())
+        except Exception:        # noqa: BLE001
+            pass
+        box.add(campo)
+        d.add_button(_t("lau.collegati.prova"), 2)
+        d.add_button(_t("lau.imp.chiudi"), 0)
+        d.add_button(_t("lau.collegati.collega"), 1)
+        d.set_default_response(1)
+        d.show_all()
+        risposta = d.run()
+        codice = campo.get_text()
+        d.destroy()
+        if risposta == 1:
+            riuscito, testo, impronta = importa_codice(rete, codice)
+            if not testo:
+                return self._avviso(_t("lau.collegati"), _t("lau.collegati.non_valido"))
+            titolo = _t("lau.collegati.fatto") if riuscito else _t("lau.collegati")
+            corpo = testo + ("\n\n" + _t("lau.collegati.confronta", impronta=impronta) if riuscito and impronta else "")
+        elif risposta == 2:
+            r = subprocess.run([sys.executable, str(rete), "importa", "--prova"], capture_output=True, text=True, timeout=60)
+            titolo, corpo = _t("lau.collegati"), (r.stdout + r.stderr).strip()
+        else:
+            return
+        f = Gtk.MessageDialog(transient_for=self, modal=True, message_type=Gtk.MessageType.INFO,
+                              buttons=Gtk.ButtonsType.OK, text=titolo)
+        f.format_secondary_text(corpo)
+        for w in f.get_message_area().get_children():      # l'impronta si deve poter copiare
+            if isinstance(w, Gtk.Label):
+                w.set_selectable(True)
+        f.run()
+        f.destroy()
+
     def _apri_terminale(self):
         """⌨ Terminale: il terminale del sistema pronto per nyctalus-cli (chat e file da riga di comando)."""
         for candidato in (RADICE / "avvia-terminale.sh", RADICE.parent / "strumenti" / "avvia-terminale.sh"):
@@ -645,6 +721,7 @@ class Launcher(Gtk.Window):
             mi.connect("activate", lambda _w: cb())
             menu.append(mi)
 
+        voce("🔗 " + _t("lau.collegati") + "…", self._collegati_rete)   # incolla il codice di rete (NYCT1:…)
         voce("⚙ " + _t("lau.imp.titolo") + "…", self._impostazioni_finestra)  # finestra a schede: rete, prestazioni, chiamate
         voce("🦊 " + _t("lau.firefox"), self._apri_firefox)    # navigazione anonima con Firefox
         voce("🦇 " + _t("lau.aiuta"), self._aiuta_la_rete)      # questo PC come nodo solo intermedio

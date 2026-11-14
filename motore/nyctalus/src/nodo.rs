@@ -45,6 +45,9 @@ pub struct Contorno {
     /// **solo intermedio** («🦇 Aiuta la rete»): rifiuta di fare da uscita (verso Internet o verso
     /// un punto d'incontro); il traffico degli altri non esce MAI dal suo indirizzo
     pub solo_intermedio: bool,
+    /// **senza uscita** (`--no-exit`): mai uscita verso Internet, ma punto d'incontro sì (chat,
+    /// file, siti .nyct funzionano); per i nodi di casa
+    pub senza_uscita: bool,
     /// tetto della banda inoltrata (Mbit/s), 0 = nessuno
     pub tetto_mbit: f64,
 }
@@ -57,6 +60,7 @@ struct Tetto {
 
 static TETTO: OnceLock<Tetto> = OnceLock::new();
 static SOLO_INTERMEDIO: OnceLock<bool> = OnceLock::new();
+static SENZA_USCITA: OnceLock<bool> = OnceLock::new();
 
 /// Aspetta, se serve, per restare sotto il tetto di banda del nodo.
 async fn rispetta_tetto(byte: usize) {
@@ -102,6 +106,7 @@ pub async fn nodo(
 ) -> Risultato<()> {
     let _ = COPERTURA_NODO.set(copertura);
     let _ = SOLO_INTERMEDIO.set(contorno.solo_intermedio);
+    let _ = SENZA_USCITA.set(contorno.senza_uscita);
     if contorno.tetto_mbit > 0.0 {
         let b = contorno.tetto_mbit * 1_000_000.0 / 8.0;
         let _ = TETTO.set(Tetto { byte_al_secondo: b, stato: tokio::sync::Mutex::new((b * 0.25, std::time::Instant::now())) });
@@ -156,6 +161,8 @@ pub async fn nodo(
     }
     if contorno.solo_intermedio {
         println!("  MIDDLE ONLY: never an exit (others' traffic never leaves from this address)");
+    } else if contorno.senza_uscita {
+        println!("  NO EXIT: never an Internet exit (others' browsing never leaves from this address); rendezvous for .nyct sites and chat: yes");
     }
     if contorno.tetto_mbit > 0.0 {
         println!("  bandwidth cap: {} Mbit/s", contorno.tetto_mbit);
@@ -392,6 +399,10 @@ async fn gestisci_circuito(
             let e_rendezvous = crate::incontro::spacchetta_tunnel(&primo)
                 .map(|p| p.starts_with(crate::incontro::MAGIA))
                 .unwrap_or(false);
+            if !e_rendezvous && *SENZA_USCITA.get().unwrap_or(&false) {
+                // nodo «senza uscita»: punto d'incontro sì, uscita verso Internet mai
+                return Err("no-exit node: refusing to act as Internet exit".into());
+            }
             if e_rendezvous {
                 crate::incontro::uscita_rendezvous(invio_monte, ricezione_monte, chiave, primo, &segreto).await?;
             } else {

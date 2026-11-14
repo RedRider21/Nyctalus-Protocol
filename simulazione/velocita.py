@@ -23,7 +23,8 @@ import time
 from pathlib import Path
 
 QUI = Path(__file__).resolve().parent
-BIN = QUI.parent / "target" / "release" / "nyctalus"
+# NYCTALUS_BIN: un motore preciso (per esempio una copia congelata mentre si sviluppa)
+BIN = Path(os.environ.get("NYCTALUS_BIN") or QUI.parent / "target" / "release" / "nyctalus")
 SIM = Path(os.environ.get("NYCTALUS_SIM", Path.home() / ".local/share/nyctalus-sim"))
 SHADOW = SIM / "installato" / "bin" / "shadow"
 TOR = SIM / "installato" / "bin" / "tor"

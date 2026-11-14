@@ -49,6 +49,11 @@ pub struct VoceElenco {
     /// uscita né punto d'incontro. Nell'elenco: `ruolo=intermedio guardia=si`, così i motori più
     /// vecchi continuano a vederlo come semplice intermedio (degradano senza rompersi).
     pub guardia: bool,
+    /// **Senza uscita** (dalla 0.3.22): nodo pieno (guardia, intermedio, punto d'incontro) che però
+    /// non fa MAI da uscita verso Internet, per esempio il PC o il Raspberry di casa: la navigazione
+    /// degli altri non esce dal suo indirizzo. Nell'elenco: `uscita=no` (i motori più vecchi lo
+    /// ignorano e potrebbero sceglierlo come uscita: il nodo rifiuta, aggiornare tutti insieme).
+    pub senza_uscita: bool,
 }
 
 /// Nome di famiglia valido: 1-32 caratteri fra lettere, cifre, `_`, `.` e `-`.
@@ -144,6 +149,9 @@ fn righe_voci(voci: &[VoceElenco]) -> String {
                 s.push_str(" guardia=si");
             }
         }
+        if v.senza_uscita && !v.intermedio {
+            s.push_str(" uscita=no");
+        }
         s.push('\n');
     }
     s
@@ -156,7 +164,7 @@ fn analizza_voce(resto: &str) -> Result<VoceElenco, ErroreElenco> {
     };
     // campi facoltativi «nome=valore»: quelli che non conosciamo si IGNORANO (sono comunque coperti
     // dalla firma), così un elenco con campi nuovi resta leggibile dai motori più vecchi
-    let (mut famiglia, mut banda, mut intermedio, mut guardia) = (None, None, false, false);
+    let (mut famiglia, mut banda, mut intermedio, mut guardia, mut senza_uscita) = (None, None, false, false, false);
     for c in extra {
         let Some((k, v)) = c.split_once('=') else {
             return Err(ErroreElenco::Malformato(format!("campo non valido: {c}")));
@@ -167,6 +175,7 @@ fn analizza_voce(resto: &str) -> Result<VoceElenco, ErroreElenco> {
             "banda" => banda = v.parse::<u32>().ok().filter(|b| (1..=1_000_000).contains(b)),
             "ruolo" => intermedio = v == "intermedio",
             "guardia" => guardia = v == "si",
+            "uscita" => senza_uscita = v == "no",
             _ => {}
         }
     }
@@ -175,7 +184,7 @@ fn analizza_voce(resto: &str) -> Result<VoceElenco, ErroreElenco> {
             .and_then(|b| b.try_into().ok())
             .ok_or_else(|| ErroreElenco::Malformato("chiave esadecimale non a 32 byte".into()))
     };
-    Ok(VoceElenco { indirizzo: (*indirizzo).to_string(), x25519: a_32(x25519)?, impronta_tls: a_32(impronta)?, famiglia, banda, guardia: intermedio && guardia, intermedio })
+    Ok(VoceElenco { indirizzo: (*indirizzo).to_string(), x25519: a_32(x25519)?, impronta_tls: a_32(impronta)?, famiglia, banda, guardia: intermedio && guardia, senza_uscita: senza_uscita && !intermedio, intermedio })
 }
 
 fn esadecimale(byte: &[u8]) -> String {
@@ -195,10 +204,28 @@ fn da_esadecimale(testo: &str) -> Option<Vec<u8>> {
 mod test {
     use super::*;
 
+    #[test]
+    fn senza_uscita_firmato_e_riletto() {
+        let (segreto, pubblica) = genera_autorita();
+        let voci = vec![
+            VoceElenco { indirizzo: "10.0.0.1:4601".into(), x25519: [1; 32], impronta_tls: [2; 32], famiglia: None, banda: None, intermedio: false, guardia: false, senza_uscita: true },
+            VoceElenco { indirizzo: "10.0.0.2:4601".into(), x25519: [3; 32], impronta_tls: [4; 32], famiglia: None, banda: None, intermedio: false, guardia: false, senza_uscita: false },
+        ];
+        let testo = firma_elenco(&voci, &segreto);
+        assert!(testo.contains("uscita=no"));
+        assert_eq!(verifica_elenco(&testo, &pubblica).unwrap(), voci);
+        // «uscita=no» su un intermedio non ha senso (non esce comunque): non si scrive
+        let mut v = voci[0].clone();
+        v.intermedio = true;
+        assert!(!firma_elenco(&[v], &segreto).contains("uscita=no"));
+        // manomettere il campo rompe la firma
+        assert!(verifica_elenco(&testo.replace(" uscita=no", ""), &pubblica).is_err());
+    }
+
     fn voci() -> Vec<VoceElenco> {
         vec![
-            VoceElenco { indirizzo: "127.0.0.1:4601".into(), x25519: [1; 32], impronta_tls: [2; 32], famiglia: None, banda: None, intermedio: false, guardia: false },
-            VoceElenco { indirizzo: "127.0.0.1:4602".into(), x25519: [3; 32], impronta_tls: [4; 32], famiglia: None, banda: None, intermedio: false, guardia: false },
+            VoceElenco { indirizzo: "127.0.0.1:4601".into(), x25519: [1; 32], impronta_tls: [2; 32], famiglia: None, banda: None, intermedio: false, guardia: false, senza_uscita: false },
+            VoceElenco { indirizzo: "127.0.0.1:4602".into(), x25519: [3; 32], impronta_tls: [4; 32], famiglia: None, banda: None, intermedio: false, guardia: false, senza_uscita: false },
         ]
     }
 

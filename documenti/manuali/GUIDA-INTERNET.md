@@ -120,7 +120,7 @@ Poi, a seconda dell'apparecchio:
 | Apparecchio | Come si collega |
 |---|---|
 | **Telefono Android** | dalla pagina appena aperta tocca **📲 Collega l'app Nyctalus** e conferma |
-| **PC Linux** | `nyctalus-rete importa 'NYCT1:…'` con il codice che gli mandi (anche per messaggio: non è segreto), poi chiude e riapre chat e browser |
+| **PC Linux** | mini menu → ⚙ → **🔗 Collegati a una rete…** e incolla il codice che gli mandi (oppure, da terminale, `nyctalus-rete importa 'NYCT1:…'`); poi chiude e riapre chat e browser |
 | **Windows** | nella finestra di Nyctalus tocca **🔗 Rete** e incolla il codice |
 
 **Confrontate a voce l'impronta**: quella che vede lui dopo l'importazione deve essere
@@ -186,6 +186,10 @@ di 3 gestori diversi. Il perché, in `PIANO-ANONIMATO.md` (Tappa 3).
   da esperti esterni. Non affidateci segreti veri.
 - Con tutti i nodi sul tuo PC la rete **funziona**, ma verso di **te** non è anonima: tu
   ospiti ogni salto. Per l'anonimato vero servono nodi su macchine e linee diverse.
+- **La navigazione degli amici esce da casa tua.** Con i nodi sul tuo PC, chi naviga sui siti
+  normali con il browser 🦇 lo fa con il **tuo** indirizzo. Se non vuoi, accendi la rete con
+  `nyctalus-rete casa --internet NOME --senza-uscita` (dalla 0.3.22): chat, chiamate, file e
+  siti `.nyct` funzionano lo stesso, la navigazione su Internet no (serve un'uscita su un server).
 - **Passo successivo, facoltativo:** il tuo amico, con l'IP statico, ospita **anche lui** un
   paio di nodi (Passo 8). Così la rete diventa distribuita fra due città.
 - Tutto il traffico in rete è cifrato e senza parole riconoscibili: lo dimostra la prova

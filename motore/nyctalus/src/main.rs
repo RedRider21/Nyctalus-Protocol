@@ -65,7 +65,7 @@ Usage:
   nyctalus nodes   [--config FILE] [--directory FILE] [--authority HEX] [--probe] [--timeout 3] [--obfuscation HEX]
   nyctalus exec    [--socks ADDR] [--config FILE] -- PROGRAM [ARG...]
   nyctalus monitor [--control 127.0.0.1:1090]
-  nyctalus node    --listen 0.0.0.0:4601 [--data DIR] [--announce PUBLIC_IP:PORT] [--secret HEX] [--directory FILE --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0] [--hidden-bridge] [--middle-only] [--max-rate MBIT]
+  nyctalus node    --listen 0.0.0.0:4601 [--data DIR] [--announce PUBLIC_IP:PORT] [--secret HEX] [--directory FILE --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0] [--hidden-bridge] [--middle-only | --no-exit] [--max-rate MBIT]
   nyctalus authority
   nyctalus directory --authority-secret HEX --entries 'addr,x,fp;addr,x,fp'
   nyctalus circuit  (--directory FILE --authority HEX | --nodes 'addr,pub;...') [--socks ...] [--circuits 2 (1-8)] [--hops 3 (1-5)] [--cover 0] [--exits 1 (1-4)] [--constant-rate N [--constant-always]]
@@ -91,6 +91,9 @@ Usage:
   site keeps its own exit, new sites go to the least busy one (each exit sees fewer of your sites; measured: no speed gain).
 '--constant-rate N [--constant-always]' (circuit/start, or env NYCTALUS_COSTANTE=N, NYCTALUS_COSTANTE_SEMPRE=1): constant
   cover, N cells/s each way (real or dummy) while in use (or always): the line looks flat. Costs bandwidth, caps speed.
+'--no-exit' (node): never an Internet exit (others' browsing never leaves from this address), still a guard, middle and
+  rendezvous node, so chat, files and .nyct sites keep working. In the directory: role «noexit» (uscita=no). With no exit
+  in the network the tunnel still starts: .nyct sites work, Internet connections get a SOCKS error.
 '--hidden-bridge' (node): a private entry NOT in the directory, with its own camouflage key; it prints the
   bridge line. '--bridge LINE[;LINE]' (start/circuit/site/browse, or env NYCTALUS_PONTI, or 'bridge = ' in the config): always enter
   the network through those bridges.
@@ -264,6 +267,7 @@ async fn esegui() -> Risultato<()> {
                 annuncia: opzione(&opzioni, "announce").map(String::from),
                 ponte: opzione(&opzioni, "hidden-bridge").is_some(),
                 solo_intermedio: opzione(&opzioni, "middle-only").is_some(),
+                senza_uscita: opzione(&opzioni, "no-exit").is_some(),
                 tetto_mbit: opzione(&opzioni, "max-rate").map(str::parse::<f64>).transpose()?.unwrap_or(0.0),
             };
             if !(0.0..=100_000.0).contains(&contorno.tetto_mbit) {
@@ -388,7 +392,7 @@ async fn esegui() -> Risultato<()> {
 type Opzioni = HashMap<String, String>;
 
 /// Opzioni senza valore (flag sì/no): se presenti valgono "true".
-const FLAG_BOOLEANI: &[&str] = &["probe", "hidden-bridge", "mimic", "webrtc", "middle-only", "constant-always"];
+const FLAG_BOOLEANI: &[&str] = &["probe", "hidden-bridge", "mimic", "webrtc", "middle-only", "no-exit", "constant-always"];
 
 fn leggi_opzioni(argomenti: &[String]) -> Risultato<(Opzioni, Vec<String>)> {
     let mut opzioni = HashMap::new();
@@ -444,6 +448,7 @@ fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_cir
     let mut bande = Vec::new();
     let mut intermedi = Vec::new();
     let mut guardie = Vec::new();
+    let mut senza_uscita = Vec::new();
     for v in voci {
         match circuito_rete::risolvi_voce(&v.indirizzo, &v.x25519) {
             Ok(a) => {
@@ -456,6 +461,9 @@ fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_cir
                 }
                 if v.intermedio {
                     intermedi.push(v.x25519);
+                }
+                if v.senza_uscita {
+                    senza_uscita.push(v.x25519);
                 }
                 if v.guardia {
                     guardie.push(v.x25519);
@@ -472,6 +480,7 @@ fn nodi_da_elenco(percorso: &str, autorita: [u8; 32]) -> Risultato<Vec<avvia_cir
     percorsi::imposta_bande(bande);
     percorsi::imposta_intermedi(intermedi);
     percorsi::imposta_guardie_promosse(guardie);
+    percorsi::imposta_senza_uscita(senza_uscita);
     Ok(nodi)
 }
 
@@ -687,11 +696,12 @@ fn leggi_voci_elenco(testo: &str) -> Risultato<Vec<nyctalus_core::elenco::VoceEl
                 [a, x, f, fam] => (a, x, f, *fam, "", ""),
                 [a, x, f, fam, b] => (a, x, f, *fam, *b, ""),
                 [a, x, f, fam, b, r] => (a, x, f, *fam, *b, *r),
-                _ => return Err("entry in the form address,x25519hex,fingerprinthex[,family[,mbit[,middle|guard]]]".into()),
+                _ => return Err("entry in the form address,x25519hex,fingerprinthex[,family[,mbit[,middle|guard|noexit]]]".into()),
             };
-            if !matches!(ruolo, "" | "middle" | "intermedio" | "guard" | "guardia") {
-                return Err(format!("role: «middle», «guard» or empty, not {ruolo}").into());
+            if !matches!(ruolo, "" | "middle" | "intermedio" | "guard" | "guardia" | "noexit" | "senza-uscita") {
+                return Err(format!("role: «middle», «guard», «noexit» or empty, not {ruolo}").into());
             }
+            let senza_uscita = matches!(ruolo, "noexit" | "senza-uscita");
             let famiglia = if fam.is_empty() {
                 None
             } else if nyctalus_core::elenco::famiglia_valida(fam) {
@@ -710,8 +720,9 @@ fn leggi_voci_elenco(testo: &str) -> Risultato<Vec<nyctalus_core::elenco::VoceEl
                 impronta_tls: da_esadecimale(fp)?,
                 famiglia,
                 banda,
-                intermedio: !ruolo.is_empty(),
+                intermedio: !ruolo.is_empty() && !senza_uscita,
                 guardia: matches!(ruolo, "guard" | "guardia"),
+                senza_uscita,
             })
         })
         .collect()

@@ -7,7 +7,7 @@ Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 
 L'elenco **completo** dei comandi di Nyctalus, diviso per tipologia. È l'unico elenco
 completo: gli altri manuali spiegano *come* fare le cose e rimandano qui per le opzioni.
-Aggiornato alla 0.3.21; ogni comando stampa anche il suo aiuto (`--help`, o `aiuto` per
+Aggiornato alla 0.3.22; ogni comando stampa anche il suo aiuto (`--help`, o `aiuto` per
 `nyctalus-cli`).
 
 | Tipologia | Comandi |
@@ -34,7 +34,7 @@ cartella del pacchetto, con gli script `avvia-….sh`.
 
 | Comando | Senza installare | Cosa apre |
 |---|---|---|
-| `nyctalus-launcher` | `./avvia-launcher.sh` | il **mini menu**: accende la rete, apre gli altri programmi, ⚙ impostazioni |
+| `nyctalus-launcher` | `./avvia-launcher.sh` | il **mini menu**: accende la rete, apre gli altri programmi; in ⚙: **🔗 Collegati a una rete** (incolli il codice di rete), impostazioni, Firefox, Aiuta la rete |
 | `nyctalus-chat` | `./avvia-chat.sh` | la **chat** (accende il motore se è spento) |
 | `nyctalus-browser` | `./avvia-browser.sh` | il **browser**: normale o 🦇 attraverso la rete, siti `.nyct` |
 | `nyctalus-file` | `./avvia-file.sh` | il programma **File** (file grandi ai contatti) |
@@ -94,6 +94,7 @@ da lì. Guida: `MANUALE-GESTORE-RETE.md`.
 |---|---|
 | `casa [--nodi 4]` | rete di casa tutta su questo PC, con il codice per il telefono (Ctrl-C ferma) |
 | `casa --internet NOME` | la stessa, raggiungibile da Internet (NOME = No-IP/DuckDNS o IP pubblico) |
+| `casa … --senza-uscita` · `--con-uscita` | i nodi di questo PC non fanno da uscita verso Internet (chat, file e siti `.nyct` sì) · tornano a farla; la scelta si ricorda |
 | `ospite aggiungi RIGA… --famiglia NOME [--internet]` | aggiunge il nodo di un amico |
 | `ospite togli IP:PORTA [--internet]` · `ospite elenco [--internet]` | toglie / elenca i nodi ospiti |
 
@@ -102,7 +103,7 @@ da lì. Guida: `MANUALE-GESTORE-RETE.md`.
 | Comando | Cosa fa |
 |---|---|
 | `crea [--nome NOME]` | crea l'autorità (le chiavi che firmano l'elenco) |
-| `aggiungi RIGA… \| --file F [--famiglia NOME] [--banda MBIT] [--intermedio]` | aggiunge nodi (righe «IP:PORTA,chiave,impronta») |
+| `aggiungi RIGA… \| --file F [--famiglia NOME] [--banda MBIT] [--intermedio \| --senza-uscita]` | aggiunge nodi (righe «IP:PORTA,chiave,impronta»); `--senza-uscita` = mai uscita verso Internet |
 | `togli IP:PORTA` | toglie un nodo |
 | `famiglia IP:PORTA NOME\|-` | mette (o toglie) un nodo in una famiglia: mai due nello stesso percorso |
 | `banda IP:PORTA MBIT\|-` | banda del nodo: i più capaci si scelgono più spesso |
@@ -172,6 +173,7 @@ Esce con 0 = tutto a posto, 1 = qualcosa non torna, 3 = controllo non possibile.
 | `--codice NYCT1:…` | prende dal codice della rete camuffamento, rumore e forma |
 | `--camuffamento HEX` · `--rumore HZ` · `--http3 NOME` · `--webrtc` | camuffamento e forma a mano |
 | `--ponte` | ponte nascosto: fuori dall'elenco, stampa la riga segreta |
+| `--senza-uscita` | i nodi non fanno mai da uscita verso Internet (server o Raspberry di casa); righe già segnate |
 | `--nuova-identita` | rifà chiavi e certificato (cambiano le righe: rimandale al gestore) |
 
 **Gestire i nodi installati** (`nyctalus-server`)
@@ -244,9 +246,9 @@ particolari e prove. `nyctalus help` stampa l'elenco.
 
 | Comando | Cosa fa |
 |---|---|
-| `node --listen 0.0.0.0:4601 [--data DIR] [--announce IP:PORTA] [--secret HEX] [--directory F --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0] [--hidden-bridge] [--middle-only] [--max-rate MBIT]` | un nodo della rete |
+| `node --listen 0.0.0.0:4601 [--data DIR] [--announce IP:PORTA] [--secret HEX] [--directory F --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0] [--hidden-bridge] [--middle-only \| --no-exit] [--max-rate MBIT]` | un nodo della rete; `--no-exit` = mai uscita verso Internet, punto d'incontro sì; `--middle-only` = solo intermedio |
 | `authority` | crea le chiavi di un'autorità |
-| `directory --authority-secret HEX --entries 'addr,x,fp;…'` | firma un elenco di nodi |
+| `directory --authority-secret HEX --entries 'addr,x,fp[,famiglia[,mbit[,middle\|guard\|noexit]]];…'` | firma un elenco di nodi |
 
 **Prove e studio**
 

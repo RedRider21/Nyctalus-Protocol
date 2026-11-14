@@ -78,7 +78,7 @@ Usate tutti pacchetti **della stessa data**.
   esce mai dal suo PC (`~/.nyctalus-rete`). Fanne una copia di sicurezza.
 - **Sono anonimo?** Il contenuto è sempre cifrato; l'**anonimato** (nessuno sa chi parla con chi) dipende da dove stanno i nodi e da quanti usano la rete. Con i nodi tutti su un PC, come nella prova con un amico, **non** lo siete. Le tappe per arrivarci: [Piano verso una rete anonima](PIANO-ANONIMATO.md).
 - **Com'è rispetto a Tor?** Misurato nella stessa Internet simulata: più veloce in tutti gli
-  scenari misurati (da +25% con i nodi saturi a +119% con nodi di velocità diverse); stessa resistenza sugli scaricamenti; sulla chat, con la modalità riservata, chi vede tutte le linee
+  scenari misurati (da +22% con i nodi saturi a +113% sulla linea pulita, con la 0.3.21); stessa resistenza sugli scaricamenti; sulla chat, con la modalità riservata, chi vede tutte le linee
   non capisce chi scrive a chi. Tor resta molto più maturo e collaudato. Tabella completa:
   [Nyctalus e Tor, a confronto](PIANO-ANONIMATO.md#nyctalus-e-tor-a-confronto).
 - **È sicuro?** Cosa si verifica e come: [Sicurezza](SICUREZZA.md), compresa la prova

@@ -5,7 +5,7 @@
 
 Per il GESTORE della rete (chi la tiene in piedi):
   nyctalus-rete crea [--nome NOME]       crea l'autorità (chiavi che firmano l'elenco)
-  nyctalus-rete aggiungi RIGA… | --file F [--famiglia NOME] [--banda MBIT] [--intermedio]
+  nyctalus-rete aggiungi RIGA… | --file F [--famiglia NOME] [--banda MBIT] [--intermedio | --senza-uscita]
                                          aggiunge i nodi (righe «IP:PORTA,chiave,impronta»);
                                          --famiglia = stesso gestore/fornitore (mai due nello
                                          stesso percorso)
@@ -28,6 +28,10 @@ Per il GESTORE della rete (chi la tiene in piedi):
                                          codice per il telefono (Ctrl-C per fermare)
   nyctalus-rete casa --internet NOME     la stessa, raggiungibile DA INTERNET (NOME = No-IP/
                                          DuckDNS o IP pubblico; porte da inoltrare sul router)
+  nyctalus-rete casa … --senza-uscita | --con-uscita
+                                         i nodi di questo PC NON fanno da uscita verso Internet
+                                         (la navigazione degli amici non esce dal tuo indirizzo;
+                                         chat, file e siti .nyct funzionano); la scelta si ricorda
   nyctalus-rete ospite aggiungi RIGA… --famiglia NOME [--internet]
                                          aggiunge alla rete di casa (o Internet) il NODO DI UN
                                          AMICO (righe dal suo «installa.sh»); vale subito
@@ -81,11 +85,12 @@ from pathlib import Path
 DATI = Path(os.environ.get("NYCTALUS_RETE_DATI", Path.home() / ".nyctalus-rete"))
 CONFIG_CLIENT = Path.home() / ".nyctalus-browser" / "config.json"     # lo leggono chat e browser del PC
 PREFISSO = "NYCT1:"
-RIGA = re.compile(r"^(\[?[0-9A-Za-z.:-]+\]?):(\d{1,5}),([0-9a-f]{64}),([0-9a-f]{64})(,[A-Za-z0-9_.-]{0,32}(,([1-9][0-9]{0,6})?(,(middle|guard))?)?)?$")
+RIGA = re.compile(r"^(\[?[0-9A-Za-z.:-]+\]?):(\d{1,5}),([0-9a-f]{64}),([0-9a-f]{64})(,[A-Za-z0-9_.-]{0,32}(,([1-9][0-9]{0,6})?(,(middle|guard|noexit))?)?)?$")
 
 
 def componi_riga(campi, famiglia, banda, ruolo=None):
-    """Riga del nodo «indirizzo,x25519,impronta[,famiglia[,banda[,middle]]]» (vuoti in fondo tolti).
+    """Riga del nodo «indirizzo,x25519,impronta[,famiglia[,banda[,middle|guard|noexit]]]» (vuoti in
+    fondo tolti); noexit = senza uscita verso Internet (nodi di casa), punto d'incontro sì.
     Senza `ruolo` si conserva quello che la riga aveva già."""
     if ruolo is None:
         ruolo = campi[5] if len(campi) > 5 else ""
@@ -295,7 +300,8 @@ class Rete:
     def rifirma_con_ospiti(self, prima=()):
         """I nodi propri (quelli che non erano ospiti) più gli ospiti di adesso: elenco rifirmato."""
         vecchi = {r.split(",")[0] for r in prima} | {r.split(",")[0] for r in self.ospiti()}
-        propri = [",".join(r.split(",")[:3] + (["casa"] if self.ospiti() else []))
+        propri = [componi_riga(r.split(","), "casa" if self.ospiti() else None, None,
+                               "noexit" if self.senza_uscita() else "")
                   for r in self.nodi() if r.split(",")[0] not in vecchi]
         self.salva_nodi(propri + self.ospiti())
         if self.f_aut.exists() and len(propri) + len(self.ospiti()) >= 3:
@@ -303,6 +309,17 @@ class Rete:
 
     def esiste(self):
         return self.f_aut.exists()
+
+    def senza_uscita(self):
+        """I nodi di QUESTO PC non fanno da uscita verso Internet (scelta ricordata nella rete)."""
+        return (self.dir / "senza-uscita").exists()
+
+    def imposta_senza_uscita(self, si):
+        f = self.dir / "senza-uscita"
+        if si:
+            scrivi_privato(f, "i nodi di questo PC non fanno da uscita verso Internet\n")
+        else:
+            f.unlink(missing_ok=True)
 
     def autorita(self):
         if not self.esiste():
@@ -335,7 +352,7 @@ class Rete:
     def salva_nodi(self, righe):
         scrivi_privato(self.f_nodi, "".join(r + "\n" for r in righe))
 
-    def aggiungi(self, righe, famiglia=None, intermedio=False, banda=None):
+    def aggiungi(self, righe, famiglia=None, intermedio=False, banda=None, senza_uscita=False):
         if famiglia is not None and not FAMIGLIA.match(famiglia):
             esci("nome di famiglia non valido: lettere, cifre, _ . - (al massimo 32)")
         attuali = self.nodi()
@@ -347,10 +364,10 @@ class Rete:
             r = r.split()[-1] if " " in r else r          # accetta anche «directory entry:   …»
             if not RIGA.match(r):
                 esci("riga non valida: %r (atteso IP:PORTA,chiave,impronta)" % r)
-            if famiglia or intermedio or banda:
+            if famiglia or intermedio or banda or senza_uscita:
                 c = r.split(",")
                 r = componi_riga(c, famiglia or (c[3] if len(c) > 3 else None), banda or (c[4] if len(c) > 4 and c[4] else None),
-                                 "middle" if intermedio else None)
+                                 "middle" if intermedio else "noexit" if senza_uscita else None)
             indirizzo = r.split(",")[0]
             attuali = [a for a in attuali if a.split(",")[0] != indirizzo] + [r]
             nuove += 1
@@ -882,7 +899,7 @@ def apri_firewall_internet(porta_web, porte_nodi, cartella):
         print("     sudo " + " ".join(c))
 
 
-def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None):
+def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None, uscita=None):
     """Rete di casa sul PC. Con `internet` (un nome tipo miacasa.ddns.net, o l'IP pubblico) la
     stessa rete si raggiunge da Internet: è una rete a sé («Rete Internet di prova»), i nodi si
     annunciano col nome e l'elenco si scarica da http://NOME:porta/."""
@@ -893,6 +910,9 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None):
     r = Rete(privata(DATI / ("internet" if internet else "casa")))
     if not r.esiste():
         r.crea("Rete Internet di prova" if internet else "Rete di casa")
+    if uscita is not None:                               # --senza-uscita / --con-uscita: si ricorda
+        r.imposta_senza_uscita(not uscita)
+    senza_uscita = r.senza_uscita()
     b, proc, righe = binario(), [], []
     try:
         for i in range(nodi):
@@ -908,7 +928,8 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None):
                     (d / f).unlink(missing_ok=True)
             log = open(r.dir / ("nodo-%d.log" % porta), "ab")
             proc.append(subprocess.Popen([b, "node", "--listen", "0.0.0.0:%d" % porta, "--data", str(d),
-                                          "--announce", "%s:%d" % (ip, porta)] + opz_prot(r.protezione()),
+                                          "--announce", "%s:%d" % (ip, porta)] + opz_prot(r.protezione())
+                                         + (["--no-exit"] if senza_uscita else []),
                                          stdout=log, stderr=log,
                                          start_new_session=True))
         for i in range(nodi):
@@ -927,10 +948,17 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None):
             # mai due nello stesso percorso. Senza ospiti l'elenco resta quello di sempre, leggibile
             # anche dai client prima della 0.3.3.
             righe = [",".join(x.split(",")[:3] + ["casa"]) for x in righe]
+        if senza_uscita:
+            # nessuna uscita verso Internet da questo PC: nell'elenco firmato «uscita=no»
+            righe = [componi_riga(x.split(","), (x.split(",")[3] if len(x.split(",")) > 3 else None), None, "noexit") for x in righe]
         r.salva_nodi(righe + ospiti)
         r.firma()
         if ospiti:
             print("» nodi ospiti nella rete: %d (%s)" % (len(ospiti), ", ".join(o.split(",")[0] for o in ospiti)))
+        if senza_uscita:
+            print("» nodi SENZA USCITA verso Internet: chat, file e siti .nyct sì; la navigazione degli altri "
+                  "non esce da questo PC%s" % ("" if any(len(o.split(",")) < 6 or o.split(",")[5] != "noexit" for o in ospiti)
+                                              else " (nella rete non c'è nessuna uscita: si naviga solo sui siti .nyct)"))
         avvia_rubrica(r, r.autorita()["pubblica"], proc)      # chi usa la rete vede chi c'è
         srv, url = servitore(r, porta_web, ip)
         cod = r.codice(url)
@@ -1134,11 +1162,18 @@ def principale(args):
         if banda is not None and not re.fullmatch(r"[1-9][0-9]{0,6}", banda):
             esci("--banda: Mbit/s (es. 10)")
         intermedio = "--intermedio" in args
-        args = [a for a in args if a != "--intermedio"]
+        senza_uscita = "--senza-uscita" in args
+        if intermedio and senza_uscita:
+            esci("--intermedio e --senza-uscita insieme non servono: un intermedio non fa mai da uscita")
+        args = [a for a in args if a not in ("--intermedio", "--senza-uscita")]
         righe = (Path(f).read_text().splitlines() if f else []) + args
         if not righe:
             esci("indica le righe dei nodi o --file FILE")
-        n, tot = rete.aggiungi(righe, famiglia, intermedio, int(banda) if banda else None)
+        n, tot = rete.aggiungi(righe, famiglia, intermedio, int(banda) if banda else None, senza_uscita)
+        if senza_uscita:
+            print("  Nodi SENZA USCITA verso Internet: guardia, intermedio e punto d'incontro sì.")
+            print("  ⚠️  Il segno lo capiscono i motori dalla 0.3.22: aggiorna prima tutti i client; il nodo")
+            print("     va avviato con --no-exit (installa.sh --senza-uscita), così rifiuta comunque di uscire.")
         if intermedio:
             print("  Nodi SOLO INTERMEDI (PC che aiutano la rete): mai guardia, uscita o punto d'incontro.")
             print("  ⚠️  Il ruolo lo capiscono i motori dalla 0.3.11: aggiorna prima tutti i client.")
@@ -1247,7 +1282,8 @@ def principale(args):
             esci("--internet: indica il nome pubblico (es. miacasa.ddns.net) o l'IP pubblico")
         casa(int(opzione(args, "--nodi", "4")), int(opzione(args, "--porta-base", "4701")),
              int(opzione(args, "--porta", "18800")), opzione(args, "--ip", ip_locale()),
-             "--non-importare" not in args, internet)
+             "--non-importare" not in args, internet,
+             False if "--senza-uscita" in args else True if "--con-uscita" in args else None)
     elif cmd == "protezione":
         quale = "casa" if "--casa" in args else "internet" if "--internet" in args else None
         args = [a for a in args if a not in ("--casa", "--internet")]
@@ -1304,7 +1340,9 @@ def principale(args):
                 riga = riga.strip().split()[-1] if riga.strip() else ""
                 if not RIGA.match(riga):
                     esci("riga non valida: %r (atteso IP:PORTA,chiave,impronta)" % riga)
-                nuove.append(",".join(riga.split(",")[:3] + [famiglia]))
+                c = riga.split(",")
+                # la famiglia è quella indicata; banda e ruolo (es. «noexit», nodi senza uscita) restano
+                nuove.append(componi_riga(c, famiglia, c[4] if len(c) > 4 and c[4] else None))
             if not nuove:
                 esci("indica le righe del nodo (le stampa «installa.sh» sul PC o server dell'amico)")
             indirizzi = {n.split(",")[0] for n in nuove}
