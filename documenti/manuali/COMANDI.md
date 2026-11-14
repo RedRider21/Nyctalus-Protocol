@@ -34,7 +34,7 @@ cartella del pacchetto, con gli script `avvia-….sh`.
 
 | Comando | Senza installare | Cosa apre |
 |---|---|---|
-| `nyctalus-launcher` | `./avvia-launcher.sh` | il **mini menu**: accende la rete, apre gli altri programmi; in ⚙: **🔗 Collegati a una rete** (incolli il codice di rete), impostazioni, Firefox, Aiuta la rete |
+| `nyctalus-launcher` | `./avvia-launcher.sh` | il **mini menu**: accende la rete, apre gli altri programmi; in ⚙: **🏠 La mia rete** (accendere la propria rete a spunte, mostra il comando `nyctalus-rete casa …` equivalente), **🔗 Collegati a una rete** (incolli il codice di rete), impostazioni, Firefox, Aiuta la rete |
 | `nyctalus-chat` | `./avvia-chat.sh` | la **chat** (accende il motore se è spento) |
 | `nyctalus-browser` | `./avvia-browser.sh` | il **browser**: normale o 🦇 attraverso la rete, siti `.nyct` |
 | `nyctalus-file` | `./avvia-file.sh` | il programma **File** (file grandi ai contatti) |

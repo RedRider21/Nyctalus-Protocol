@@ -92,6 +92,12 @@ porte. Poi:
 nyctalus-rete casa --internet miacasa.ddns.net
 ```
 
+**Senza terminale** (dalla 0.3.23): mini menu → ⚙ → **🏠 La mia rete…** → «Anche da Internet» e
+il nome (o l'IP pubblico), spunte **Senza uscita** e **Sempre accesa** → **▶ Accendi**. La finestra
+mostra il comando equivalente (lo stesso di qui sopra, con le opzioni scelte), lo esegue e mostra
+il codice da dare agli amici; **🔓 Apri il firewall** apre le porte (chiede la password);
+**■ Spegni** la ferma.
+
 Il comando:
 
 - accende 4 nodi che si presentano col **nome** (non con l'IP: se l'IP cambia, non serve fare nulla);

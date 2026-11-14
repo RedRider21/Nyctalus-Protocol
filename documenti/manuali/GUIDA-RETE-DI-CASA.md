@@ -9,6 +9,8 @@ Serve: un PC Linux con Nyctalus installato (ruolo **Gestore**) e un telefono And
 l'app Nyctalus. PC e telefono sulla **stessa Wi-Fi**.
 
 ## 1. Sul PC: accendi la rete di casa
+**Senza terminale** (dalla 0.3.23): mini menu → ⚙ → **🏠 La mia rete…** → «Solo in casa» →
+**▶ Accendi**. Il codice, l'indirizzo e l'impronta compaiono nella finestra. Oppure:
 ```sh
 nyctalus-rete casa
 ```

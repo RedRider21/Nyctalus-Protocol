@@ -11,8 +11,13 @@ orientamento vengono ricordati (`~/.nyctalus-launcher/config.json`).
 import json
 import os
 import re
+import shlex
+import shutil
+import signal
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 
 import gi
@@ -60,6 +65,114 @@ def importa_codice(rete, codice):
     testo = (r.stdout + r.stderr).strip()
     m = re.search(r"impronta ([0-9A-Fa-f-]{4,})", testo)
     return r.returncode == 0, testo, m.group(1) if m else ""
+
+
+# --- «🏠 La mia rete»: la rete di casa con le scelte in una finestra -------------------------
+# Costruisce lo stesso comando che si scriverebbe nel terminale (nyctalus-rete casa …), lo mostra
+# e lo esegue: «sempre accesa» = servizio systemd (--servizio); altrimenti un processo staccato
+# dal mini menu (resta acceso anche chiudendolo), fermato con «Spegni».
+MIA_RETE = {"internet": True, "nome": "", "nodi": 4, "base": 4701, "porta": 18800,
+            "senza_uscita": True, "sempre": True}
+DATI_RETE = Path(os.environ.get("NYCTALUS_RETE_DATI", Path.home() / ".nyctalus-rete"))
+PID_FINESTRA = DATI_RETE / "finestra.pid"
+LOG_FINESTRA = DATI_RETE / "finestra.log"
+UNITA_CASA = os.environ.get("NYCTALUS_UNITA_CASA", "nyctalus-casa.service")
+
+
+def comando_casa(scelte):
+    """Le scelte della finestra → gli argomenti di `nyctalus-rete` (senza il nome del programma).
+    ValueError se il nome pubblico o i numeri non vanno."""
+    sc = dict(MIA_RETE, **scelte)
+    args = ["casa"]
+    if sc["internet"]:
+        nome = sc["nome"].strip()
+        if not re.fullmatch(r"[A-Za-z0-9.-]{3,253}", nome):
+            raise ValueError("nome")
+        args += ["--internet", nome]
+    nodi, base, porta = int(sc["nodi"]), int(sc["base"]), int(sc["porta"])
+    if not (3 <= nodi <= 12 and 1024 <= base <= 65535 - nodi and 1024 <= porta <= 65535) or base <= porta < base + nodi:
+        raise ValueError("numeri")
+    if nodi != MIA_RETE["nodi"]:
+        args += ["--nodi", str(nodi)]
+    if base != MIA_RETE["base"]:
+        args += ["--porta-base", str(base)]
+    if porta != MIA_RETE["porta"]:
+        args += ["--porta", str(porta)]
+    args.append("--senza-uscita" if sc["senza_uscita"] else "--con-uscita")
+    if sc["sempre"]:
+        args.append("--servizio")
+    return args
+
+
+def comando_leggibile(args):
+    return "nyctalus-rete " + shlex.join(args)
+
+
+def pid_finestra():
+    """PID della rete accesa dalla finestra (non come servizio), se è ancora viva."""
+    try:
+        pid = int(PID_FINESTRA.read_text().strip())
+        os.kill(pid, 0)
+        return pid
+    except (OSError, ValueError):
+        return None
+
+
+def servizio_attivo():
+    try:
+        r = subprocess.run(["systemctl", "--user", "is-active", UNITA_CASA], capture_output=True, text=True, timeout=10)
+        return r.stdout.strip() in ("active", "activating")
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+def spegni_casa(rete):
+    """Spegne la rete di casa in entrambi i modi (servizio e processo della finestra)."""
+    testo = []
+    if servizio_attivo() or (Path.home() / ".config/systemd/user" / UNITA_CASA).exists():
+        r = subprocess.run([sys.executable, str(rete), "casa", "--servizio", "--togli"], capture_output=True, text=True, timeout=60)
+        testo.append((r.stdout + r.stderr).strip())
+    pid = pid_finestra()
+    if pid:
+        for sig, attesa in ((signal.SIGINT, 20), (signal.SIGTERM, 10)):
+            try:
+                os.killpg(pid, sig)
+            except OSError:
+                pass
+            for _ in range(attesa * 4):
+                if pid_finestra() is None:
+                    break
+                time.sleep(0.25)
+            if pid_finestra() is None:
+                break
+        testo.append("rete accesa dalla finestra fermata")
+    PID_FINESTRA.unlink(missing_ok=True)
+    return "\n".join(t for t in testo if t)
+
+
+def accendi_casa(rete, args, attesa=300):
+    """Esegue `nyctalus-rete` con quegli argomenti (spegnendo prima la rete già accesa).
+    → (riuscito, testo da mostrare)."""
+    spegni_casa(rete)
+    if "--servizio" in args:
+        r = subprocess.run([sys.executable, str(rete)] + args, capture_output=True, text=True, timeout=attesa + 60,
+                           stdin=subprocess.DEVNULL)
+        return r.returncode == 0, (r.stdout + r.stderr).strip()
+    DATI_RETE.mkdir(parents=True, exist_ok=True)
+    with open(LOG_FINESTRA, "w") as log:
+        proc = subprocess.Popen([sys.executable, str(rete)] + args, stdin=subprocess.DEVNULL, stdout=log,
+                                stderr=subprocess.STDOUT, start_new_session=True,
+                                env=dict(os.environ, PYTHONUNBUFFERED="1"))
+    PID_FINESTRA.write_text(str(proc.pid))
+    for _ in range(attesa * 2):
+        testo = LOG_FINESTRA.read_text(errors="replace")
+        if "Lascia questa finestra aperta" in testo:
+            return True, testo.split("Lascia questa finestra aperta")[0].strip()
+        if proc.poll() is not None:
+            PID_FINESTRA.unlink(missing_ok=True)
+            return False, testo.strip()
+        time.sleep(0.5)
+    return False, LOG_FINESTRA.read_text(errors="replace").strip()
 
 
 def _cerca(*relativi):
@@ -704,6 +817,164 @@ class Launcher(Gtk.Window):
         f.run()
         f.destroy()
 
+    def _mia_rete(self):
+        """🏠 La mia rete: la rete di casa (o raggiungibile da Internet) con le scelte a spunta;
+        mostra ed esegue lo stesso comando del terminale."""
+        rete = RADICE / "gestore-rete" / "nyctalus-rete"
+        if not rete.exists():
+            return self._avviso(_t("lau.miarete"), _t("lau.in_arrivo_corpo"))
+        sc = dict(MIA_RETE, **self.cfg.get("mia_rete", {}))
+        d = Gtk.Dialog(title=_t("lau.miarete"), transient_for=self, modal=False)
+        d.set_default_size(600, -1)
+        box = d.get_content_area()
+        box.set_spacing(8)
+        box.set_border_width(14)
+
+        def etichetta(testo, dim=False):
+            et = Gtk.Label(label=testo, xalign=0)
+            et.set_line_wrap(True)
+            et.set_max_width_chars(70)
+            if dim:
+                et.get_style_context().add_class("dim-label")
+            box.add(et)
+            return et
+        etichetta(_t("lau.miarete.spiega"))
+        stato = etichetta("", dim=True)
+        solo_casa = Gtk.RadioButton.new_with_label(None, _t("lau.miarete.solocasa"))
+        da_internet = Gtk.RadioButton.new_with_label_from_widget(solo_casa, _t("lau.miarete.internet"))
+        nome = Gtk.Entry(text=sc["nome"])
+        nome.set_placeholder_text(_t("lau.miarete.nome_esempio"))
+        riga = Gtk.Box(spacing=8)
+        riga.pack_start(da_internet, False, False, 0)
+        riga.pack_start(nome, True, True, 0)
+        box.add(solo_casa)
+        box.add(riga)
+        senza = Gtk.CheckButton(label=_t("lau.miarete.senza_uscita"))
+        sempre = Gtk.CheckButton(label=_t("lau.miarete.sempre"))
+        box.add(senza)
+        box.add(sempre)
+        avanzate = Gtk.Expander(label=_t("lau.miarete.avanzate"))
+        griglia = Gtk.Grid(column_spacing=8, row_spacing=6, margin_top=6)
+        numeri = {}
+        for i, (k, lo, hi) in enumerate((("nodi", 3, 12), ("base", 1024, 65000), ("porta", 1024, 65535))):
+            griglia.attach(Gtk.Label(label=_t("lau.miarete." + k), xalign=0), 0, i, 1, 1)
+            sp = Gtk.SpinButton.new_with_range(lo, hi, 1)
+            sp.set_value(int(sc[k]))
+            griglia.attach(sp, 1, i, 1, 1)
+            numeri[k] = sp
+        avanzate.add(griglia)
+        box.add(avanzate)
+        etichetta(_t("lau.miarete.comando"), dim=True)
+        cmd = Gtk.Label(xalign=0, selectable=True)
+        cmd.set_line_wrap(True)
+        cmd.set_max_width_chars(70)
+        box.add(cmd)
+        uscita = Gtk.TextView(editable=False, monospace=True, wrap_mode=Gtk.WrapMode.WORD_CHAR)
+        scorri = Gtk.ScrolledWindow(min_content_height=160)
+        scorri.add(uscita)
+        box.pack_start(scorri, True, True, 0)
+        (da_internet if sc["internet"] else solo_casa).set_active(True)
+        senza.set_active(bool(sc["senza_uscita"]))
+        sempre.set_active(bool(sc["sempre"]))
+
+        def scelte():
+            return {"internet": da_internet.get_active(), "nome": nome.get_text().strip(),
+                    "nodi": numeri["nodi"].get_value_as_int(), "base": numeri["base"].get_value_as_int(),
+                    "porta": numeri["porta"].get_value_as_int(), "senza_uscita": senza.get_active(),
+                    "sempre": sempre.get_active()}
+
+        def aggiorna(*_a):
+            nome.set_sensitive(da_internet.get_active())
+            try:
+                cmd.set_markup("<tt>%s</tt>" % GLib.markup_escape_text(comando_leggibile(comando_casa(scelte()))))
+                accendi.set_sensitive(True)
+            except ValueError as e:
+                cmd.set_text(_t("lau.miarete.nome_non_valido") if str(e) == "nome" else _t("lau.miarete.numeri_non_validi"))
+                accendi.set_sensitive(False)
+
+        def mostra_stato():
+            if servizio_attivo():
+                stato.set_text(_t("lau.miarete.stato_servizio"))
+            elif pid_finestra():
+                stato.set_text(_t("lau.miarete.stato_finestra"))
+            else:
+                stato.set_text(_t("lau.miarete.stato_spenta"))
+
+        def scrivi(testo):
+            uscita.get_buffer().set_text(testo)
+
+        def in_sottofondo(lavoro, fine):
+            for b in pulsanti:
+                b.set_sensitive(False)
+
+            def gira():
+                try:
+                    esito = lavoro()
+                except Exception as e:  # noqa: BLE001
+                    esito = (False, str(e))
+                GLib.idle_add(fine, esito)
+            threading.Thread(target=gira, daemon=True).start()
+
+        def finito(esito):
+            riuscito, testo = esito
+            titolo = _t("lau.miarete.accesa") if riuscito else _t("lau.miarete.non_partita")
+            scrivi(titolo + "\n\n" + testo)
+            for b in pulsanti:
+                b.set_sensitive(True)
+            aggiorna()
+            mostra_stato()
+            return False
+
+        def premi_accendi(_b):
+            sc_ora = scelte()
+            self.cfg["mia_rete"] = sc_ora
+            self._salva_cfg()
+            args = comando_casa(sc_ora)
+            scrivi(_t("lau.miarete.in_avvio") + "\n" + comando_leggibile(args))
+            in_sottofondo(lambda: accendi_casa(rete, args), finito)
+
+        def premi_spegni(_b):
+            scrivi(_t("lau.miarete.in_spegnimento"))
+            in_sottofondo(lambda: (True, spegni_casa(rete)),
+                          lambda e: finito((True, _t("lau.miarete.spenta") + ("\n" + e[1] if e[1] else ""))) and False)
+
+        def premi_firewall(_b):
+            s = scelte()
+            a, z, w = s["base"], s["base"] + s["nodi"] - 1, s["porta"]
+            regole = "ufw allow %d:%d/udp && ufw allow %d:%d/tcp && ufw allow %d/tcp" % (a, z, a, z, w)
+            in_sottofondo(lambda: (lambda r: (r.returncode == 0, (r.stdout + r.stderr).strip() or "sudo " + regole))(
+                subprocess.run(["pkexec", "sh", "-c", regole], capture_output=True, text=True)),
+                lambda e: finito((e[0], (_t("lau.miarete.firewall_ok") if e[0] else e[1]))))
+
+        accendi = Gtk.Button(label="▶ " + _t("lau.miarete.accendi"))
+        spegni = Gtk.Button(label="■ " + _t("lau.miarete.spegni"))
+        firewall = Gtk.Button(label="🔓 " + _t("lau.miarete.firewall"))
+        chiudi = Gtk.Button(label=_t("lau.imp.chiudi"))
+        pulsanti = [accendi, spegni, firewall]
+        accendi.connect("clicked", premi_accendi)
+        spegni.connect("clicked", premi_spegni)
+        firewall.connect("clicked", premi_firewall)
+        chiudi.connect("clicked", lambda _b: d.destroy())
+        barra = Gtk.Box(spacing=8)
+        if shutil.which("ufw") and shutil.which("pkexec"):
+            barra.pack_start(firewall, False, False, 0)
+        barra.pack_end(accendi, False, False, 0)
+        barra.pack_end(spegni, False, False, 0)
+        barra.pack_end(chiudi, False, False, 0)
+        box.add(barra)
+        for w in (solo_casa, da_internet, senza, sempre):
+            w.connect("toggled", aggiorna)
+        nome.connect("changed", aggiorna)
+        for sp in numeri.values():
+            sp.connect("value-changed", aggiorna)
+        aggiorna()
+        mostra_stato()
+        if servizio_attivo():          # già accesa come servizio: mostra subito il codice
+            r = subprocess.run([sys.executable, str(rete), "casa"] + (["--internet", sc["nome"]] if sc["internet"] and sc["nome"] else [])
+                               + ["--servizio", "--stampa"], capture_output=True, text=True, timeout=30)
+            scrivi((r.stdout + r.stderr).strip())
+        d.show_all()
+
     def _apri_terminale(self):
         """⌨ Terminale: il terminale del sistema pronto per nyctalus-cli (chat e file da riga di comando)."""
         for candidato in (RADICE / "avvia-terminale.sh", RADICE.parent / "strumenti" / "avvia-terminale.sh"):
@@ -721,6 +992,7 @@ class Launcher(Gtk.Window):
             mi.connect("activate", lambda _w: cb())
             menu.append(mi)
 
+        voce("🏠 " + _t("lau.miarete") + "…", self._mia_rete)              # accendere la PROPRIA rete, a spunte
         voce("🔗 " + _t("lau.collegati") + "…", self._collegati_rete)   # incolla il codice di rete (NYCT1:…)
         voce("⚙ " + _t("lau.imp.titolo") + "…", self._impostazioni_finestra)  # finestra a schede: rete, prestazioni, chiamate
         voce("🦊 " + _t("lau.firefox"), self._apri_firefox)    # navigazione anonima con Firefox

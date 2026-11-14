@@ -92,6 +92,17 @@ messaggi, allegati, fotocamera, menu del tasto destro, temi, **chiamate 📞 e v
 
 ---
 
+### Accendere la propria rete (🏠 La mia rete)
+Dal **mini menu → ⚙ → 🏠 La mia rete…** (dalla 0.3.23) si accende la **propria** rete senza
+terminale: «Solo in casa» oppure «Anche da Internet» con il nome o l'IP pubblico; spunte **Senza
+uscita verso Internet** (consigliata) e **Sempre accesa** (servizio che riparte da solo dopo un
+riavvio); in «Avanzate» numero di nodi e porte. In fondo la finestra mostra il **comando
+equivalente** (`nyctalus-rete casa …`, utilizzabile anche nel terminale), poi **▶ Accendi** lo
+esegue e mostra codice di rete e passi; **■ Spegni** ferma la rete (in entrambi i modi);
+**🔓 Apri il firewall** apre le porte con `ufw` (chiede la password). Le scelte si ricordano.
+Senza «Sempre accesa» la rete resta accesa anche chiudendo il mini menu, fino a «Spegni» o allo
+spegnimento del PC.
+
 ### Collegarsi a una rete condivisa
 Senza configurazione chat e browser usano una rete di prova solo sul PC. Per una rete
 condivisa serve il **codice di rete** dato da chi la gestisce. Dal **mini menu → ⚙ → 🔗
