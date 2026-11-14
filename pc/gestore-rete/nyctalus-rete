@@ -1216,6 +1216,9 @@ def principale(args):
         print(__doc__)
         return
     cmd, args = args[0], list(args[1:])
+    if any(a in ("-h", "--help") for a in args):   # «casa --help» mostra l'aiuto, non accende niente
+        print(__doc__)
+        return
     rete = Rete(DATI)
     if cmd == "crea":
         nome = opzione(args, "--nome", "Rete Nyctalus")

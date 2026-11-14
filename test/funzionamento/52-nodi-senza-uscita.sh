@@ -78,6 +78,10 @@ avvia_casa() { # avvia_casa N [opzioni] → rete di casa accesa, elenco in $TMP/
   curl -sf http://127.0.0.1:24720/directory.txt -o "$TMP/casa$n.txt"
 }
 ferma_casa() { kill -INT $CASA 2>/dev/null; for _ in $(seq 1 40); do kill -0 $CASA 2>/dev/null || break; sleep 0.25; done; sleep 1; }
+mkdir -p "$TMP/aiuto"
+HOME="$TMP/aiuto" NYCTALUS_BIN="$BIN" timeout 15 python3 "$G" casa --senza-uscita --help < /dev/null > "$TMP/aiuto.txt" 2>&1 \
+  && grep -q "nyctalus-rete" "$TMP/aiuto.txt" && [ ! -e "$TMP/aiuto/.nyctalus-rete" ] \
+  && pass "«casa … --help» mostra l'aiuto e non accende (né riscrive) la rete" || fail "casa --help: $(head -2 "$TMP/aiuto.txt")"
 avvia_casa 1 --senza-uscita
 [ "$(grep -c '^v .*uscita=no' "$TMP/casa1.txt")" = 4 ] && grep -q "SENZA USCITA" "$TMP/casa1.log" \
   && grep -q "NO EXIT" "$H/.nyctalus-rete/casa/nodo-24721.log" \
