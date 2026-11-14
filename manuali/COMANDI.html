@@ -1,0 +1,1019 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
+     Pagina generata da strumenti/manuali-html.py: non modificarla a mano. -->
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tutti i comandi · Nyctalus</title>
+<link rel="icon" href="../logo.svg">
+<link rel="stylesheet" href="../stile.css">
+<link rel="stylesheet" href="manuali.css">
+</head>
+<body>
+<div class="barra"><div class="wrap">
+  <a class="marca" href="../index.html"><img src="../logo.svg" alt="Nyctalus"> Nyctalus</a>
+  <div class="spazio"></div>
+  <nav class="link"><a href="index.html">Manuali</a><a href="https://github.com/RedRider21/Nyctalus-Protocol">GitHub</a></nav>
+  <button class="btn-icona" id="tema" title="Tema">🌓</button>
+</div></div>
+<main class="wrap manuale-doc">
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><a href="COMANDI.html" class="qui">Tutti i comandi</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-COLLAUDO.html">Manuale del collaudo (nyctalus-collaudo)</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
+<article>
+<h1 id="tutti-i-comandi">Tutti i comandi</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-programmi-con-la-finestra">1. Programmi con la finestra</a><a href="#2-chat-e-file-dal-terminale-nyctalus-cli">2. Chat e file dal terminale (nyctalus-cli)</a><a href="#3-rete-collegarsi-e-gestirla-nyctalus-rete">3. Rete: collegarsi e gestirla (nyctalus-rete)</a><a href="#4-siti-nyct-nyctalus-sito">4. Siti .nyct (nyctalus-sito)</a><a href="#5-controlli-collaudo-e-integrita">5. Controlli: collaudo e integrità</a><a href="#6-server-e-nodi">6. Server e nodi</a><a href="#7-telefono-termux">7. Telefono (Termux)</a><a href="#8-installare-e-disinstallare">8. Installare e disinstallare</a><a href="#9-il-motore-per-esperti-nyctalus">9. Il motore, per esperti (nyctalus)</a><a href="#10-variabili-dambiente">10. Variabili d'ambiente</a><a href="#11-per-chi-sviluppa">11. Per chi sviluppa</a><a href="#12-corrispondenze-con-tor">12. Corrispondenze con Tor</a></nav>
+<p>L'elenco <strong>completo</strong> dei comandi di Nyctalus, diviso per tipologia. È l'unico elenco
+completo: gli altri manuali spiegano <em>come</em> fare le cose e rimandano qui per le opzioni.
+Aggiornato alla 0.3.21; ogni comando stampa anche il suo aiuto (<code>--help</code>, o <code>aiuto</code> per
+<code>nyctalus-cli</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Tipologia</th>
+<th>Comandi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#1-programmi-con-la-finestra">1. Programmi con la finestra</a></td>
+<td><code>nyctalus-launcher</code>, <code>nyctalus-chat</code>, <code>nyctalus-browser</code>, <code>nyctalus-file</code>, <code>nyctalus-firefox</code></td>
+</tr>
+<tr>
+<td><a href="#2-chat-e-file-dal-terminale-nyctalus-cli">2. Chat e file dal terminale</a></td>
+<td><code>nyctalus-cli</code></td>
+</tr>
+<tr>
+<td><a href="#3-rete-collegarsi-e-gestirla-nyctalus-rete">3. Rete: collegarsi e gestirla</a></td>
+<td><code>nyctalus-rete</code></td>
+</tr>
+<tr>
+<td><a href="#4-siti-nyct-nyctalus-sito">4. Siti .nyct</a></td>
+<td><code>nyctalus-sito</code></td>
+</tr>
+<tr>
+<td><a href="#5-controlli-collaudo-e-integrita">5. Controlli</a></td>
+<td><code>nyctalus-collaudo</code>, <code>nyctalus-integrita</code></td>
+</tr>
+<tr>
+<td><a href="#6-server-e-nodi">6. Server e nodi</a></td>
+<td><code>installa.sh</code> del server, <code>nyctalus-server</code></td>
+</tr>
+<tr>
+<td><a href="#7-telefono-termux">7. Telefono (Termux)</a></td>
+<td>script unico, <code>nyctalus-mobile</code></td>
+</tr>
+<tr>
+<td><a href="#8-installare-e-disinstallare">8. Installare e disinstallare</a></td>
+<td><code>installa.sh</code>, <code>disinstalla.sh</code></td>
+</tr>
+<tr>
+<td><a href="#9-il-motore-per-esperti-nyctalus">9. Il motore, per esperti</a></td>
+<td><code>nyctalus …</code></td>
+</tr>
+<tr>
+<td><a href="#10-variabili-dambiente">10. Variabili d'ambiente</a></td>
+<td><code>NYCTALUS_…</code></td>
+</tr>
+<tr>
+<td><a href="#11-per-chi-sviluppa">11. Per chi sviluppa</a></td>
+<td>prove, pacchetti, release</td>
+</tr>
+<tr>
+<td><a href="#12-corrispondenze-con-tor">12. Corrispondenze con Tor</a></td>
+<td><code>tor</code>, <code>nyx</code>, <code>torsocks</code>…</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="1-programmi-con-la-finestra">1. Programmi con la finestra</h2>
+<p>Installati sul PC Linux (nel menu delle applicazioni e come comandi); senza installare, dalla
+cartella del pacchetto, con gli script <code>avvia-….sh</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Senza installare</th>
+<th>Cosa apre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nyctalus-launcher</code></td>
+<td><code>./avvia-launcher.sh</code></td>
+<td>il <strong>mini menu</strong>: accende la rete, apre gli altri programmi, ⚙ impostazioni</td>
+</tr>
+<tr>
+<td><code>nyctalus-chat</code></td>
+<td><code>./avvia-chat.sh</code></td>
+<td>la <strong>chat</strong> (accende il motore se è spento)</td>
+</tr>
+<tr>
+<td><code>nyctalus-browser</code></td>
+<td><code>./avvia-browser.sh</code></td>
+<td>il <strong>browser</strong>: normale o 🦇 attraverso la rete, siti <code>.nyct</code></td>
+</tr>
+<tr>
+<td><code>nyctalus-file</code></td>
+<td><code>./avvia-file.sh</code></td>
+<td>il programma <strong>File</strong> (file grandi ai contatti)</td>
+</tr>
+<tr>
+<td><code>nyctalus-firefox</code></td>
+<td><code>./avvia-firefox.sh</code></td>
+<td><strong>Nyctalus Firefox</strong>: il tuo Firefox con un profilo blindato</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>./avvia-terminale.sh</code></td>
+<td>⌨ un terminale pronto per <code>nyctalus-cli</code> (dal mini menu)</td>
+</tr>
+</tbody>
+</table>
+<p>Telefono: l'app <strong>Nyctalus</strong>. Windows: <code>Nyctalus.cmd</code>.</p>
+<hr />
+<h2 id="2-chat-e-file-dal-terminale-nyctalus-cli">2. Chat e file dal terminale (<code>nyctalus-cli</code>)</h2>
+<p>Usa lo stesso motore della chat. Nel ⌨ Terminale del mini menu e del telefono si scrive senza
+<code>nyctalus-cli</code> davanti. Guida con esempi: <a href="MANUALE-TERMINALE.html"><code>MANUALE-TERMINALE.md</code></a>.</p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>io</code></td>
+<td>il tuo Contact ID</td>
+</tr>
+<tr>
+<td><code>contatti</code></td>
+<td>i contatti, ● se in linea</td>
+</tr>
+<tr>
+<td><code>aggiungi &lt;indirizzo&gt; &lt;nome&gt;</code></td>
+<td>aggiunge un contatto</td>
+</tr>
+<tr>
+<td><code>scrivi &lt;contatto&gt; &lt;testo…&gt;</code></td>
+<td>manda un messaggio</td>
+</tr>
+<tr>
+<td><code>leggi &lt;contatto&gt; [-n N]</code></td>
+<td>la conversazione (ultimi N, di solito 20)</td>
+</tr>
+<tr>
+<td><code>ascolta</code></td>
+<td>messaggi, file e proposte in arrivo, in diretta (Ctrl-C esce)</td>
+</tr>
+<tr>
+<td><code>invia &lt;contatto&gt; &lt;file…&gt;</code></td>
+<td>file grandi (programma File)</td>
+</tr>
+<tr>
+<td><code>file</code> · <code>file -s</code></td>
+<td>i trasferimenti con l'avanzamento · seguiti in diretta</td>
+</tr>
+<tr>
+<td><code>accetta &lt;id&gt;</code> · <code>rifiuta &lt;id&gt;</code></td>
+<td>un file in arrivo che chiede conferma</td>
+</tr>
+<tr>
+<td><code>pausa &lt;id&gt;</code> · <code>riprendi &lt;id&gt;</code> · <code>annulla &lt;id&gt;</code></td>
+<td>un trasferimento</td>
+</tr>
+<tr>
+<td><code>togli &lt;id&gt;</code> · <code>pulisci</code></td>
+<td>dall'elenco dei trasferimenti (i file restano)</td>
+</tr>
+<tr>
+<td><code>impostazioni [soglia MB] [canali N] [inchat si\|no] [riservata si\|no]</code></td>
+<td>soglia di accettazione automatica, collegamenti in parallelo, file anche nella chat, modalità riservata</td>
+</tr>
+<tr>
+<td><code>avvia</code></td>
+<td>accende il motore senza finestre (server, SSH, Raspberry; Ctrl-C lo spegne)</td>
+</tr>
+<tr>
+<td><code>sblocca</code></td>
+<td>apre i dati protetti da passphrase (da dare a ogni avvio)</td>
+</tr>
+<tr>
+<td><code>cassaforte</code> · <code>cassaforte attiva\|cambia\|togli</code></td>
+<td>protezione dei dati con passphrase: com'è · accendila, cambia passphrase, toglila</td>
+</tr>
+<tr>
+<td><code>aiuto</code></td>
+<td>l'elenco dei comandi</td>
+</tr>
+</tbody>
+</table>
+<p><code>&lt;contatto&gt;</code> = nome (anche solo l'inizio, senza maiuscole) o indirizzo <code>.nyct</code>; <code>&lt;id&gt;</code> = basta l'inizio.</p>
+<hr />
+<h2 id="3-rete-collegarsi-e-gestirla-nyctalus-rete">3. Rete: collegarsi e gestirla (<code>nyctalus-rete</code>)</h2>
+<p>Dati del gestore in <code>~/.nyctalus-rete</code> (privata): la chiave segreta dell'autorità non esce mai
+da lì. Guida: <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md</code></a>.</p>
+<p><strong>Per chi usa una rete (client)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>importa CODICE\|FILE</code></td>
+<td>collega questo PC alla rete del codice <code>NYCT1:…</code></td>
+</tr>
+<tr>
+<td><code>importa --prova</code></td>
+<td>torna alla rete di prova locale</td>
+</tr>
+<tr>
+<td><code>reti</code> · <code>usa N</code> · <code>stato</code></td>
+<td>le reti salvate (● in uso) · passa alla N · a quale rete sei collegato</td>
+</tr>
+<tr>
+<td><code>aiuta si --indirizzo NOME\|IP [--porta 4800] [--tetto 10]</code> · <code>aiuta no</code> · <code>aiuta stato</code></td>
+<td>«🦇 Aiuta la rete»: il PC fa anche da nodo solo intermedio, con un tetto di banda (Mbit/s)</td>
+</tr>
+<tr>
+<td><code>ponte aggiungi RIGA…</code> · <code>ponte togli IP:PORTA\|tutti</code> · <code>ponte elenco</code></td>
+<td>ponti nascosti: si entra sempre da lì</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rete di casa e con gli amici</strong></p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>casa [--nodi 4]</code></td>
+<td>rete di casa tutta su questo PC, con il codice per il telefono (Ctrl-C ferma)</td>
+</tr>
+<tr>
+<td><code>casa --internet NOME</code></td>
+<td>la stessa, raggiungibile da Internet (NOME = No-IP/DuckDNS o IP pubblico)</td>
+</tr>
+<tr>
+<td><code>ospite aggiungi RIGA… --famiglia NOME [--internet]</code></td>
+<td>aggiunge il nodo di un amico</td>
+</tr>
+<tr>
+<td><code>ospite togli IP:PORTA [--internet]</code> · <code>ospite elenco [--internet]</code></td>
+<td>toglie / elenca i nodi ospiti</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Per chi gestisce una rete</strong></p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>crea [--nome NOME]</code></td>
+<td>crea l'autorità (le chiavi che firmano l'elenco)</td>
+</tr>
+<tr>
+<td><code>aggiungi RIGA… \| --file F [--famiglia NOME] [--banda MBIT] [--intermedio]</code></td>
+<td>aggiunge nodi (righe «IP:PORTA,chiave,impronta»)</td>
+</tr>
+<tr>
+<td><code>togli IP:PORTA</code></td>
+<td>toglie un nodo</td>
+</tr>
+<tr>
+<td><code>famiglia IP:PORTA NOME\|-</code></td>
+<td>mette (o toglie) un nodo in una famiglia: mai due nello stesso percorso</td>
+</tr>
+<tr>
+<td><code>banda IP:PORTA MBIT\|-</code></td>
+<td>banda del nodo: i più capaci si scelgono più spesso</td>
+</tr>
+<tr>
+<td><code>stabilita [--sonda] [--applica]</code></td>
+<td>stabilità dei PC che aiutano; <code>--applica</code> promuove a guardia i più stabili</td>
+</tr>
+<tr>
+<td><code>guardia IP:PORTA si\|no\|auto</code></td>
+<td>promozione a guardia decisa a mano</td>
+</tr>
+<tr>
+<td><code>elenco</code> · <code>verifica</code></td>
+<td>rete, nodi e stato dell'elenco · prova a raggiungere ogni nodo</td>
+</tr>
+<tr>
+<td><code>firma</code></td>
+<td>firma l'elenco dei nodi → <code>directory.txt</code></td>
+</tr>
+<tr>
+<td><code>codice --url URL [--rubrica ADDR --casella ADDR]</code></td>
+<td>il codice di rete da dare ai client</td>
+</tr>
+<tr>
+<td><code>servi [--porta 18800]</code></td>
+<td>pubblica <code>directory.txt</code> da questo PC (rete locale)</td>
+</tr>
+<tr>
+<td><code>protezione [si\|no] [--rumore HZ] [--forma rumore\|h3\|webrtc [--nome SITO]] [--casa\|--internet]</code></td>
+<td>camuffamento e rumore di fondo di tutta la rete (finiscono nel codice)</td>
+</tr>
+<tr>
+<td><code>rubrica [--codice NYCT1:…] [--servizio [--togli\|--stampa]]</code></td>
+<td>rubrica e casella cifrata della rete, sempre accese</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-siti-nyct-nyctalus-sito">4. Siti .nyct (<code>nyctalus-sito</code>)</h2>
+<p>Dati in <code>~/.nyctalus-siti/NOME/</code> (privata). Guida: <a href="MANUALE-SITI.html"><code>MANUALE-SITI.md</code></a>.</p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nyctalus-sito</code></td>
+<td>guida passo passo (menu)</td>
+</tr>
+<tr>
+<td><code>crea NOME [--cartella DIR \| --backend 127.0.0.1:PORTA] [--codice NYCT1:…] [--chiave FILE] [--si]</code></td>
+<td>sito nuovo (pagine fisse o un server web locale)</td>
+</tr>
+<tr>
+<td><code>avvia NOME</code></td>
+<td>lo mette online finché non premi Ctrl-C</td>
+</tr>
+<tr>
+<td><code>servizio NOME [--togli] [--stampa]</code></td>
+<td>sempre acceso, come servizio dell'utente</td>
+</tr>
+<tr>
+<td><code>elenco</code> · <code>indirizzo NOME</code></td>
+<td>i siti con indirizzo e stato · solo l'indirizzo <code>.nyct</code></td>
+</tr>
+<tr>
+<td><code>rete NOME [--codice NYCT1:…]</code></td>
+<td>su quale rete sta</td>
+</tr>
+<tr>
+<td><code>esporta NOME FILE</code></td>
+<td>copia di sicurezza della chiave (= l'indirizzo del sito)</td>
+</tr>
+<tr>
+<td><code>togli NOME [--si]</code></td>
+<td>lo cancella (la chiave resta in una copia di sicurezza)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-controlli-collaudo-e-integrita">5. Controlli: collaudo e integrità</h2>
+<p><strong><code>nyctalus-collaudo</code></strong>: il collaudo della <strong>tua rete vera</strong>, con un rapporto ✓/✗. Guida: <a href="MANUALE-COLLAUDO.html"><code>MANUALE-COLLAUDO.md</code></a>.</p>
+<table>
+<thead>
+<tr>
+<th>Opzione</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>(nessuna)</em></td>
+<td>integrità, configurazione, nodi e sonde, tunnel, IP, DNS, velocità, chat e servizi</td>
+</tr>
+<tr>
+<td><code>--guidato</code></td>
+<td>in più le domande sulle prove a mano (browser, chiamata, file…)</td>
+</tr>
+<tr>
+<td><code>--rapporto FILE</code> · <code>--json</code></td>
+<td>salva il rapporto · gli esiti anche in JSON</td>
+</tr>
+<tr>
+<td><code>--solo-rete</code></td>
+<td>niente verso Internet (server, rete di casa)</td>
+</tr>
+<tr>
+<td><code>--senza-diretto</code> · <code>--senza-velocita</code> · <code>--mb N</code> · <code>--senza-integrita</code></td>
+<td>salta il confronto con il tuo IP vero · la prova di velocità (o ne sceglie i MB) · il controllo d'integrità</td>
+</tr>
+<tr>
+<td><code>--contatto NOME</code></td>
+<td>manda anche un messaggio di prova</td>
+</tr>
+<tr>
+<td><code>--socks 127.0.0.1:PORTA</code> · <code>--config FILE</code></td>
+<td>un tunnel o una configurazione precisi</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>nyctalus-integrita</code></strong>: i programmi installati sono quelli pubblicati? (<code>firma/LEGGIMI.md</code>)</p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nyctalus-integrita</code></td>
+<td>controlla l'installazione di questo dispositivo</td>
+</tr>
+<tr>
+<td><code>nyctalus-integrita verifica CARTELLA</code></td>
+<td>controlla una cartella (installata o un pacchetto scompattato)</td>
+</tr>
+<tr>
+<td><code>nyctalus-integrita firma CARTELLA</code></td>
+<td>(chi pubblica) crea e firma l'elenco <code>INTEGRITA</code></td>
+</tr>
+</tbody>
+</table>
+<p>Esce con 0 = tutto a posto, 1 = qualcosa non torna, 3 = controllo non possibile.</p>
+<hr />
+<h2 id="6-server-e-nodi">6. Server e nodi</h2>
+<p><strong>Installare i nodi</strong> (<code>installa.sh</code> del pacchetto server). Guida: <a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>.</p>
+<table>
+<thead>
+<tr>
+<th>Opzione</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sudo ./installa.sh</code></td>
+<td>chiede IP pubblico, quanti nodi, porte</td>
+</tr>
+<tr>
+<td><code>--ip IP</code> · <code>--nodi N</code> (1-8) · <code>--porta PRIMA</code> · <code>--si</code></td>
+<td>senza domande</td>
+</tr>
+<tr>
+<td><code>--utente</code></td>
+<td>senza root: servizi dell'utente</td>
+</tr>
+<tr>
+<td><code>--codice NYCT1:…</code></td>
+<td>prende dal codice della rete camuffamento, rumore e forma</td>
+</tr>
+<tr>
+<td><code>--camuffamento HEX</code> · <code>--rumore HZ</code> · <code>--http3 NOME</code> · <code>--webrtc</code></td>
+<td>camuffamento e forma a mano</td>
+</tr>
+<tr>
+<td><code>--ponte</code></td>
+<td>ponte nascosto: fuori dall'elenco, stampa la riga segreta</td>
+</tr>
+<tr>
+<td><code>--nuova-identita</code></td>
+<td>rifà chiavi e certificato (cambiano le righe: rimandale al gestore)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Gestire i nodi installati</strong> (<code>nyctalus-server</code>)</p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>stato</code></td>
+<td>servizi attivi e porte</td>
+</tr>
+<tr>
+<td><code>righe</code></td>
+<td>le righe d'elenco da mandare al gestore (o quelle segrete del ponte)</td>
+</tr>
+<tr>
+<td><code>avvia</code> · <code>ferma</code> · <code>riavvia</code></td>
+<td>i servizi dei nodi</td>
+</tr>
+<tr>
+<td><code>log [PORTA]</code></td>
+<td>ultimi messaggi dei nodi</td>
+</tr>
+</tbody>
+</table>
+<p>Disinstallare: <code>sudo /opt/nyctalus/disinstalla.sh [--anche-identita]</code> (le identità restano, se non lo chiedi).
+Sul server si possono usare anche <code>nyctalus-rete rubrica …</code> (rubrica e casella) e <code>nyctalus-sito …</code>.</p>
+<hr />
+<h2 id="7-telefono-termux">7. Telefono (Termux)</h2>
+<p>Di solito fa tutto l'app (<strong>Strumenti ▾</strong>). A mano:</p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>curl -fsSL https://github.com/RedRider21/Nyctalus-Protocol/releases/latest/download/installa-termux.sh \| bash</code></td>
+<td>installa o aggiorna, verificando firma e integrità</td>
+</tr>
+<tr>
+<td><code>nyctalus-mobile</code> · <code>--sfondo</code> · <code>--ferma</code> · <code>--stato</code></td>
+<td>il servizio del telefono: in primo piano · in sottofondo · fermalo · è acceso?</td>
+</tr>
+<tr>
+<td><code>bash installa.sh [--avvio-automatico]</code></td>
+<td>dal pacchetto scompattato (con Termux:Boot riparte all'accensione)</td>
+</tr>
+<tr>
+<td><code>bash ~/nyctalus/disinstalla.sh</code></td>
+<td>toglie solo Nyctalus (i dati solo se confermi)</td>
+</tr>
+</tbody>
+</table>
+<p>In Termux ci sono anche <code>nyctalus-cli</code>, <code>nyctalus-collaudo</code> e <code>nyctalus-integrita</code>.</p>
+<hr />
+<h2 id="8-installare-e-disinstallare">8. Installare e disinstallare</h2>
+<table>
+<thead>
+<tr>
+<th>Dove</th>
+<th>Comando</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PC Linux</td>
+<td><code>./installa.sh [--ruolo client\|gestore\|nodo] [--si] [--avvio-automatico]</code> (controlla l'integrità del pacchetto prima di copiare)</td>
+</tr>
+<tr>
+<td>PC Linux</td>
+<td><code>~/.local/share/nyctalus/disinstalla.sh [--si]</code></td>
+</tr>
+<tr>
+<td>Server</td>
+<td>sezione 6 · Telefono: sezione 7 · Windows: si scompatta e si apre <code>Nyctalus.cmd</code></td>
+</tr>
+</tbody>
+</table>
+<p>Passo passo: <a href="MANUALE-INSTALLAZIONE.html"><code>MANUALE-INSTALLAZIONE.md</code></a>.</p>
+<hr />
+<h2 id="9-il-motore-per-esperti-nyctalus">9. Il motore, per esperti (<code>nyctalus</code>)</h2>
+<p>I programmi sopra usano il motore da soli: questi comandi servono per usi a mano, server
+particolari e prove. <code>nyctalus help</code> stampa l'elenco.</p>
+<p><strong>Usare la rete</strong></p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>start [--config F] [--directory F --authority HEX] [--socks 127.0.0.1:1080] [--circuits 2] [--hops 3] [--cover 0] [--bridge RIGA]</code></td>
+<td>demone con proxy SOCKS5 (come <code>tor</code>)</td>
+</tr>
+<tr>
+<td><code>status [--config F]</code></td>
+<td>lo stato del demone</td>
+</tr>
+<tr>
+<td><code>monitor [--control 127.0.0.1:1090]</code></td>
+<td>cruscotto testuale (come <code>nyx</code>)</td>
+</tr>
+<tr>
+<td><code>exec [--socks ADDR] [--config F] -- PROGRAMMA [ARG…]</code></td>
+<td>un programma dentro la rete (come <code>torsocks</code>)</td>
+</tr>
+<tr>
+<td><code>nodes [--directory F --authority HEX] [--probe] [--timeout 3] [--obfuscation HEX]</code></td>
+<td>l'elenco firmato; <code>--probe</code> prova chi risponde</td>
+</tr>
+<tr>
+<td><code>circuit (--directory F --authority HEX \| --nodes 'addr,pub;…') [--socks …] [--circuits 1-8] [--hops 1-5] [--cover 0] [--exits 1-4] [--constant-rate N [--constant-always]]</code></td>
+<td>come <code>start</code> con i nodi indicati</td>
+</tr>
+<tr>
+<td><code>chat [--data DIR] [--identity F] [--backend 127.0.0.1:1082] [--control 127.0.0.1:1091] [--socks 127.0.0.1:1080] [--max-file 200] [--control-token SEGRETO] [--rubrica ADDR] [--casella ADDR]</code></td>
+<td>il motore della chat</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Siti .nyct</strong></p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>site (--dir CARTELLA \| --backend IP:PORTA) [--directory F --authority HEX \| --rendezvous IP:PORTA --fingerprint HEX] [--identity F \| --identity-chat 127.0.0.1:1091] [--hops 3] [--pool 4]</code></td>
+<td>pubblica un sito (senza <code>--identity</code> la chiave è nuova a ogni avvio, e così l'indirizzo)</td>
+</tr>
+<tr>
+<td><code>browse ADDR.nyct [--directory F --authority HEX \| --rendezvous … --fingerprint …] [--path /] [--hops 3]</code></td>
+<td>visita un sito (stampa la risposta HTTP)</td>
+</tr>
+<tr>
+<td><code>address --identity F</code></td>
+<td>la chiave di un sito (creata se manca) e il suo indirizzo</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Nodi ed elenco firmato</strong></p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>node --listen 0.0.0.0:4601 [--data DIR] [--announce IP:PORTA] [--secret HEX] [--directory F --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0] [--hidden-bridge] [--middle-only] [--max-rate MBIT]</code></td>
+<td>un nodo della rete</td>
+</tr>
+<tr>
+<td><code>authority</code></td>
+<td>crea le chiavi di un'autorità</td>
+</tr>
+<tr>
+<td><code>directory --authority-secret HEX --entries 'addr,x,fp;…'</code></td>
+<td>firma un elenco di nodi</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Prove e studio</strong></p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test-circuit (--directory F --authority HEX \| --nodes …) [--message DEST]</code></td>
+<td>prova un circuito</td>
+</tr>
+<tr>
+<td><code>simulate-paths (--directory F --authority HEX) --adversary FAMIGLIA,… [--users 1000] [--days 90] [--circuits-per-day 20]</code></td>
+<td>quanto spesso un avversario (alcune famiglie) sta ai due capi, con la scelta dei percorsi vecchia, senza guardia e attuale</td>
+</tr>
+<tr>
+<td><code>receive --out F [--listen 0.0.0.0:4433] [--identity F]</code> · <code>send --to IP:PORTA --fingerprint HEX --recipient ADDR [--lanes 4] FILE</code></td>
+<td>trasferimento diretto (livello L2)</td>
+</tr>
+<tr>
+<td><code>single-hop --to IP:PORTA --fingerprint HEX [--socks …]</code> · <code>exit --listen 0.0.0.0:4600</code></td>
+<td>proxy a un salto (prova, nessun anonimato)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Opzioni comuni</strong> (valgono dove hanno senso)</p>
+<table>
+<thead>
+<tr>
+<th>Opzione</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--obfuscation HEX</code></td>
+<td>camuffamento con la chiave della rete</td>
+</tr>
+<tr>
+<td><code>--mimic [--mimic-name SITO]</code></td>
+<td>forma HTTP/3 (sembra un sito)</td>
+</tr>
+<tr>
+<td><code>--webrtc</code></td>
+<td>forma videochiamata (STUN + SRTP)</td>
+</tr>
+<tr>
+<td><code>--bridge RIGA[;RIGA]</code></td>
+<td>entrare sempre da questi ponti nascosti</td>
+</tr>
+<tr>
+<td><code>--exits N</code></td>
+<td>uscite diverse (1-4): ogni sito resta sulla sua; non accelera</td>
+</tr>
+<tr>
+<td><code>--constant-rate N [--constant-always]</code></td>
+<td>copertura costante: N celle/s per verso durante l'uso (o sempre)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>File di configurazione</strong> di <code>start</code>/<code>status</code> (<code>~/.config/nyctalus/config</code>, righe <code>chiave = valore</code>):
+<code>directory</code>, <code>authority</code>, <code>socks</code>, <code>control</code>, <code>circuits</code>, <code>hops</code>, <code>cover</code>, <code>obfuscation</code>, <code>bridge</code>, <code>exits</code>.</p>
+<hr />
+<h2 id="10-variabili-dambiente">10. Variabili d'ambiente</h2>
+<p>Di solito le imposta da solo chi avvia il motore (impostazioni a schede). Utili a mano:</p>
+<p><strong>Motore e rete</strong></p>
+<table>
+<thead>
+<tr>
+<th>Variabile</th>
+<th>Cosa fa</th>
+<th>Di serie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NYCTALUS_TCP=1</code> / <code>=0</code></td>
+<td>entrata sempre in TCP / mai</td>
+<td>TCP solo se UDP non risponde</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_PONTI</code></td>
+<td>ponti nascosti (come <code>--bridge</code>)</td>
+<td>nessuno</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_MIMETICO=1</code> · <code>NYCTALUS_NOME_MIMETICO</code></td>
+<td>forma HTTP/3 e nome del sito imitato</td>
+<td>spenta</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_WEBRTC=1</code></td>
+<td>forma videochiamata</td>
+<td>spenta</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_USCITE</code></td>
+<td>uscite diverse (1-4)</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_COSTANTE=N</code> · <code>NYCTALUS_COSTANTE_SEMPRE=1</code></td>
+<td>copertura costante</td>
+<td>spenta</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_FINESTRA_KB</code></td>
+<td>finestra per circuito (KB)</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_CONGESTIONE</code></td>
+<td><code>bbr</code>, <code>cubic</code>, <code>newreno</code></td>
+<td>bbr</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_RIUSO=0</code></td>
+<td>un collegamento per circuito invece che per coppia di nodi</td>
+<td>riuso acceso</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_CODIFICA=k,r</code></td>
+<td>ragnatela codificata (sperimentale, non accelera)</td>
+<td>spenta</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_PARENTELA=rigida</code></td>
+<td>rifiuta i percorsi con nodi parenti invece di avvisare</td>
+<td>avviso</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_GUARDIE</code></td>
+<td>cartella delle guardie primarie</td>
+<td><code>~/.nyctalus/guardie</code></td>
+</tr>
+<tr>
+<td><code>NYCTALUS_DIAGNOSI=1</code></td>
+<td>righe di diagnosi su stderr</td>
+<td>spenta</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_REGISTRA_COMPATIBILE=1</code></td>
+<td>il nodo accetta anche servizi senza registrazione provata (passaggio dalla 0.3.18)</td>
+<td>spento</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Chat</strong></p>
+<table>
+<thead>
+<tr>
+<th>Variabile</th>
+<th>Cosa fa</th>
+<th>Di serie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NYCTALUS_CHAT_PORT</code> · <code>NYCTALUS_CHAT_TOKEN</code> · <code>NYCTALUS_CHAT_HOST</code></td>
+<td>porta, segreto e host della porta di controllo (altrimenti da <code>~/.nyctalus-chat/controllo</code>)</td>
+<td>1091</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_MIX_MS</code></td>
+<td>ritardo medio per salto delle buste riservate (chat da mixnet)</td>
+<td>800</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_RITMO_RISERVATO</code> · <code>NYCTALUS_RITIRO_RISERVATO</code></td>
+<td>ritmo d'invio e di ritiro della modalità riservata (secondi)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_CAMERA_DEV</code> · <code>NYCTALUS_CAMERA_SRC</code> · <code>NYCTALUS_MIC_SRC</code> · <code>NYCTALUS_ALTOPARLANTE</code></td>
+<td>webcam, microfono e altoparlante (GStreamer)</td>
+<td><code>/dev/video0</code>, quelli di sistema</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_MANUALE_URL</code></td>
+<td>dove apre il manuale il pulsante «?»</td>
+<td>il sito</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Programmi, cartelle e porte</strong></p>
+<table>
+<thead>
+<tr>
+<th>Variabile</th>
+<th>Cosa fa</th>
+<th>Di serie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NYCTALUS_BIN</code></td>
+<td>quale motore usare</td>
+<td>quello installato</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_RETE_DATI</code> · <code>NYCTALUS_SITI_DATI</code></td>
+<td>dati di <code>nyctalus-rete</code> · di <code>nyctalus-sito</code></td>
+<td><code>~/.nyctalus-rete</code> · <code>~/.nyctalus-siti</code></td>
+</tr>
+<tr>
+<td><code>NYCTALUS_RUBRICA_PORTE</code></td>
+<td>porte locali di rubrica e casella</td>
+<td>18810-18814</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_STAB_GIORNI</code> · <code>NYCTALUS_STAB_PROVE</code> · <code>NYCTALUS_STAB_OGNI</code></td>
+<td>misura di stabilità per le guardie promosse</td>
+<td>14 giorni, 20, 3600 s</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_FIREFOX</code> · <code>NYCTALUS_FIREFOX_PROFILO</code></td>
+<td>quale Firefox · dove sta il profilo</td>
+<td>quello di sistema · <code>~/.nyctalus-firefox/profilo</code></td>
+</tr>
+<tr>
+<td><code>NYCTALUS_MOBILE_PORT</code> · <code>NYCTALUS_GALLERIA</code> · <code>NYCTALUS_AVVIO_AUTOMATICO=0</code></td>
+<td>(telefono/Windows) porta della web-app · cartelle della galleria · non accendere la rete all'avvio</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>Le variabili usate solo dalle prove automatiche (<code>…_SOLO</code>, <code>NYCTALUS_SENZA_SUONI</code>,
+<code>NYCTALUS_RADICE</code>, <code>NYCTALUS_FIRMA_*</code>, <code>NYCTALUS_CHIAVE_RELEASE</code>…) sono descritte in <a href="MANUALE-PROVE.html"><code>MANUALE-PROVE.md</code></a>.</p>
+<hr />
+<h2 id="11-per-chi-sviluppa">11. Per chi sviluppa</h2>
+<p>Dalla cartella dei sorgenti.</p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cargo build --release</code> · <code>cargo test --release</code></td>
+<td>compila il motore · test del motore</td>
+</tr>
+<tr>
+<td><code>test/esegui-tutti.sh [sicurezza\|funzionamento]</code></td>
+<td>tutte le prove (<code>NYCT_TIENI=1</code> conserva i log)</td>
+</tr>
+<tr>
+<td><code>strumenti/verifica.sh</code></td>
+<td>solo le prove di sicurezza</td>
+</tr>
+<tr>
+<td><code>strumenti/demo-locale.sh</code> · <code>strumenti/demo-chat.sh</code> · <code>strumenti/demo-locale-nav-normal.sh</code></td>
+<td>rete di prova con browser e sito · due chat · browser normale</td>
+</tr>
+<tr>
+<td><code>strumenti/audit.sh</code></td>
+<td>vulnerabilità note delle dipendenze (RustSec)</td>
+</tr>
+<tr>
+<td><code>strumenti/crea-installazioni.sh</code> · <code>strumenti/pacchetto-termux.sh DIR</code> · <code>strumenti/compila-apk.sh</code></td>
+<td>pacchetti (firmati per l'integrità) · pacchetto Termux · app Android</td>
+</tr>
+<tr>
+<td><code>strumenti/firma-release.sh DIR</code> · <code>strumenti/verifica-release.sh DIR</code></td>
+<td>firma / verifica <code>SHA256SUMS</code> di una release</td>
+</tr>
+<tr>
+<td><code>strumenti/manuali-html.py CARTELLA</code> · <code>strumenti/crea-screenshot.sh</code></td>
+<td>manuali per il sito · screenshot su dati dimostrativi</td>
+</tr>
+<tr>
+<td><code>simulazione/velocita.py</code>, <code>simulazione/correlazione.py</code>, …</td>
+<td>misure in Shadow (<code>simulazione/LEGGIMI.md</code>)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="12-corrispondenze-con-tor">12. Corrispondenze con Tor</h2>
+<table>
+<thead>
+<tr>
+<th>Tor</th>
+<th>Nyctalus</th>
+<th>A cosa serve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tor</code></td>
+<td><code>nyctalus start</code></td>
+<td>demone + proxy SOCKS5</td>
+</tr>
+<tr>
+<td>porta di controllo</td>
+<td><code>nyctalus status</code></td>
+<td>interrogare il demone</td>
+</tr>
+<tr>
+<td><code>nyx</code> (monitor del Tor Project)</td>
+<td><code>nyctalus monitor</code></td>
+<td>cruscotto testuale</td>
+</tr>
+<tr>
+<td><code>torsocks</code></td>
+<td><code>nyctalus exec</code></td>
+<td>un programma dentro la rete</td>
+</tr>
+<tr>
+<td>servizio <code>.onion</code> (<code>HiddenServiceDir</code>)</td>
+<td><code>nyctalus-sito</code> (o <code>nyctalus site</code>)</td>
+<td>pubblicare un sito nascosto</td>
+</tr>
+<tr>
+<td><code>obfs4proxy</code>, ponti</td>
+<td><code>--obfuscation</code>, <code>--mimic</code>, <code>--webrtc</code>, <code>nyctalus-rete ponte</code></td>
+<td>camuffamento e ponti</td>
+</tr>
+<tr>
+<td>Tor Browser</td>
+<td>Nyctalus Browser 🦇, <code>nyctalus-firefox</code></td>
+<td>navigare</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>nyctalus-cli</code>, <code>nyctalus-chat</code>, <code>nyctalus-file</code></td>
+<td>chat, chiamate e file (Tor non li ha)</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>nyctalus-rete</code></td>
+<td>creare e gestire una rete propria</td>
+</tr>
+<tr>
+<td>—</td>
+<td><code>nyctalus-collaudo</code>, <code>nyctalus-integrita</code></td>
+<td>collaudo della rete, integrità dei programmi</td>
+</tr>
+</tbody>
+</table>
+</article>
+</main>
+<button class="torna-su" id="torna-su" type="button" title="Torna su" aria-label="Torna su">↑</button>
+<script>
+(function(){var b=document.getElementById('torna-su');
+function aggiorna(){b.classList.toggle('visibile',window.scrollY>250);}
+window.addEventListener('scroll',aggiorna,{passive:true});aggiorna();
+b.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});})();
+</script>
+<script>
+(function(){var r=document.documentElement;try{var t=localStorage.getItem('nyct-tema');}catch(e){}
+if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';r.setAttribute('data-theme',t);
+document.getElementById('tema').onclick=function(){var n=r.getAttribute('data-theme')==='light'?'dark':'light';
+r.setAttribute('data-theme',n);try{localStorage.setItem('nyct-tema',n);}catch(e){}};})();
+</script>
+</body>
+</html>

@@ -19,7 +19,7 @@
   <button class="btn-icona" id="tema" title="Tema">🌓</button>
 </div></div>
 <main class="wrap manuale-doc">
-<nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html" class="qui">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-COLLAUDO.html">Manuale del collaudo (nyctalus-collaudo)</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
+<nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html" class="qui">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><a href="COMANDI.html">Tutti i comandi</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-COLLAUDO.html">Manuale del collaudo (nyctalus-collaudo)</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
 <h1 id="guida-completa-scaricare-configurare-opzioni">Guida completa: scaricare, configurare, opzioni</h1><nav class="sommario"><b>In questa pagina</b><a href="#parte-1-cosa-scaricare">Parte 1 · Cosa scaricare</a><a href="#parte-2-i-tre-ruoli-client-nodo-gestore">Parte 2 · I tre ruoli: client, nodo, gestore</a><a href="#parte-3-le-opzioni">Parte 3 · Le opzioni</a></nav>
 <p>Tutto in un posto, con passi brevi:</p>
@@ -572,108 +572,11 @@ modalità rigida invece <strong>si rifiuta</strong>: meglio niente che un percor
 <pre><code class="language-sh">NYCTALUS_PARENTELA=rigida nyctalus-chat          # o davanti a qualunque comando del motore
 </code></pre>
 <h3 id="16-opzioni-avanzate-del-motore">16. Opzioni avanzate del motore</h3>
-<p>Per chi usa il motore a mano (<code>nyctalus start</code>, <code>nyctalus circuit</code>…). Tutte in <a href="DEPLOY.html"><code>DEPLOY.md</code></a>.</p>
-<table>
-<thead>
-<tr>
-<th>Opzione</th>
-<th>A cosa serve</th>
-<th>Valori</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--hops N</code></td>
-<td>nodi per percorso; sotto 3 niente anonimato</td>
-<td>1-5, di serie 3</td>
-</tr>
-<tr>
-<td><code>--circuits N</code></td>
-<td>strade parallele (più veloce)</td>
-<td>1-8, di serie 2</td>
-</tr>
-<tr>
-<td><code>--cover HZ</code></td>
-<td>rumore di fondo (celle finte al secondo)</td>
-<td>di serie 0, o quello della rete</td>
-</tr>
-<tr>
-<td><code>--obfuscation HEX</code></td>
-<td>camuffamento con la chiave della rete</td>
-<td>quella del codice</td>
-</tr>
-<tr>
-<td><code>--bridge RIGA</code> / <code>NYCTALUS_PONTI</code></td>
-<td>entrare da un ponte nascosto</td>
-<td>nessuno</td>
-</tr>
-<tr>
-<td><code>--mimic [--mimic-name SITO]</code> / <code>NYCTALUS_MIMETICO=1</code></td>
-<td>forma HTTP/3 (con <code>--obfuscation</code>)</td>
-<td>spenta</td>
-</tr>
-<tr>
-<td><code>--webrtc</code> / <code>NYCTALUS_WEBRTC=1</code></td>
-<td>forma videochiamata: STUN + SRTP (con <code>--obfuscation</code>)</td>
-<td>spenta</td>
-</tr>
-<tr>
-<td><code>--constant-rate N [--constant-always]</code> / <code>NYCTALUS_COSTANTE</code>, <code>NYCTALUS_COSTANTE_SEMPRE=1</code></td>
-<td>copertura costante: N celle/s per verso, vere o finte, durante l'uso (o sempre)</td>
-<td>spenta</td>
-</tr>
-<tr>
-<td><code>NYCTALUS_MIX_MS</code></td>
-<td>ritardo medio per salto delle buste della modalità riservata (chat da mixnet)</td>
-<td>800</td>
-</tr>
-<tr>
-<td><code>--exits N</code> / <code>NYCTALUS_USCITE</code> / <code>exits = N</code></td>
-<td>uscite diverse (1-4): ogni sito resta sulla sua, i siti nuovi vanno alla più libera; ogni uscita vede solo i suoi siti, ma più uscite = più nodi che vedono un tuo sito; misurato: non accelera (la strettoia è la guardia)</td>
-<td>1</td>
-</tr>
-<tr>
-<td><code>--hidden-bridge</code> (nodo)</td>
-<td>il nodo fa da ponte nascosto</td>
-<td>spento</td>
-</tr>
-<tr>
-<td><code>--middle-only</code> (nodo)</td>
-<td>solo intermedio: mai uscita («Aiuta la rete»)</td>
-<td>spento</td>
-</tr>
-<tr>
-<td><code>--max-rate MBIT</code> (nodo)</td>
-<td>tetto della banda inoltrata</td>
-<td>nessuno</td>
-</tr>
-<tr>
-<td><code>NYCTALUS_TCP=1</code> / <code>=0</code></td>
-<td>entrata sempre in TCP / mai (di serie: TCP solo se UDP non risponde)</td>
-<td>automatico</td>
-</tr>
-<tr>
-<td><code>NYCTALUS_RIUSO=0</code> (nodo)</td>
-<td>un collegamento per circuito invece di uno per coppia di nodi</td>
-<td>riuso acceso</td>
-</tr>
-<tr>
-<td><code>NYCTALUS_FINESTRA_KB</code></td>
-<td>finestra per circuito (KB): più piccola = la ragnatela sente prima le strade lente</td>
-<td>256</td>
-</tr>
-<tr>
-<td><code>NYCTALUS_CONGESTIONE</code></td>
-<td>controllo di congestione: <code>bbr</code>, <code>cubic</code>, <code>newreno</code></td>
-<td>bbr</td>
-</tr>
-<tr>
-<td><code>NYCTALUS_CODIFICA=8,2</code></td>
-<td>ragnatela codificata <strong>sperimentale</strong> (k celle + r riserve); misurata: non accelera</td>
-<td>spenta</td>
-</tr>
-</tbody>
-</table>
+<p>Per chi usa il motore a mano (<code>nyctalus start</code>, <code>nyctalus circuit</code>, <code>nyctalus node</code>…): tutte le
+opzioni (salti, circuiti, rumore, camuffamento, ponti, forme HTTP/3 e videochiamata, copertura
+costante, uscite diverse, nodi solo intermedi) e le variabili d'ambiente sono in
+<strong><a href="COMANDI.html"><code>COMANDI.md</code></a></strong> §9-10; come funzionano, in <a href="DEPLOY.html"><code>DEPLOY.md</code></a> §2. Di serie: 3 salti, 2 circuiti,
+1 uscita, rumore e camuffamento quelli della rete.</p>
 <h3 id="17-impostazioni-a-schede">17. Impostazioni a schede</h3>
 <p>Tutte le regolazioni che prima stavano solo nei file di configurazione o nelle variabili
 d'ambiente si cambiano dalle <strong>Impostazioni</strong>, divise per area in <strong>schede</strong>:</p>

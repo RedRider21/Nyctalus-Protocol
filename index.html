@@ -91,7 +91,7 @@
     <span class="it">Tor è la rete anonima di riferimento: matura, studiata da vent'anni, con milioni di utenti. Nyctalus è un prototipo che prova scelte diverse. Qui sotto: prima quello che abbiamo <b>misurato</b> con i programmi veri, poi cosa c'è e cosa manca in ciascuno.</span><span class="en">Tor is the reference anonymity network: mature, studied for twenty years, with millions of users. Nyctalus is a prototype trying different choices. Below: first what we <b>measured</b> with the real programs, then what each one has and lacks.</span>
   </p>
   <h3 style="margin-top:26px"><span class="it">Misurato</span><span class="en">Measured</span></h3>
-  <p class="intro" style="font-size:.9rem"><span class="it">Simulazione con <b>Shadow</b> (il simulatore usato nella ricerca su Tor): Tor 0.4.9 e Nyctalus veri sulla stessa Internet simulata (30 ms fra due computer, linee da 50/20 Mbit), stessi utenti, stesso attacco, 3 ripetizioni; velocità con file da 5 MB. Come rifarla: <a href="https://github.com/RedRider21/Nyctalus-Protocol/blob/main/simulazione/LEGGIMI.md">simulazione/LEGGIMI.md</a>.</span><span class="en">Simulation with <b>Shadow</b> (the simulator used in Tor research): real Tor 0.4.9 and Nyctalus on the same simulated Internet (30 ms between any two computers, 50/20 Mbit lines), same users, same attack, 3 runs; speed with 5 MB files. How to reproduce it: <a href="https://github.com/RedRider21/Nyctalus-Protocol/blob/main/simulazione/LEGGIMI.md">simulazione/LEGGIMI.md</a>.</span></p>
+  <p class="intro" style="font-size:.9rem"><span class="it">Simulazione con <b>Shadow</b> (il simulatore usato nella ricerca su Tor): Tor 0.4.9 e Nyctalus veri sulla stessa Internet simulata (30 ms fra due computer, linee da 50/20 Mbit), stessi utenti, stesso attacco, 3 ripetizioni salvo dove indicato; velocità con file da 5 MB; ultime misure 11/11/2026. Misure interne: i PC che aiutano promossi a guardie accorciano i tempi del 18% con 8 utenti; più uscite per utente non accelerano (la strettoia è l'entrata). Come rifarla: <a href="https://github.com/RedRider21/Nyctalus-Protocol/blob/main/simulazione/LEGGIMI.md">simulazione/LEGGIMI.md</a>.</span><span class="en">Simulation with <b>Shadow</b> (the simulator used in Tor research): real Tor 0.4.9 and Nyctalus on the same simulated Internet (30 ms between any two computers, 50/20 Mbit lines), same users, same attack, 3 runs unless stated; speed with 5 MB files; latest measurements 11/11/2026. Internal measurements: users' PCs promoted to guards cut times by 18% with 8 users; more exits per user do not speed up (the entry is the bottleneck). How to reproduce it: <a href="https://github.com/RedRider21/Nyctalus-Protocol/blob/main/simulazione/LEGGIMI.md">simulazione/LEGGIMI.md</a>.</span></p>
   <table>
     <thead><tr><th></th><th>Tor 0.4.9</th><th>Nyctalus</th></tr></thead>
     <tbody>
@@ -116,6 +116,12 @@
       <tr><td><b><span class="it">… nodi tutti saturi, 8 utenti</span><span class="en">… all nodes saturated, 8 users</span></b></td>
         <td>1,47 Mbit/s</td>
         <td><b>2,08 · +41%</b></td></tr>
+      <tr><td><b><span class="it">4 scaricamenti insieme da 4 siti (nodi da 10 Mbit, 5 ripetizioni): tempo per finirli</span><span class="en">4 downloads at once from 4 sites (10 Mbit nodes, 5 runs): time to finish them</span></b></td>
+        <td>28,2 s</td>
+        <td><b>21,9 s · −22%</b></td></tr>
+      <tr><td><b><span class="it">… 4 utenti insieme</span><span class="en">… 4 users at once</span></b></td>
+        <td>71,2 s <span class="it">(mediana 63,5)</span><span class="en">(median 63.5)</span></td>
+        <td><b>55,8 s · −22%</b> <span class="it">(mediana 61,3: quasi alla pari)</span><span class="en">(median 61.3: nearly on par)</span></td></tr>
       <tr><td><b><span class="it">Primo byte</span><span class="en">First byte</span></b></td>
         <td>0,49 s</td>
         <td>0,50 s — <span class="it">alla pari</span><span class="en">on par</span></td></tr>
@@ -337,23 +343,57 @@ curl --socks5-hostname 127.0.0.1:1080 http://example.com</pre>
     <h3><span class="it">4. Trasferire un file (test del livello L2)</span><span class="en">4. Transfer a file (L2 layer test)</span></h3>
     <p class="intro"><span class="it">Sul ricevitore:</span><span class="en">On the receiver:</span></p>
     <pre>nyctalus receive --out received.bin --identity my.key</pre>
-    <p class="intro"><span class="it">Stampa il comando <code class="in">invia</code> con l'indirizzo <code class="in">.nyct</code> del ricevitore. Sul mittente:</span><span class="en">It prints the <code class="in">invia</code> command with the receiver's <code class="in">.nyct</code> address. On the sender:</span></p>
+    <p class="intro"><span class="it">Stampa il comando <code class="in">send</code> con l'indirizzo <code class="in">.nyct</code> del ricevitore. Sul mittente:</span><span class="en">It prints the <code class="in">send</code> command with the receiver's <code class="in">.nyct</code> address. On the sender:</span></p>
     <pre>nyctalus send --to IP:4433 --fingerprint &lt;FINGERPRINT&gt; --recipient &lt;ADDRESS&gt;.nyct file</pre>
   </div>
 
   <div class="passo">
     <h3><span class="it">5. Comandi</span><span class="en">5. Commands</span></h3>
+    <p class="intro"><span class="it">Per tipologia. L'elenco completo, con tutte le opzioni e le variabili d'ambiente: <a href="manuali/COMANDI.html"><b>Tutti i comandi</b></a>.</span><span class="en">By kind. The full list, with every option and environment variable: <a href="manuali/COMANDI.html"><b>All commands</b></a> (Italian).</span></p>
+    <h4 style="margin:18px 0 6px"><span class="it">Programmi con la finestra</span><span class="en">Programs with a window</span></h4>
+    <table>
+      <tbody>
+        <tr><td><code class="in">nyctalus-launcher</code></td><td><span class="it">il mini menu: accende la rete, apre gli altri programmi</span><span class="en">the mini menu: starts the network, opens the other programs</span></td></tr>
+        <tr><td><code class="in">nyctalus-chat</code></td><td><span class="it">la chat, con chiamate e videochiamate</span><span class="en">the chat, with calls and video calls</span></td></tr>
+        <tr><td><code class="in">nyctalus-browser</code></td><td><span class="it">il browser: normale o 🦇 attraverso la rete, siti .nyct</span><span class="en">the browser: normal or 🦇 through the network, .nyct sites</span></td></tr>
+        <tr><td><code class="in">nyctalus-file</code></td><td><span class="it">file grandi ai contatti</span><span class="en">big files to contacts</span></td></tr>
+        <tr><td><code class="in">nyctalus-firefox</code></td><td><span class="it">il tuo Firefox con un profilo blindato</span><span class="en">your Firefox with a hardened profile</span></td></tr>
+      </tbody>
+    </table>
+    <h4 style="margin:18px 0 6px"><span class="it">Chat e file dal terminale</span><span class="en">Chat and files from the terminal</span></h4>
+    <table>
+      <tbody>
+        <tr><td><code class="in">nyctalus-cli</code></td><td><span class="it"><code class="in">io</code>, <code class="in">contatti</code>, <code class="in">scrivi</code>, <code class="in">leggi</code>, <code class="in">ascolta</code>, <code class="in">invia</code>, <code class="in">file</code>, <code class="in">avvia</code>, <code class="in">sblocca</code>, <code class="in">cassaforte</code>… (MANUALE-TERMINALE)</span><span class="en"><code class="in">io</code>, <code class="in">contatti</code>, <code class="in">scrivi</code>, <code class="in">leggi</code>, <code class="in">ascolta</code>, <code class="in">invia</code>, <code class="in">file</code>, <code class="in">avvia</code>, <code class="in">sblocca</code>, <code class="in">cassaforte</code>…</span></td></tr>
+      </tbody>
+    </table>
+    <h4 style="margin:18px 0 6px"><span class="it">Rete, siti e controlli</span><span class="en">Network, sites and checks</span></h4>
+    <table>
+      <tbody>
+        <tr><td><code class="in">nyctalus-rete</code></td><td><span class="it">collegarsi (<code class="in">importa</code>, <code class="in">reti</code>, <code class="in">aiuta</code>, <code class="in">ponte</code>), rete di casa (<code class="in">casa</code>, <code class="in">ospite</code>), gestire una rete (<code class="in">crea</code>, <code class="in">aggiungi</code>, <code class="in">firma</code>, <code class="in">codice</code>, <code class="in">protezione</code>, <code class="in">rubrica</code>, <code class="in">stabilita</code>…)</span><span class="en">join (<code class="in">importa</code>, <code class="in">reti</code>, <code class="in">aiuta</code>, <code class="in">ponte</code>), home network (<code class="in">casa</code>, <code class="in">ospite</code>), run a network (<code class="in">crea</code>, <code class="in">aggiungi</code>, <code class="in">firma</code>, <code class="in">codice</code>, <code class="in">protezione</code>, <code class="in">rubrica</code>, <code class="in">stabilita</code>…)</span></td></tr>
+        <tr><td><code class="in">nyctalus-sito</code></td><td><span class="it">un sito .nyct: guida passo passo, <code class="in">crea</code>, <code class="in">avvia</code>, <code class="in">servizio</code> (sempre acceso), <code class="in">esporta</code> la chiave</span><span class="en">a .nyct site: step-by-step guide, <code class="in">crea</code>, <code class="in">avvia</code>, <code class="in">servizio</code> (always on), <code class="in">esporta</code> the key</span></td></tr>
+        <tr><td><code class="in">nyctalus-collaudo</code></td><td><span class="it">il collaudo della tua rete vera: nodi, IP nascosto, DNS, velocità, chat (<code class="in">--guidato</code>, <code class="in">--rapporto</code>)</span><span class="en">checkup of your real network: nodes, hidden IP, DNS, speed, chat (<code class="in">--guidato</code>, <code class="in">--rapporto</code>)</span></td></tr>
+        <tr><td><code class="in">nyctalus-integrita</code></td><td><span class="it">i programmi installati sono quelli pubblicati?</span><span class="en">are the installed programs the published ones?</span></td></tr>
+      </tbody>
+    </table>
+    <h4 style="margin:18px 0 6px"><span class="it">Server e telefono</span><span class="en">Servers and phone</span></h4>
+    <table>
+      <tbody>
+        <tr><td><code class="in">./installa.sh</code></td><td><span class="it">sul server: i nodi come servizi (<code class="in">--codice</code>, <code class="in">--ponte</code>, <code class="in">--utente</code>…)</span><span class="en">on the server: nodes as services (<code class="in">--codice</code>, <code class="in">--ponte</code>, <code class="in">--utente</code>…)</span></td></tr>
+        <tr><td><code class="in">nyctalus-server</code></td><td><span class="it">i nodi installati: <code class="in">stato</code>, <code class="in">righe</code>, <code class="in">riavvia</code>, <code class="in">log</code></span><span class="en">installed nodes: <code class="in">stato</code>, <code class="in">righe</code>, <code class="in">riavvia</code>, <code class="in">log</code></span></td></tr>
+        <tr><td><code class="in">nyctalus-mobile</code></td><td><span class="it">(Termux) il servizio del telefono: <code class="in">--sfondo</code>, <code class="in">--ferma</code>, <code class="in">--stato</code></span><span class="en">(Termux) the phone service: <code class="in">--sfondo</code>, <code class="in">--ferma</code>, <code class="in">--stato</code></span></td></tr>
+      </tbody>
+    </table>
+    <h4 style="margin:18px 0 6px"><span class="it">Il motore, per esperti (e le corrispondenze con Tor)</span><span class="en">The engine, for experts (and the Tor equivalents)</span></h4>
     <table>
       <thead><tr><th>Tor</th><th>Nyctalus</th><th><span class="it">A cosa serve</span><span class="en">Purpose</span></th></tr></thead>
       <tbody>
         <tr><td><code class="in">tor</code></td><td><code class="in">nyctalus start</code></td><td><span class="it">demone + proxy SOCKS5</span><span class="en">daemon + SOCKS5 proxy</span></td></tr>
-        <tr><td>control port</td><td><code class="in">nyctalus status</code></td><td><span class="it">interrogare il demone</span><span class="en">query the daemon</span></td></tr>
-        <tr><td><code class="in">nyx</code></td><td><code class="in">nyctalus monitor</code></td><td><span class="it">cruscotto testuale</span><span class="en">text dashboard</span></td></tr>
+        <tr><td><span class="it">porta di controllo</span><span class="en">control port</span></td><td><code class="in">nyctalus status</code></td><td><span class="it">interrogare il demone</span><span class="en">query the daemon</span></td></tr>
+        <tr><td><code class="in">nyx</code></td><td><code class="in">nyctalus monitor</code></td><td><span class="it">cruscotto testuale (nyx è il monitor ufficiale del Tor Project)</span><span class="en">text dashboard (nyx is the Tor Project's official monitor)</span></td></tr>
         <tr><td><code class="in">torsocks</code></td><td><code class="in">nyctalus exec</code></td><td><span class="it">un programma dentro la rete</span><span class="en">a program inside the network</span></td></tr>
-        <tr><td>.onion</td><td><code class="in">nyctalus site</code></td><td><span class="it">pubblicare un sito .nyct</span><span class="en">publish a .nyct site</span></td></tr>
-        <tr><td>—</td><td><code class="in">nyctalus-sito</code></td><td><span class="it">un sito .nyct con un comando: guida passo passo, sempre acceso, chiave (MANUALE-SITI)</span><span class="en">a .nyct site with one command: step-by-step guide, always on, key (MANUALE-SITI)</span></td></tr>
-        <tr><td>—</td><td><code class="in">nyctalus-rete</code></td><td><span class="it">la rete: <code class="in">importa</code> un codice, <code class="in">casa</code> (rete di casa), <code class="in">crea</code>/<code class="in">firma</code>/<code class="in">codice</code> per chi la gestisce</span><span class="en">the network: <code class="in">importa</code> a code, <code class="in">casa</code> (home network), <code class="in">crea</code>/<code class="in">firma</code>/<code class="in">codice</code> for its manager</span></td></tr>
-        <tr><td>—</td><td><code class="in">nyctalus-server</code></td><td><span class="it">i nodi installati sul server: <code class="in">stato</code>, <code class="in">righe</code>, <code class="in">riavvia</code>, <code class="in">log</code></span><span class="en">nodes installed on the server: <code class="in">stato</code>, <code class="in">righe</code>, <code class="in">riavvia</code>, <code class="in">log</code></span></td></tr>
+        <tr><td><span class="it">servizio .onion</span><span class="en">.onion service</span></td><td><code class="in">nyctalus site</code> · <code class="in">browse</code></td><td><span class="it">pubblicare e visitare un sito .nyct</span><span class="en">publish and visit a .nyct site</span></td></tr>
+        <tr><td><span class="it">relay, autorità</span><span class="en">relay, authority</span></td><td><code class="in">nyctalus node</code> · <code class="in">authority</code> · <code class="in">directory</code> · <code class="in">nodes</code></td><td><span class="it">nodi, chiavi e elenco firmato</span><span class="en">nodes, keys and the signed list</span></td></tr>
+        <tr><td><span class="it">ponti obfs4</span><span class="en">obfs4 bridges</span></td><td><code class="in">--obfuscation</code> · <code class="in">--mimic</code> · <code class="in">--webrtc</code> · <code class="in">--bridge</code></td><td><span class="it">camuffamento e ponti nascosti</span><span class="en">camouflage and hidden bridges</span></td></tr>
       </tbody>
     </table>
   </div>
