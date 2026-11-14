@@ -71,6 +71,24 @@ i client più vecchi non leggono un elenco con le famiglie.</p>
 <p>Un utente che attiva «🦇 Aiuta la rete» ti manda la riga del suo PC. Aggiungila con
 <code>nyctalus-rete aggiungi 'RIGA' --intermedio --banda MBIT --famiglia NOME</code>: quel nodo sarà usato
 solo come intermedio (mai guardia, uscita o punto d'incontro). Serve la 0.3.11 su tutti i client.</p>
+<h3 id="nodi-senza-uscita-i-nodi-di-casa-dalla-0322">Nodi senza uscita: i nodi di casa (dalla 0.3.22)</h3>
+<p>L'<strong>uscita</strong> è il nodo che parla con i siti di Internet: i siti vedono <strong>il suo indirizzo</strong>. Se
+un nodo sta a casa tua, la navigazione degli altri (browser 🦇) uscirebbe dalla tua linea, e
+reclami o richieste per quello che fanno gli altri arriverebbero a te. Per questo un nodo può
+essere <strong>senza uscita</strong>: fa da guardia, da intermedio e da <strong>punto d'incontro</strong> (chat, chiamate,
+file e siti <code>.nyct</code> funzionano), ma <strong>non fa mai uscire</strong> traffico verso Internet.</p>
+<ul>
+<li>Un nodo tuo o di un amico: <code>nyctalus-rete aggiungi 'RIGA' --senza-uscita</code> (e il nodo va
+  avviato senza uscita: <code>installa.sh --senza-uscita</code>, che stampa le righe già segnate).</li>
+<li>La rete di casa: <code>nyctalus-rete casa … --senza-uscita</code> (la scelta si ricorda;
+  <code>--con-uscita</code> per tornare indietro).</li>
+<li>Nell'elenco firmato il nodo porta <code>uscita=no</code> e i client non lo scelgono mai come uscita; se
+  un client vecchio ci prova, il nodo <strong>rifiuta</strong> lo stesso.</li>
+<li>Se <strong>nessun</strong> nodo della rete fa da uscita, la rete serve solo chat, file e siti <code>.nyct</code>: la
+  navigazione su Internet riceve subito un errore chiaro. Per offrirla, metti un'uscita su un
+  server dedicato (una VPS) o da chi se ne assume consapevolmente la responsabilità.</li>
+<li>Serve la 0.3.22 su tutti: aggiorna client e nodi insieme.</li>
+</ul>
 <h3 id="pc-stabili-promossi-a-guardia-dalla-0319">PC stabili promossi a guardia (dalla 0.3.19)</h3>
 <p>Un PC che aiuta la rete e resta acceso con continuità può fare anche da <strong>guardia</strong> (il nodo
 d'entrata, come il contrassegno «Guard» di Tor): così la rete ha più entrate senza nuovi server.
@@ -129,7 +147,7 @@ firmato: anche se qualcuno lo alterasse, i client lo rifiuterebbero. Scegli tu d
   <strong>🔗 Rete</strong> → Importa codice (<a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a> §1).</li>
 </ul>
 <h2 id="6-rete-di-casa-prove-senza-server">6. Rete di casa (prove senza server)</h2>
-<pre><code class="language-sh">nyctalus-rete casa            # opzioni: --nodi 4  --ip IP  --porta 18800  --porta-base 4701
+<pre><code class="language-sh">nyctalus-rete casa            # opzioni: --nodi 4  --ip IP  --porta 18800  --porta-base 4701  --senza-uscita
 </code></pre>
 <p>Fa tutto da solo su questo PC:</p>
 <ul>

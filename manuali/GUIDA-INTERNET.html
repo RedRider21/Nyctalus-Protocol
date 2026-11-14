@@ -158,7 +158,7 @@ Se non si apre, vedi la tabella dei problemi.</p>
 </tr>
 <tr>
 <td><strong>PC Linux</strong></td>
-<td><code>nyctalus-rete importa 'NYCT1:…'</code> con il codice che gli mandi (anche per messaggio: non è segreto), poi chiude e riapre chat e browser</td>
+<td>mini menu → ⚙ → <strong>🔗 Collegati a una rete…</strong> e incolla il codice che gli mandi (oppure, da terminale, <code>nyctalus-rete importa 'NYCT1:…'</code>); poi chiude e riapre chat e browser</td>
 </tr>
 <tr>
 <td><strong>Windows</strong></td>
@@ -247,6 +247,13 @@ di 3 gestori diversi. Il perché, in <a href="PIANO-ANONIMATO.html"><code>PIANO-
   da esperti esterni. Non affidateci segreti veri.</li>
 <li>Con tutti i nodi sul tuo PC la rete <strong>funziona</strong>, ma verso di <strong>te</strong> non è anonima: tu
   ospiti ogni salto. Per l'anonimato vero servono nodi su macchine e linee diverse.</li>
+<li><strong>Sempre accesa, senza tenere acceso il PC:</strong> su un Raspberry Pi basta <code>./rete-raspberry.sh
+  --nome NOME</code> (<a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a> §6-ter); su un PC sempre acceso
+  <code>nyctalus-rete casa --internet NOME --servizio</code>.</li>
+<li><strong>La navigazione degli amici esce da casa tua.</strong> Con i nodi sul tuo PC, chi naviga sui siti
+  normali con il browser 🦇 lo fa con il <strong>tuo</strong> indirizzo. Se non vuoi, accendi la rete con
+  <code>nyctalus-rete casa --internet NOME --senza-uscita</code> (dalla 0.3.22): chat, chiamate, file e
+  siti <code>.nyct</code> funzionano lo stesso, la navigazione su Internet no (serve un'uscita su un server).</li>
 <li><strong>Passo successivo, facoltativo:</strong> il tuo amico, con l'IP statico, ospita <strong>anche lui</strong> un
   paio di nodi (Passo 8). Così la rete diventa distribuita fra due città.</li>
 <li>Tutto il traffico in rete è cifrato e senza parole riconoscibili: lo dimostra la prova

@@ -190,6 +190,10 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 <td><strong>programma File, motore</strong>: Alice → Bob sulla rete di prova (3 salti, canali paralleli): sotto soglia parte da solo, sopra soglia «Accetta», pausa/ripresa, motore di Bob spento a metà e riacceso (riprende dai pezzi già verificati), file sempre identico (SHA-256), non-contatto rifiutato senza proporglielo; nella chat il file compare all'ora d'arrivo con ✓✓ e diventa blu alla lettura; con «inchat 0» non compare in chat. Motore di Bob rallentato solo in prova (<code>NYCTALUS_PROVA_RALLENTA_MS</code>)</td>
 </tr>
 <tr>
+<td><code>52-nodi-senza-uscita</code></td>
+<td><strong>nodi senza uscita</strong> (<code>--no-exit</code>, <code>uscita=no</code>): elenco firmato con il segno; in una rete mista, in 5 avvii, l'uscita è sempre un nodo che lo permette; un nodo senza uscita rifiuta anche un client che ci prova; in una rete di soli nodi senza uscita il tunnel parte, il sito <code>.nyct</code> si visita e Internet è rifiutato con un errore chiaro; <code>nyctalus-rete casa --senza-uscita</code> segna i nodi, la scelta si ricorda, un ospite senza uscita resta tale, <code>--con-uscita</code> torna indietro</td>
+</tr>
+<tr>
 <td><code>51-guardie-di-riserva</code></td>
 <td><strong>guardie primarie</strong> su una rete di prova da 7 nodi: il client ricorda 3 entrate fisse ed entra dalla prima; spenta la prima, tunnel e scaricamento partono dalla SECONDA (mai da un nodo a caso) e le guardie ricordate non cambiano; un sito <code>.nyct</code> si pubblica e si visita lo stesso; riaccesa la prima, si rientra da lei; spenta di nuovo a tunnel acceso, il tunnel si ricostruisce da solo dalla seconda sulla stessa porta; spente tutte e tre, il client prova solo quelle e si ferma</td>
 </tr>

@@ -21,7 +21,7 @@
 <main class="wrap manuale-doc">
 <nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><a href="COMANDI.html">Tutti i comandi</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html" class="qui">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-COLLAUDO.html">Manuale del collaudo (nyctalus-collaudo)</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
-<h1 id="manuale-del-server-nodi-della-rete">Manuale del server (nodi della rete)</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-cosa-serve">1. Cosa serve</a><a href="#2-portare-il-pacchetto-sul-server">2. Portare il pacchetto sul server</a><a href="#3-installare">3. Installare</a><a href="#4-gestire">4. Gestire</a><a href="#5-opzioni-in-piu">5. Opzioni in più</a><a href="#6-a-casa-con-ip-dinamico-no-ip-duckdns">6. A casa, con IP dinamico (No-IP, DuckDNS…)</a><a href="#6-bis-rubrica-e-casella-della-rete-facoltativo">6-bis. Rubrica e casella della rete (facoltativo)</a><a href="#7-senza-root">7. Senza root</a><a href="#8-aggiornare-e-disinstallare">8. Aggiornare e disinstallare</a><a href="#9-problemi">9. Problemi</a></nav>
+<h1 id="manuale-del-server-nodi-della-rete">Manuale del server (nodi della rete)</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-cosa-serve">1. Cosa serve</a><a href="#2-portare-il-pacchetto-sul-server">2. Portare il pacchetto sul server</a><a href="#3-installare">3. Installare</a><a href="#4-gestire">4. Gestire</a><a href="#5-opzioni-in-piu">5. Opzioni in più</a><a href="#6-a-casa-con-ip-dinamico-no-ip-duckdns">6. A casa, con IP dinamico (No-IP, DuckDNS…)</a><a href="#6-ter-la-tua-rete-su-un-raspberry-pi-sempre-accesa-dalla-0322">6-ter. La TUA rete su un Raspberry Pi, sempre accesa (dalla 0.3.22)</a><a href="#6-bis-rubrica-e-casella-della-rete-facoltativo">6-bis. Rubrica e casella della rete (facoltativo)</a><a href="#7-senza-root">7. Senza root</a><a href="#8-aggiornare-e-disinstallare">8. Aggiornare e disinstallare</a><a href="#9-problemi">9. Problemi</a></nav>
 <p>Un <strong>nodo</strong> inoltra il traffico cifrato della rete. Non vede cosa passa né chi parla con
 chi. Su un server ne puoi far girare da 1 a 8. Quadro generale: <a href="index.html"><code>LEGGIMI.md</code></a> (Inizia qui).</p>
 <h2 id="1-cosa-serve">1. Cosa serve</h2>
@@ -133,6 +133,11 @@ nyctalus-server log         # ultimi messaggi (log 4601 = solo quel nodo)
   <code>--codice</code> della rete); propone da sola la porta 443.</li>
 <li><code>--webrtc</code>: <strong>forma videochiamata</strong>, il traffico sembra una chiamata WebRTC (STUN + SRTP);
   anche questa di solito arriva già dal <code>--codice</code> della rete. Esclude <code>--http3</code>.</li>
+<li><code>--senza-uscita</code> (dalla 0.3.22): i nodi <strong>non fanno mai da uscita verso Internet</strong> (la
+  navigazione degli altri non esce dal tuo indirizzo), ma restano guardia, intermedio e punto
+  d'incontro: chat, file e siti <code>.nyct</code> funzionano. Le righe stampate sono già segnate
+  (<code>…,,,noexit</code>): il gestore le aggiunge così come sono. Consigliato su un server o Raspberry
+  <strong>di casa</strong>; un'uscita su una VPS dedicata, invece, si installa senza questa opzione.</li>
 <li><code>--nuova-identita</code>: rifà chiavi e certificato dei nodi (il certificato nuovo ha dati normali e,
   nella forma HTTP/3, il nome del sito). Cambiano le righe: rimandale al gestore.</li>
 <li>Per cambiare IP o opzioni: modifica <code>/etc/nyctalus/server.conf</code>, poi
@@ -149,6 +154,32 @@ nyctalus-server log         # ultimi messaggi (log 4601 = solo quel nodo)
 <p>Quando l'IP cambia non serve fare nulla: client e nodi risolvono il nome a ogni collegamento.
 Nota: alcuni router non permettono ai dispositivi di casa di raggiungere il proprio nome
 pubblico; in quel caso in casa si usano gli altri nodi della rete.</p>
+<h2 id="6-ter-la-tua-rete-su-un-raspberry-pi-sempre-accesa-dalla-0322">6-ter. La TUA rete su un Raspberry Pi, sempre accesa (dalla 0.3.22)</h2>
+<p>Se vuoi che la rete per te e i tuoi amici resti accesa senza tenere acceso il PC, un Raspberry
+Pi 3, 4 o 5 con sistema <strong>a 64 bit</strong> basta e avanza. Un solo comando fa tutto: nodi, elenco
+firmato, rubrica, casella, pagina del codice, come <code>nyctalus-rete casa --internet</code>, ma come
+<strong>servizio che riparte da solo</strong> dopo un riavvio o una caduta.</p>
+<ol>
+<li>Sul Raspberry scarica e scompatta <code>Nyctalus-Server-Linux-arm64.zip</code>, poi, <strong>da utente
+   normale</strong> (non con sudo):
+   <code>sh
+   cd Nyctalus-Server
+   ./rete-raspberry.sh --nome miacasa.duckdns.org      # o l'IP pubblico, se non cambia</code>
+   Lo script controlla il motore e l'integrità del pacchetto, copia il programma in
+   <code>~/.local/share/nyctalus-server</code>, apre il firewall (se c'è ufw chiede la password), tiene i
+   servizi accesi anche senza login, accende la rete e stampa il <strong>codice di rete</strong> e
+   l'<strong>impronta</strong>.</li>
+<li>Sul <strong>router</strong>: inoltra verso il Raspberry <strong>UDP e TCP 4701-4704</strong> e <strong>TCP 18800</strong>, e
+   dagli un indirizzo fisso (DHCP statico).</li>
+<li>Prova da un telefono con i <strong>dati mobili</strong>: <code>http://miacasa.duckdns.org:18800/</code>.</li>
+</ol>
+<p><strong>Di serie i nodi NON fanno da uscita verso Internet</strong> (§3, <code>--senza-uscita</code>): chat, chiamate,
+file e siti <code>.nyct</code> funzionano, la navigazione degli altri non esce dal tuo indirizzo.
+Per permetterla: <code>./rete-raspberry.sh --nome … --con-uscita</code>.</p>
+<p>Dopo: <code>nyctalus-rete casa --internet NOME --servizio --stampa</code> (codice e stato),
+<code>journalctl --user -u nyctalus-casa -f</code> (messaggi), <code>nyctalus-collaudo --solo-rete</code> (collaudo),
+<code>./rete-raspberry.sh --togli</code> (spegne e toglie il servizio). Su un PC sempre acceso vale lo
+stesso comando: <code>nyctalus-rete casa --internet NOME --senza-uscita --servizio</code>.</p>
 <h2 id="6-bis-rubrica-e-casella-della-rete-facoltativo">6-bis. Rubrica e casella della rete (facoltativo)</h2>
 <p>Rubrica (chi usa la rete) e casella cifrata (messaggi a chi non è in linea) devono stare su una
 macchina sempre accesa: il server va benissimo.</p>

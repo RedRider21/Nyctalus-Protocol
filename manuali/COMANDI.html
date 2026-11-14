@@ -24,7 +24,7 @@
 <h1 id="tutti-i-comandi">Tutti i comandi</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-programmi-con-la-finestra">1. Programmi con la finestra</a><a href="#2-chat-e-file-dal-terminale-nyctalus-cli">2. Chat e file dal terminale (nyctalus-cli)</a><a href="#3-rete-collegarsi-e-gestirla-nyctalus-rete">3. Rete: collegarsi e gestirla (nyctalus-rete)</a><a href="#4-siti-nyct-nyctalus-sito">4. Siti .nyct (nyctalus-sito)</a><a href="#5-controlli-collaudo-e-integrita">5. Controlli: collaudo e integrità</a><a href="#6-server-e-nodi">6. Server e nodi</a><a href="#7-telefono-termux">7. Telefono (Termux)</a><a href="#8-installare-e-disinstallare">8. Installare e disinstallare</a><a href="#9-il-motore-per-esperti-nyctalus">9. Il motore, per esperti (nyctalus)</a><a href="#10-variabili-dambiente">10. Variabili d'ambiente</a><a href="#11-per-chi-sviluppa">11. Per chi sviluppa</a><a href="#12-corrispondenze-con-tor">12. Corrispondenze con Tor</a></nav>
 <p>L'elenco <strong>completo</strong> dei comandi di Nyctalus, diviso per tipologia. È l'unico elenco
 completo: gli altri manuali spiegano <em>come</em> fare le cose e rimandano qui per le opzioni.
-Aggiornato alla 0.3.21; ogni comando stampa anche il suo aiuto (<code>--help</code>, o <code>aiuto</code> per
+Aggiornato alla 0.3.22; ogni comando stampa anche il suo aiuto (<code>--help</code>, o <code>aiuto</code> per
 <code>nyctalus-cli</code>).</p>
 <table>
 <thead>
@@ -100,7 +100,7 @@ cartella del pacchetto, con gli script <code>avvia-….sh</code>.</p>
 <tr>
 <td><code>nyctalus-launcher</code></td>
 <td><code>./avvia-launcher.sh</code></td>
-<td>il <strong>mini menu</strong>: accende la rete, apre gli altri programmi, ⚙ impostazioni</td>
+<td>il <strong>mini menu</strong>: accende la rete, apre gli altri programmi; in ⚙: <strong>🔗 Collegati a una rete</strong> (incolli il codice di rete), impostazioni, Firefox, Aiuta la rete</td>
 </tr>
 <tr>
 <td><code>nyctalus-chat</code></td>
@@ -262,6 +262,14 @@ da lì. Guida: <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md
 <td>la stessa, raggiungibile da Internet (NOME = No-IP/DuckDNS o IP pubblico)</td>
 </tr>
 <tr>
+<td><code>casa … --servizio [--stampa \| --togli]</code></td>
+<td>la rete sempre accesa come servizio (Raspberry, PC sempre acceso), riparte da sola · rivede codice e stato · la spegne</td>
+</tr>
+<tr>
+<td><code>casa … --senza-uscita</code> · <code>--con-uscita</code></td>
+<td>i nodi di questo PC non fanno da uscita verso Internet (chat, file e siti <code>.nyct</code> sì) · tornano a farla; la scelta si ricorda</td>
+</tr>
+<tr>
 <td><code>ospite aggiungi RIGA… --famiglia NOME [--internet]</code></td>
 <td>aggiunge il nodo di un amico</td>
 </tr>
@@ -285,8 +293,8 @@ da lì. Guida: <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md
 <td>crea l'autorità (le chiavi che firmano l'elenco)</td>
 </tr>
 <tr>
-<td><code>aggiungi RIGA… \| --file F [--famiglia NOME] [--banda MBIT] [--intermedio]</code></td>
-<td>aggiunge nodi (righe «IP:PORTA,chiave,impronta»)</td>
+<td><code>aggiungi RIGA… \| --file F [--famiglia NOME] [--banda MBIT] [--intermedio \| --senza-uscita]</code></td>
+<td>aggiunge nodi (righe «IP:PORTA,chiave,impronta»); <code>--senza-uscita</code> = mai uscita verso Internet</td>
 </tr>
 <tr>
 <td><code>togli IP:PORTA</code></td>
@@ -480,8 +488,39 @@ da lì. Guida: <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md
 <td>ponte nascosto: fuori dall'elenco, stampa la riga segreta</td>
 </tr>
 <tr>
+<td><code>--senza-uscita</code></td>
+<td>i nodi non fanno mai da uscita verso Internet (server o Raspberry di casa); righe già segnate</td>
+</tr>
+<tr>
 <td><code>--nuova-identita</code></td>
 <td>rifà chiavi e certificato (cambiano le righe: rimandale al gestore)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>La tua rete su un Raspberry Pi, in un colpo</strong> (<code>./rete-raspberry.sh</code> del pacchetto server; <a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a> §6-ter)</p>
+<table>
+<thead>
+<tr>
+<th>Opzione</th>
+<th>Cosa fa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--nome NOME</code></td>
+<td>nome DuckDNS/No-IP o IP pubblico (senza: lo chiede)</td>
+</tr>
+<tr>
+<td><code>--nodi N</code> · <code>--porta-base 4701</code> · <code>--porta 18800</code></td>
+<td>quanti nodi e su quali porte</td>
+</tr>
+<tr>
+<td><code>--con-uscita</code></td>
+<td>i nodi fanno anche da uscita verso Internet (di serie no)</td>
+</tr>
+<tr>
+<td><code>--si</code> · <code>--togli</code></td>
+<td>nessuna domanda · spegne e toglie il servizio della rete</td>
 </tr>
 </tbody>
 </table>
@@ -645,15 +684,15 @@ particolari e prove. <code>nyctalus help</code> stampa l'elenco.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>node --listen 0.0.0.0:4601 [--data DIR] [--announce IP:PORTA] [--secret HEX] [--directory F --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0] [--hidden-bridge] [--middle-only] [--max-rate MBIT]</code></td>
-<td>un nodo della rete</td>
+<td><code>node --listen 0.0.0.0:4601 [--data DIR] [--announce IP:PORTA] [--secret HEX] [--directory F --authority HEX] [--obfuscation HEX] [--tor-socks 127.0.0.1:9050] [--cover 0] [--hidden-bridge] [--middle-only \| --no-exit] [--max-rate MBIT]</code></td>
+<td>un nodo della rete; <code>--no-exit</code> = mai uscita verso Internet, punto d'incontro sì; <code>--middle-only</code> = solo intermedio</td>
 </tr>
 <tr>
 <td><code>authority</code></td>
 <td>crea le chiavi di un'autorità</td>
 </tr>
 <tr>
-<td><code>directory --authority-secret HEX --entries 'addr,x,fp;…'</code></td>
+<td><code>directory --authority-secret HEX --entries 'addr,x,fp[,famiglia[,mbit[,middle\|guard\|noexit]]];…'</code></td>
 <td>firma un elenco di nodi</td>
 </tr>
 </tbody>
