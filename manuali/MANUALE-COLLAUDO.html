@@ -76,6 +76,12 @@ casa può non esserlo dal telefono.</p>
 </thead>
 <tbody>
 <tr>
+<td>0</td>
+<td><strong>Integrità dei programmi</strong></td>
+<td>i programmi installati sono identici a quelli pubblicati (elenco <code>INTEGRITA</code> firmato dalla release, <code>nyctalus-integrita</code>)</td>
+<td>un file è stato cambiato o aggiunto: reinstalla dalla release ufficiale (<code>--senza-integrita</code> per saltarlo)</td>
+</tr>
+<tr>
 <td>1</td>
 <td><strong>Configurazione</strong></td>
 <td>c'è il motore, la rete è configurata (codice <code>NYCT1:</code>), si vede la forma del traffico, rubrica e casella</td>
@@ -97,7 +103,7 @@ casa può non esserlo dal telefono.</p>
 <td>3</td>
 <td><strong>Tunnel</strong></td>
 <td>il circuito a 3 salti si costruisce</td>
-<td>meno di 3 nodi vivi, o chiave/forma diverse fra te e i nodi</td>
+<td>meno di 3 nodi vivi, le tue 3 entrate fisse (guardie primarie) tutte spente, o chiave/forma diverse fra te e i nodi. Se è spenta solo la prima il tunnel parte dalla seconda: compare come «!»</td>
 </tr>
 <tr>
 <td>4</td>

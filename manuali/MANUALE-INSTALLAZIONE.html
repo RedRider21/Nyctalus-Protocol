@@ -83,6 +83,10 @@ cd Nyctalus
 <strong>1) Client</strong> (il caso normale), <strong>2) Gestore</strong> (come il client, in più gestisci una rete),
 <strong>3) Nodo server</strong> (la macchina fa da nodo: vedi <a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>). Senza domande:
 <code>./installa.sh --ruolo client --si</code>.</p>
+<p>Prima di copiare qualunque cosa l'installatore controlla l'<strong>integrità</strong> del pacchetto: ogni file
+deve avere l'impronta scritta nell'elenco firmato dalla release (<code>firma/LEGGIMI.md</code>). Se un file è
+stato cambiato o aggiunto si ferma con «controllo d'integrità fallito» e non installa nulla:
+riscarica il pacchetto dalla release ufficiale. Dopo, in ogni momento: <code>nyctalus-integrita</code>.</p>
 <h3 id="13-avviare">1.3 Avviare</h3>
 <table>
 <thead>

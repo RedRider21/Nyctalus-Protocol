@@ -299,9 +299,9 @@ casi delicati sul web normale c'è Nyctalus Firefox (profilo sul modello di Tor 
 <td>—</td>
 </tr>
 <tr>
-<td>Autocontrollo d'integrità dei programmi installati</td>
-<td>⏳ dopo la firma delle release</td>
-<td>—</td>
+<td><strong>Autocontrollo d'integrità</strong> dei programmi installati</td>
+<td>✅ (0.3.21) ogni pacchetto porta <code>INTEGRITA</code> (impronta SHA-256 di ogni file) firmato con la chiave della release (namespace <code>nyctalus-integrita</code>); gli installatori (PC, server, Termux) rifiutano un pacchetto con un file cambiato o un programma aggiunto, anche se la release fosse stata rifirmata; <code>nyctalus-integrita</code> (e il collaudo, punto 0) ricontrolla i file installati in ogni momento. Limite: chi può scrivere nei file di Nyctalus può cambiare anche il controllo: per un controllo indipendente usare il comando e la chiave presi dalla release</td>
+<td>prove <code>12-integrita</code>, <code>37-script-unico-termux</code></td>
 </tr>
 </tbody>
 </table>

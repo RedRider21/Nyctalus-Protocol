@@ -55,6 +55,10 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 </thead>
 <tbody>
 <tr>
+<td><code>12-integrita</code></td>
+<td><strong>autocontrollo d'integrità</strong> (chiave di prova): pacchetto firmato e intatto ✓; un file cambiato, un programma aggiunto, l'elenco ritoccato, la firma di un'altra chiave o assente ✗; la chiave vera non accetta quella di prova; il motore del telefono copiato con un altro nome si riconosce dalla mappa ma un motore sostituito no; l'installatore del PC installa il pacchetto intatto e rifiuta quello alterato</td>
+</tr>
+<tr>
 <td><code>01-directory-firmata</code></td>
 <td>l'elenco dei nodi firmato è accettato; manomesso o firmato da un'altra autorità è <strong>rifiutato</strong></td>
 </tr>
@@ -186,6 +190,10 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 <td><strong>programma File, motore</strong>: Alice → Bob sulla rete di prova (3 salti, canali paralleli): sotto soglia parte da solo, sopra soglia «Accetta», pausa/ripresa, motore di Bob spento a metà e riacceso (riprende dai pezzi già verificati), file sempre identico (SHA-256), non-contatto rifiutato senza proporglielo; nella chat il file compare all'ora d'arrivo con ✓✓ e diventa blu alla lettura; con «inchat 0» non compare in chat. Motore di Bob rallentato solo in prova (<code>NYCTALUS_PROVA_RALLENTA_MS</code>)</td>
 </tr>
 <tr>
+<td><code>51-guardie-di-riserva</code></td>
+<td><strong>guardie primarie</strong> su una rete di prova da 7 nodi: il client ricorda 3 entrate fisse ed entra dalla prima; spenta la prima, tunnel e scaricamento partono dalla SECONDA (mai da un nodo a caso) e le guardie ricordate non cambiano; un sito <code>.nyct</code> si pubblica e si visita lo stesso; riaccesa la prima, si rientra da lei; spenta di nuovo a tunnel acceso, il tunnel si ricostruisce da solo dalla seconda sulla stessa porta; spente tutte e tre, il client prova solo quelle e si ferma</td>
+</tr>
+<tr>
 <td><code>50-collaudo</code></td>
 <td><strong>nyctalus-collaudo</strong> su una rete di prova camuffata (<code>--solo-rete</code>): configurazione, elenco firmato, 4 nodi vivi con i tempi, nodi muti senza chiave, tunnel temporaneo acceso e poi spento, rubrica <code>.nyct</code> raggiungibile, rapporto su file e JSON; un nodo spento segnalato per nome (e spiegato se era l'entrata fissa), due nodi spenti = non superato, elenco manomesso rifiutato, rete non configurata</td>
 </tr>
@@ -239,7 +247,7 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 </tr>
 <tr>
 <td><code>37-script-unico-termux</code></td>
-<td><strong>lo script unico</strong> <code>installa-termux.sh</code> eseguito come lo incolla l'utente (<code>curl … \| bash</code>) in una Termux simulata: pacchetto alterato rifiutato, installazione in un colpo, permesso all'app (una riga), impostazioni ricaricate, app riaperta, niente aggiornamento se Termux è pronto, rilanciabile</td>
+<td>(anche: un file del pacchetto cambiato con la release RIFIRMATA viene fermato dall'elenco d'integrità; dopo l'installazione <code>nyctalus-integrita</code> conferma i file) <strong>lo script unico</strong> <code>installa-termux.sh</code> eseguito come lo incolla l'utente (<code>curl … \| bash</code>) in una Termux simulata: pacchetto alterato rifiutato, installazione in un colpo, permesso all'app (una riga), impostazioni ricaricate, app riaperta, niente aggiornamento se Termux è pronto, rilanciabile</td>
 </tr>
 <tr>
 <td><code>36-ripiego-tcp</code></td>
