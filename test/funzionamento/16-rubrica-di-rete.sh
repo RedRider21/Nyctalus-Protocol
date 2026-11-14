@@ -55,6 +55,6 @@ R=$(NYCT_FINO="^MSG $RUB " controllo 20822 "$U" 120 SUB "SEND $RUB $(printf '{"o
     | grep -oE "^MSG $RUB [0-9]+ [0-9a-f]+" | head -1 | awk '{print $4}' | xxd -r -p)
 echo "$R" | grep -q '"op":"iscritto","nome":"Anna"' && pass "un utente della rete si iscrive alla rubrica sul server" || fail "iscrizione: $R"
 U2=$(RETE "$SRV" rubrica --servizio --stampa)
-echo "$U2" | grep -q "^ExecStart=.*nyctalus-rete rubrica$" && echo "$U2" | grep -q "^Restart=always" \
-  && pass "--servizio: unità systemd dell'utente, si riavvia sempre" || fail "unità: $U2"
+echo "$U2" | grep -q '^ExecStart=".*nyctalus-rete" "rubrica"$' && echo "$U2" | grep -q "^Restart=always" \
+  && pass "--servizio: unità systemd dell'utente (percorsi tra virgolette), si riavvia sempre" || fail "unità: $U2"
 [ "$KO" -eq 0 ]
