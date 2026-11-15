@@ -303,6 +303,6 @@ mod prove {
     #[test]
     fn json_come_il_python() {
         let v = serde_json::json!({"a": 1, "b": "è", "c": [true, null]});
-        assert_eq!(json_come_python(&v), r#"{"a": 1, "b": "è", "c": [true, null]}"#);
+        assert_eq!(json_come_python(&v), "{\"a\": 1, \"b\": \"\\u00e8\", \"c\": [true, null]}");
     }
 }

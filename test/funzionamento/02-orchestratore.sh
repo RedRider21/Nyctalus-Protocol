@@ -13,8 +13,8 @@ cat > "$H/.nyctalus-mobile/config.json" <<'EOF'
 {"porte": {"http": 19732, "controllo": 19491, "backend": 19482, "socks": 19480, "socks_locale": 19486,
            "monitor": 19496, "nodi": [19440, 19441, 19442, 19443]}}
 EOF
-HOME="$H" NYCTALUS_BIN="$BIN" python3 "$ROOT/mobile/orchestratore/nyctalus_mobile.py" > "$TMP/o.log" 2>&1 &
-OPID=$!; PIDS+=($OPID)
+HOME="$H" NYCTALUS_BIN="$BIN" avvia_orchestratore "$TMP/o.log"
+OPID=${PIDS[-1]}
 [ -n "$(attendi_regex "$TMP/o.log" 'servizi pronti' 40)" ] && pass "servizi avviati (rete di prova + chat + servizio .nyct)" || { fail "servizi non avviati: $(tail -2 "$TMP/o.log")"; exit 1; }
 python3 "$STRUMENTI/prova_orchestratore.py" 19732 "$TOK" > "$TMP/r.txt" 2>&1
 while read -r esito resto; do          # niente pipe: i conteggi restano in questa shell
