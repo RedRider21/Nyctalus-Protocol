@@ -35,6 +35,37 @@
 - ✅ **Release v0.3.25 PUBBLICATA** (15/11, APK 0.68; motore ricompilato dal flusso «Eseguibili» con NYCTALUS_VICINI; 20 file firmati, firma e impronte verificate dopo il caricamento; suite 884 + prova APK 32 = 916 superate, 0 fallite; motore 144 test). Sito aggiornato. Installata sul PC dell'utente (nessuna rete accesa in quel momento); `nyctalus-aggiorna --controlla` sul PC conferma 0.3.25.
 - ✅ **(0.3.25) 🧭 Che cosa vuoi fare?** al primo avvio del mini menu (solo se non c'è ancora una rete; `benvenuto` nella config del launcher), 4 strade (usa/ospita/aiuta/prova) + nota server; voce nel menu ⚙; 5 lingue; domanda dell'installatore riformulata; prova 53 (11).
 - ✅ **Release v0.3.26 PUBBLICATA** (15/11, APK 0.69; motore della 0.3.25; correzione «Apri il gestore della rete» → terminale del gestore che resta aperto; suite 887/887 compresa la prova dell'APK). Installata sul PC dell'utente con **⬆ Aggiorna** (`nyctalus-aggiorna --si`): prima prova vera riuscita (firma e impronta verificate da GitHub).
+## ▶▶ RIPARTIRE DA QUI (fine sessione 15/11/2026 sera)
+
+**Situazione:** PC dell'utente con l'installazione di PROVA `0.3.99-prova` (dal codice attuale: pulsanti 🔊 Audio della chiamata
+corretti, nomi dalla rubrica, nodi vicini, ⬆ Aggiorna…), rete «Rete Internet di prova» F9A4-3DD9 accesa come servizio
+(87.7.168.88, lan 192.168.1.14). Telefono: «Nyctalus prova» (org.nyctalus.mobile.prova, app SENZA Termux) da
+`installazioni/Android/Nyctalus-prova.apk` (impronta 33afb0d6…), da installare via Bluetooth sopra la precedente; dati portati
+da Termux con il trasloco; chat telefono ↔ PC funzionante. `installazioni/` è stata rigenerata dal codice attuale (Nyctalus.apk lì
+ora è l'APK nativa di sviluppo, NON la 0.3.26 pubblicata). **VERSIONE = 0.3.99-prova: riportarla al numero vero prima della release.**
+
+**DA FARE, in ordine:**
+1. **Chiamate, da ricontrollare con calma (richiesta esplicita dell'utente):**
+   a. telefono → PC: lo squillo sul PC arriva in ritardo (PC → telefono è immediato): misurare ogni passaggio (pagina → orchestratore
+      Rust → motore → circuito/punto d'incontro → PC), confrontare con l'app con Termux;
+   b. PC → telefono: «audio non abilitato» / messaggio sul telefono: chiedere all'utente il testo esatto e se si sentono; controllare
+      permesso del microfono nell'app nuova (onPermissionRequest, RICHIESTA_MICROFONO), risposta da notifica senza tocco
+      (setMediaPlaybackRequiresUserGesture(true) blocca l'audio?), «Rispondi» ad app chiusa;
+   c. videochiamata: forte latenza iniziale; d. pulsanti della finestra di chiamata del PC (audio corretto, verificare il resto).
+   Già corretti: notifica di chiamata anche con l'app aperta nel menu principale/browser; 🔊 del PC con elenco proprio.
+2. Prove ancora da fare sul telefono: file e foto (galleria, fotocamera, ricevuti), notifiche ad app chiusa, scheda 📱 App,
+   chiudi/riapri più volte, dati mobili (da fuori casa).
+3. **Fase 8:** DuckDNS/IP dal router nelle impostazioni del telefono; **tutta la manualistica con «Termux facoltativo»** (elenco in
+   `documenti/APP-ANDROID-NATIVA.md`); test automatico per i nomi dalla rubrica.
+4. **Release 0.4.0:** app nativa che SOSTITUISCE quella vera (pacchetto org.nyctalus.mobile, trasloco automatico per gli amici),
+   motore con `app` (compilato dal flusso Eseguibili), suite completa, Pages; poi l'utente disinstalla «Nyctalus prova».
+5. **TAPPA 2 — niente porte da aprire (decisione dell'utente, ribadita):** elenco dei nodi DENTRO i nodi (via la TCP 18800, unico
+   pezzo non camuffato), nodi pubblici su 443 con forma HTTP/3, ponte inverso per Raspberry/PC/telefoni (solo collegamenti in
+   uscita), telefono anche nodo (solo Wi-Fi e in carica, solo intermedio). Serve decidere il PUNTO PUBBLICO: Oracle Free Tier,
+   server affittato 3-5 €/mese, o amico. Spiegato all'utente: nessuna porta (443, 22…) è aperta IN ENTRATA su un router di casa.
+6. Dubbio SOC/SIEM: spiegato che il camuffamento riduce la riconoscibilità ma non rende invisibili; regola: mai sulla rete dell'ufficio.
+7. Orchestratore Python (`mobile/orchestratore`): da togliere quando l'app nativa è stabile; Windows passerà a `nyctalus app`.
+
 - ✅ **15/11 sera: PRIMA PROVA VERA dell'app senza Termux** («Nyctalus prova», pacchetto org.nyctalus.mobile.prova, accanto all'app vera, installata via Bluetooth da `installazioni/Android/Nyctalus-prova.apk`): trasloco da Termux riuscito, chat telefono ↔ PC sulla rete F9A4-3DD9. Corretti dalla prova: motore già acceso riusato (Address already in use), vecchio servizio Termux riconosciuto e spento, chat accesa anche con la rete spenta, scheda «📱 App» dopo Profilo, Strumenti ripuliti (Termux facoltativo), «🏠 Pagina della rete del PC di casa» nel browser integrato (Collega l'app → questa app). Restano: prove di chiamate/file/notifiche sul telefono, fase 8 (DuckDNS/IP nelle impostazioni del telefono, manuali con Termux facoltativo), poi release 0.4.0 che sostituisce l'app vera. Poi TAPPA 2 decisa con l'utente: niente porte da aprire (elenco dentro i nodi al posto della 18800, nodi pubblici su 443 forma HTTP/3, ponte inverso), serve scegliere il punto pubblico (Oracle gratuito / server affittato / amico). Dubbio dell'utente su SOC/SIEM: spiegato che il camuffamento riduce la riconoscibilità ma non rende invisibili; regola: mai Nyctalus sulla rete dell'ufficio.
 - ▶ **(dal 15/11) TAPPA 3: app Android senza Termux** — progetto in `documenti/APP-ANDROID-NATIVA.md` (orchestratore riscritto in Rust come `nyctalus app`, stesse API, provato con le prove esistenti; APK Java sottile con libnyctalus.so, servizio in primo piano, WebView). **Termux = aggiunta facoltativa**, da chiarire in TUTTA la manualistica quando esce l'app nuova (elenco nel documento). Ordine scelto dall'utente: app nativa prima della tappa 2 (motore: ponte inverso).
 - 🔜 **DA FARE (richieste dell'utente):** 1) la finestra «La mia rete» deve collegare anche il PC stesso alla propria rete (oggi il servizio usa --non-importare); 2) le regole DNAT per il NAT loopback messe dalla rete stessa all'accensione; 3) **OBIETTIVO dell'utente: non dover aprire porte sul router.** Strade da valutare: nodi di casa che si collegano IN USCITA a un nodo pubblico (ponte inverso), hole punching UDP coordinato da un nodo raggiungibile, UPnP/NAT-PMP/PCP automatici quando il router li ha (il TIM dell'utente: UPnP non risponde), IPv6, un nodo pubblico su un piccolo server (VPS) come unico punto con porte aperte.
