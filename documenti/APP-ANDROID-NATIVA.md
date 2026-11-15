@@ -55,7 +55,7 @@ Perché in Rust dentro il motore e non in Java nell'app:
 | ✅ 3 | ponte WebSocket `/ws` ↔ porta di controllo della chat; notifiche (`/api/notifiche`) | `03-webapp`, `12-notifiche` |
 | ✅ 4 | file: allegati con Range, carica, galleria, sfoglia, miniature (anche EXIF), archivio e cassaforte | `prova_miniature.py`, `46`/`49-cassaforte` |
 | ✅ 5 | SOCKS del browser interno | `06-browser-mobile` (sicurezza) |
-| 6 | APK nativo: `libnyctalus.so` per arm64-v8a e armeabi-v7a, servizio in primo piano, WebView, ponte JavaScript, avvio all'accensione | `08-app-android` (compilazione e contenuto dell'APK) |
+| ◐ 6 | APK nativo: `libnyctalus.so` per arm64-v8a e armeabi-v7a, servizio in primo piano, WebView, ponte JavaScript, avvio all'accensione | `08-app-android` (compilazione e contenuto dell'APK) |
 | 7 | passaggio dall'app con Termux: identità, contatti, messaggi copiati nella cartella dell'app (con il consenso) | prova dedicata |
 | 8 | impostazioni nuove: DuckDNS, IP dal router; «telefono anche nodo» (solo Wi-Fi e in carica, solo intermedio) dopo il ponte inverso (tappa 2) | — |
 
@@ -73,6 +73,14 @@ Sicurezza dell'orchestratore 9/9 · orchestratore (02) completo, senza processi 
 (il ⌨ Terminale esiste solo con Termux) · notifiche 8/8 · cassaforte 46 e 49 complete · browser dell'app (06) 24/24 ·
 ponti nascosti (32) 21/21 · test unitari Rust del modulo `app` 9. Differenza trovata e corretta: all'arresto
 si lascia ai programmi il tempo di chiudersi (la chat svuota la vista in chiaro della cassaforte).
+
+## Fase 6, stato (15/11)
+Fatto: `MotoreNativo` (avvia «libnyctalus.so app» con HOME privata, TMPDIR/XDG_RUNTIME_DIR nella cache, galleria e
+sfoglia del telefono, registro `app.log`), avvio/riavvio/notifiche/accensione senza Termux, permessi della galleria,
+`compila-apk.sh` di serie «con tutto» (5,2 MB; `NYCTALUS_APK_TERMUX=1` per la versione di prima), «Installa in Termux»
+dal pacchetto firmato della release. Prova 08: 34/34.
+Da fare: motore per Android con `app` compilato dal flusso «Eseguibili» (download ~50 MB, da approvare); prova sul
+telefono vero dell'utente (qui non c'è un telefono né un emulatore).
 
 ## Python o Rust (parere dato all'utente, 15/11)
 Rust per ciò che trasporta dati o deve funzionare da solo (motore, telefono, Windows); Python per le finestre
