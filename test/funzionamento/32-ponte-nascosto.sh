@@ -106,7 +106,7 @@ python3 -c "import json,sys;c=json.load(open(sys.argv[1]));sys.exit(0 if not c.g
 # 6) telefono/Windows: l'API della rete (orchestratore con HOME finta, senza avvio dei servizi)
 HM="$TMP/mobile"; mkdir -p "$HM/.nyctalus-mobile"; TOK=$(python3 -c 'import secrets;print(secrets.token_hex(16))')
 printf %s "$TOK" > "$HM/.nyctalus-mobile/token"; echo '{"porte": {"http": 19743}}' > "$HM/.nyctalus-mobile/config.json"
-HOME="$HM" NYCTALUS_AVVIO_AUTOMATICO=0 NYCTALUS_BIN=/bin/false python3 "$ROOT/mobile/orchestratore/nyctalus_mobile.py" > "$TMP/o.log" 2>&1 & PIDS+=($!)
+HOME="$HM" NYCTALUS_AVVIO_AUTOMATICO=0 NYCTALUS_BIN=/bin/false avvia_orchestratore "$TMP/o.log"
 api() { python3 - "$TOK" "$@" <<'PY'
 import json, sys, urllib.request, urllib.error
 tok, metodo, via = sys.argv[1:4]

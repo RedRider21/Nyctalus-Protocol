@@ -16,6 +16,7 @@ pub mod file;
 pub mod http;
 pub mod rete;
 pub mod servizi;
+pub mod socks;
 pub mod ws;
 
 use std::path::{Path, PathBuf};
@@ -274,6 +275,7 @@ pub async fn esegui(webapp: Option<PathBuf>) -> Risultato<()> {
             std::process::exit(0);
         });
     }
+    tokio::spawn(socks::ascolta(app.clone()));
     if std::env::var("NYCTALUS_AVVIO_AUTOMATICO").map(|v| v == "1").unwrap_or(true) {
         servizi::avvia(&app);
     }

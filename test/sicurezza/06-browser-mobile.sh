@@ -41,7 +41,7 @@ grep -q '"<-loopback>"' "$J/ProxyNyctalus.java" && pass "proxy anche per 127.0.0
 # --- inoltratore --------------------------------------------------------------------------
 H="$TMP/home"; mkdir -p "$H/.nyctalus-mobile"
 echo '{"porte": {"http": 19821, "controllo": 19822, "backend": 19823, "socks": 19824, "socks_locale": 19825, "monitor": 19826, "nodi": [19827,19828,19829,19830], "socks_browser": 19831}}' > "$H/.nyctalus-mobile/config.json"
-HOME="$H" NYCTALUS_BIN="$BIN" NYCTALUS_AVVIO_AUTOMATICO=0 python3 "$ROOT/mobile/orchestratore/nyctalus_mobile.py" > "$TMP/o.log" 2>&1 & PIDS+=($!)
+HOME="$H" NYCTALUS_BIN="$BIN" NYCTALUS_AVVIO_AUTOMATICO=0 avvia_orchestratore "$TMP/o.log"
 for _ in $(seq 1 40); do ss -ltn | grep -q ":19831 " && break; sleep 0.2; done
 S() { curl -s --max-time 15 --socks5-hostname 127.0.0.1:19831 "$@"; }
 G=$(python3 -c 'import secrets;print(secrets.token_hex(8))')

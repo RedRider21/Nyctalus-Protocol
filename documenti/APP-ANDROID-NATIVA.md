@@ -50,11 +50,11 @@ Perché in Rust dentro il motore e non in Java nell'app:
 
 | # | Fase | Prova |
 |---|---|---|
-| 1 | `nyctalus app`: server HTTP, segreto/cookie, controllo dell'origine, file statici della web-app, `/api/stato` | `05-orchestratore` (sicurezza) contro Rust |
-| 2 | servizi: avvia/ferma chat, tunnel, servizio `.nyct`; `/api/rete` (codice, reti salvate, vicini), `/api/impostazioni` | `02-orchestratore`, `prova_orchestratore.py` |
-| 3 | ponte WebSocket `/ws` ↔ porta di controllo della chat; notifiche (`/api/notifiche`) | `03-webapp`, `12-notifiche` |
-| 4 | file: allegati con Range, carica, galleria, sfoglia, miniature (anche EXIF), archivio e cassaforte | `prova_miniature.py`, `46`/`49-cassaforte` |
-| 5 | SOCKS del browser interno | `06-browser-mobile` (sicurezza) |
+| ✅ 1 | `nyctalus app`: server HTTP, segreto/cookie, controllo dell'origine, file statici della web-app, `/api/stato` | `05-orchestratore` (sicurezza) contro Rust |
+| ✅ 2 | servizi: avvia/ferma chat, tunnel, servizio `.nyct`; `/api/rete` (codice, reti salvate, vicini), `/api/impostazioni` | `02-orchestratore`, `prova_orchestratore.py` |
+| ✅ 3 | ponte WebSocket `/ws` ↔ porta di controllo della chat; notifiche (`/api/notifiche`) | `03-webapp`, `12-notifiche` |
+| ✅ 4 | file: allegati con Range, carica, galleria, sfoglia, miniature (anche EXIF), archivio e cassaforte | `prova_miniature.py`, `46`/`49-cassaforte` |
+| ✅ 5 | SOCKS del browser interno | `06-browser-mobile` (sicurezza) |
 | 6 | APK nativo: `libnyctalus.so` per arm64-v8a e armeabi-v7a, servizio in primo piano, WebView, ponte JavaScript, avvio all'accensione | `08-app-android` (compilazione e contenuto dell'APK) |
 | 7 | passaggio dall'app con Termux: identità, contatti, messaggi copiati nella cartella dell'app (con il consenso) | prova dedicata |
 | 8 | impostazioni nuove: DuckDNS, IP dal router; «telefono anche nodo» (solo Wi-Fi e in carica, solo intermedio) dopo il ponte inverso (tappa 2) | — |
@@ -67,6 +67,17 @@ Il terminale (`/ws/terminale`) resta solo nella versione con Termux.
 - Android può fermare i servizi in sottofondo per risparmiare batteria: l'app chiede di essere
   esclusa dall'ottimizzazione della batteria (facoltativo).
 - Grandezza stimata: ~6-7 MB con arm64 + armv7 (oggi 11 MB con il pacchetto di Termux dentro).
+
+## Stato delle prove contro `nyctalus app` (15/11/2026)
+Sicurezza dell'orchestratore 9/9 · orchestratore (02) completo, senza processi orfani · web-app 74 + 3 saltate
+(il ⌨ Terminale esiste solo con Termux) · notifiche 8/8 · cassaforte 46 e 49 complete · browser dell'app (06) 24/24 ·
+ponti nascosti (32) 21/21 · test unitari Rust del modulo `app` 9. Differenza trovata e corretta: all'arresto
+si lascia ai programmi il tempo di chiudersi (la chat svuota la vista in chiaro della cassaforte).
+
+## Python o Rust (parere dato all'utente, 15/11)
+Rust per ciò che trasporta dati o deve funzionare da solo (motore, telefono, Windows); Python per le finestre
+GTK e gli strumenti di gestione su Linux (già presente, più rapido da modificare; gtk-rs costerebbe centinaia di
+MB di dipendenze). Il vecchio orchestratore Python si toglie quando l'app nativa è stabile.
 
 ## Manualistica (decisione dell'utente, 15/11/2026)
 Termux diventa **un'aggiunta facoltativa, a scelta**: l'app da sola fa tutto; Termux serve solo a
