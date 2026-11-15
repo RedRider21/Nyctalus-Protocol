@@ -198,6 +198,18 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 <td><strong>finestra «🏠 La mia rete»</strong> del mini menu del PC: le spunte diventano il comando <code>nyctalus-rete casa …</code> giusto; nomi pericolosi, nodi troppo pochi e porte sovrapposte rifiutati; «Accendi» accende la rete staccata dal mini menu con i nodi senza uscita; riaccendere con altre scelte spegne prima la precedente; «Spegni» ferma rete, pagina e nodi; testi in 5 lingue; il codice si estrae pronto da copiare; la versione (file <code>VERSIONE</code>) è la prima voce del menu ⚙</td>
 </tr>
 <tr>
+<td><code>54-nodi-vicini</code></td>
+<td><strong>nodi vicini</strong> (router senza NAT loopback, IP pubblico finto che non risponde): <code>casa --internet</code> accende nodi, rubrica e casella lo stesso; la prova dal nome pubblico resta onesta (0/4); il codice porta l'indirizzo in casa (<code>lan</code>); <code>nyctalus-rete vicini</code> dà <code>pubblico=127.0.0.1</code> sul PC che ospita, <code>pubblico=IP interno</code> su un altro dispositivo di casa e sul telefono, niente lontano da casa; il motore con <code>NYCTALUS_VICINI</code> raggiunge 4/4 nodi (senza 0/4) e costruisce il tunnel</td>
+</tr>
+<tr>
+<td><code>55-aggiorna-pc</code></td>
+<td><strong>⬆ Aggiorna Nyctalus</strong> (<code>nyctalus-aggiorna</code>) con una finta GitHub e una chiave di prova, in una HOME finta: versione nuova vista con il peso; scaricamento, firma valida, impronta giusta, integrità confermata dall'installatore; pacchetto alterato, release firmata da un'altra chiave, <code>SHA256SUMS</code> ritoccato → rifiutati; già aggiornato → niente; risposta strana → errore chiaro; nessuna installazione fuori dalla prova</td>
+</tr>
+<tr>
+<td><code>56-router-ip-duckdns</code></td>
+<td><strong>il router senza siti esterni</strong> (finto router NAT-PMP + UPnP, finto DuckDNS, HOME finta): IP pubblico da NAT-PMP e da UPnP; porte aperte dal router (5); router muto → alternative indicate; CGNAT avvisato; DuckDNS salvato (0600), aggiornato, token sbagliato e valori non validi rifiutati; <code>ip --per-rete</code> (nome DuckDNS prima dell'IP); <code>casa --internet auto</code> con le 7 porte aperte dal router; DuckDNS aggiornato da solo con la rete accesa</td>
+</tr>
+<tr>
 <td><code>51-guardie-di-riserva</code></td>
 <td><strong>guardie primarie</strong> su una rete di prova da 7 nodi: il client ricorda 3 entrate fisse ed entra dalla prima; spenta la prima, tunnel e scaricamento partono dalla SECONDA (mai da un nodo a caso) e le guardie ricordate non cambiano; un sito <code>.nyct</code> si pubblica e si visita lo stesso; riaccesa la prima, si rientra da lei; spenta di nuovo a tunnel acceso, il tunnel si ricostruisce da solo dalla seconda sulla stessa porta; spente tutte e tre, il client prova solo quelle e si ferma</td>
 </tr>

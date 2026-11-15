@@ -143,6 +143,10 @@ firmato: anche se qualcuno lo alterasse, i client lo rifiuterebbero. Scegli tu d
 <li><strong>Va rifatto se cambi l'URL o la protezione</strong> (lo rifà da solo <code>nyctalus-rete protezione</code>).
   Aggiungere o togliere nodi non cambia il codice.</li>
 <li>Rubrica e casella, se le hai accese, entrano nel codice (§6-bis).</li>
+<li>Per una rete ospitata in casa (<code>casa --internet</code>) il codice porta anche l'<strong>indirizzo in
+  casa</strong> di chi la ospita (<code>lan</code>, es. <code>192.168.1.14</code>, dalla 0.3.25): chi è nella stessa casa lo
+  usa da solo quando il router non rimanda indietro i collegamenti verso l'IP pubblico. Rivela
+  solo l'indirizzo interno della tua rete di casa, che da fuori non serve a niente.</li>
 <li>I client lo importano: PC <code>nyctalus-rete importa NYCT1:…</code> (<a href="MANUALE-PC.html"><code>MANUALE-PC.md</code></a> §3), telefono
   <strong>🔗 Rete</strong> → Importa codice (<a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a> §1).</li>
 </ul>
@@ -173,9 +177,16 @@ aggiornamento riaccendi <code>casa</code> e ricollega i client</strong> (📲 su
 codice nuovo contiene la casella.</p>
 <p>Lascia la finestra aperta; <code>Ctrl-C</code> ferma tutto.</p>
 <p><strong>La stessa rete, raggiungibile da Internet</strong> (per provare con un amico in un'altra città):
-<code>nyctalus-rete casa --internet NOME</code> con il tuo nome No-IP/DuckDNS o l'IP pubblico. È una rete a
-sé («Rete Internet di prova»); i nodi si presentano col nome, il comando dice quali porte
-inoltrare sul router e prova i nodi. Passo passo: <a href="GUIDA-INTERNET.html"><code>GUIDA-INTERNET.md</code></a>.</p>
+<code>nyctalus-rete casa --internet NOME</code> con il tuo nome No-IP/DuckDNS o l'IP pubblico
+(<code>--internet auto</code>: il nome DuckDNS impostato con <code>nyctalus-rete duckdns</code>, altrimenti l'IP
+chiesto al router). È una rete a sé («Rete Internet di prova»); i nodi si presentano col nome.
+Dalla 0.3.25 il comando <strong>chiede al router di aprire le porte da solo</strong> (UPnP/NAT-PMP, rinnovate
+ogni 30 minuti; <code>nyctalus-rete porte</code> a mano), aggiorna il nome DuckDNS ogni 5 minuti e, se il
+router non rimanda indietro i collegamenti verso il proprio IP pubblico, fa parlare i nodi di
+questo PC dall'interno (<code>NYCTALUS_VICINI</code>); altrimenti dice quali porte inoltrare. Con
+<code>--servizio</code> («Sempre accesa») resta accesa da sola e collega anche questo PC alla rete
+(<code>--non-importare</code> per non farlo). Senza terminale: mini menu → ⚙ → <strong>🏠 La mia rete</strong>.
+Passo passo: <a href="GUIDA-INTERNET.html"><code>GUIDA-INTERNET.md</code></a>.</p>
 <p><strong>Se il telefono resta a caricare la pagina, è il firewall del PC.</strong> Su Ubuntu ufw scarta in
 silenzio ciò che arriva dalla rete locale. <code>casa</code> se ne accorge e stampa i comandi; con la
 rete <code>192.168.1.x</code> sono:</p>

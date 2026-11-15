@@ -79,10 +79,18 @@ sudo apt install gir1.2-gstreamer-1.0 gstreamer1.0-gtk3 \
 <pre><code class="language-sh">unzip Nyctalus-PC-Linux.zip             # crea la cartella Nyctalus/
 cd Nyctalus
 </code></pre>
-<p>All'inizio l'installatore chiede <strong>cosa stai installando</strong>:
-<strong>1) Client</strong> (il caso normale), <strong>2) Gestore</strong> (come il client, in più gestisci una rete),
-<strong>3) Nodo server</strong> (la macchina fa da nodo: vedi <a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>). Senza domande:
+<p>All'inizio l'installatore chiede <strong>che cosa vuoi fare con questo computer</strong>:
+<strong>1) Usare Nyctalus</strong> (il caso normale: ti colleghi alla rete di qualcuno), <strong>2) Ospitare una
+rete</strong> (come 1, e in più questo PC può essere la tua rete), <strong>3) Server / nodo</strong> (una macchina
+sempre accesa che fa da nodo: vedi <a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>). Senza domande:
 <code>./installa.sh --ruolo client --si</code>.</p>
+<p>Al <strong>primo avvio</strong> il mini menu ripropone la scelta in modo semplice (<strong>🧭 Che cosa vuoi fare?</strong>:
+mi collego alla rete di qualcuno · ospito la mia rete · aiuto una rete · provo da solo) e apre
+la finestra giusta (<a href="MANUALE-PC.html"><code>MANUALE-PC.md</code></a>).</p>
+<p><strong>Aggiornare (dalla 0.3.25):</strong> mini menu → <strong>⚙ → ⬆ Aggiorna Nyctalus…</strong>, oppure
+<code>nyctalus-aggiorna</code>: scarica l'ultima release, verifica la firma e l'impronta del pacchetto e
+la installa al posto della vecchia (i tuoi dati restano). Fino alla 0.3.24: scarica il pacchetto
+nuovo e rilancia <code>./installa.sh</code>.</p>
 <p>Prima di copiare qualunque cosa l'installatore controlla l'<strong>integrità</strong> del pacchetto: ogni file
 deve avere l'impronta scritta nell'elenco firmato dalla release (<code>firma/LEGGIMI.md</code>). Se un file è
 stato cambiato o aggiunto si ferma con «controllo d'integrità fallito» e non installa nulla:

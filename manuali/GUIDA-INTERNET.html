@@ -67,8 +67,11 @@ parti invertite.</p>
 <p>Senza IP pubblico, gli altri non possono raggiungere il tuo PC e nessuna impostazione
 del router può rimediare.</p>
 <ol>
-<li>Nella pagina del router guarda l'<strong>IP WAN</strong> (o «IP pubblico», «Indirizzo Internet»).</li>
-<li>Apri un sito come <code>https://ifconfig.me</code> e confronta.</li>
+<li>Nella pagina del router guarda l'<strong>IP WAN</strong> (o «IP pubblico», «Indirizzo Internet»).
+   Dalla 0.3.25 lo chiede al router anche <code>nyctalus-rete ip</code> (o <strong>🔍 Trova</strong> nella finestra
+   «🏠 La mia rete»), <strong>senza siti esterni</strong>, se il router ha UPnP o NAT-PMP; avvisa da solo
+   se l'indirizzo è condiviso (CGNAT).</li>
+<li>Oppure apri un sito come <code>https://ifconfig.me</code> e confronta.</li>
 <li><strong>Uguali</strong> → va bene, prosegui. <strong>Diversi</strong>, oppure l'IP WAN inizia con <code>100.64</code>–<code>100.127</code>,
    <code>10.</code>, <code>192.168.</code> → sei dietro <strong>CGNAT</strong>. Chiedi all'operatore un IP pubblico (spesso è
    gratuito), oppure fai ospitare la rete al tuo amico.</li>
@@ -76,7 +79,12 @@ del router può rimediare.</p>
 <p><strong>TIM su fibra o ADSL</strong> di solito dà un IP pubblico <strong>dinamico</strong>: va bene, è proprio il
 caso del nome No-IP. Le offerte via radio (FWA/5G) di solito no.</p>
 <h2 id="passo-2-il-nome-no-ip-sempre-aggiornato-5-minuti">Passo 2 · Il nome No-IP sempre aggiornato (5 minuti)</h2>
-<p>Il nome deve puntare sempre al tuo IP attuale:</p>
+<p><strong>Il modo più semplice (dalla 0.3.25): DuckDNS dentro Nyctalus.</strong> Crea gratis un nome su
+duckdns.org (si entra con un account Google o GitHub), poi nella finestra «🏠 La mia rete» →
+«Avanzate» → DuckDNS scrivi nome e token e tocca <strong>Salva e prova</strong> (da terminale:
+<code>nyctalus-rete duckdns --dominio miacasa --token TOKEN</code>). Con la rete accesa, Nyctalus aggiorna
+il nome da solo ogni 5 minuti; <code>casa --internet auto</code> lo usa da sé.</p>
+<p>Con No-IP (o altri), il nome deve puntare sempre al tuo IP attuale:</p>
 <ul>
 <li><strong>meglio nel router</strong>: cerca la sezione <strong>DNS dinamico</strong> (DDNS), scegli No-IP e inserisci
   nome, utente e password;</li>
@@ -89,6 +97,11 @@ Il nome gratuito di No-IP va <strong>confermato ogni 30 giorni</strong> (arriva 
 (es. <code>192.168.1.14</code>). Così l'inoltro del passo 4 non si rompe quando il PC si riaccende.
 Il comando del passo 5 ti ricorda quale indirizzo ha il PC.</p>
 <h2 id="passo-4-inoltra-le-porte-sul-router-5-minuti">Passo 4 · Inoltra le porte sul router (5 minuti)</h2>
+<p><strong>Prima prova se il router lo fa da solo (dalla 0.3.25):</strong> quando accendi la rete raggiungibile
+da Internet, Nyctalus chiede al router di aprire le porte (UPnP o NAT-PMP) e le tiene aperte
+finché la rete è accesa; lo dice con «il router ha aperto da solo N porte». Se invece dice che
+vanno inoltrate a mano (UPnP spento, come sui TIM Hub di serie), segui questo passo. Da
+terminale: <code>nyctalus-rete porte</code>.</p>
 <p>Sezione <strong>Port forwarding</strong> / <strong>Inoltro porte</strong> / <strong>Virtual server</strong> / <strong>Port mapping</strong>
 (sul TIM Hub di solito sta fra le impostazioni avanzate). Crea due regole verso
 l'indirizzo del PC:</p>
@@ -138,11 +151,13 @@ il codice da dare agli amici; <strong>🔓 Apri il firewall</strong> apre le por
 </ul>
 <p><strong>Lascia la finestra aperta</strong> finché fate le prove; Ctrl-C spegne tutto.</p>
 <blockquote>
-<p>Se la prova dice che i nodi <strong>non rispondono</strong>, spesso la causa è il router di casa che
-non fa «tornare dentro» i pacchetti diretti al proprio nome (<em>NAT loopback</em>). Da fuori
-funziona, ma il PC non riesce a raggiungersi da solo. Rimedio, <strong>solo su questo PC</strong>:
-aggiungi a <code>/etc/hosts</code> la riga <code>127.0.0.1 miacasa.ddns.net</code> e rilancia il comando.
-Il telefono, se è in casa sulla Wi-Fi, in quel caso usalo con i <strong>dati mobili</strong>.</p>
+<p>Se la prova dice che i nodi <strong>non rispondono</strong> da questo PC, spesso è solo il router di casa
+che non fa «tornare dentro» i pacchetti diretti al proprio indirizzo pubblico (<em>NAT
+loopback</em>, per esempio i TIM Hub). <strong>Non serve fare niente</strong> (dalla 0.3.25): i nodi di questo
+PC si parlano dall'interno, il codice di rete porta anche l'indirizzo in casa di chi ospita
+(<code>lan</code>) e PC, browser, Firefox, collaudo e telefono <strong>nella stessa casa</strong> usano quello da soli
+(<code>nyctalus-rete vicini</code> mostra la regola). La prova vera resta quella da fuori: un telefono
+con i <strong>dati mobili</strong> o un amico.</p>
 </blockquote>
 <h2 id="passo-6-il-tuo-amico-si-collega">Passo 6 · Il tuo amico si collega</h2>
 <p><strong>Prima prova (dal suo browser, 10 secondi):</strong> apre <code>http://miacasa.ddns.net:18800/</code>.
@@ -230,7 +245,7 @@ di 3 gestori diversi. Il perché, in <a href="PIANO-ANONIMATO.html"><code>PIANO-
 </tr>
 <tr>
 <td>sul tuo PC i nodi non rispondono, all'amico sì</td>
-<td>NAT loopback del router: riga in <code>/etc/hosts</code> (passo 5)</td>
+<td>NAT loopback del router: dalla 0.3.25 si aggira da solo (passo 5); prima, riga in <code>/etc/hosts</code></td>
 </tr>
 <tr>
 <td>funzionava, poi più nulla</td>

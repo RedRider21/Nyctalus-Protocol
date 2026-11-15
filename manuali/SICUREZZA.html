@@ -294,6 +294,21 @@ casi delicati sul web normale c'è Nyctalus Firefox (profilo sul modello di Tor 
 <td>prove 45–49</td>
 </tr>
 <tr>
+<td><strong>Aggiornamento del PC dal programma</strong> (⬆ Aggiorna, <code>nyctalus-aggiorna</code>, 0.3.25)</td>
+<td>✅ scarica dalla release, verifica la firma di <code>SHA256SUMS</code> con la chiave della release inclusa nel programma e l'impronta del pacchetto; poi l'installatore controlla <code>INTEGRITA</code>. Pacchetto alterato, firma d'altri, elenco ritoccato → non installa nulla. Il controllo parte solo su richiesta (GitHub vede l'indirizzo da cui si controlla)</td>
+<td>prova 55</td>
+</tr>
+<tr>
+<td><strong>Porte aperte dal router</strong> (UPnP/NAT-PMP, 0.3.25)</td>
+<td>⚠️ comodo, ma è il programma ad aprire le porte: solo quelle della rete (UDP/TCP dei nodi, TCP della pagina), verso questo PC, rinnovate solo finché la rete è accesa; lo dice sempre. Chi preferisce il controllo a mano tiene UPnP spento nel router (Nyctalus allora indica le porte da inoltrare). Il firewall del PC accetta le risposte UPnP solo dal router</td>
+<td>prova 56</td>
+</tr>
+<tr>
+<td><strong>Indirizzo in casa nel codice di rete</strong> (<code>lan</code>, 0.3.25)</td>
+<td>✅ rivela solo l'IP interno (192.168…/10…/172.16-31…) di chi ospita, inutile da fuori; i client lo usano solo se risponde, e il nodo resta autenticato dall'impronta TLS dell'elenco firmato (un indirizzo sbagliato non può far parlare con un altro nodo)</td>
+<td>prova 54</td>
+</tr>
+<tr>
 <td>Fuzzing guidato (<code>cargo-fuzz</code>, libFuzzer)</td>
 <td>⏳ serve installare strumenti (nightly)</td>
 <td>—</td>

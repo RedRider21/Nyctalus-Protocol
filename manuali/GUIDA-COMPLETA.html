@@ -91,9 +91,11 @@ Usate <strong>la stessa versione</strong> su tutti gli apparecchi.</p>
 <ol>
 <li><code>sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1</code> (una volta).</li>
 <li>Scompatta <code>Nyctalus-PC-Linux.zip</code>, entra nella cartella <code>Nyctalus</code> e lancia <code>./installa.sh</code> →
-   scelta <strong>1 · Client</strong>.</li>
-<li>Collegati alla rete: <code>nyctalus-rete importa NYCT1:…</code> (il codice te lo dà il gestore).
-   Controlla che l'<strong>impronta</strong> mostrata sia uguale a quella del gestore.</li>
+   scelta <strong>1 · Usare Nyctalus</strong>.</li>
+<li>Collegati alla rete: al primo avvio il mini menu chiede <strong>🧭 Che cosa vuoi fare?</strong> → <strong>🔗 Mi
+   collego alla rete di qualcuno</strong> e incolli il codice <code>NYCT1:…</code> (oppure ⚙ → 🔗 Collegati a una
+   rete, o <code>nyctalus-rete importa NYCT1:…</code>). Controlla che l'<strong>impronta</strong> mostrata sia uguale a
+   quella del gestore.</li>
 <li>Apri il mini menu (<strong>Nyctalus</strong> nel menu delle applicazioni) → <strong>Chat</strong>.</li>
 <li>Per navigare: il <strong>Browser</strong> del mini menu (scheda 🦇). In più, per il web normale senza
    farti riconoscere fra una visita e l'altra, <strong>Nyctalus Firefox</strong> (<a href="#8-browser-modalita-nyctalus">§8</a>).</li>
@@ -114,8 +116,9 @@ Usate <strong>la stessa versione</strong> su tutti gli apparecchi.</p>
 <li>Scompatta <code>Nyctalus-Windows.zip</code>, doppio clic su <code>Nyctalus.cmd</code>.</li>
 <li><strong>🔗 Rete</strong> → incolla il codice. Poi <strong>Chat</strong>.</li>
 </ol>
-<p><strong>Per aggiornare:</strong> stesso pacchetto, versione nuova. PC: <code>./installa.sh</code> di nuovo. Telefono:
-nuova APK, poi di nuovo il punto 3. I tuoi dati restano.</p>
+<p><strong>Per aggiornare:</strong> PC: mini menu → <strong>⚙ → ⬆ Aggiorna Nyctalus</strong> (dalla 0.3.25; verifica firma
+e impronta prima di installare), oppure <code>nyctalus-aggiorna</code>. Telefono: punto 3. I tuoi dati
+restano.</p>
 <p>Dettagli: <a href="MANUALE-INSTALLAZIONE.html"><code>MANUALE-INSTALLAZIONE.md</code></a>, <a href="MANUALE-PC.html"><code>MANUALE-PC.md</code></a>, <a href="MANUALE-TELEFONO.html"><code>MANUALE-TELEFONO.md</code></a>, <a href="MANUALE-WINDOWS.html"><code>MANUALE-WINDOWS.md</code></a>.</p>
 <h3 id="nodo-far-funzionare-la-rete-server-o-pc-sempre-acceso">Nodo: far funzionare la rete (server o PC sempre acceso)</h3>
 <p>Un nodo <strong>inoltra</strong> traffico cifrato: non vede cosa passa né chi lo manda. Serve una macchina
@@ -434,9 +437,15 @@ far vedere a ogni uscita meno siti.</p>
 <p><strong>A cosa serve:</strong> provare tutto senza server: il tuo PC tiene accesi 4 nodi, l'elenco, la
 rubrica e la casella.</p>
 <pre><code class="language-sh">nyctalus-rete casa                       # nella tua Wi-Fi
-nyctalus-rete casa --internet NOME       # raggiungibile da Internet (NOME = No-IP o IP pubblico)
+nyctalus-rete casa --internet NOME       # raggiungibile da Internet (NOME = DuckDNS/No-IP o IP pubblico)
+nyctalus-rete casa --internet auto       # il nome DuckDNS, o l'IP chiesto al router
 </code></pre>
-<p>Passo passo: <a href="GUIDA-RETE-DI-CASA.html"><code>GUIDA-RETE-DI-CASA.md</code></a> e <a href="GUIDA-INTERNET.html"><code>GUIDA-INTERNET.md</code></a>. Con i nodi tutti su un PC la rete
+<p>Senza terminale: mini menu → ⚙ → <strong>🏠 La mia rete</strong> (spunte, <strong>🔍 Trova</strong> l'indirizzo, DuckDNS
+in «Avanzate»). Dalla 0.3.25 il router <strong>apre le porte da solo</strong> quando lo permette (UPnP o
+NAT-PMP; altrimenti vanno inoltrate a mano), e la rete funziona anche con i router che non
+rimandano indietro i collegamenti verso il proprio IP pubblico: il PC che ospita, e telefono o
+PC nella stessa casa, usano da soli l'indirizzo interno (<code>nyctalus-rete vicini</code>).
+Passo passo: <a href="GUIDA-RETE-DI-CASA.html"><code>GUIDA-RETE-DI-CASA.md</code></a> e <a href="GUIDA-INTERNET.html"><code>GUIDA-INTERNET.md</code></a>. Con i nodi tutti su un PC la rete
 <strong>non è anonima</strong> (il motore lo dice nei registri).</p>
 <h3 id="11-rubrica-e-casella">11. Rubrica e casella</h3>
 <p><strong>A cosa serve:</strong> la <strong>casella cifrata</strong> tiene i messaggi per chi è spento (e serve alla

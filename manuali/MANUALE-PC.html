@@ -126,10 +126,48 @@ uno, lo Stealth si accende da solo. Senza rete Nyctalus attiva <strong>il browse
 subito, mentre la rete finisce di avviarsi in sottofondo. Tutto il resto (contatti,
 messaggi, allegati, fotocamera, menu del tasto destro, temi, <strong>chiamate 📞 e videochiamate 📹</strong>) è in <strong><a href="MANUALE-CHAT.html"><code>MANUALE-CHAT.md</code></a></strong>.</p>
 <hr />
+<h3 id="al-primo-avvio-che-cosa-vuoi-fare">Al primo avvio: «Che cosa vuoi fare?»</h3>
+<p>La prima volta che apri il mini menu (se su questo PC non c'è ancora nessuna rete) compare
+<strong>🧭 Che cosa vuoi fare?</strong>, con quattro strade spiegate semplici; ognuna apre la finestra giusta:</p>
+<table>
+<thead>
+<tr>
+<th>Scelta</th>
+<th>Cosa succede</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🔗 <strong>Mi collego alla rete di qualcuno</strong></td>
+<td>incolli il codice di rete che ti hanno dato (niente da aprire sul router)</td>
+</tr>
+<tr>
+<td>🏠 <strong>Ospito la mia rete su questo PC</strong></td>
+<td>si apre «🏠 La mia rete»</td>
+</tr>
+<tr>
+<td>🦇 <strong>Aiuto una rete con questo PC</strong></td>
+<td>questo PC fa anche da nodo intermedio («Aiuta la rete»)</td>
+</tr>
+<tr>
+<td>🧪 <strong>Provo prima da solo</strong></td>
+<td>la rete di prova solo su questo PC</td>
+</tr>
+</tbody>
+</table>
+<p>Per un server sempre acceso o un Raspberry Pi si usa il pacchetto «Server» (<a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>).
+Si riapre quando vuoi: <strong>⚙ → 🧭 Che cosa vuoi fare?</strong></p>
 <h3 id="quale-versione-ho">Quale versione ho?</h3>
 <p>La <strong>prima voce del menu ⚙</strong> del mini menu è <strong>🦇 Nyctalus 0.3.x</strong>: la versione installata
 (file <code>VERSIONE</code> del pacchetto). Toccandola si vedono la cartella dell'installazione e il link alle
 novità di quella versione.</p>
+<h3 id="aggiornare-con-un-tocco-aggiorna-nyctalus">Aggiornare con un tocco (⬆ Aggiorna Nyctalus)</h3>
+<p>Subito sotto c'è <strong>⬆ Aggiorna Nyctalus…</strong> (dalla 0.3.25): controlla su GitHub se c'è una versione
+nuova e ne mostra il peso; <strong>⬆ Aggiorna alla X</strong> la scarica, <strong>verifica la firma della release e
+l'impronta del pacchetto</strong> (un file alterato non si installa) e la installa; se la tua rete è
+accesa come servizio la riavvia con i programmi nuovi. Poi <strong>↻ Riavvia il mini menu</strong>; chat e
+browser aperti vanno chiusi e riaperti. Il controllo parte solo quando apri la finestra (GitHub
+vede l'indirizzo da cui controlli). Da terminale: <code>nyctalus-aggiorna</code>.</p>
 <h3 id="accendere-la-propria-rete-la-mia-rete">Accendere la propria rete (🏠 La mia rete)</h3>
 <p>Dal <strong>mini menu → ⚙ → 🏠 La mia rete…</strong> (dalla 0.3.23) si accende la <strong>propria</strong> rete senza
 terminale: «Solo in casa» oppure «Anche da Internet» con il nome o l'IP pubblico; spunte <strong>Senza
@@ -139,6 +177,10 @@ equivalente</strong> (<code>nyctalus-rete casa …</code>, utilizzabile anche ne
 esegue e mostra codice di rete e passi (il codice compare in un campo a parte con <strong>📋 Copia
 il codice</strong>: si incolla così com'è in un messaggio agli amici); <strong>■ Spegni</strong> ferma la rete (in entrambi i modi);
 <strong>🔓 Apri il firewall</strong> apre le porte con <code>ufw</code> (chiede la password). Le scelte si ricordano.
+Dalla 0.3.25: <strong>🔍 Trova</strong> scrive da solo il tuo indirizzo (il nome DuckDNS se l'hai impostato,
+altrimenti l'IP chiesto al router, senza siti esterni); in «Avanzate» c'è <strong>DuckDNS</strong> (nome e
+token, «Salva e prova»); accendendo la rete il router apre da solo le porte, se lo permette
+(UPnP/NAT-PMP); il tuo PC si collega da solo alla propria rete, anche quando è «sempre accesa».
 Senza «Sempre accesa» la rete resta accesa anche chiudendo il mini menu, fino a «Spegni» o allo
 spegnimento del PC.</p>
 <h3 id="collegarsi-a-una-rete-condivisa">Collegarsi a una rete condivisa</h3>

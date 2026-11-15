@@ -52,7 +52,7 @@ Aggiornato alla 0.3.22; ogni comando stampa anche il suo aiuto (<code>--help</co
 </tr>
 <tr>
 <td><a href="#5-controlli-collaudo-e-integrita">5. Controlli</a></td>
-<td><code>nyctalus-collaudo</code>, <code>nyctalus-integrita</code></td>
+<td><code>nyctalus-collaudo</code>, <code>nyctalus-integrita</code>, <code>nyctalus-aggiorna</code></td>
 </tr>
 <tr>
 <td><a href="#6-server-e-nodi">6. Server e nodi</a></td>
@@ -233,6 +233,22 @@ da lì. Guida: <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md
 <tr>
 <td><code>reti</code> · <code>usa N</code> · <code>stato</code></td>
 <td>le reti salvate (● in uso) · passa alla N · a quale rete sei collegato</td>
+</tr>
+<tr>
+<td><code>ip [--per-rete]</code></td>
+<td>il tuo IP pubblico chiesto al <strong>router</strong> (UPnP/NAT-PMP), avviso CGNAT, IPv6: nessun sito esterno; <code>--per-rete</code>: l'indirizzo che userebbe <code>casa --internet auto</code> (nome DuckDNS o IP del router)</td>
+</tr>
+<tr>
+<td><code>porte [--nodi 4 --porta-base 4701 --porta 18800]</code></td>
+<td>chiede al router di aprire da solo le porte della rete (UPnP/NAT-PMP)</td>
+</tr>
+<tr>
+<td><code>duckdns --dominio NOME --token TOKEN</code> · <code>duckdns</code> · <code>duckdns --togli</code></td>
+<td>nome fisso <code>NOME.duckdns.org</code> che segue il tuo IP (la rete accesa lo aggiorna ogni 5 minuti)</td>
+</tr>
+<tr>
+<td><code>vicini [--url]</code></td>
+<td>se la rete in uso è ospitata in questa casa (o su questo PC): la regola «IP pubblico=IP interno» che chat, browser e collaudo usano da soli (router senza NAT loopback), o l'elenco da scaricare</td>
 </tr>
 <tr>
 <td><code>aiuta si --indirizzo NOME\|IP [--porta 4800] [--tetto 10]</code> · <code>aiuta no</code> · <code>aiuta stato</code></td>
@@ -452,6 +468,31 @@ da lì. Guida: <a href="MANUALE-GESTORE-RETE.html"><code>MANUALE-GESTORE-RETE.md
 </tbody>
 </table>
 <p>Esce con 0 = tutto a posto, 1 = qualcosa non torna, 3 = controllo non possibile.</p>
+<p><strong><code>nyctalus-aggiorna</code></strong> (PC, dalla 0.3.25): aggiorna dall'ultima release su GitHub. È lo stesso
+del bottone <strong>⚙ → ⬆ Aggiorna Nyctalus</strong> del mini menu.</p>
+<table>
+<thead>
+<tr>
+<th>Comando</th>
+<th>A cosa serve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nyctalus-aggiorna</code></td>
+<td>controlla, chiede conferma, scarica, verifica <strong>firma</strong> di <code>SHA256SUMS</code> e <strong>impronta</strong> del pacchetto, installa; riavvia la rete se è accesa come servizio</td>
+</tr>
+<tr>
+<td><code>nyctalus-aggiorna --controlla [--json]</code></td>
+<td>dice solo se c'è una versione nuova e quanto pesa (esce con 10 se c'è)</td>
+</tr>
+<tr>
+<td><code>nyctalus-aggiorna --si</code></td>
+<td>senza domande</td>
+</tr>
+</tbody>
+</table>
+<p>Contatta GitHub solo quando lo lanci tu. Se firma o impronta non tornano non installa nulla.</p>
 <hr />
 <h2 id="6-server-e-nodi">6. Server e nodi</h2>
 <p><strong>Installare i nodi</strong> (<code>installa.sh</code> del pacchetto server). Guida: <a href="MANUALE-SERVER.html"><code>MANUALE-SERVER.md</code></a>.</p>
@@ -783,6 +824,11 @@ particolari e prove. <code>nyctalus help</code> stampa l'elenco.</p>
 <td><code>NYCTALUS_PONTI</code></td>
 <td>ponti nascosti (come <code>--bridge</code>)</td>
 <td>nessuno</td>
+</tr>
+<tr>
+<td><code>NYCTALUS_VICINI=pubblico=interno;…</code></td>
+<td>nodi annunciati con l'IP pubblico che stanno in questa casa: ci si collega all'indirizzo interno (router senza NAT loopback); l'impronta TLS dell'elenco resta controllata</td>
+<td>la imposta <code>nyctalus-rete</code> da solo</td>
 </tr>
 <tr>
 <td><code>NYCTALUS_MIMETICO=1</code> · <code>NYCTALUS_NOME_MIMETICO</code></td>
