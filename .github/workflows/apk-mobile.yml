@@ -36,8 +36,10 @@ jobs:
         run: |
           SDKM="$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)"
           yes | "$SDKM" --sdk_root="$ANDROID_HOME" --install "platforms;android-34" "build-tools;34.0.0" > /dev/null
+      # solo verifica che l'app si compili: qui il motore per Android non c'è (lo compila il flusso
+      # «Eseguibili»), quindi l'APK di prova non lo contiene e non va installata
       - name: Compila
-        run: bash strumenti/compila-apk.sh
+        run: NYCTALUS_APK_SOLO_VERIFICA=1 bash strumenti/compila-apk.sh
       - uses: actions/upload-artifact@v4
         with:
           name: Nyctalus-apk

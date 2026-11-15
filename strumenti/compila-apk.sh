@@ -46,7 +46,11 @@ if [ "${NYCTALUS_APK_TERMUX:-0}" = 1 ]; then
 else
   for coppia in arm64-v8a:aarch64-linux-android armeabi-v7a:armv7-linux-androideabi; do
     abi="${coppia%%:*}"; m="$ROOT/target/${coppia#*:}/release/nyctalus"
-    [ -s "$m" ] || { echo "manca il motore per Android $abi ($m): compilalo con il flusso «Eseguibili»" >&2; exit 1; }
+    if [ ! -s "$m" ]; then
+      # NYCTALUS_APK_SOLO_VERIFICA=1 (controllo su GitHub): APK senza motore, solo per vedere che si compila
+      [ "${NYCTALUS_APK_SOLO_VERIFICA:-0}" = 1 ] && { echo "» (solo verifica) senza il motore per $abi: questa APK non va installata"; continue; }
+      echo "manca il motore per Android $abi ($m): compilalo con il flusso «Eseguibili»" >&2; exit 1
+    fi
     mkdir -p "$L/libs/lib/$abi"; cp "$m" "$L/libs/lib/$abi/libnyctalus.so"
   done
 fi
