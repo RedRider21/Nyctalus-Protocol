@@ -11,8 +11,7 @@ H="$TMP/home"; mkdir -p "$H/.nyctalus-mobile"
 TOK=segreto0123456789abcdef0123456789
 printf %s "$TOK" > "$H/.nyctalus-mobile/token"
 PORTA=19731
-HOME="$H" NYCTALUS_MOBILE_PORT=$PORTA NYCTALUS_AVVIO_AUTOMATICO=0 NYCTALUS_BIN="$BIN" \
-  python3 "$ROOT/mobile/orchestratore/nyctalus_mobile.py" > "$TMP/o.log" 2>&1 & PIDS+=($!)
+HOME="$H" NYCTALUS_MOBILE_PORT=$PORTA NYCTALUS_AVVIO_AUTOMATICO=0 NYCTALUS_BIN="$BIN" avvia_orchestratore "$TMP/o.log"
 [ -n "$(attendi_regex "$TMP/o.log" 'Nyctalus mobile' 10)" ] || { fail "orchestratore non partito"; exit 1; }
 python3 - "$PORTA" "$TOK" > "$TMP/r.txt" <<'PY'
 import http.client, sys, json

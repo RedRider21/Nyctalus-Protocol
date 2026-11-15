@@ -21,6 +21,7 @@
 
 #![forbid(unsafe_code)] // nessun blocco `unsafe` nel motore (piano di sicurezza, punto 7)
 
+mod app;
 mod avvia;
 mod avvia_circuito;
 mod cella;
@@ -98,6 +99,7 @@ Usage:
   bridge line. '--bridge LINE[;LINE]' (start/circuit/site/browse, or env NYCTALUS_PONTI, or 'bridge = ' in the config): always enter
   the network through those bridges.
 'site'/'browse': host and visit an internal .nyct site through a rendezvous node (a node reached with --rendezvous/--fingerprint).
+'app': the phone app's orchestrator (web app on 127.0.0.1:18731, services, files) — the same as mobile/orchestratore, for the Android app without Termux.
 'chat': metadata-free .nyct chat engine (needs 'start' for the SOCKS and a 'site --backend' pointing at its backend port); a GTK UI talks to it on the control port.
 'receive'/'send': file transfer (L2 test). 'single-hop'/'exit': 1-hop proxy (test).";
 
@@ -348,6 +350,10 @@ async fn esegui() -> Risultato<()> {
                 avvia_circuito::imposta_uscite(n);
             }
             avvia_circuito::avvia_circuito(nodi, circuiti, salti, socks, controllo, offusca, copertura).await
+        }
+        "app" => {
+            // l'orchestratore dell'app del telefono (senza Termux): web-app, servizi, file
+            app::esegui(opzione(&opzioni, "webapp").map(PathBuf::from)).await
         }
         "chat" => {
             let base = PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".into()))

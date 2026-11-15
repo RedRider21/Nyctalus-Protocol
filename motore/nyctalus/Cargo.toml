@@ -22,3 +22,5 @@ argon2 = "0.5"
 zeroize = "1"
 # ring: per HMAC-SHA1 di STUN (MESSAGE-INTEGRITY); già presente come dipendenza di rustls/quinn.
 ring = "0.17"
+# serde_json: la configurazione e le API dell'app del telefono (`nyctalus app`)
+serde_json = "1"

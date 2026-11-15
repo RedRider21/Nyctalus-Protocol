@@ -120,3 +120,15 @@ PY
 controllo() {
   python3 "$STRUMENTI/controllo.py" "$@"
 }
+
+# L'orchestratore dell'app del telefono: il Python di Termux (di serie) oppure `nyctalus app`
+# del motore (NYCTALUS_ORCHESTRATORE=rust), lo stesso programma per l'app Android senza Termux.
+# Uso: HOME=… NYCTALUS_MOBILE_PORT=… avvia_orchestratore FILE_DI_REGISTRO
+avvia_orchestratore() {
+  if [ "${NYCTALUS_ORCHESTRATORE:-python}" = rust ]; then
+    "$BIN" app > "$1" 2>&1 &
+  else
+    python3 "$ROOT/mobile/orchestratore/nyctalus_mobile.py" > "$1" 2>&1 &
+  fi
+  PIDS+=($!)
+}
