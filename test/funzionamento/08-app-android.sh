@@ -157,8 +157,8 @@ fi
 
 # --- compilazione (solo se c'è un Android SDK) ---
 if [ -d "${ANDROID_HOME:-/nessuno}/build-tools" ]; then
-  APK="$ROOT/mobile/android/Nyctalus.apk"
-  bash "$ROOT/strumenti/compila-apk.sh" > "$TMP/c.log" 2>&1 && [ -s "$APK" ] && pass "APK compilata e firmata ($(du -h "$APK" | cut -f1))" || fail "compilazione APK: $(tail -3 "$TMP/c.log")"
+  APK="$TMP/apk/Nyctalus.apk"            # mai in installazioni/: lì restano le APK vere
+  NYCTALUS_APK_DOVE="$TMP/apk" bash "$ROOT/strumenti/compila-apk.sh" > "$TMP/c.log" 2>&1 && [ -s "$APK" ] && pass "APK compilata e firmata ($(du -h "$APK" | cut -f1))" || fail "compilazione APK: $(tail -3 "$TMP/c.log")"
   # APK «con tutto»: motore come libreria per arm64 e armv7, web-app, niente pacchetto per Termux
   python3 - "$APK" > "$TMP/apk.txt" <<'PY'
 import sys, zipfile

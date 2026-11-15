@@ -5,8 +5,8 @@
 # Compila l'app Android (mobile/android) SENZA Gradle e senza scaricare nulla:
 # bastano un Android SDK già presente (build-tools + una piattaforma) e un JDK.
 #   aapt2 (risorse) → javac (codice) → d8 (dex) → zipalign → apksigner
-# Risultato: mobile/android/Nyctalus.apk (che crea-installazioni.sh mette in
-# installazioni/Android/). La compilazione su GitHub usa invece Gradle (stesso codice).
+# Risultato: installazioni/Android/Nyctalus.apk (l'unico posto delle APK; con
+# NYCTALUS_APK_PROVA=1 installazioni/Android/Nyctalus-prova.apk).
 #
 # SDK: $ANDROID_HOME o $ANDROID_SDK_ROOT, altrimenti ~/Android/Sdk.
 # Firma: chiave di sviluppo in mobile/android/privato/ (fuori da git), creata la
@@ -35,12 +35,13 @@ sed 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<ma
   "$APP/AndroidManifest.xml" > "$L/AndroidManifest.xml"
 # NYCTALUS_APK_PROVA=1: «Nyctalus prova», un'altra app (pacchetto org.nyctalus.mobile.prova) da
 # installare ACCANTO a quella vera per provarla; esce come Nyctalus-prova.apk
-RES="$APP/res"; RINOMINA=(); USCITA_APK="$AND/Nyctalus.apk"
+DOVE="${NYCTALUS_APK_DOVE:-$ROOT/installazioni/Android}"; mkdir -p "$DOVE"   # (le prove: una cartella temporanea)
+RES="$APP/res"; RINOMINA=(); USCITA_APK="$DOVE/Nyctalus.apk"
 if [ "${NYCTALUS_APK_PROVA:-0}" = 1 ]; then
   sed -i 's#android:authorities="org.nyctalus.mobile.foto"#android:authorities="org.nyctalus.mobile.prova.foto"#' "$L/AndroidManifest.xml"
   cp -r "$APP/res" "$L/res-prova"; RES="$L/res-prova"
   sed -i 's#<string name="app_name">Nyctalus</string>#<string name="app_name">Nyctalus prova</string>#' "$RES/values/strings.xml"
-  RINOMINA=(--rename-manifest-package org.nyctalus.mobile.prova); USCITA_APK="$AND/Nyctalus-prova.apk"
+  RINOMINA=(--rename-manifest-package org.nyctalus.mobile.prova); USCITA_APK="$DOVE/Nyctalus-prova.apk"
 fi
 # l'app porta con sé il pacchetto per Termux (pulsante «Installa Nyctalus in Termux»)
 mkdir -p "$L/assets"

@@ -211,10 +211,11 @@ if [ -d "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}/build-tools" ];
   NYCTALUS_PACCHETTO="$LAVORO/nyctalus-termux.tar.gz" bash "$ROOT/strumenti/compila-apk.sh"
 fi
 APK=""
-for c in "$ROOT/mobile/android/Nyctalus.apk" \
+[ -f "$OUT/Android/Nyctalus.apk" ] && APK=1          # compila-apk.sh la scrive già qui
+for c in "$ROOT/mobile/android/app/build/outputs/apk/release/app-release.apk" \
          "$ROOT/mobile/android/app/build/outputs/apk/release/app-release.apk" \
          "$ROOT/mobile/android/app/build/outputs/apk/debug/app-debug.apk"; do
-  [ -f "$c" ] && { cp "$c" "$OUT/Android/Nyctalus.apk"; APK=1; break; }
+  [ -z "$APK" ] && [ -f "$c" ] && { cp "$c" "$OUT/Android/Nyctalus.apk"; APK=1; break; }
 done
 MOTORE_PRONTO="no"; [ -d "$A/bin" ] && MOTORE_PRONTO="sì"
 

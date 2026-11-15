@@ -36,8 +36,9 @@ ANDROID_HOME=/percorso/android-sdk bash strumenti/compila-apk.sh
 ```
 
 Senza Gradle e senza scaricare nulla: servono un Android SDK (build-tools e una
-piattaforma) e un JDK. Il risultato è `mobile/android/Nyctalus.apk`;
-`strumenti/crea-installazioni.sh` lo copia in `installazioni/Android/`.
+piattaforma) e un JDK. Il risultato è `installazioni/Android/Nyctalus.apk`, l'unico posto
+delle APK (con `NYCTALUS_APK_PROVA=1`: `installazioni/Android/Nyctalus-prova.apk`, l'app di prova
+da installare accanto a quella vera).
 La chiave di firma di sviluppo sta in `mobile/android/privato/` (fuori da git):
 conservala, altrimenti il telefono rifiuta gli aggiornamenti sopra la versione installata.
 
