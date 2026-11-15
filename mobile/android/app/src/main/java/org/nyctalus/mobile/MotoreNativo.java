@@ -50,6 +50,11 @@ final class MotoreNativo {
 
     /** Accende Nyctalus (se non lo è già) con il segreto d'accesso di questa app. */
     static synchronized void avvia(Context ctx, String segreto) {
+        avvia(ctx, segreto, true);
+    }
+
+    /** servizi=false: solo l'orchestratore (prima del trasloco: la chat creerebbe un'identità nuova). */
+    static synchronized void avvia(Context ctx, String segreto, boolean servizi) {
         Context c = ctx.getApplicationContext();
         File home = c.getFilesDir();
         File dati = new File(home, ".nyctalus-mobile");
@@ -66,6 +71,7 @@ final class MotoreNativo {
             env.put("XDG_RUNTIME_DIR", c.getCacheDir().getAbsolutePath()); // vista in chiaro della cassaforte
             env.put("NYCTALUS_BIN", lib.getAbsolutePath());
             env.put("NYCTALUS_ANDROID", "1");
+            env.put("NYCTALUS_AVVIO_AUTOMATICO", servizi ? "1" : "0");
             // le cartelle condivise del telefono: galleria (foto/video recenti) e «sfoglia» (sola lettura)
             File mem = Environment.getExternalStorageDirectory();
             env.put("NYCTALUS_GALLERIA", new File(mem, "DCIM") + ":" + new File(mem, "Pictures") + ":" + new File(mem, "Movies"));

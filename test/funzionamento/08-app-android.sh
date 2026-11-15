@@ -93,6 +93,7 @@ def unisci(c):
         elif ident == "sp.impronta": out.append("@HASH@")
         elif ident == "comandoAvvio()": out.append(unisci(avvio.split("return", 1)[1]))
         elif ident == "segreto": out.append("@SEGRETO@")
+        elif ident == "getPackageName()": out.append("org.nyctalus.mobile")
     return "".join(out)
 print(unisci(scarica) + " && " + unisci(installa))
 PY
@@ -123,7 +124,7 @@ env HOME="$H2" PREFIX="$P2" PATH="$F2:$PATH" bash -c "$(istanza "$CASUALE" "$HAS
 grep -q "allow-external-apps = true" "$H2/.termux/termux.properties" && grep -q "^extra-keys" "$H2/.termux/termux.properties" \
   && pass "allow-external-apps abilitato, resto di termux.properties intatto" || fail "termux.properties"
 [ "$(cat "$H2/.nyctalus-mobile/token" 2>/dev/null)" = "$SEG2" ] && pass "segreto dell'app scritto dopo l'installazione" || fail "segreto non scritto dopo l'installazione"
-grep -q -- "-n org.nyctalus.mobile/.MainActivity" "$TMP/am.txt" 2>/dev/null && pass "alla fine riporta in primo piano l'app" || fail "l'app non viene riaperta"
+grep -q -- "-n org.nyctalus.mobile/org.nyctalus.mobile.MainActivity" "$TMP/am.txt" 2>/dev/null && pass "alla fine riporta in primo piano l'app" || fail "l'app non viene riaperta"
 ! grep -q upgrade "$TMP/pkg.txt" 2>/dev/null && pass "nessun pkg upgrade durante l'installazione" || fail "pkg upgrade lanciato"
 T0=$(find /tmp -maxdepth 2 -name n.tar.gz -newer "$TMP/inst.tpl" 2>/dev/null | head -1)
 [ -z "$T0" ] && pass "cartelle temporanee rimosse (anche dopo il rifiuto)" || fail "rimasto: $T0"

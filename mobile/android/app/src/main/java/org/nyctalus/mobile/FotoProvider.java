@@ -26,7 +26,8 @@ import java.io.FileNotFoundException;
  */
 public class FotoProvider extends ContentProvider {
 
-    static final String AUTORITA = "org.nyctalus.mobile.foto";
+    /** «<pacchetto>.foto»: l'app di prova («Nyctalus prova», pacchetto …mobile.prova) ha la sua. */
+    static String AUTORITA = "org.nyctalus.mobile.foto";
 
     static File cartella(android.content.Context c) {
         File d = new File(c.getCacheDir(), "scatti");
@@ -62,6 +63,7 @@ public class FotoProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
+        if (getContext() != null) AUTORITA = getContext().getPackageName() + ".foto";
         return true;
     }
 

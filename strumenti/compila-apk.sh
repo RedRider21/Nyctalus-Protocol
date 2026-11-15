@@ -33,6 +33,15 @@ VCODE=$(grep -oE "versionCode [0-9]+" "$AND/app/build.gradle" | grep -oE '[0-9]+
 # aapt2 vuole il nome del pacchetto nel manifest (con Gradle sta in «namespace»)
 sed 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.nyctalus.mobile">#' \
   "$APP/AndroidManifest.xml" > "$L/AndroidManifest.xml"
+# NYCTALUS_APK_PROVA=1: «Nyctalus prova», un'altra app (pacchetto org.nyctalus.mobile.prova) da
+# installare ACCANTO a quella vera per provarla; esce come Nyctalus-prova.apk
+RES="$APP/res"; RINOMINA=(); USCITA_APK="$AND/Nyctalus.apk"
+if [ "${NYCTALUS_APK_PROVA:-0}" = 1 ]; then
+  sed -i 's#android:authorities="org.nyctalus.mobile.foto"#android:authorities="org.nyctalus.mobile.prova.foto"#' "$L/AndroidManifest.xml"
+  cp -r "$APP/res" "$L/res-prova"; RES="$L/res-prova"
+  sed -i 's#<string name="app_name">Nyctalus</string>#<string name="app_name">Nyctalus prova</string>#' "$RES/values/strings.xml"
+  RINOMINA=(--rename-manifest-package org.nyctalus.mobile.prova); USCITA_APK="$AND/Nyctalus-prova.apk"
+fi
 # l'app porta con sé il pacchetto per Termux (pulsante «Installa Nyctalus in Termux»)
 mkdir -p "$L/assets"
 # APK «con tutto» (di serie): la web-app negli asset e il motore come libreria (lib/<abi>/
@@ -54,8 +63,8 @@ else
     mkdir -p "$L/libs/lib/$abi"; cp "$m" "$L/libs/lib/$abi/libnyctalus.so"
   done
 fi
-"$BT/aapt2" compile --dir "$APP/res" -o "$L/res.zip"
-"$BT/aapt2" link -I "$JAR" --manifest "$L/AndroidManifest.xml" -o "$L/base.apk" --java "$L/gen" \
+"$BT/aapt2" compile --dir "$RES" -o "$L/res.zip"
+"$BT/aapt2" link -I "$JAR" --manifest "$L/AndroidManifest.xml" -o "$L/base.apk" --java "$L/gen" ${RINOMINA[@]+"${RINOMINA[@]}"} \
   --min-sdk-version 24 --target-sdk-version 34 --version-code "$VCODE" --version-name "$VNAME" -A "$L/assets" "$L/res.zip"
 
 mkdir -p "$L/classi" "$L/dex"
@@ -77,7 +86,7 @@ if [ ! -f "$K" ]; then
   echo "» creata la chiave di firma di sviluppo: $K"
 fi
 "$BT/apksigner" sign --ks "$K" --ks-pass pass:nyctalus --ks-key-alias nyctalus \
-  --out "$AND/Nyctalus.apk" "$L/allineato.apk"
-rm -f "$AND/Nyctalus.apk.idsig"
-"$BT/apksigner" verify "$AND/Nyctalus.apk"
-echo "» pronto: $AND/Nyctalus.apk ($(du -h "$AND/Nyctalus.apk" | cut -f1), versione $VNAME)"
+  --out "$USCITA_APK" "$L/allineato.apk"
+rm -f "$USCITA_APK.idsig"
+"$BT/apksigner" verify "$USCITA_APK"
+echo "» pronto: $USCITA_APK ($(du -h "$USCITA_APK" | cut -f1), versione $VNAME)"

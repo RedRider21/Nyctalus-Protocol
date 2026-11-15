@@ -607,6 +607,10 @@ public class MainActivity extends Activity {
         riga1.addView(cella("⬇  Installa Termux", v -> installaTermux()));
         riga1.addView(cella("↻  Aggiorna Termux", v -> aggiornaTermux()));
         riga2.addView(cella("🦇  Installa / aggiorna Nyctalus in Termux", v -> installaNyctalus()));
+        if (MotoreNativo.disponibile(this))
+            riga2.addView(cella("📦  Porta qui i dati da Termux", v -> conferma("Porto qui i dati da Termux?",
+                    "Identità, contatti, messaggi, file ricevuti e rete di Nyctalus in Termux passano in quest'app. "
+                    + "Se qui c'è già un'identità non si sovrascrive nulla.", this::trasloco)));
         riga3.addView(cella("⌨  Apri Termux", v -> apriTermux()));
         riga3.addView(cella("📋  Comando di avvio", v -> copiaComando()));
         riga4.addView(cella("☁  Aggiornamenti da GitHub", v -> aggiornamentiGithub()));
@@ -668,8 +672,18 @@ public class MainActivity extends Activity {
             if (MotoreNativo.disponibile(this)) {
                 // APK con tutto dentro: niente Termux. Il motore parte nella cartella privata dell'app.
                 imposta("avvio di Nyctalus…");
-                MotoreNativo.avvia(this, segreto);
-                if (attendi(25000)) { servizioPronto(); return; }
+                // un vecchio Nyctalus in Termux occuperebbe le stesse porte: lo si spegne (i suoi dati restano)
+                if (termuxInstallato()) { eseguiInTermuxSilenzioso(this, "nyctalus-mobile --ferma >/dev/null 2>&1; true"); dormi(1500); }
+                // primo avvio su un telefono che ha Nyctalus in Termux: prima di accendere la chat (che
+                // creerebbe un'identità nuova) si chiede se portare qui identità, contatti e messaggi
+                boolean decidere = termuxInstallato() && !getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("trasloco_deciso", false)
+                        && !new File(getFilesDir(), ".nyctalus-chat/identita").exists();
+                MotoreNativo.avvia(this, segreto, !decidere);
+                if (attendi(25000)) {
+                    if (decidere) { runOnUiThread(this::chiediTrasloco); return; }
+                    servizioPronto();
+                    return;
+                }
                 String r = MotoreNativo.ultimeRighe(this, 4);
                 imposta("Nyctalus non è partito." + (r.isEmpty() ? "" : "\n" + r) + "\nChiudi e riapri l'app.");
                 return;
@@ -700,6 +714,71 @@ public class MainActivity extends Activity {
 
     private void avviaInTermux() {
         avviaServizio(this, segreto);
+    }
+
+    /** Un comando in Termux, in sottofondo e senza aprirlo (solo se il permesso c'è già). */
+    static void eseguiInTermuxSilenzioso(android.content.Context ctx, String cmd) {
+        if (Build.VERSION.SDK_INT >= 23 && ctx.checkSelfPermission(PERMESSO_TERMUX) != PackageManager.PERMISSION_GRANTED) return;
+        try {
+            Intent i = new Intent();
+            i.setComponent(new ComponentName(TERMUX, "com.termux.app.RunCommandService"));
+            i.setAction("com.termux.RUN_COMMAND");
+            i.putExtra("com.termux.RUN_COMMAND_PATH", "/data/data/com.termux/files/usr/bin/bash");
+            i.putExtra("com.termux.RUN_COMMAND_ARGUMENTS", new String[]{"-lc", cmd});
+            i.putExtra("com.termux.RUN_COMMAND_WORKDIR", "/data/data/com.termux/files/home");
+            i.putExtra("com.termux.RUN_COMMAND_BACKGROUND", true);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(i);
+            else ctx.startService(i);
+        } catch (Exception ignorata) { }
+    }
+
+    // ------------------------------------------------------------ 📦 trasloco da Termux
+    /** «Hai già Nyctalus in Termux: porto qui i tuoi dati?» (una volta; poi da Strumenti). */
+    private void chiediTrasloco() {
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("trasloco_deciso", true).apply();
+        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle("Porto qui i tuoi dati?")
+                .setMessage("Su questo telefono c'è già Nyctalus in Termux. Porto in quest'app la tua identità "
+                        + "(lo stesso Contact ID: gli amici non devono rifare nulla), i contatti, i messaggi, i file "
+                        + "ricevuti e la tua rete.\n\nTermux esegue il passaggio (si vede per un momento); i dati "
+                        + "restano anche in Termux. Nulla esce dal telefono.")
+                .setPositiveButton("Porta i dati", (d, k) -> trasloco())
+                .setNegativeButton("Inizio da zero", (d, k) -> new Thread(() -> {
+                    try { api("POST", "/api/servizi/avvia", null); } catch (IOException ignorata) { }
+                    servizioPronto();
+                }).start())
+                .setCancelable(false).show();
+    }
+
+    private void trasloco() {
+        String T = "\"$PREFIX/tmp/nyctalus-trasloco.tar\"";
+        String cmd = "nyctalus-mobile --ferma >/dev/null 2>&1; cd ~ && "
+                + "{ [ -f .nyctalus-chat/identita ] || { echo '✗ In Termux non c è un identità Nyctalus da portare.'; exit 1; }; } && "
+                + "echo '» impacchetto i dati di Nyctalus…' && "
+                + "tar cf " + T + " .nyctalus-chat $( [ -f .nyctalus-mobile/config.json ] && echo .nyctalus-mobile/config.json ) && "
+                + "echo '» li consegno all app…' && "
+                + "curl -fsS -X POST -H 'Cookie: nyct=" + segreto + "' -T " + T + " " + URL_BASE + "/api/trasloco; E=$?; "
+                + "rm -f " + T + "; echo; "
+                + "if [ $E = 0 ]; then echo '✓ Fatto: torno nell app Nyctalus…'; sleep 2; "
+                + "am start -n " + getPackageName() + "/org.nyctalus.mobile.MainActivity >/dev/null 2>&1; "
+                + "else echo '✗ Passaggio non riuscito: leggi qui sopra.'; fi";
+        eseguiInTermux(cmd, false, null);
+        imposta("passaggio dei dati da Termux in corso…");
+        new Thread(() -> {
+            long fine = SystemClock.elapsedRealtime() + 15 * 60 * 1000;
+            while (SystemClock.elapsedRealtime() < fine) {
+                dormi(2000);
+                try {
+                    String[] r = api("GET", "/api/trasloco", null);
+                    if ("200".equals(r[0]) && new org.json.JSONObject(r[1]).optBoolean("identita")) {
+                        imposta("✓ dati portati da Termux");
+                        if (attendi(30000)) servizioPronto();
+                        return;
+                    }
+                } catch (Exception ignorata) { }
+            }
+            imposta("Il passaggio non è arrivato. Strumenti ▾ → 📦 Porta qui i dati da Termux per riprovare.");
+        }).start();
     }
 
     /** Accende Nyctalus: dentro l'app se l'APK porta il motore, altrimenti in Termux. */
@@ -750,7 +829,10 @@ public class MainActivity extends Activity {
                 byte[] buf = new byte[4096];
                 int n;
                 while ((n = in.read(buf)) > 0) b.write(buf, 0, n);
-                portaSocksBrowser = new org.json.JSONObject(b.toString("UTF-8")).optInt("socks_browser", portaSocksBrowser);
+                org.json.JSONObject st = new org.json.JSONObject(b.toString("UTF-8"));
+                portaSocksBrowser = st.optInt("socks_browser", portaSocksBrowser);
+                // app con tutto: risponde un vecchio servizio in Termux rimasto acceso? Non è il nostro
+                if (MotoreNativo.disponibile(this) && !st.optBoolean("nativo")) return false;
             } catch (Exception ignorata) { }
             return true;
         } catch (IOException e) {
@@ -957,7 +1039,7 @@ public class MainActivity extends Activity {
         return "tar xzf n.tar.gz && bash nyctalus-termux/installa.sh && cd ~ && rm -rf \"$D\" && "
                 + comandoAvvio() + " && "
                 + "echo && echo '✓ Fatto: torno nell app Nyctalus…' && sleep 2 && "
-                + "(am start -n org.nyctalus.mobile/.MainActivity >/dev/null 2>&1 || true)"
+                + "(am start -n " + getPackageName() + "/org.nyctalus.mobile.MainActivity >/dev/null 2>&1 || true)"
                 + " || { echo; echo '✗ Installazione non riuscita: leggi i messaggi qui sopra.'; cd ~; rm -rf \"$D\"; }";
     }
 
