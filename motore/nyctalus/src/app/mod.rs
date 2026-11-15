@@ -15,6 +15,7 @@
 pub mod http;
 pub mod rete;
 pub mod servizi;
+pub mod ws;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -322,6 +323,25 @@ where
     }
     let p = req.percorso.as_str();
     let post = req.metodo == "POST";
+    if p == "/ws" && req.intestazione("upgrade").eq_ignore_ascii_case("websocket") {
+        return ws::ponte_chat(app, req, _lettore, w).await;
+    }
+    if p == "/ws/terminale" {
+        // il ⌨ Terminale (nyctalus-cli) c'è solo nella versione con Termux
+        return http::testo(w, "404 Not Found", "terminale disponibile solo con Termux").await;
+    }
+    if p == "/api/notifiche" {
+        return ws::flusso_notifiche(app, w).await;
+    }
+    if p == "/api/chiamata/rifiuta" && post {
+        // pulsante «Rifiuta» della notifica, ad app chiusa: si rifiuta senza aprire nulla
+        let (da, id) = (req.param("da").unwrap_or(""), req.param("id").unwrap_or(""));
+        if !rete::indirizzo_nyct(da) || id.is_empty() || id.len() > 32 || !id.bytes().all(|c| c.is_ascii_alphanumeric()) {
+            return http::json(w, "400 Bad Request", &json!({"ok": false, "errore": "parametri non validi"})).await;
+        }
+        let ok = ws::comando_motore(app, &format!("CALLNO {da} {id}")).await;
+        return http::json(w, "200 OK", &json!({"ok": ok})).await;
+    }
     if p == "/api/stato" {
         return http::json(w, "200 OK", &app.info()).await;
     }

@@ -37,7 +37,7 @@ mkdir -p "$H/.nyctalus-chat/allegati/prova"
 head -c 2097152 /dev/urandom > "$H/.nyctalus-chat/allegati/prova/distro.iso"
 head -c 4096 /dev/urandom > "$H/.nyctalus-chat/allegati/prova/nota.pdf"
 NYCTALUS_SFOGLIA="$TMP/galleria" NYCTALUS_SFOGLIA_SOLO=1 \
-NYCTALUS_GALLERIA="$TMP/galleria" NYCTALUS_GALLERIA_SOLO=1 HOME="$H" NYCTALUS_BIN="$BIN" python3 "$ROOT/mobile/orchestratore/nyctalus_mobile.py" > "$TMP/o.log" 2>&1 & PIDS+=($!)
+NYCTALUS_GALLERIA="$TMP/galleria" NYCTALUS_GALLERIA_SOLO=1 HOME="$H" NYCTALUS_BIN="$BIN" avvia_orchestratore "$TMP/o.log"
 [ -n "$(attendi_regex "$TMP/o.log" 'servizi pronti' 40)" ] || { fail "servizi non avviati"; exit 1; }
 U="http://127.0.0.1:19733"
 cat > "$TMP/passi.json" <<EOF

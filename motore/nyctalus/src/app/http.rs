@@ -153,8 +153,14 @@ pub async fn json<W: AsyncWrite + Unpin>(w: &mut W, stato: &str, v: &serde_json:
 
 /// JSON con lo stesso aspetto di `json.dumps` (spazi dopo «,» e «:», non-ASCII in `\uXXXX`).
 pub fn json_come_python(v: &serde_json::Value) -> String {
+    json_formattato(v, true)
+}
+
+/// Come `json.dumps` (spazi dopo «,» e «:»); `solo_ascii`: non-ASCII in `\uXXXX` (di serie del
+/// Python), altrimenti UTF-8 così com'è (`ensure_ascii=False`).
+pub fn json_formattato(v: &serde_json::Value, solo_ascii: bool) -> String {
     use serde_json::Value;
-    fn stringa(s: &str, out: &mut String) {
+    fn stringa(s: &str, out: &mut String, solo_ascii: bool) {
         out.push('"');
         for c in s.chars() {
             match c {
@@ -163,7 +169,7 @@ pub fn json_come_python(v: &serde_json::Value) -> String {
                 '\n' => out.push_str("\\n"),
                 '\r' => out.push_str("\\r"),
                 '\t' => out.push_str("\\t"),
-                c if (c as u32) < 0x20 || (c as u32) > 0x7e => {
+                c if (c as u32) < 0x20 || (solo_ascii && (c as u32) > 0x7e) => {
                     let mut buf = [0u16; 2];
                     for u in c.encode_utf16(&mut buf) {
                         out.push_str(&format!("\\u{u:04x}"));
@@ -174,19 +180,19 @@ pub fn json_come_python(v: &serde_json::Value) -> String {
         }
         out.push('"');
     }
-    fn scrivi(v: &Value, out: &mut String) {
+    fn scrivi(v: &Value, out: &mut String, asc: bool) {
         match v {
             Value::Null => out.push_str("null"),
             Value::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
             Value::Number(n) => out.push_str(&n.to_string()),
-            Value::String(s) => stringa(s, out),
+            Value::String(s) => stringa(s, out, asc),
             Value::Array(a) => {
                 out.push('[');
                 for (i, x) in a.iter().enumerate() {
                     if i > 0 {
                         out.push_str(", ");
                     }
-                    scrivi(x, out);
+                    scrivi(x, out, asc);
                 }
                 out.push(']');
             }
@@ -196,16 +202,16 @@ pub fn json_come_python(v: &serde_json::Value) -> String {
                     if i > 0 {
                         out.push_str(", ");
                     }
-                    stringa(k, out);
+                    stringa(k, out, asc);
                     out.push_str(": ");
-                    scrivi(x, out);
+                    scrivi(x, out, asc);
                 }
                 out.push('}');
             }
         }
     }
     let mut out = String::new();
-    scrivi(v, &mut out);
+    scrivi(v, &mut out, solo_ascii);
     out
 }
 

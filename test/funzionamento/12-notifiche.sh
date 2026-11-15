@@ -13,7 +13,7 @@ cat > "$H/.nyctalus-mobile/config.json" <<'JSON'
 {"porte": {"http": 19735, "controllo": 19791, "backend": 19782, "socks": 19780, "socks_locale": 19786,
            "monitor": 19796, "nodi": [19740, 19741, 19742, 19743]}}
 JSON
-HOME="$H" NYCTALUS_BIN="$BIN" python3 "$ROOT/mobile/orchestratore/nyctalus_mobile.py" > "$TMP/o.log" 2>&1 & PIDS+=($!)
+HOME="$H" NYCTALUS_BIN="$BIN" avvia_orchestratore "$TMP/o.log"
 [ -n "$(attendi_regex "$TMP/o.log" 'servizi pronti' 40)" ] || { fail "servizi non avviati: $(tail -2 "$TMP/o.log")"; exit 1; }
 python3 "$STRUMENTI/prova_notifiche.py" 19735 "$TOK" > "$TMP/r.txt" 2>&1 || echo "KO prova interrotta: $(tail -1 "$TMP/r.txt")" >> "$TMP/r.txt"
 while read -r esito resto; do
