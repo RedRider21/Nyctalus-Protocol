@@ -17,6 +17,7 @@ pub mod http;
 pub mod rete;
 pub mod servizi;
 pub mod socks;
+pub mod trasloco;
 pub mod ws;
 
 use std::path::{Path, PathBuf};
@@ -225,6 +226,9 @@ impl App {
             "binario": std::env::current_exe().is_ok(),
             "chiusa": s.chiusa && s.indirizzo.is_empty(),
             "versione": VERSIONE,
+            // l'orchestratore dentro il motore (app senza Termux): l'app Android lo distingue così
+            // da un vecchio servizio in Termux rimasto acceso sulla stessa porta
+            "nativo": true,
         })
     }
 
@@ -353,6 +357,14 @@ where
     }
     if p == "/api/stato" {
         return http::json(w, "200 OK", &app.info()).await;
+    }
+    if p == "/api/trasloco" {
+        if post {
+            let n: i64 = req.intestazione("content-length").parse().unwrap_or(-1);
+            let (stato, v) = trasloco::ricevi(app, n, req.param("forza") == Some("1"), _lettore).await;
+            return http::json(w, stato, &v).await;
+        }
+        return http::json(w, "200 OK", &trasloco::stato(app)).await;
     }
     let percorso_p = || req.param("p").and_then(file::da_hex_percorso);
     if p == "/api/file" {
