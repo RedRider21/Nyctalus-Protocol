@@ -18,7 +18,7 @@ public class AvvioAccensione extends BroadcastReceiver {
         android.content.SharedPreferences p = c.getSharedPreferences(MainActivity.PREFS, Context.MODE_PRIVATE);
         if (!p.getBoolean("avvio_accensione", false)) return;
         String segreto = p.getString("segreto", "");
-        if (segreto.length() >= 32) MainActivity.avviaInTermux(c, segreto);
+        if (segreto.length() >= 32) MainActivity.avviaServizio(c, segreto);
         ServizioNotifiche.avvia(c);
     }
 }

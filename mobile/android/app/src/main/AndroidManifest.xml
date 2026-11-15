@@ -38,7 +38,16 @@
         <intent><action android:name="android.intent.action.GET_CONTENT" /><data android:mimeType="*/*" /></intent>
     </queries>
 
+    <!-- APK «con tutto» (senza Termux): il motore viaggia come lib/<abi>/libnyctalus.so e
+         Android lo estrae nella cartella delle librerie, l'unica da cui si possono eseguire
+         programmi (Android 10+). La galleria (foto e video recenti) si legge con il permesso
+         chiesto alla prima apertura. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+
     <application
+        android:extractNativeLibs="true"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"

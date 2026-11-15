@@ -653,6 +653,15 @@ public class MainActivity extends Activity {
     private void avvia() {
         avviando = true;
         try {
+            if (MotoreNativo.disponibile(this)) {
+                // APK con tutto dentro: niente Termux. Il motore parte nella cartella privata dell'app.
+                imposta("avvio di Nyctalus…");
+                MotoreNativo.avvia(this, segreto);
+                if (attendi(25000)) { servizioPronto(); return; }
+                String r = MotoreNativo.ultimeRighe(this, 4);
+                imposta("Nyctalus non è partito." + (r.isEmpty() ? "" : "\n" + r) + "\nChiudi e riapri l'app.");
+                return;
+            }
             if (!termuxInstallato()) {
                 imposta("Benvenuto! Tocca «⚡ Prepara Nyctalus»: l'app scarica e prepara tutto da sola.");
                 mostraPrepara();
@@ -678,7 +687,13 @@ public class MainActivity extends Activity {
     }
 
     private void avviaInTermux() {
-        avviaInTermux(this, segreto);
+        avviaServizio(this, segreto);
+    }
+
+    /** Accende Nyctalus: dentro l'app se l'APK porta il motore, altrimenti in Termux. */
+    static void avviaServizio(android.content.Context ctx, String segreto) {
+        if (MotoreNativo.disponibile(ctx)) MotoreNativo.avvia(ctx, segreto);
+        else avviaInTermux(ctx, segreto);
     }
 
     /** Chiede a Termux di avviare il servizio (anche dal servizio delle notifiche). */
@@ -749,7 +764,7 @@ public class MainActivity extends Activity {
         ServitorePacchetto spento = ServizioPacchetto.attivo;     // pronto: il pacchetto non serve più
         if (spento != null) { spento.interrupt(); ServizioPacchetto.attivo = null; }
         runOnUiThread(() -> { if (pulsantePrepara != null) pulsantePrepara.setVisibility(View.GONE); });
-        offriAggiornamentoTermux();
+        if (!MotoreNativo.disponibile(this)) offriAggiornamentoTermux();   // l'app nuova non ne ha bisogno
         runOnUiThread(() -> { if (pulsanteEntra != null) pulsanteEntra.animate().alpha(1f).setDuration(300).start(); });
         if (entraAppenaPronto) mostraWeb();
     }
@@ -808,7 +823,7 @@ public class MainActivity extends Activity {
             new Thread(() -> {
                 if (!risponde()) {
                     pronto = false;
-                    imposta("Nyctalus si era fermato: lo riavvio in Termux…");
+                    imposta(MotoreNativo.disponibile(this) ? "Nyctalus si era fermato: lo riavvio…" : "Nyctalus si era fermato: lo riavvio in Termux…");
                     avviaInTermux();
                     if (attendi(30000)) servizioPronto();
                     else imposta("Nyctalus non risponde. Strumenti ▾ → Comando di avvio, incollalo in Termux.");
@@ -876,7 +891,11 @@ public class MainActivity extends Activity {
         if (!termuxInstallato()) { installaTermux(); return; }
         ricaricaChat = true;
         if (!ServitorePacchetto.presente(this)) {
-            avviso("Questa versione dell'app non contiene il pacchetto: usa nyctalus-termux.tar.gz (vedi manuale).");
+            // l'app «con tutto» non porta più il pacchetto per Termux (lo usa solo chi vuole anche i
+            // comandi): Termux lo scarica dalla release, e lo script ne verifica la firma
+            provatoInPrimoPiano = true;
+            eseguiInTermux("curl -fsSL https://github.com/RedRider21/Nyctalus-Protocol/releases/latest/download/installa-termux.sh | bash", true, null);
+            imposta("Installazione dei comandi di Nyctalus in Termux…\n(serve Internet: il pacchetto firmato arriva dalla release)");
             return;
         }
         ServitorePacchetto sp = avviaServitore();
@@ -1006,7 +1025,7 @@ public class MainActivity extends Activity {
             return api(metodo, percorso, json);
         } catch (IOException primo) {
             pronto = false;
-            imposta("Nyctalus non risponde: lo riavvio in Termux…");
+            imposta(MotoreNativo.disponibile(this) ? "Nyctalus non risponde: lo riavvio…" : "Nyctalus non risponde: lo riavvio in Termux…");
             avviaInTermux();
             if (!attendi(30000)) {
                 throw new IOException("il servizio di Nyctalus in Termux è spento. Apri Termux e scrivi: "

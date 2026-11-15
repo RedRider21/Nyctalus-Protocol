@@ -158,8 +158,23 @@ fi
 if [ -d "${ANDROID_HOME:-/nessuno}/build-tools" ]; then
   APK="$ROOT/mobile/android/Nyctalus.apk"
   bash "$ROOT/strumenti/compila-apk.sh" > "$TMP/c.log" 2>&1 && [ -s "$APK" ] && pass "APK compilata e firmata ($(du -h "$APK" | cut -f1))" || fail "compilazione APK: $(tail -3 "$TMP/c.log")"
-  python3 -c "import zipfile,sys;sys.exit(0 if 'assets/nyctalus-termux.tar.gz' in zipfile.ZipFile(sys.argv[1]).namelist() else 1)" "$APK" \
-    && pass "l'APK contiene il pacchetto per Termux" || fail "pacchetto Termux assente dall'APK"
+  # APK «con tutto»: motore come libreria per arm64 e armv7, web-app, niente pacchetto per Termux
+  python3 - "$APK" > "$TMP/apk.txt" <<'PY'
+import sys, zipfile
+z = zipfile.ZipFile(sys.argv[1]); n = set(z.namelist())
+print("LIB", all(f"lib/{a}/libnyctalus.so" in n for a in ("arm64-v8a", "armeabi-v7a")))
+print("WEB", "assets/webapp/index.html" in n and "assets/webapp/app.js" in n)
+print("TERMUX", "assets/nyctalus-termux.tar.gz" in n)
+m = z.read("AndroidManifest.xml")
+print("ESTRAI", b"extractNativeLibs" in m or "extractNativeLibs".encode("utf-16-le") in m)
+print("MB", round(sum(i.compress_size for i in z.infolist()) / 1e6, 1))
+PY
+  grep -q "^LIB True" "$TMP/apk.txt" && grep -q "^WEB True" "$TMP/apk.txt" && grep -q "^TERMUX False" "$TMP/apk.txt" \
+    && pass "APK con tutto: motore per arm64 e armv7 (libnyctalus.so), web-app, senza il pacchetto per Termux ($(sed -n 's/^MB //p' "$TMP/apk.txt") MB)" || fail "contenuto dell'APK: $(tr '\n' ' ' < "$TMP/apk.txt")"
+  grep -q "^ESTRAI True" "$TMP/apk.txt" && pass "manifest: le librerie si estraggono (Android esegue il motore dalla cartella delle librerie)" || fail "extractNativeLibs assente"
+  grep -q 'MotoreNativo.avvia' "$ROOT/mobile/android/app/src/main/java/org/nyctalus/mobile/MainActivity.java" \
+    && grep -q '"app", "--webapp"' "$ROOT/mobile/android/app/src/main/java/org/nyctalus/mobile/MotoreNativo.java" \
+    && pass "l'app avvia da sé «libnyctalus.so app» (HOME privata, senza Termux); Termux solo per i comandi, se lo vuoi" || fail "avvio nativo mancante"
 else
   salta "compilazione APK: nessun Android SDK (imposta ANDROID_HOME)"
 fi

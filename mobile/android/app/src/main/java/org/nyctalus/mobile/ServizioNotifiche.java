@@ -120,7 +120,7 @@ public class ServizioNotifiche extends Service {
                 // Termux fermato da Android? Lo si riaccende, ma non più di una volta ogni 5 minuti
                 if (SystemClock.elapsedRealtime() - ultimoRiavvio > 300000) {
                     ultimoRiavvio = SystemClock.elapsedRealtime();
-                    MainActivity.avviaInTermux(this, segreto);
+                    MainActivity.avviaServizio(this, segreto);
                 }
             } finally {
                 if (c != null) c.disconnect();

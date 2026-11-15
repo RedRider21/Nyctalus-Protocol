@@ -35,8 +35,21 @@ sed 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<ma
   "$APP/AndroidManifest.xml" > "$L/AndroidManifest.xml"
 # l'app porta con sé il pacchetto per Termux (pulsante «Installa Nyctalus in Termux»)
 mkdir -p "$L/assets"
-if [ -s "${NYCTALUS_PACCHETTO:-}" ]; then cp "$NYCTALUS_PACCHETTO" "$L/assets/nyctalus-termux.tar.gz"
-else bash "$ROOT/strumenti/pacchetto-termux.sh" "$L/pacchetto" >/dev/null; cp "$L/pacchetto/nyctalus-termux.tar.gz" "$L/assets/"; fi
+# APK «con tutto» (di serie): la web-app negli asset e il motore come libreria (lib/<abi>/
+# libnyctalus.so) per i telefoni veri, arm64 e armv7; Termux non serve. NYCTALUS_APK_TERMUX=1: la
+# versione di prima, che porta il pacchetto per Termux e avvia lì Nyctalus.
+cp -r "$ROOT/mobile/webapp" "$L/assets/webapp"
+find "$L/assets/webapp" -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
+if [ "${NYCTALUS_APK_TERMUX:-0}" = 1 ]; then
+  if [ -s "${NYCTALUS_PACCHETTO:-}" ]; then cp "$NYCTALUS_PACCHETTO" "$L/assets/nyctalus-termux.tar.gz"
+  else bash "$ROOT/strumenti/pacchetto-termux.sh" "$L/pacchetto" >/dev/null; cp "$L/pacchetto/nyctalus-termux.tar.gz" "$L/assets/"; fi
+else
+  for coppia in arm64-v8a:aarch64-linux-android armeabi-v7a:armv7-linux-androideabi; do
+    abi="${coppia%%:*}"; m="$ROOT/target/${coppia#*:}/release/nyctalus"
+    [ -s "$m" ] || { echo "manca il motore per Android $abi ($m): compilalo con il flusso «Eseguibili»" >&2; exit 1; }
+    mkdir -p "$L/libs/lib/$abi"; cp "$m" "$L/libs/lib/$abi/libnyctalus.so"
+  done
+fi
 "$BT/aapt2" compile --dir "$APP/res" -o "$L/res.zip"
 "$BT/aapt2" link -I "$JAR" --manifest "$L/AndroidManifest.xml" -o "$L/base.apk" --java "$L/gen" \
   --min-sdk-version 24 --target-sdk-version 34 --version-code "$VCODE" --version-name "$VNAME" -A "$L/assets" "$L/res.zip"
@@ -49,6 +62,7 @@ mapfile -t CLASSI < <(find "$L/classi" -name '*.class')
 
 cp "$L/base.apk" "$L/senza-firma.apk"
 ( cd "$L/dex" && zip -q -X "$L/senza-firma.apk" classes.dex )
+[ -d "$L/libs" ] && ( cd "$L/libs" && zip -q -X -r "$L/senza-firma.apk" lib )
 "$BT/zipalign" -p -f 4 "$L/senza-firma.apk" "$L/allineato.apk"
 
 K="$AND/privato/firma-sviluppo.jks"
