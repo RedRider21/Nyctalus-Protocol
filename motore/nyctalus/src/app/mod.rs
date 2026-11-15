@@ -12,6 +12,7 @@
 //! presentare il segreto (`~/.nyctalus-mobile/token`, 600): `?t=SEGRETO` una volta → cookie.
 //! Le richieste che cambiano qualcosa devono venire dalla nostra pagina (intestazione Origin).
 
+pub mod file;
 pub mod http;
 pub mod rete;
 pub mod servizi;
@@ -206,6 +207,8 @@ pub struct App {
     pub processi: servizi::Processi,
     /// segreto della porta di controllo del motore della chat (lo usa anche nyctalus-cli)
     pub segreto_motore: String,
+    pub galleria: file::CacheGalleria,
+    pub miniature_ripulite: Mutex<bool>,
 }
 
 impl App {
@@ -249,7 +252,8 @@ pub async fn esegui(webapp: Option<PathBuf>) -> Risultato<()> {
     let mut b = [0u8; 16];
     getrandom::fill(&mut b).map_err(|e| e.to_string())?;
     let segreto_motore: String = b.iter().map(|x| format!("{x:02x}")).collect();
-    let app = Arc::new(App { p, porte, segreto, servizi: Mutex::new(StatoServizi::default()), processi: servizi::Processi::default(), segreto_motore });
+    let app = Arc::new(App { p, porte, segreto, servizi: Mutex::new(StatoServizi::default()), processi: servizi::Processi::default(), segreto_motore,
+        galleria: file::CacheGalleria::default(), miniature_ripulite: Mutex::new(false) });
     let ascolto = TcpListener::bind(("127.0.0.1", app.porte.http)).await?;
     log(&format!("Nyctalus mobile {VERSIONE} — http://127.0.0.1:{}/?t={s}", app.porte.http));
     log(&format!("web-app da: {}", app.p.webapp.display()));
@@ -327,6 +331,9 @@ where
         return ws::ponte_chat(app, req, _lettore, w).await;
     }
     if p == "/ws/terminale" {
+        if !app.origine_ammessa(req.intestazione("origin")) {
+            return http::testo(w, "403 Forbidden", "origine non ammessa").await;
+        }
         // il ⌨ Terminale (nyctalus-cli) c'è solo nella versione con Termux
         return http::testo(w, "404 Not Found", "terminale disponibile solo con Termux").await;
     }
@@ -344,6 +351,74 @@ where
     }
     if p == "/api/stato" {
         return http::json(w, "200 OK", &app.info()).await;
+    }
+    let percorso_p = || req.param("p").and_then(file::da_hex_percorso);
+    if p == "/api/file" {
+        let f = file::in_chiaro(app, percorso_p().and_then(|x| file::leggibile(app, &x))).await;
+        return match f {
+            Some(f) => http::servi_file(w, req, &f, None, "").await,
+            None => http::testo(w, "404 Not Found", "file non disponibile").await,
+        };
+    }
+    if p == "/api/miniatura" {
+        let orig = percorso_p().and_then(|x| file::leggibile(app, &x));
+        let f = file::in_chiaro(app, orig.clone()).await;
+        let Some(f) = f else { return http::testo(w, "404 Not Found", "nessuna miniatura").await };
+        // file cifrato: miniatura nella vista in chiaro (mai sul disco); ricevuti in chiaro: a parte
+        let dove = if Some(&f) != orig.as_ref() { f.parent().map(Path::to_path_buf) }
+                   else if file::e_ricevuto(app, &f) { Some(app.p.cache.join("ricevuti")) } else { None };
+        let (a, f2) = (app.clone(), f.clone());
+        let m = tokio::task::spawn_blocking(move || file::miniatura(&a, &f2, dove)).await?;
+        return match m {
+            Some(m) => {
+                let tipo = if m == f { None } else { Some("image/jpeg") };
+                http::servi_file(w, req, &m, tipo, "Cache-Control: private, max-age=86400\r\n").await
+            }
+            None => http::testo(w, "404 Not Found", "nessuna miniatura").await,
+        };
+    }
+    if p == "/api/galleria" {
+        let da: usize = req.param("da").and_then(|v| v.parse().ok()).unwrap_or(0);
+        let n: usize = req.param("n").and_then(|v| v.parse().ok()).unwrap_or(30).clamp(1, 60);
+        let a = app.clone();
+        let v = tokio::task::spawn_blocking(move || file::galleria(&a, da, n)).await?;
+        return http::json(w, "200 OK", &v).await;
+    }
+    if p == "/api/apri" && post {
+        let f = file::in_chiaro(app, percorso_p().and_then(|x| file::leggibile(app, &x))).await;
+        let v = f.map(|f| file::apri_o_condividi(&f, false)).unwrap_or_else(|| json!({"ok": false}));
+        return http::json(w, "200 OK", &v).await;
+    }
+    if p == "/api/carica" && post {
+        let n: i64 = req.intestazione("content-length").parse().unwrap_or(-1);
+        let (stato, v) = file::carica(app, req.param("nome").unwrap_or("file"), n, _lettore).await;
+        return http::json(w, stato, &v).await;
+    }
+    if p == "/api/sfoglia" {
+        let d = req.param("d").and_then(file::da_hex_percorso).map(|x| x.to_string_lossy().to_string()).unwrap_or_default();
+        let a = app.clone();
+        let v = tokio::task::spawn_blocking(move || file::sfoglia(&a, &d)).await?;
+        return http::json(w, "200 OK", &v).await;
+    }
+    if p == "/api/archivio" {
+        let a = app.clone();
+        let v = tokio::task::spawn_blocking(move || file::archivio(&a)).await?;
+        return http::json(w, "200 OK", &v).await;
+    }
+    if p == "/api/elimina" && post {
+        let v = match file::nell_archivio(app, req.param("p").unwrap_or("")) {
+            None => json!({"ok": false, "errore": "file non nell'archivio"}),
+            Some(f) => match std::fs::remove_file(&f) {
+                Ok(()) => json!({"ok": true}),
+                Err(e) => json!({"ok": false, "errore": e.to_string()}),
+            },
+        };
+        return http::json(w, "200 OK", &v).await;
+    }
+    if p == "/api/condividi" && post {
+        let f = file::in_chiaro(app, file::nell_archivio(app, req.param("p").unwrap_or(""))).await;
+        let v = f.map(|f| file::apri_o_condividi(&f, true)).unwrap_or_else(|| json!({"ok": false}));
+        return http::json(w, "200 OK", &v).await;
     }
     if p == "/api/rete" {
         return if post { cambia_rete(app, req, _lettore, w).await } else { http::json(w, "200 OK", &info_rete(app)).await };

@@ -36,7 +36,7 @@ attendi_regex "$TMP/prep.log" '[a-z2-7]{56}\.nyct' 10 > /dev/null
 NYCT_FINO="^(CIFRATA|ERR)" controllo 19851 preparazione0123456789 30 "CIFRA $(hx "$PP")" | grep -q "^CIFRATA" && kill $PREP && wait $PREP 2>/dev/null
 [ "$(head -c 5 "$FOTO")" = NYCS1 ] && [ "$(head -c 5 "$DOC")" = NYCS1 ] && pass "foto e documento ricevuti: cifrati sul disco (prova)" || fail "file di prova non cifrati"
 
-HOME="$H" NYCTALUS_BIN="$BIN" python3 "$ROOT/mobile/orchestratore/nyctalus_mobile.py" > "$TMP/o.log" 2>&1 & ORCH=$!; PIDS+=($ORCH)
+HOME="$H" NYCTALUS_BIN="$BIN" avvia_orchestratore "$TMP/o.log"; ORCH=${PIDS[-1]}
 [ -n "$(attendi_regex "$TMP/o.log" 'servizi pronti' 40)" ] || fail "servizi: $(tail -3 "$TMP/o.log")"
 U="http://127.0.0.1:19933"; C=(-s -b "nyct=$TOK")
 # a cassaforte CHIUSA il file non si può aprire

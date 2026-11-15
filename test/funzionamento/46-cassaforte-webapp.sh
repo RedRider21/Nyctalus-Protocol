@@ -27,7 +27,7 @@ attendi_regex "$TMP/prep.log" '[a-z2-7]{56}\.nyct' 10 > /dev/null
 NYCT_FINO="^(CIFRATA|ERR)" controllo 19751 preparazione0123456789 30 "CIFRA $(hx "$PP")" | grep -q "^CIFRATA" && kill $PREP && wait $PREP 2>/dev/null
 grep -q "messaggio segreto\|$(hx 'messaggio segreto')" "$H/.nyctalus-chat/cronologia/$BOB.log" && fail "dati di prova non cifrati" || pass "dati della chat cifrati sul telefono (prova)"
 
-HOME="$H" NYCTALUS_BIN="$BIN" python3 "$ROOT/mobile/orchestratore/nyctalus_mobile.py" > "$TMP/o.log" 2>&1 & PIDS+=($!)
+HOME="$H" NYCTALUS_BIN="$BIN" avvia_orchestratore "$TMP/o.log"
 [ -n "$(attendi_regex "$TMP/o.log" 'servizi pronti' 40)" ] && grep -q "la chat aspetta la passphrase" "$TMP/o.log" \
   && pass "il servizio del telefono parte anche con i dati cifrati (la chat aspetta la passphrase)" || fail "servizi: $(tail -3 "$TMP/o.log")"
 U="http://127.0.0.1:19833"

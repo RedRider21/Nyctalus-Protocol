@@ -63,7 +63,17 @@ impl Processi {
                     let _ = Command::new("kill").args(["-TERM", &gruppo]).stdout(Stdio::null()).stderr(Stdio::null()).status();
                 }
             }
-            let _ = c.kill();
+        }
+        // si lascia il tempo di chiudersi bene (la chat svuota la vista in chiaro della cassaforte),
+        // poi chi è ancora vivo si ferma per forza
+        let fine = Instant::now() + Duration::from_secs(5);
+        while Instant::now() < fine && v.iter_mut().any(|c| matches!(c.try_wait(), Ok(None))) {
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        for c in v.iter_mut() {
+            if matches!(c.try_wait(), Ok(None)) {
+                let _ = c.kill();
+            }
             let _ = c.wait();
         }
         v.clear();
