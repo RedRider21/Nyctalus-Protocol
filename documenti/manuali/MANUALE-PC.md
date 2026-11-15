@@ -92,6 +92,20 @@ messaggi, allegati, fotocamera, menu del tasto destro, temi, **chiamate 📞 e v
 
 ---
 
+### Al primo avvio: «Che cosa vuoi fare?»
+La prima volta che apri il mini menu (se su questo PC non c'è ancora nessuna rete) compare
+**🧭 Che cosa vuoi fare?**, con quattro strade spiegate semplici; ognuna apre la finestra giusta:
+
+| Scelta | Cosa succede |
+|---|---|
+| 🔗 **Mi collego alla rete di qualcuno** | incolli il codice di rete che ti hanno dato (niente da aprire sul router) |
+| 🏠 **Ospito la mia rete su questo PC** | si apre «🏠 La mia rete» |
+| 🦇 **Aiuto una rete con questo PC** | questo PC fa anche da nodo intermedio («Aiuta la rete») |
+| 🧪 **Provo prima da solo** | la rete di prova solo su questo PC |
+
+Per un server sempre acceso o un Raspberry Pi si usa il pacchetto «Server» (`MANUALE-SERVER.md`).
+Si riapre quando vuoi: **⚙ → 🧭 Che cosa vuoi fare?**
+
 ### Quale versione ho?
 La **prima voce del menu ⚙** del mini menu è **🦇 Nyctalus 0.3.x**: la versione installata
 (file `VERSIONE` del pacchetto). Toccandola si vedono la cartella dell'installazione e il link alle

@@ -87,7 +87,14 @@ print("VER", l.versione())
 voci = []
 Gtk.Menu.popup_at_pointer = lambda self, ev: voci.extend(c.get_label() for c in self.get_children() if isinstance(c, Gtk.MenuItem) and not isinstance(c, Gtk.SeparatorMenuItem))
 try:
-    w = l.Launcher(); w._menu_impostazioni(); print("PRIMA", voci[0])
+    w = l.Launcher(); w._menu_impostazioni(); print("PRIMA", voci[0]); print("VOCI", " | ".join(voci))
+    chiamate = []
+    w._che_cosa_vuoi_fare = lambda: chiamate.append(1)
+    w.cfg.pop("benvenuto", None); w._primo_avvio()               # ha già una rete: niente domanda
+    gia = len(chiamate)
+    l.DATI_RETE = l.Path("/inesistente-nyctalus-prova")             # nessuna rete: la domanda, una volta
+    w.cfg.pop("benvenuto", None); w._primo_avvio(); w._primo_avvio()
+    print("BENVENUTO", gia, len(chiamate), w.cfg.get("benvenuto"))
 except Exception as e:
     print("PRIMA errore", e)
 EOF2
@@ -95,4 +102,9 @@ grep -q "COD NYCT1:eyJ2Ijox_-LC=J -" "$TMP/ver.txt" && pass "il codice di rete s
 V=$(cat "$ROOT/VERSIONE")
 grep -qx "VER $V" "$TMP/ver.txt" && { grep -qx "PRIMA 🦇 Nyctalus $V" "$TMP/ver.txt" || grep -q "PRIMA errore" "$TMP/ver.txt"; } \
   && pass "versione $V letta dal file VERSIONE; è la prima voce del menu ⚙ (se c'è uno schermo)" || fail "versione: $(cat "$TMP/ver.txt")"
+if grep -q "^PRIMA errore" "$TMP/ver.txt"; then salta "niente schermo: menu e primo avvio non provati"
+else
+  grep -q "^VOCI .*⬆ .*🧭 .*🏠 .*🔗" "$TMP/ver.txt" && pass "menu ⚙: versione, ⬆ Aggiorna, 🧭 Che cosa vuoi fare, 🏠 La mia rete, 🔗 Collegati" || fail "voci: $(grep VOCI "$TMP/ver.txt")"
+  grep -q "^BENVENUTO 0 1 True" "$TMP/ver.txt" && pass "primo avvio: «Che cosa vuoi fare?» una volta sola, e non a chi ha già una rete" || fail "primo avvio: $(grep BENVENUTO "$TMP/ver.txt")"
+fi
 [ "$KO" -eq 0 ]

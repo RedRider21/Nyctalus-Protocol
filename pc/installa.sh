@@ -56,12 +56,13 @@ fi
 if [ -z "$RUOLO" ]; then
   if [ "$SI" = 1 ]; then RUOLO=client; else
     echo
-    echo "Che cosa stai installando su questa macchina?"
-    echo "  1) Client        — uso la chat e il browser (PC normale)                [predefinito]"
-    echo "  2) Gestore       — come il client, e in più gestisco una rete (autorità,"
-    echo "                     elenco dei nodi, codice di rete, rete di casa)"
-    echo "  3) Nodo server   — questa macchina è un SERVER sempre acceso che fa da nodo"
-    echo "                     della rete (niente grafica; serve root o --utente)"
+    echo "Che cosa vuoi fare con questo computer?"
+    echo "  1) Usare Nyctalus     — mi collego alla rete di qualcuno (o provo da solo)   [predefinito]"
+    echo "  2) Ospitare una rete  — come 1, e in più questo PC può essere la MIA rete"
+    echo "                          (nodi, elenco firmato, codice da dare agli amici)"
+    echo "  3) Server / nodo      — un SERVER sempre acceso che fa da nodo di una rete"
+    echo "                          (niente grafica; per un Raspberry: pacchetto Server)"
+    echo "  Al primo avvio il mini menu te lo richiede in modo semplice (⚙ → 🧭)."
     printf 'Scelta [1]: '; read -r s
     case "$s" in 2) RUOLO=gestore ;; 3) RUOLO=nodo ;; *) RUOLO=client ;; esac
   fi

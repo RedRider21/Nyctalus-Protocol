@@ -297,6 +297,7 @@ class Launcher(Gtk.Window):
         self.connect("destroy", self._su_chiusura)
         self.show_all()
         self._applica_scorciatoie()
+        GLib.timeout_add(600, self._primo_avvio)
 
     # --- azioni associabili a un tasto rapido ---------------------------------
     def _azioni(self):
@@ -1091,6 +1092,65 @@ class Launcher(Gtk.Window):
         f.run()
         f.destroy()
 
+    def _primo_avvio(self):
+        """Al primo avvio: «Che cosa vuoi fare?» (una volta sola). Chi ha già una rete non lo vede."""
+        if self.cfg.get("benvenuto"):
+            return False
+        gia = DATI_RETE.exists()
+        try:
+            gia = gia or bool(json.loads((Path.home() / ".nyctalus-browser" / "config.json").read_text()).get("directory_url"))
+        except (OSError, ValueError):
+            pass
+        self.cfg["benvenuto"] = True
+        self._salva_cfg()
+        if not gia:
+            self._che_cosa_vuoi_fare()
+        return False
+
+    def _che_cosa_vuoi_fare(self):
+        """🧭 Le strade possibili, spiegate semplici: ognuna apre la finestra giusta."""
+        d = Gtk.Dialog(title=_t("lau.strada"), transient_for=self, modal=True)
+        d.set_resizable(False)                      # alta quanto il contenuto
+        box = d.get_content_area()
+        box.set_spacing(10)
+        box.set_border_width(16)
+        testa = Gtk.Label(xalign=0)
+        testa.set_markup("<b><big>%s</big></b>\n%s" % (GLib.markup_escape_text(_t("lau.strada.titolo")),
+                                                      GLib.markup_escape_text(_t("lau.strada.sotto"))))
+        testa.set_line_wrap(True)
+        testa.set_max_width_chars(70)
+        box.add(testa)
+        strade = [("🔗", "usa", self._collegati_rete), ("🏠", "ospita", self._mia_rete),
+                  ("🦇", "aiuta", self._aiuta_la_rete), ("🧪", "prova", None)]
+        for icona, chiave, azione in strade:
+            b = Gtk.Button()
+            et = Gtk.Label(xalign=0)
+            et.set_markup("<b>%s  %s</b>\n<small>%s</small>" % (icona, GLib.markup_escape_text(_t("lau.strada.%s" % chiave)),
+                                                               GLib.markup_escape_text(_t("lau.strada.%s.spiega" % chiave))))
+            et.set_line_wrap(True)
+            et.set_max_width_chars(66)
+            et.set_margin_top(4)
+            et.set_margin_bottom(4)
+            b.add(et)
+
+            def scelto(_b, a=azione):
+                d.destroy()
+                if a:
+                    GLib.idle_add(lambda: (a(), False)[1])
+            b.connect("clicked", scelto)
+            box.add(b)
+        server = Gtk.Label(xalign=0)
+        server.set_markup("<small>%s</small>" % GLib.markup_escape_text(_t("lau.strada.server")))
+        server.set_line_wrap(True)
+        server.set_max_width_chars(70)
+        server.get_style_context().add_class("dim-label")
+        box.add(server)
+        d.add_button(_t("lau.imp.chiudi"), 0)
+        d.show_all()
+        d.run()
+        if d.get_visible():
+            d.destroy()
+
     def _aggiorna(self):
         """⬆ Aggiorna Nyctalus: controlla l'ultima release su GitHub (solo ora, su richiesta),
         e con un tocco scarica, verifica firma e impronta e installa (nyctalus-aggiorna)."""
@@ -1211,6 +1271,7 @@ class Launcher(Gtk.Window):
         voce("🦇 Nyctalus " + versione(), self._info_versione)            # la versione installata
         voce("⬆ " + _t("lau.agg") + "…", self._aggiorna)                     # dalla release su GitHub
         menu.append(Gtk.SeparatorMenuItem())
+        voce("🧭 " + _t("lau.strada") + "…", self._che_cosa_vuoi_fare)     # le strade, spiegate semplici
         voce("🏠 " + _t("lau.miarete") + "…", self._mia_rete)              # accendere la PROPRIA rete, a spunte
         voce("🔗 " + _t("lau.collegati") + "…", self._collegati_rete)   # incolla il codice di rete (NYCT1:…)
         voce("⚙ " + _t("lau.imp.titolo") + "…", self._impostazioni_finestra)  # finestra a schede: rete, prestazioni, chiamate
