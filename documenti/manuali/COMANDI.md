@@ -16,7 +16,7 @@ Aggiornato alla 0.3.22; ogni comando stampa anche il suo aiuto (`--help`, o `aiu
 | [2. Chat e file dal terminale](#2-chat-e-file-dal-terminale-nyctalus-cli) | `nyctalus-cli` |
 | [3. Rete: collegarsi e gestirla](#3-rete-collegarsi-e-gestirla-nyctalus-rete) | `nyctalus-rete` |
 | [4. Siti .nyct](#4-siti-nyct-nyctalus-sito) | `nyctalus-sito` |
-| [5. Controlli](#5-controlli-collaudo-e-integrita) | `nyctalus-collaudo`, `nyctalus-integrita` |
+| [5. Controlli](#5-controlli-collaudo-e-integrita) | `nyctalus-collaudo`, `nyctalus-integrita`, `nyctalus-aggiorna` |
 | [6. Server e nodi](#6-server-e-nodi) | `installa.sh` del server, `nyctalus-server` |
 | [7. Telefono (Termux)](#7-telefono-termux) | script unico, `nyctalus-mobile` |
 | [8. Installare e disinstallare](#8-installare-e-disinstallare) | `installa.sh`, `disinstalla.sh` |

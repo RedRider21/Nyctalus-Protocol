@@ -97,6 +97,14 @@ La **prima voce del menu ⚙** del mini menu è **🦇 Nyctalus 0.3.x**: la vers
 (file `VERSIONE` del pacchetto). Toccandola si vedono la cartella dell'installazione e il link alle
 novità di quella versione.
 
+### Aggiornare con un tocco (⬆ Aggiorna Nyctalus)
+Subito sotto c'è **⬆ Aggiorna Nyctalus…** (dalla 0.3.25): controlla su GitHub se c'è una versione
+nuova e ne mostra il peso; **⬆ Aggiorna alla X** la scarica, **verifica la firma della release e
+l'impronta del pacchetto** (un file alterato non si installa) e la installa; se la tua rete è
+accesa come servizio la riavvia con i programmi nuovi. Poi **↻ Riavvia il mini menu**; chat e
+browser aperti vanno chiusi e riaperti. Il controllo parte solo quando apri la finestra (GitHub
+vede l'indirizzo da cui controlli). Da terminale: `nyctalus-aggiorna`.
+
 ### Accendere la propria rete (🏠 La mia rete)
 Dal **mini menu → ⚙ → 🏠 La mia rete…** (dalla 0.3.23) si accende la **propria** rete senza
 terminale: «Solo in casa» oppure «Anche da Internet» con il nome o l'IP pubblico; spunte **Senza
