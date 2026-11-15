@@ -1425,6 +1425,23 @@ public class BrowserActivity extends Activity {
                     Toast.makeText(BrowserActivity.this, "Bloccato in modalità Nyctalus: " + Uri.parse(u).getScheme() + ":", Toast.LENGTH_SHORT).show();
                     return true;
                 }
+                // «📲 Collega l'app» della pagina di una rete (nyctalus://rete?codice=… o il suo intent://):
+                // il codice va a QUESTA app (non a un'altra app Nyctalus installata), che chiede conferma
+                if (u.startsWith("nyctalus://") || (u.startsWith("intent://rete") && u.contains("scheme=nyctalus"))) {
+                    try {
+                        Uri dati = u.startsWith("intent://") ? Intent.parseUri(u, Intent.URI_INTENT_SCHEME).getData() : Uri.parse(u);
+                        if (dati != null && "nyctalus".equals(dati.getScheme())) {
+                            Intent i = new Intent(Intent.ACTION_VIEW, dati);
+                            i.setClass(BrowserActivity.this, MainActivity.class);
+                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                            startActivity(i);
+                            finish();
+                        }
+                    } catch (Exception e) {
+                        Log.i(TAG, "collegamento di rete non valido", e);
+                    }
+                    return true;
+                }
                 // schemi non http (tel:, mailto:, intent:) -> delega al sistema
                 if (!u.startsWith("http://") && !u.startsWith("https://") && !u.startsWith("about:") && !u.startsWith("data:")) {
                     try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(u))); } catch (Exception e) {

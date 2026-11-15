@@ -1220,6 +1220,11 @@ function impostazioni(solo) {
   const bi = el("button", "", "📥 Importa codice"), bp = el("button", "nascosto", "↩ Rete di prova");
   const bpo = el("button", "nascosto", "🌉 Ponti nascosti");
   condivisa.append(bi, bpo, bp);
+  // nell'app Android: la pagina della rete del PC di casa nel browser integrato («📲 Collega l'app»)
+  if (HOST && HOST.paginaReteCasa) {
+    const bc = el("button", "", "🏠 Pagina della rete del PC di casa"); bc.onclick = () => HOST.paginaReteCasa();
+    condivisa.insertBefore(bc, bpo);
+  }
   let pontiRete = [];
   fetch("/api/rete").then((r) => r.json()).then((x) => {
     quale.textContent = x.condivisa ? "Collegato a «" + (x.nome || "rete condivisa") + "» · impronta " + x.impronta

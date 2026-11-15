@@ -1212,10 +1212,38 @@ public class MainActivity extends Activity {
         azioni.add(() -> { if (reteCondivisa) cambiaRete("{\"prova\":true}"); });
         voci.add("📥  Importa un codice di rete");
         azioni.add(this::importaCodice);
+        voci.add("🏠  Pagina della rete del PC di casa");
+        azioni.add(this::paginaReteCasa);
         new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
                 .setTitle("Rete Nyctalus (per chat, browser e file)")
                 .setItems(voci.toArray(new String[0]), (d, k) -> azioni.get(k).run())
                 .setNegativeButton("Chiudi", null).show();
+    }
+
+    /** La pagina della rete ospitata dal PC di casa (http://IP:18800/) nel browser integrato: il suo
+     *  «📲 Collega l'app» porta il codice dritto a quest'app. L'indirizzo si ricorda. */
+    void paginaReteCasa() {
+        runOnUiThread(() -> {
+            final android.widget.EditText campo = new android.widget.EditText(this);
+            campo.setText(getSharedPreferences(PREFS, MODE_PRIVATE).getString("pagina_casa", "192.168.1."));
+            campo.setSelection(campo.getText().length());
+            campo.setSingleLine(true);
+            android.widget.FrameLayout box = new android.widget.FrameLayout(this);
+            box.setPadding(dp(20), dp(8), dp(20), 0);
+            box.addView(campo);
+            new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                    .setTitle("Pagina della rete del PC di casa")
+                    .setMessage("L'indirizzo del PC nella Wi-Fi di casa (lo mostra il PC accendendo la rete, es. 192.168.1.14). "
+                            + "Nella pagina tocca «📲 Collega l'app Nyctalus».")
+                    .setView(box)
+                    .setPositiveButton("Apri", (d, k) -> {
+                        String a = campo.getText().toString().trim().replaceAll("^https?://", "").replaceAll("/.*$", "");
+                        if (!a.matches("[A-Za-z0-9.-]{3,253}(:[0-9]{1,5})?")) { avviso("Indirizzo non valido: " + a); return; }
+                        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("pagina_casa", a.replaceAll(":[0-9]+$", "")).apply();
+                        apriBrowser("http://" + (a.contains(":") ? a : a + ":18800") + "/", false);
+                    })
+                    .setNegativeButton("Annulla", null).show();
+        });
     }
 
     /** Una rete salvata già in uso: si può solo togliere dall'elenco. */
@@ -1949,6 +1977,12 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public String temaApp() {
             return getSharedPreferences(PREFS, MODE_PRIVATE).getString("tema", "notte");
+        }
+
+        /** Impostazioni → Rete della chat: la pagina della rete del PC di casa nel browser integrato. */
+        @JavascriptInterface
+        public void paginaReteCasa() {
+            MainActivity.this.paginaReteCasa();
         }
 
         @JavascriptInterface
