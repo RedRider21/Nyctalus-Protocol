@@ -310,6 +310,7 @@ Di solito le imposta da solo chi avvia il motore (impostazioni a schede). Utili 
 |---|---|---|
 | `NYCTALUS_TCP=1` / `=0` | entrata sempre in TCP / mai | TCP solo se UDP non risponde |
 | `NYCTALUS_PONTI` | ponti nascosti (come `--bridge`) | nessuno |
+| `NYCTALUS_VICINI=pubblico=interno;…` | nodi annunciati con l'IP pubblico che stanno in questa casa: ci si collega all'indirizzo interno (router senza NAT loopback); l'impronta TLS dell'elenco resta controllata | la imposta `nyctalus-rete` da solo |
 | `NYCTALUS_MIMETICO=1` · `NYCTALUS_NOME_MIMETICO` | forma HTTP/3 e nome del sito imitato | spenta |
 | `NYCTALUS_WEBRTC=1` | forma videochiamata | spenta |
 | `NYCTALUS_USCITE` | uscite diverse (1-4) | 1 |

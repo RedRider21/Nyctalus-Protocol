@@ -175,6 +175,11 @@ Note:
   condivisa» compare «per chi osserva sembri un visitatore del sito …» (`GUIDA-COMPLETA.md` §12).
 - **UDP bloccato**: se la rete dove sei (ufficio, Wi-Fi di un albergo) blocca UDP, l'app passa
   **da sola** a TCP sulla stessa porta dopo qualche secondo (`GUIDA-COMPLETA.md` §13-bis).
+- **In casa di chi ospita la rete** (dalla 0.3.25): se sei sulla stessa Wi-Fi del PC o del
+  Raspberry che ospita la rete, l'app usa **da sola** il suo indirizzo interno (scritto nel
+  codice di rete): funziona anche con i router che non rimandano indietro i collegamenti verso
+  il proprio IP pubblico. Fuori casa usa quello pubblico, come sempre. Serve il codice di rete
+  di una rete 0.3.25 (chi la ospita lo rigenera riaccendendola).
 - **🌉 Ponti nascosti** (in Rete condivisa, quando sei su una rete condivisa): incolla la
   riga segreta di un ponte, cioè un'entrata privata fuori dall'elenco. Da quel momento si entra
   sempre da lì. Spiegazione: `GUIDA-COMPLETA.md` §13.

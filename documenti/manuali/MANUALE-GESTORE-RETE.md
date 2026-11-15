@@ -124,6 +124,10 @@ Stampa `NYCT1:…` e lo salva in `~/.nyctalus-rete/codice.txt`.
 - **Va rifatto se cambi l'URL o la protezione** (lo rifà da solo `nyctalus-rete protezione`).
   Aggiungere o togliere nodi non cambia il codice.
 - Rubrica e casella, se le hai accese, entrano nel codice (§6-bis).
+- Per una rete ospitata in casa (`casa --internet`) il codice porta anche l'**indirizzo in
+  casa** di chi la ospita (`lan`, es. `192.168.1.14`, dalla 0.3.25): chi è nella stessa casa lo
+  usa da solo quando il router non rimanda indietro i collegamenti verso l'IP pubblico. Rivela
+  solo l'indirizzo interno della tua rete di casa, che da fuori non serve a niente.
 - I client lo importano: PC `nyctalus-rete importa NYCT1:…` (`MANUALE-PC.md` §3), telefono
   **🔗 Rete** → Importa codice (`MANUALE-TELEFONO.md` §1).
 
@@ -153,9 +157,16 @@ codice nuovo contiene la casella.
 Lascia la finestra aperta; `Ctrl-C` ferma tutto.
 
 **La stessa rete, raggiungibile da Internet** (per provare con un amico in un'altra città):
-`nyctalus-rete casa --internet NOME` con il tuo nome No-IP/DuckDNS o l'IP pubblico. È una rete a
-sé («Rete Internet di prova»); i nodi si presentano col nome, il comando dice quali porte
-inoltrare sul router e prova i nodi. Passo passo: `GUIDA-INTERNET.md`.
+`nyctalus-rete casa --internet NOME` con il tuo nome No-IP/DuckDNS o l'IP pubblico
+(`--internet auto`: il nome DuckDNS impostato con `nyctalus-rete duckdns`, altrimenti l'IP
+chiesto al router). È una rete a sé («Rete Internet di prova»); i nodi si presentano col nome.
+Dalla 0.3.25 il comando **chiede al router di aprire le porte da solo** (UPnP/NAT-PMP, rinnovate
+ogni 30 minuti; `nyctalus-rete porte` a mano), aggiorna il nome DuckDNS ogni 5 minuti e, se il
+router non rimanda indietro i collegamenti verso il proprio IP pubblico, fa parlare i nodi di
+questo PC dall'interno (`NYCTALUS_VICINI`); altrimenti dice quali porte inoltrare. Con
+`--servizio` («Sempre accesa») resta accesa da sola e collega anche questo PC alla rete
+(`--non-importare` per non farlo). Senza terminale: mini menu → ⚙ → **🏠 La mia rete**.
+Passo passo: `GUIDA-INTERNET.md`.
 
 **Se il telefono resta a caricare la pagina, è il firewall del PC.** Su Ubuntu ufw scarta in
 silenzio ciò che arriva dalla rete locale. `casa` se ne accorge e stampa i comandi; con la

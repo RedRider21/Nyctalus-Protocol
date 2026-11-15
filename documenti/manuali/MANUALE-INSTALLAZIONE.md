@@ -46,10 +46,20 @@ unzip Nyctalus-PC-Linux.zip             # crea la cartella Nyctalus/
 cd Nyctalus
 ```
 
-All'inizio l'installatore chiede **cosa stai installando**:
-**1) Client** (il caso normale), **2) Gestore** (come il client, in più gestisci una rete),
-**3) Nodo server** (la macchina fa da nodo: vedi `MANUALE-SERVER.md`). Senza domande:
+All'inizio l'installatore chiede **che cosa vuoi fare con questo computer**:
+**1) Usare Nyctalus** (il caso normale: ti colleghi alla rete di qualcuno), **2) Ospitare una
+rete** (come 1, e in più questo PC può essere la tua rete), **3) Server / nodo** (una macchina
+sempre accesa che fa da nodo: vedi `MANUALE-SERVER.md`). Senza domande:
 `./installa.sh --ruolo client --si`.
+
+Al **primo avvio** il mini menu ripropone la scelta in modo semplice (**🧭 Che cosa vuoi fare?**:
+mi collego alla rete di qualcuno · ospito la mia rete · aiuto una rete · provo da solo) e apre
+la finestra giusta (`MANUALE-PC.md`).
+
+**Aggiornare (dalla 0.3.25):** mini menu → **⚙ → ⬆ Aggiorna Nyctalus…**, oppure
+`nyctalus-aggiorna`: scarica l'ultima release, verifica la firma e l'impronta del pacchetto e
+la installa al posto della vecchia (i tuoi dati restano). Fino alla 0.3.24: scarica il pacchetto
+nuovo e rilancia `./installa.sh`.
 
 Prima di copiare qualunque cosa l'installatore controlla l'**integrità** del pacchetto: ogni file
 deve avere l'impronta scritta nell'elenco firmato dalla release (`firma/LEGGIMI.md`). Se un file è

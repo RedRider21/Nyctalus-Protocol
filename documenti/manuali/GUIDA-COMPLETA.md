@@ -51,9 +51,11 @@ Per **provare** basta un PC: fa da gestore, da nodi e da client insieme (rete di
 **PC Linux**
 1. `sudo apt install python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1` (una volta).
 2. Scompatta `Nyctalus-PC-Linux.zip`, entra nella cartella `Nyctalus` e lancia `./installa.sh` →
-   scelta **1 · Client**.
-3. Collegati alla rete: `nyctalus-rete importa NYCT1:…` (il codice te lo dà il gestore).
-   Controlla che l'**impronta** mostrata sia uguale a quella del gestore.
+   scelta **1 · Usare Nyctalus**.
+3. Collegati alla rete: al primo avvio il mini menu chiede **🧭 Che cosa vuoi fare?** → **🔗 Mi
+   collego alla rete di qualcuno** e incolli il codice `NYCT1:…` (oppure ⚙ → 🔗 Collegati a una
+   rete, o `nyctalus-rete importa NYCT1:…`). Controlla che l'**impronta** mostrata sia uguale a
+   quella del gestore.
 4. Apri il mini menu (**Nyctalus** nel menu delle applicazioni) → **Chat**.
 5. Per navigare: il **Browser** del mini menu (scheda 🦇). In più, per il web normale senza
    farti riconoscere fra una visita e l'altra, **Nyctalus Firefox** ([§8](#8-browser-modalita-nyctalus)).
@@ -72,8 +74,9 @@ Per **provare** basta un PC: fa da gestore, da nodi e da client insieme (rete di
 1. Scompatta `Nyctalus-Windows.zip`, doppio clic su `Nyctalus.cmd`.
 2. **🔗 Rete** → incolla il codice. Poi **Chat**.
 
-**Per aggiornare:** stesso pacchetto, versione nuova. PC: `./installa.sh` di nuovo. Telefono:
-nuova APK, poi di nuovo il punto 3. I tuoi dati restano.
+**Per aggiornare:** PC: mini menu → **⚙ → ⬆ Aggiorna Nyctalus** (dalla 0.3.25; verifica firma
+e impronta prima di installare), oppure `nyctalus-aggiorna`. Telefono: punto 3. I tuoi dati
+restano.
 
 Dettagli: `MANUALE-INSTALLAZIONE.md`, `MANUALE-PC.md`, `MANUALE-TELEFONO.md`, `MANUALE-WINDOWS.md`.
 
@@ -308,8 +311,14 @@ rubrica e la casella.
 
 ```sh
 nyctalus-rete casa                       # nella tua Wi-Fi
-nyctalus-rete casa --internet NOME       # raggiungibile da Internet (NOME = No-IP o IP pubblico)
+nyctalus-rete casa --internet NOME       # raggiungibile da Internet (NOME = DuckDNS/No-IP o IP pubblico)
+nyctalus-rete casa --internet auto       # il nome DuckDNS, o l'IP chiesto al router
 ```
+Senza terminale: mini menu → ⚙ → **🏠 La mia rete** (spunte, **🔍 Trova** l'indirizzo, DuckDNS
+in «Avanzate»). Dalla 0.3.25 il router **apre le porte da solo** quando lo permette (UPnP o
+NAT-PMP; altrimenti vanno inoltrate a mano), e la rete funziona anche con i router che non
+rimandano indietro i collegamenti verso il proprio IP pubblico: il PC che ospita, e telefono o
+PC nella stessa casa, usano da soli l'indirizzo interno (`nyctalus-rete vicini`).
 Passo passo: `GUIDA-RETE-DI-CASA.md` e `GUIDA-INTERNET.md`. Con i nodi tutti su un PC la rete
 **non è anonima** (il motore lo dice nei registri).
 

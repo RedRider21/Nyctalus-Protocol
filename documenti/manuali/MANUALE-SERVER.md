@@ -133,9 +133,17 @@ firmato, rubrica, casella, pagina del codice, come `nyctalus-rete casa --interne
    `~/.local/share/nyctalus-server`, apre il firewall (se c'è ufw chiede la password), tiene i
    servizi accesi anche senza login, accende la rete e stampa il **codice di rete** e
    l'**impronta**.
-2. Sul **router**: inoltra verso il Raspberry **UDP e TCP 4701-4704** e **TCP 18800**, e
-   dagli un indirizzo fisso (DHCP statico).
+2. Sul **router**: dalla 0.3.25 la rete chiede al router di aprire le porte **da sola**
+   (UPnP o NAT-PMP) e lo dice con «il router ha aperto da solo N porte». Se il router non lo
+   permette (molti lo hanno spento di serie, per esempio i TIM Hub), inoltra tu verso il
+   Raspberry **UDP e TCP 4701-4704** e **TCP 18800**. In ogni caso dagli un indirizzo fisso
+   (DHCP statico).
+   Il nome DuckDNS lo può aggiornare la rete stessa: `nyctalus-rete duckdns --dominio miacasa
+   --token TOKEN` sul Raspberry, prima del passo 1 (poi `--nome miacasa.duckdns.org`).
 3. Prova da un telefono con i **dati mobili**: `http://miacasa.duckdns.org:18800/`.
+   **In casa** PC e telefono raggiungono il Raspberry da soli con l'indirizzo interno, anche se
+   il router non rimanda indietro i collegamenti verso il proprio IP pubblico: il codice di rete
+   porta l'indirizzo in casa del Raspberry (dalla 0.3.25).
 
 **Di serie i nodi NON fanno da uscita verso Internet** (§3, `--senza-uscita`): chat, chiamate,
 file e siti `.nyct` funzionano, la navigazione degli altri non esce dal tuo indirizzo.
