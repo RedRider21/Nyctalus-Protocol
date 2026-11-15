@@ -139,6 +139,7 @@ const S = {
   tema: salvato("tema", "notte"), temaColore: salvato("temaColore", { c: "#3ecf9a", scuro: true }), sfondo: salvato("sfondo", "pipistrelli"), exif: salvato("exif", true),
   trasferimenti: new Map(), ultimoGiorno: null, ws: null, filtro: "",
   storia: null, cacheChat: null, inFondo: true,
+  senzaNome: new Set(),        // contatti aggiunti senza nome (si mostra il codice)
 };
 
 // ---------- connessione al motore ------------------------------------------------------
@@ -148,6 +149,8 @@ function connetti() {
   ws.onopen = () => {
     manda("WHOAMI"); manda("LIST"); manda("SUB"); manda("RISERVATA");
     if (S.elencoInAttesa) { S.elencoInAttesa = false; chiediRubrica({ op: "elenco" }); }
+    // i nomi della rubrica per i contatti che non ne hanno uno (senza aprire la rubrica)
+    setTimeout(() => { if (S.rubrica && S.senzaNome.size) chiediRubrica({ op: "elenco" }); }, 4000);
   };
   ws.onmessage = (ev) => ev.data.split("\n").forEach((r) => r && evento(r));
   // se il motore non risponde si ritenta sempre più di rado (1,5 s → 30 s), non a raffica
@@ -261,7 +264,14 @@ function rispostaRubrica(testo) {
   const chiave = "nyct-iscritto-" + S.rubrica;
   if (r.op === "iscritto") { try { localStorage.setItem(chiave, r.nome); } catch (e) { /* niente */ } toast("Iscritto come «" + r.nome + "»"); chiediRubrica({ op: "elenco" }); }
   else if (r.op === "cancellato") { try { localStorage.removeItem(chiave); } catch (e) { /* niente */ } toast("Non sei più in rubrica"); chiediRubrica({ op: "elenco" }); }
-  else if (r.op === "elenco") { S.rubricaDati = r; if (!r.iscritto) { try { localStorage.removeItem(chiave); } catch (e) { /* niente */ } } disegnaRubrica(); }
+  else if (r.op === "elenco") {
+    S.rubricaDati = r; if (!r.iscritto) { try { localStorage.removeItem(chiave); } catch (e) { /* niente */ } }
+    // contatti senza nome: prendono il nome con cui sono iscritti in rubrica (salvato, come se l'avessi scritto tu)
+    (r.utenti || []).forEach((u) => {
+      if (u.a !== S.me && S.senzaNome.has(u.a) && u.n) { manda("ADD " + u.a + " " + inHex(u.n)); S.senzaNome.delete(u.a); aggiornaContatto(u.a, u.n); }
+    });
+    disegnaRubrica();
+  }
   else if (r.op === "errore") toast("Rubrica: " + r.msg);
 }
 
@@ -343,7 +353,11 @@ function evento(riga) {
     S.ritardoWs = 1500;
     if (S.chatDaAprire) { const a = S.chatDaAprire; S.chatDaAprire = ""; setTimeout(() => apriChat(a), 300); }
   }
-  else if (t === "C") { aggiornaContatto(p[1], p[2] ? daHex(p[2]) : p[1].slice(0, 10)); cacheContatto(p[1]); }
+  else if (t === "C") {
+    // contatto senza nome: si ricorda, così prende quello con cui è iscritto in rubrica
+    if (p[2]) S.senzaNome.delete(p[1]); else S.senzaNome.add(p[1]);
+    aggiornaContatto(p[1], p[2] ? daHex(p[2]) : p[1].slice(0, 10)); cacheContatto(p[1]);
+  }
   else if (t === "L") { anteprima(p[1], p.slice(2).join(" ")); cacheContatto(p[1]); }
   else if (t === "ST") {
     p[2] === "1" ? S.online.add(p[1]) : S.online.delete(p[1]);

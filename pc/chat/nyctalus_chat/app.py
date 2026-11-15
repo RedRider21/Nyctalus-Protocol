@@ -1017,6 +1017,9 @@ class Chat(Gtk.Window):
         self._cmd("SUB")
         self._cmd("RISERVATA")            # stato della modalità riservata (per il menu)
         self._cmd("CASSAFORTE")           # dati cifrati con passphrase? (per il menu)
+        # i nomi della rubrica per i contatti senza nome (senza aprire la rubrica)
+        GLib.timeout_add_seconds(4, lambda: (self.rubrica and getattr(self, "_senza_nome", None)
+                                             and self.chiedi_rubrica({"op": "elenco"}), False)[1])
         # rubrica: «ci sono» se iscritti (così risultiamo in linea), apertura chiesta dal mini menu
         GLib.timeout_add_seconds(4, lambda: self._ci_sono() and False)
         GLib.timeout_add_seconds(180, self._ci_sono)
@@ -1093,6 +1096,11 @@ class Chat(Gtk.Window):
         elif tipo == "C" and len(parti) >= 2:
             addr = parti[1]
             nome = _da_hex(parti[2]) if len(parti) >= 3 and parti[2] else addr[:10]
+            # contatto senza nome: prenderà quello con cui è iscritto in rubrica
+            senza = getattr(self, "_senza_nome", None)
+            if senza is None:
+                senza = self._senza_nome = set()
+            (senza.add if not (len(parti) >= 3 and parti[2]) else senza.discard)(addr)
             self._upsert_contatto(addr, nome)
         elif tipo == "L" and len(parti) >= 4:
             # L <addr> <ultima riga di cronologia>
@@ -2021,6 +2029,14 @@ class Chat(Gtk.Window):
         elif r.get("op") == "elenco":
             if not r.get("iscritto") and nomi.pop(self.rubrica, None) is not None:
                 self._salva_ui()
+            # contatti senza nome: prendono il nome con cui sono iscritti in rubrica (salvato)
+            senza = getattr(self, "_senza_nome", set())
+            for u in r.get("utenti", []):
+                a, n = str(u.get("a", "")), str(u.get("n", "")).strip()
+                if a in senza and n:
+                    self._cmd("ADD %s %s" % (a, n.encode().hex()))
+                    senza.discard(a)
+                    self._upsert_contatto(a, n)
             if self.fin_rubrica is not None:
                 self.fin_rubrica.mostra(r, self._iscritto())
         elif r.get("op") == "errore" and self.fin_rubrica is not None:
