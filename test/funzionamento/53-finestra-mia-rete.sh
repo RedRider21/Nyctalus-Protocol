@@ -107,4 +107,11 @@ else
   grep -q "^VOCI .*⬆ .*🧭 .*🏠 .*🔗" "$TMP/ver.txt" && pass "menu ⚙: versione, ⬆ Aggiorna, 🧭 Che cosa vuoi fare, 🏠 La mia rete, 🔗 Collegati" || fail "voci: $(grep VOCI "$TMP/ver.txt")"
   grep -q "^BENVENUTO 0 1 True" "$TMP/ver.txt" && pass "primo avvio: «Che cosa vuoi fare?» una volta sola, e non a chi ha già una rete" || fail "primo avvio: $(grep BENVENUTO "$TMP/ver.txt")"
 fi
+# ⚙ Impostazioni → Rete → «Apri il gestore della rete»: un terminale che RESTA aperto (prima si
+# chiudeva subito: lanciava nyctalus-rete senza comandi), con stato, protezione e comandi
+HOME="$TMP/gestore-term" NYCTALUS_BIN="$BIN" python3 "$ROOT/pc/gestore-rete/nyctalus-rete" crea --nome Prova > /dev/null 2>&1
+HOME="$TMP/gestore-term" timeout 30 bash "$ROOT/strumenti/avvia-terminale.sh" --rete --dentro < /dev/null > "$TMP/gt.txt" 2>&1; E=$?
+[ "$E" = 0 ] && grep -q "Gestore della rete Nyctalus" "$TMP/gt.txt" && grep -q "Camuffamento" "$TMP/gt.txt" && grep -q "nyctalus-rete protezione si" "$TMP/gt.txt" \
+  && grep -q '"--rete"' "$ROOT/pc/launcher/nyctalus_launcher/app.py" \
+  && pass "«Apri il gestore della rete»: terminale con stato, protezione e comandi, che resta aperto (shell interattiva)" || fail "gestore in terminale: $E $(head -5 "$TMP/gt.txt")"
 [ "$KO" -eq 0 ]

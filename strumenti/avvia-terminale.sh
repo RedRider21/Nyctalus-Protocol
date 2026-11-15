@@ -12,17 +12,56 @@ QUI="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 if   [ -x "$QUI/cli/nyctalus-cli" ];       then CLIDIR="$QUI/cli"            # pacchetto installato
 else CLIDIR="$QUI/../pc/cli"; fi                                            # progetto
 
+# --rete: il terminale del GESTORE DELLA RETE (stato, protezione, comandi di nyctalus-rete)
+MODO=""; [ "${1:-}" = "--rete" ] && { MODO="--rete"; shift; }
 if [ "${1:-}" != "--dentro" ]; then
   io="$(printf '%q' "$QUI/avvia-terminale.sh")"
   for t in x-terminal-emulator gnome-terminal mate-terminal xfce4-terminal konsole xterm; do
     command -v "$t" >/dev/null 2>&1 || continue
     case "$t" in
-      gnome-terminal) exec gnome-terminal --title="Nyctalus" -- bash "$QUI/avvia-terminale.sh" --dentro ;;
-      konsole|xterm)  exec "$t" -e bash "$QUI/avvia-terminale.sh" --dentro ;;
-      *)              exec "$t" -e "bash $io --dentro" ;;
+      gnome-terminal) exec gnome-terminal --title="Nyctalus" -- bash "$QUI/avvia-terminale.sh" $MODO --dentro ;;
+      konsole|xterm)  exec "$t" -e bash "$QUI/avvia-terminale.sh" $MODO --dentro ;;
+      *)              exec "$t" -e "bash $io $MODO --dentro" ;;
     esac
   done
   echo "✗ nessun terminale trovato (x-terminal-emulator, gnome-terminal, xterm…)"; exit 1
+fi
+
+if [ "$MODO" = "--rete" ]; then
+  if [ -f "$QUI/gestore-rete/nyctalus-rete" ]; then GDIR="$QUI/gestore-rete"; else GDIR="$QUI/../pc/gestore-rete"; fi
+  printf '\033]0;Nyctalus · gestore della rete\007'
+  cd "$HOME" 2>/dev/null
+  export PATH="$GDIR:$CLIDIR:$PATH"
+  echo "🦇 Gestore della rete Nyctalus"
+  echo
+  echo "── La rete che usa questo PC"
+  python3 "$GDIR/nyctalus-rete" stato 2>&1 | sed 's/^/  /'
+  if [ -f "$HOME/.nyctalus-rete/autorita.json" ] || [ -d "$HOME/.nyctalus-rete/internet" ] || [ -d "$HOME/.nyctalus-rete/casa" ]; then
+    echo
+    echo "── Protezione della rete che gestisci (forma del traffico, rumore di fondo)"
+    for q in "":"la tua rete" --internet:"la rete raggiungibile da Internet (casa --internet)" --casa:"la rete di casa (casa)"; do
+      O="$(python3 "$GDIR/nyctalus-rete" protezione ${q%%:*} 2>/dev/null | head -6)"
+      [ -n "$O" ] && { echo "  · ${q#*:}"; printf '%s\n' "$O" | sed 's/^/    /'; }
+    done
+  fi
+  cat <<'AIUTO'
+
+── Comandi utili (scrivili qui sotto)
+  nyctalus-rete stato                               a quale rete è collegato questo PC
+  nyctalus-rete protezione [--internet|--casa]      com'è la protezione della rete che gestisci
+  nyctalus-rete protezione si --forma rumore|h3|webrtc [--rumore 0.5] [--internet|--casa]
+                                                    cambia la forma del traffico o il rumore di fondo
+                                                    (poi riaccendi la rete e ridai il codice a tutti)
+  nyctalus-rete ip · porte · duckdns · vicini       IP e porte dal router, DuckDNS, rete in casa
+  nyctalus-rete reti · usa N · importa CODICE       le reti salvate, cambiare rete
+  nyctalus-rete --help                              tutti i comandi    ·   exit per chiudere
+AIUTO
+  echo
+  RC="$(mktemp /tmp/nyctalus-rc.XXXXXX)"
+  printf '%s\n' '[ -f ~/.bashrc ] && . ~/.bashrc' "PS1='\[\e[1;36m\]nyctalus-rete\[\e[0m\] \w › '" "export PATH=\"$GDIR:$CLIDIR:\$PATH\"" > "$RC"
+  bash --rcfile "$RC" -i
+  rm -f "$RC"
+  exit 0
 fi
 
 # --- dentro il terminale --------------------------------------------------------------

@@ -695,16 +695,13 @@ class Launcher(Gtk.Window):
         return box
 
     def _apri_gestore_rete(self):
-        rete = RADICE / "gestore-rete" / "nyctalus-rete"
-        if not rete.exists():
-            return self._avviso(_t("lau.settings"), _t("lau.in_arrivo_corpo"))
-        for term in (["x-terminal-emulator", "-e"], ["gnome-terminal", "--"], ["konsole", "-e"], ["xterm", "-e"]):
-            try:
-                subprocess.Popen(term + [sys.executable, str(rete)])
+        """Un terminale che RESTA APERTO con lo stato della rete, la sua protezione e i comandi di
+        nyctalus-rete pronti (prima apriva nyctalus-rete senza comandi: stampava l'aiuto e si chiudeva)."""
+        for candidato in (RADICE / "avvia-terminale.sh", RADICE.parent / "strumenti" / "avvia-terminale.sh"):
+            if candidato.exists():
+                self._lancia(["bash", str(candidato), "--rete"])
                 return
-            except FileNotFoundError:
-                continue
-        self._avviso(_t("lau.settings"), "nyctalus-rete")
+        self._avviso(_t("lau.settings"), _t("lau.in_arrivo_corpo"))
 
     def _impostazioni_finestra(self):
         d = Gtk.Dialog(title=_t("lau.imp.titolo"), transient_for=self, modal=True)
