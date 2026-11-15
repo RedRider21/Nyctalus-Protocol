@@ -137,7 +137,7 @@ public class ServizioNotifiche extends Service {
             return;
         }
         if (!("msg".equals(tipo) || "file".equals(tipo)) || !da.matches("[a-z2-7]{56}\\.nyct")) return;
-        if (appInPrimoPiano) return;
+        if (appInPrimoPiano && MainActivity.chatInVista()) return;   // nel menu principale: notifica
         String nome = o.optString("nome", da.substring(0, 10));
         String testo = "msg".equals(tipo) ? o.optString("testo") : descriviFile(o.optString("mime"), o.optString("file"));
         List<String> righe;
@@ -178,7 +178,9 @@ public class ServizioNotifiche extends Service {
             nm.cancel(id);
             return;
         }
-        if (appInPrimoPiano) return;              // app aperta: squilla già la schermata della chiamata
+        // chat sullo schermo: squilla già la sua schermata. Nel menu principale dell'app (o nel
+        // browser) invece non squillerebbe nulla: allora la notifica con Rispondi / Rifiuta
+        if (appInPrimoPiano && MainActivity.chatInVista()) return;
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationChannel ch = new NotificationChannel(CANALE_CHIAMATE, "Chiamate", NotificationManager.IMPORTANCE_HIGH);
             ch.setDescription("Chiamate in arrivo nella chat Nyctalus");

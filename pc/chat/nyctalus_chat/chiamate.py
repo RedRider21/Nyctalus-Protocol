@@ -91,26 +91,28 @@ class Chiamate:
         scala.connect("value-changed", lambda w: self._volume(w.get_value() / 100))
         box.pack_start(scala, False, False, 0)
         box.pack_start(Gtk.Label(label=self._t("chat.ch.uscita"), xalign=0), False, False, 0)
-        self.box_uscite = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        box.pack_start(self.box_uscite, False, False, 0)
+        # ogni pulsante 🔊 (barra della chat e finestra della chiamata) ha il SUO elenco: prima ce
+        # n'era uno solo, che il secondo pulsante toglieva al primo (menu vuoto, «non fa nulla»)
+        uscite = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        box.pack_start(uscite, False, False, 0)
         box.show_all()
         pop.add(box)
-        pop.connect("show", lambda _p: self._riempi_uscite())
+        pop.connect("show", lambda _p: self._riempi_uscite(uscite))
         return pop
 
-    def _riempi_uscite(self):
-        for f in self.box_uscite.get_children():
-            self.box_uscite.remove(f)
+    def _riempi_uscite(self, box_uscite):
+        for f in box_uscite.get_children():
+            box_uscite.remove(f)
         primo = Gtk.RadioButton.new_with_label(None, self._t("chat.ch.predefinita"))
         primo.set_active(self.uscita is None)
         primo.connect("toggled", lambda b: b.get_active() and self._scegli_uscita(None))
-        self.box_uscite.pack_start(primo, False, False, 0)
+        box_uscite.pack_start(primo, False, False, 0)
         for nome, descr in media.uscite_audio():
             b = Gtk.RadioButton.new_with_label_from_widget(primo, descr)
             b.set_active(self.uscita == nome)
             b.connect("toggled", lambda w, n=nome: w.get_active() and self._scegli_uscita(n))
-            self.box_uscite.pack_start(b, False, False, 0)
-        self.box_uscite.show_all()
+            box_uscite.pack_start(b, False, False, 0)
+        box_uscite.show_all()
 
     def _scegli_uscita(self, nome):
         self.uscita = nome

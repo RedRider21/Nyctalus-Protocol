@@ -103,9 +103,20 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri[]> attesaFile;
     private Uri scattoInCorso;
 
+    /** L'app aperta (per sapere se la chat è davvero sullo schermo o si è nel menu principale). */
+    private static volatile java.lang.ref.WeakReference<MainActivity> attiva;
+
+    /** True solo se la chat (la pagina) è sullo schermo: nel menu principale o nel browser una
+     *  chiamata in arrivo non squillerebbe da nessuna parte, quindi serve la notifica. */
+    static boolean chatInVista() {
+        MainActivity a = attiva != null ? attiva.get() : null;
+        return a != null && a.web != null && a.web.getParent() != null;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        attiva = new java.lang.ref.WeakReference<>(this);
         caricaTema();
         getWindow().setStatusBarColor(C_SFONDO);
         getWindow().setNavigationBarColor(C_SFONDO);
