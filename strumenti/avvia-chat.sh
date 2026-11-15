@@ -60,6 +60,13 @@ except Exception: print('')" "$CFG" "$1" 2>/dev/null; }
 porta_occupata() { ss -ltn 2>/dev/null | grep -q ":$1\b"; }
 
 URL="$(leggi_cfg directory_url)"; AUTH="$(leggi_cfg authority)"
+# rete ospitata in questa casa (o su questo PC): nodi ed elenco con l'indirizzo interno, perché
+# molti router non rimandano indietro i collegamenti verso il proprio IP pubblico
+RETE_G=""; for c in "$QUI/gestore-rete/nyctalus-rete" "$QUI/../pc/gestore-rete/nyctalus-rete"; do [ -f "$c" ] && { RETE_G="$c"; break; }; done
+if [ -n "$URL" ] && [ -n "$RETE_G" ]; then
+  VIC="$(python3 "$RETE_G" vicini 2>/dev/null)"
+  [ -n "$VIC" ] && { export NYCTALUS_VICINI="$VIC"; URL="$(python3 "$RETE_G" vicini --url 2>/dev/null || echo "$URL")"; echo "» rete ospitata in questa casa: uso l'indirizzo interno ($VIC)"; }
+fi
 # camuffamento e rumore di fondo della rete (dal codice di rete; reti senza: niente)
 PROT=(); PROT_SITO=()
 CAM="$(leggi_cfg camuffamento)"; RUM="$(leggi_cfg rumore)"

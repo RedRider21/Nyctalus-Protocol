@@ -54,6 +54,11 @@ else
     avviso "Nessuna rete Nyctalus: apri prima la chat, oppure collegati a una rete con nyctalus-rete importa CODICE"
     exit 1
   fi
+  RETE_G=""; for c in "$QUI/gestore-rete/nyctalus-rete" "$QUI/../pc/gestore-rete/nyctalus-rete"; do [ -f "$c" ] && { RETE_G="$c"; break; }; done
+  if [ -n "$RETE_G" ]; then                    # rete ospitata in questa casa: indirizzo interno
+    VIC="$(python3 "$RETE_G" vicini 2>/dev/null)"
+    [ -n "$VIC" ] && { export NYCTALUS_VICINI="$VIC"; URL="$(python3 "$RETE_G" vicini --url 2>/dev/null || echo "$URL")"; }
+  fi
   WORK="$(mktemp -d /tmp/nyctalus-firefox.XXXXXX)"
   if ! python3 -c "import urllib.request,sys;open(sys.argv[2],'wb').write(urllib.request.urlopen(sys.argv[1],timeout=25).read())" "$URL" "$WORK/dir.txt" 2>/dev/null; then
     avviso "Non riesco a scaricare l'elenco dei nodi della rete ($URL)"; exit 1

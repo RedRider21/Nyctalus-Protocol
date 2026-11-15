@@ -109,11 +109,13 @@ Il comando:
 
 **Lascia la finestra aperta** finché fate le prove; Ctrl-C spegne tutto.
 
-> Se la prova dice che i nodi **non rispondono**, spesso la causa è il router di casa che
-> non fa «tornare dentro» i pacchetti diretti al proprio nome (*NAT loopback*). Da fuori
-> funziona, ma il PC non riesce a raggiungersi da solo. Rimedio, **solo su questo PC**:
-> aggiungi a `/etc/hosts` la riga `127.0.0.1 miacasa.ddns.net` e rilancia il comando.
-> Il telefono, se è in casa sulla Wi-Fi, in quel caso usalo con i **dati mobili**.
+> Se la prova dice che i nodi **non rispondono** da questo PC, spesso è solo il router di casa
+> che non fa «tornare dentro» i pacchetti diretti al proprio indirizzo pubblico (*NAT
+> loopback*, per esempio i TIM Hub). **Non serve fare niente** (dalla 0.3.25): i nodi di questo
+> PC si parlano dall'interno, il codice di rete porta anche l'indirizzo in casa di chi ospita
+> (`lan`) e PC, browser, Firefox, collaudo e telefono **nella stessa casa** usano quello da soli
+> (`nyctalus-rete vicini` mostra la regola). La prova vera resta quella da fuori: un telefono
+> con i **dati mobili** o un amico.
 
 ## Passo 6 · Il tuo amico si collega
 
@@ -181,7 +183,7 @@ di 3 gestori diversi. Il perché, in `PIANO-ANONIMATO.md` (Tappa 3).
 |---|---|
 | l'amico non apre `http://NOME:18800/` | inoltro TCP 18800 mancante o verso l'indirizzo sbagliato (passi 3-4); nome No-IP non aggiornato (`ping NOME` ≠ IP del router); firewall del PC (il comando del passo 5 lo dice); CGNAT (passo 1) |
 | la pagina si apre ma la chat dice «rete non raggiungibile» | inoltro **UDP 4701-4704** mancante (la pagina usa TCP, i nodi UDP: servono tutte e due le regole) |
-| sul tuo PC i nodi non rispondono, all'amico sì | NAT loopback del router: riga in `/etc/hosts` (passo 5) |
+| sul tuo PC i nodi non rispondono, all'amico sì | NAT loopback del router: dalla 0.3.25 si aggira da solo (passo 5); prima, riga in `/etc/hosts` |
 | funzionava, poi più nulla | il PC è stato riavviato o la finestra chiusa (rilancia il passo 5); l'IP è cambiato e No-IP non si è aggiornato; il nome gratuito non è stato confermato |
 | impronte diverse | **non usate quella rete**: rifate l'importazione dal codice giusto |
 | chiamata a scatti | linea di upload lenta su uno dei due lati o sul tuo (che ospita i nodi: tutto il traffico passa da te). Provate solo voce |

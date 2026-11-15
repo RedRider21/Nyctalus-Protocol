@@ -205,6 +205,33 @@ pub async fn endpoint_client_tcp(
     Ok(Endpoint::new_with_abstract_socket(EndpointConfig::default(), None, socket, runtime)?)
 }
 
+/// **Nodi vicini** (`NYCTALUS_VICINI`, es. `87.7.168.88=192.168.1.14;5.6.7.8=127.0.0.1`): nodi
+/// annunciati con l'indirizzo PUBBLICO ma che stanno in questa stessa casa (o su questo stesso
+/// computer). Molti router non rimandano indietro i collegamenti verso il proprio indirizzo
+/// pubblico (niente «NAT loopback»): da casa li si raggiunge allora con l'indirizzo interno.
+/// Cambia solo DOVE ci si collega (stessa porta); il nodo resta autenticato dall'impronta TLS
+/// dell'elenco firmato, quindi un indirizzo sbagliato non può far parlare con un altro nodo.
+/// Lo imposta da sé `nyctalus-rete` (nodi di chi ospita la rete, client nella stessa casa).
+pub fn vicino(destinazione: SocketAddr) -> SocketAddr {
+    match std::env::var("NYCTALUS_VICINI") {
+        Ok(v) => vicino_da(&v, destinazione),
+        Err(_) => destinazione,
+    }
+}
+
+fn vicino_da(regole: &str, destinazione: SocketAddr) -> SocketAddr {
+    for regola in regole.split([';', ',']) {
+        let Some((pubblico, interno)) = regola.trim().split_once('=') else { continue };
+        let (Ok(p), Ok(i)) = (pubblico.trim().parse::<std::net::IpAddr>(), interno.trim().parse::<std::net::IpAddr>()) else {
+            continue;
+        };
+        if p == destinazione.ip() {
+            return SocketAddr::new(i, destinazione.port());
+        }
+    }
+    destinazione
+}
+
 /// Collegamento all'ENTRATA della rete: UDP; se in 6 secondi non risponde nessuno (UDP bloccato),
 /// lo stesso collegamento su **TCP** alla stessa porta. `NYCTALUS_TCP=1` sempre TCP, `=0` mai.
 pub async fn collega_entrata(
@@ -215,6 +242,7 @@ pub async fn collega_entrata(
 ) -> Risultato<(Endpoint, quinn::Connection)> {
     let modo = std::env::var("NYCTALUS_TCP").unwrap_or_default();
     let nome = crate::tls::nome_per(&destinazione);
+    let destinazione = vicino(destinazione);
     if modo != "1" {
         let locale: SocketAddr = if destinazione.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
         let endpoint = endpoint_client(locale, offusca)?;
@@ -422,3 +450,21 @@ mod test {
         assert_eq!(passati, 0);
     }
 }
+
+#[cfg(test)]
+mod prove_vicini {
+    use super::vicino_da;
+    use std::net::SocketAddr;
+
+    #[test]
+    fn indirizzo_pubblico_di_casa_diventa_interno() {
+        let d: SocketAddr = "87.7.168.88:4701".parse().unwrap();
+        assert_eq!(vicino_da("87.7.168.88=192.168.1.14", d), "192.168.1.14:4701".parse::<SocketAddr>().unwrap());
+        assert_eq!(vicino_da("1.2.3.4=127.0.0.1; 87.7.168.88=127.0.0.1", d), "127.0.0.1:4701".parse::<SocketAddr>().unwrap());
+        // altri indirizzi e regole rovinate: nessun cambio
+        assert_eq!(vicino_da("1.2.3.4=192.168.1.14", d), d);
+        assert_eq!(vicino_da("spazzatura;87.7.168.88=;=1.1.1.1;87.7.168.88=nome", d), d);
+        assert_eq!(vicino_da("", d), d);
+    }
+}
+

@@ -771,7 +771,7 @@ async fn nuovo_collegamento(
         None => crate::tls::config_client_insicuro()?,
     };
     endpoint.set_default_client_config(config);
-    let connessione = endpoint.connect(prossimo, &crate::tls::nome_per(&prossimo))?.await?;
+    let connessione = endpoint.connect(crate::trasporto::vicino(prossimo), &crate::tls::nome_per(&prossimo))?.await?;
     Ok((endpoint, connessione))
 }
 

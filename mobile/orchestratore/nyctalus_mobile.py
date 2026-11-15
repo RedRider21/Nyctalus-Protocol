@@ -134,8 +134,44 @@ def leggi_codice(testo):
     for k in ("rubrica", "casella"):                     # rubrica e casella della rete
         if re.fullmatch(r"[a-z2-7]{56}\.nyct", str(cfg.get(k, ""))):
             rete[k] = cfg[k]                # la rubrica della rete
+    if ip_di_casa(str(cfg.get("lan", ""))):              # indirizzo in casa di chi ospita la rete
+        rete["lan"] = cfg["lan"]
     rete.update(prot_da_codice(cfg))                     # camuffamento e rumore di fondo della rete
     return rete
+
+
+def ip_di_casa(x):
+    """Un indirizzo IPv4 della rete di casa (192.168…, 10…, 172.16-31…)."""
+    m = re.fullmatch(r"(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})", x or "")
+    if not m or any(int(g) > 255 for g in m.groups()):
+        return False
+    a, b = int(m.group(1)), int(m.group(2))
+    return a == 10 or (a == 172 and 16 <= b <= 31) or (a == 192 and b == 168)
+
+
+def vicini(cfg):
+    """Rete ospitata nella casa in cui si trova il telefono (stessa Wi-Fi): molti router non
+    rimandano indietro i collegamenti verso il proprio IP pubblico, quindi nodi ed elenco si
+    raggiungono con l'indirizzo interno di chi ospita (campo «lan» del codice). Lontano da casa
+    l'indirizzo interno non risponde e non cambia niente. → (regola NYCTALUS_VICINI o "", url)."""
+    url = str(cfg.get("directory_url") or "")
+    lan = str(cfg.get("lan") or "")
+    if not url or not ip_di_casa(lan):
+        return "", url
+    parti = urllib.parse.urlsplit(url)
+    host, porta = parti.hostname or "", parti.port or (443 if parti.scheme == "https" else 80)
+    try:
+        pubblico = socket.getaddrinfo(host, None, socket.AF_INET)[0][4][0]
+    except (OSError, IndexError, UnicodeError):
+        return "", url
+    if ip_di_casa(pubblico) or pubblico.startswith("127."):
+        return "", url
+    try:
+        with socket.create_connection((lan, porta), timeout=0.8):
+            pass
+    except OSError:
+        return "", url
+    return "%s=%s" % (pubblico, lan), urllib.parse.urlunsplit(parti._replace(netloc="%s:%d" % (lan, porta)))
 
 
 def prot_da_codice(cfg):
@@ -294,6 +330,12 @@ class Servizi:
             DATI_CHAT.mkdir(parents=True, exist_ok=True)
             cfg = leggi_config()
             pubblica = bool(cfg.get("directory_url") and cfg.get("authority"))
+            regola, url_elenco = vicini(cfg) if pubblica else ("", "")
+            if regola:                     # la rete è ospitata in questa casa: indirizzo interno
+                os.environ["NYCTALUS_VICINI"] = regola
+                log("rete ospitata in questa casa: uso l'indirizzo interno (%s)" % regola)
+            else:
+                os.environ.pop("NYCTALUS_VICINI", None)
             porta_socks = int(PORTE["socks"] if pubblica else PORTE["socks_locale"])
             socks = "127.0.0.1:%d" % porta_socks
             occupate = [p for p in (CONTROLLO[1], int(PORTE["backend"]), porta_socks) if not porta_libera(p)]
@@ -333,7 +375,7 @@ class Servizi:
             if pubblica:
                 self.modalita, self.dettaglio = "pubblica", "elenco dei nodi"
                 dirf = lavoro / "dir.txt"
-                with urllib.request.urlopen(cfg["directory_url"], timeout=25) as r:
+                with urllib.request.urlopen(url_elenco or cfg["directory_url"], timeout=25) as r:
                     dirf.write_bytes(r.read())
                 autorita = cfg["authority"]
                 self._lancia([binario, "start", "--directory", str(dirf), "--authority", autorita,
@@ -1396,13 +1438,13 @@ async def cambia_rete(lettore, scrittore, req):
             cfg["ponti"] = {k: v for k, v in tutti.items() if v}
             nome = cfg.get("nome_rete", "")
         elif dati.get("prova"):
-            for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3"):
+            for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3", "lan"):
                 cfg.pop(k, None)
             nome = ""
         elif "usa" in dati:
             rete = reti[int(dati["usa"])]
             cfg.update(directory_url=rete["directory_url"], authority=rete["authority"], nome_rete=rete["nome"])
-            for k in ("rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3"):   # se la rete li ha
+            for k in ("rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3", "lan"):   # se la rete li ha
                 cfg.pop(k, None)
                 if rete.get(k):
                     cfg[k] = rete[k]
@@ -1412,7 +1454,7 @@ async def cambia_rete(lettore, scrittore, req):
         else:
             rete = leggi_codice(dati.get("codice", ""))
             cfg.update(directory_url=rete["directory_url"], authority=rete["authority"], nome_rete=rete["nome"])
-            for k in ("rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3"):   # se la rete li ha
+            for k in ("rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3", "lan"):   # se la rete li ha
                 cfg.pop(k, None)
                 if rete.get(k):
                     cfg[k] = rete[k]

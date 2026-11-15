@@ -29,6 +29,7 @@ import re
 import shutil
 import socket
 import subprocess
+import sys
 import threading
 import time
 import urllib.request
@@ -285,6 +286,22 @@ entry.nxs-find-none { background: #5c1f2c; }
 .nxs-find-none-text { color: #ff5a8a; }
 """
 
+
+
+def _vicini(url):
+    """Rete ospitata in questa casa (o su questo PC): la regola «IP pubblico=IP interno» per il
+    motore e l'elenco con l'indirizzo interno (`nyctalus-rete vicini`). → (regola o "", url)."""
+    g = Path(__file__).resolve().parents[2] / "gestore-rete" / "nyctalus-rete"
+    if not g.exists():
+        return "", url
+    try:
+        regola = subprocess.run([sys.executable, str(g), "vicini"], capture_output=True, text=True, timeout=20).stdout.strip()
+        if regola:
+            locale = subprocess.run([sys.executable, str(g), "vicini", "--url"], capture_output=True, text=True, timeout=20).stdout.strip()
+            return regola, (locale or url)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return "", url
 
 class Browser(FunzioniExtra, Gtk.Window):
     """Finestra principale del browser."""
@@ -691,6 +708,7 @@ class Browser(FunzioniExtra, Gtk.Window):
             if url and auth:
                 self._servizi_locale = False
                 dirf = self.data_dir / "directory.txt"
+                vicini, url = _vicini(url)       # rete ospitata in questa casa: indirizzo interno
                 try:
                     import urllib.request
                     with urllib.request.urlopen(url, timeout=15) as r:
@@ -716,6 +734,8 @@ class Browser(FunzioniExtra, Gtk.Window):
                 # ponti nascosti della rete: per ambiente (la riga di comando la vede chiunque)
                 ponti = (config.get("ponti") or {}).get(auth, [])
                 ambiente = dict(os.environ, NYCTALUS_PONTI=";".join(ponti))
+                if vicini:
+                    ambiente["NYCTALUS_VICINI"] = vicini
                 p = subprocess.Popen(
                     [binario, "start", "--directory", str(dirf), "--authority", auth,
                      "--socks", socks] + prot,

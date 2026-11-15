@@ -238,7 +238,7 @@ async fn canale_diretto(nodo: &NodoRete, offusca: Option<[u8; 32]>) -> Risultato
     let locale: SocketAddr = if indirizzo.is_ipv6() { "[::]:0" } else { "0.0.0.0:0" }.parse()?;
     let endpoint = crate::trasporto::endpoint_client(locale, offusca)?;
     let config = crate::tls::config_client(impronta)?;
-    let conn = endpoint.connect_with(config, *indirizzo, &crate::tls::nome_per(indirizzo))?.await?;
+    let conn = endpoint.connect_with(config, crate::trasporto::vicino(*indirizzo), &crate::tls::nome_per(indirizzo))?.await?;
     let (invio, ricezione) = crate::trasporto::apri_flusso(&conn, offusca).await?;
     Ok(Canale::Diretto { invio, ricezione, _conn: Some(conn), _endpoint: Some(endpoint) })
 }

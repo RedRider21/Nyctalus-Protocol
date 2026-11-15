@@ -360,8 +360,19 @@ def sonda(motore, elenco, aut, opzioni, attesa=4):
 def controllo_nodi(r, cfg, motore, cartella):
     r.titolo("2 · Nodi della rete")
     aut = cfg["authority"]
+    url = cfg["directory_url"]
+    g = Path(__file__).resolve().parent.parent / "gestore-rete" / "nyctalus-rete"
+    if g.exists() and not os.path.isfile(url):     # rete ospitata in questa casa: indirizzo interno
+        try:
+            regola = subprocess.run([sys.executable, str(g), "vicini"], capture_output=True, text=True, timeout=20).stdout.strip()
+            if regola:
+                os.environ["NYCTALUS_VICINI"] = regola
+                url = subprocess.run([sys.executable, str(g), "vicini", "--url"], capture_output=True, text=True, timeout=20).stdout.strip() or url
+                r.nota("la rete è ospitata in questa casa: nodi ed elenco con l'indirizzo interno (%s)" % regola)
+        except (OSError, subprocess.SubprocessError):
+            pass
     try:
-        elenco = scarica_elenco(cfg["directory_url"], cartella)
+        elenco = scarica_elenco(url, cartella)
     except Exception as e:      # noqa: BLE001
         r.ko("l'elenco dei nodi non si scarica", str(e))
         return None

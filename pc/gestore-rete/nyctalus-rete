@@ -54,6 +54,8 @@ Per i CLIENT (chi usa la rete):
   nyctalus-rete importa CODICE|FILE      collega questo PC alla rete del codice
   nyctalus-rete importa --prova          torna alla rete di prova locale
   nyctalus-rete reti                     le reti salvate (● quella in uso)
+  nyctalus-rete vicini [--url]           se la rete in uso è ospitata in questa casa: la regola
+                                         «IP pubblico=IP interno» per il motore (o l'elenco da usare)
   nyctalus-rete aiuta si --indirizzo NOME|IP [--porta 4800] [--tetto 10] · aiuta no · aiuta stato
                                          «🦇 AIUTA LA RETE»: questo PC fa anche da nodo SOLO
                                          INTERMEDIO (mai uscita), con un tetto di banda
@@ -185,6 +187,61 @@ def apri_firewall(porta_web, porte_nodi, ip, cartella):
     for c in comandi:
         print("     sudo " + " ".join(c))
     print("   (per richiuderle: le stesse righe con «delete allow» al posto di «allow»)")
+
+
+def ip_privato(x):
+    """Un indirizzo IPv4 della rete di casa (192.168…, 10…, 172.16-31…), non pubblico."""
+    import ipaddress
+    try:
+        a = ipaddress.ip_address(x)
+    except ValueError:
+        return False
+    return a.version == 4 and any(a in ipaddress.ip_network(n) for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
+
+
+def risolvi4(nome):
+    try:
+        return socket.getaddrinfo(nome, None, socket.AF_INET)[0][4][0]
+    except (OSError, IndexError, UnicodeError):
+        return None
+
+
+def risponde(ip, porta, attesa=0.8):
+    try:
+        with socket.create_connection((ip, porta), timeout=attesa):
+            return True
+    except OSError:
+        return False
+
+
+def vicini_client(cfg=None):
+    """Per la rete in uso: se chi la ospita è in QUESTA casa (o su questo PC), la regola per il
+    motore «IP pubblico=IP interno» (NYCTALUS_VICINI) e l'indirizzo dell'elenco da usare. Molti
+    router non rimandano indietro i collegamenti verso il proprio IP pubblico (NAT loopback).
+    → (regola o "", url dell'elenco)."""
+    from urllib.parse import urlsplit, urlunsplit
+    cfg = cfg if cfg is not None else leggi_config_client()
+    url = str(cfg.get("directory_url") or "")
+    if not url:
+        return "", url
+    parti = urlsplit(url)
+    host, porta = parti.hostname or "", parti.port or (443 if parti.scheme == "https" else 80)
+    pubblico = host if re.fullmatch(r"\d+\.\d+\.\d+\.\d+", host) else risolvi4(host)
+    if not pubblico or ip_privato(pubblico) or pubblico.startswith("127."):
+        return "", url
+    candidati = []
+    for sotto in ("internet", "casa"):                   # la rete la ospita questo PC?
+        try:
+            if json.loads((DATI / sotto / "nyctalus-rete.json").read_text()).get("authority") == cfg.get("authority"):
+                candidati.append("127.0.0.1")
+        except (OSError, ValueError):
+            pass
+    if ip_privato(str(cfg.get("lan", ""))):
+        candidati.append(cfg["lan"])
+    for c in candidati:
+        if risponde(c, porta):
+            return "%s=%s" % (pubblico, c), urlunsplit(parti._replace(netloc="%s:%d" % (c, porta)))
+    return "", url
 
 
 def ip_locale():
@@ -499,11 +556,13 @@ class Rete:
         self.f_elenco.write_text(out.stdout)
         return self.f_elenco
 
-    def codice(self, url):
+    def codice(self, url, lan=None):
         if not re.match(r"^https?://[^\s]+$", url):
             esci("URL non valido: deve iniziare con http:// o https://")
         a = self.autorita()
         cfg = {"v": 1, "nome": a["nome"], "directory_url": url, "authority": a["pubblica"]}
+        if lan and ip_privato(lan):
+            cfg["lan"] = lan          # indirizzo in casa di chi ospita: chi è nella stessa casa lo usa
         cfg.update(self.protezione())               # camuffamento e rumore: li usano anche i client
         for chiave, nome_file in (("rubrica", "indirizzo"), ("casella", "casella-indirizzo")):
             f = self.dir / "rubrica" / nome_file
@@ -537,6 +596,8 @@ def leggi_codice(testo):
     for k in ("rubrica", "casella"):                     # rubrica e casella della rete
         if re.fullmatch(r"[a-z2-7]{56}\.nyct", str(cfg.get(k, ""))):
             rete[k] = cfg[k]
+    if ip_privato(str(cfg.get("lan", ""))):              # indirizzo in casa di chi ospita la rete
+        rete["lan"] = cfg["lan"]
     rete.update(prot_da_codice(cfg))                     # camuffamento e rumore della rete
     return rete
 
@@ -608,7 +669,7 @@ def importa(argomento):
         except Exception:     # noqa: BLE001
             cfg = {}
     if argomento == "--prova":
-        for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3"):
+        for k in ("directory_url", "authority", "nome_rete", "rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3", "lan"):
             cfg.pop(k, None)
         msg = "questo PC torna alla rete di prova locale"
     else:
@@ -623,7 +684,7 @@ def importa(argomento):
         except ValueError as e:
             esci(str(e))
         cfg.update({"directory_url": rete["directory_url"], "authority": rete["authority"], "nome_rete": rete["nome"]})
-        for k in ("rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3"):   # se la rete li ha
+        for k in ("rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3", "lan"):   # se la rete li ha
             cfg.pop(k, None)
             if rete.get(k):
                 cfg[k] = rete[k]
@@ -688,7 +749,7 @@ def usa_rete(n):
         esci("rete %d non trovata (nyctalus-rete reti per l'elenco)" % n)
     r = reti[n]
     cfg.update({"directory_url": r["directory_url"], "authority": r["authority"], "nome_rete": r["nome"], "reti": reti})
-    for k in ("rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3"):   # della rete (se ci sono)
+    for k in ("rubrica", "casella", "camuffamento", "rumore", "forma", "nome_h3", "lan"):   # della rete (se ci sono)
         cfg.pop(k, None)
         if r.get(k):
             cfg[k] = r[k]
@@ -917,6 +978,12 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None, uscita=Non
         r.imposta_senza_uscita(not uscita)
     senza_uscita = r.senza_uscita()
     b, proc, righe = binario(), [], []
+    if internet:
+        # i nodi, la rubrica e la casella di QUESTO PC si parlano fra loro: verso l'indirizzo
+        # pubblico di casa passano dall'interno (il router potrebbe non rimandarli indietro)
+        pubblico = internet if re.fullmatch(r"\d+\.\d+\.\d+\.\d+", internet) else risolvi4(internet)
+        if pubblico and not ip_privato(pubblico):
+            os.environ["NYCTALUS_VICINI"] = "%s=127.0.0.1" % pubblico
     try:
         for i in range(nodi):
             porta = porta_base + i
@@ -964,7 +1031,7 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None, uscita=Non
                                               else " (nella rete non c'è nessuna uscita: si naviga solo sui siti .nyct)"))
         avvia_rubrica(r, r.autorita()["pubblica"], proc)      # chi usa la rete vede chi c'è
         srv, url = servitore(r, porta_web, ip)
-        cod = r.codice(url)
+        cod = r.codice(url, lan if internet else None)
         imp = impronta(r.autorita()["pubblica"])
         # per «casa --servizio»: codice, impronta e pagina, da rileggere senza la finestra
         scrivi_privato(r.dir / "servizio-codice.txt", "%s\nimpronta %s\npagina %s\n" % (cod, imp, url.rsplit("/", 1)[0] + "/"))
@@ -983,7 +1050,8 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None, uscita=Non
             print("\nProva dei nodi attraverso il nome pubblico (da questo PC):")
             esito = subprocess.run([b, "nodes", "--directory", str(r.f_elenco), "--authority",
                                     r.autorita()["pubblica"], "--probe"] + opz_prot(r.protezione(), rumore=False),
-                                   capture_output=True, text=True, timeout=60)
+                                   capture_output=True, text=True, timeout=60,
+                                   env={k: v for k, v in os.environ.items() if k != "NYCTALUS_VICINI"})  # la strada vera
             print("  " + (esito.stdout.strip() or esito.stderr.strip()).replace("\n", "\n  "))
             if esito.returncode != 0:
                 print("  ⚠️  Da qui i nodi non rispondono col nome pubblico. Cause tipiche:")
@@ -1064,6 +1132,8 @@ def casa_servizio(args, togli=False, stampa=False):
         esci("la rete non è partita: journalctl --user -u %s" % UNITA_CASA.name)
     righe = (cartella / "servizio-codice.txt").read_text().splitlines()
     ok("rete sempre accesa (riparte da sola dopo un riavvio)")
+    if "--non-importare" not in args:      # anche questo PC usa la rete che ospita (chat, browser)
+        importa(righe[0])
     print("  Codice di rete da dare agli amici (contiene il tuo indirizzo: solo a loro):\n  %s" % righe[0])
     print("  %s · %s (dal telefono: apri la pagina e tocca «📲 Collega l'app Nyctalus»)" % (righe[1], righe[2]))
     print("  Rivederlo: nyctalus-rete casa%s --servizio --stampa  ·  messaggi: journalctl --user -u %s -f"
@@ -1501,6 +1571,9 @@ def principale(args):
         aiuta(args)
     elif cmd == "reti":
         elenca_reti()
+    elif cmd == "vicini":
+        regola, url = vicini_client()
+        print(url if "--url" in args else regola)
     elif cmd == "usa":
         if not args or not args[0].isdigit():
             esci("indica il numero della rete (nyctalus-rete reti per l'elenco)")
