@@ -161,6 +161,17 @@ Dati in `~/.nyctalus-siti/NOME/` (privata). Guida: `MANUALE-SITI.md`.
 
 Esce con 0 = tutto a posto, 1 = qualcosa non torna, 3 = controllo non possibile.
 
+**`nyctalus-aggiorna`** (PC, dalla 0.3.25): aggiorna dall'ultima release su GitHub. È lo stesso
+del bottone **⚙ → ⬆ Aggiorna Nyctalus** del mini menu.
+
+| Comando | A cosa serve |
+|---|---|
+| `nyctalus-aggiorna` | controlla, chiede conferma, scarica, verifica **firma** di `SHA256SUMS` e **impronta** del pacchetto, installa; riavvia la rete se è accesa come servizio |
+| `nyctalus-aggiorna --controlla [--json]` | dice solo se c'è una versione nuova e quanto pesa (esce con 10 se c'è) |
+| `nyctalus-aggiorna --si` | senza domande |
+
+Contatta GitHub solo quando lo lanci tu. Se firma o impronta non tornano non installa nulla.
+
 ---
 
 ## 6. Server e nodi

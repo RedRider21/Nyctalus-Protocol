@@ -76,7 +76,7 @@ cp -r "$ROOT/pc/browser/nyctalus_browser" "$ROOT/pc/browser/nxs_i18n" "$ROOT/pc/
 cp -r "$ROOT/pc/launcher/nyctalus_launcher" "$P/launcher/"
 cp -r "$ROOT/pc/chat/nyctalus_chat" "$P/chat/"
 cp -r "$ROOT/pc/file/nyctalus_file" "$P/file/"
-cp "$ROOT/pc/cli/nyctalus-cli" "$ROOT/pc/cli/nyctalus-collaudo" "$ROOT/pc/cli/nyctalus-integrita" "$P/cli/"
+cp "$ROOT/pc/cli/nyctalus-cli" "$ROOT/pc/cli/nyctalus-collaudo" "$ROOT/pc/cli/nyctalus-integrita" "$ROOT/pc/cli/nyctalus-aggiorna" "$P/cli/"
 cp "$ROOT/pc/firefox/user.js" "$ROOT/pc/firefox/inizio.html" "$P/firefox/"
 cp -r "$ROOT/pc/gestore-rete" "$P/"
 mkdir -p "$P/server"

@@ -1023,6 +1023,106 @@ class Launcher(Gtk.Window):
         f.run()
         f.destroy()
 
+    def _aggiorna(self):
+        """⬆ Aggiorna Nyctalus: controlla l'ultima release su GitHub (solo ora, su richiesta),
+        e con un tocco scarica, verifica firma e impronta e installa (nyctalus-aggiorna)."""
+        agg = RADICE / "cli" / "nyctalus-aggiorna"
+        if not agg.exists():
+            return self._avviso(_t("lau.agg"), _t("lau.in_arrivo_corpo"))
+        d = Gtk.Dialog(title=_t("lau.agg"), transient_for=self, modal=False)
+        d.set_default_size(560, -1)
+        box = d.get_content_area()
+        box.set_spacing(8)
+        box.set_border_width(14)
+        stato = Gtk.Label(label=_t("lau.agg.controllo", versione=versione()), xalign=0)
+        stato.set_line_wrap(True)
+        stato.set_max_width_chars(70)
+        box.add(stato)
+        nota = Gtk.Label(label=_t("lau.agg.nota"), xalign=0)
+        nota.set_line_wrap(True)
+        nota.set_max_width_chars(70)
+        nota.get_style_context().add_class("dim-label")
+        box.add(nota)
+        uscita = Gtk.TextView(editable=False, monospace=True, wrap_mode=Gtk.WrapMode.WORD_CHAR)
+        scorri = Gtk.ScrolledWindow(min_content_height=140)
+        scorri.add(uscita)
+        box.pack_start(scorri, True, True, 0)
+        barra = Gtk.Box(spacing=8)
+        vai = Gtk.Button(label="⬆ " + _t("lau.agg"))
+        riavvia = Gtk.Button(label="↻ " + _t("lau.agg.riavvia"))
+        chiudi = Gtk.Button(label=_t("lau.imp.chiudi"))
+        for b in (vai, riavvia, chiudi):
+            barra.pack_end(b, False, False, 0)
+        box.add(barra)
+        chiudi.connect("clicked", lambda _b: d.destroy())
+
+        def scrivi(t):
+            uscita.get_buffer().set_text(t)
+
+        def controllato(esito):
+            try:
+                info = json.loads(esito)
+            except ValueError:
+                info = {"errore": esito.strip() or "?"}
+            if info.get("errore"):
+                stato.set_text(_t("lau.agg.errore", errore=info["errore"]))
+            elif info.get("nuova"):
+                mb = ("%.1f MB" % (info["peso"] / 1e6)).replace(".", ",") if info.get("peso") else "?"
+                stato.set_text(_t("lau.agg.disponibile", installata=info["installata"], ultima=info["ultima"], peso=mb))
+                scrivi(_t("lau.agg.novita") + "\n" + info.get("novita", ""))
+                vai.set_label("⬆ " + _t("lau.agg.vai", ultima=info["ultima"]))
+                vai.show()
+            else:
+                stato.set_text(_t("lau.agg.aggiornato", installata=info.get("installata", versione())))
+            return False
+
+        def controlla():
+            try:
+                r = subprocess.run([sys.executable, str(agg), "--controlla", "--json"], capture_output=True, text=True, timeout=60)
+                esito = r.stdout.strip().splitlines()[-1] if r.stdout.strip() else r.stderr
+            except (OSError, subprocess.SubprocessError) as e:
+                esito = json.dumps({"errore": str(e)})
+            GLib.idle_add(controllato, esito)
+
+        def installato(esito):
+            codice, testo = esito
+            scrivi(testo)
+            if codice == 0:
+                stato.set_text(_t("lau.agg.fatto"))
+                riavvia.show()
+            else:
+                stato.set_text(_t("lau.agg.fallito"))
+                vai.set_sensitive(True)
+            return False
+
+        def installa(_b):
+            vai.set_sensitive(False)
+            stato.set_text(_t("lau.agg.in_corso"))
+            scrivi("")
+
+            def gira():
+                try:
+                    r = subprocess.run([sys.executable, str(agg), "--si"], capture_output=True, text=True, timeout=900,
+                                       stdin=subprocess.DEVNULL)
+                    esito = (r.returncode, (r.stdout + r.stderr).strip())
+                except (OSError, subprocess.SubprocessError) as e:
+                    esito = (1, str(e))
+                GLib.idle_add(installato, esito)
+            threading.Thread(target=gira, daemon=True).start()
+
+        def ricomincia(_b):
+            avvio = RADICE / "avvia-launcher.sh"
+            if avvio.exists():
+                subprocess.Popen(["bash", str(avvio)], start_new_session=True,
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.destroy()
+        vai.connect("clicked", installa)
+        riavvia.connect("clicked", ricomincia)
+        d.show_all()
+        vai.hide()
+        riavvia.hide()
+        threading.Thread(target=controlla, daemon=True).start()
+
     def _apri_terminale(self):
         """⌨ Terminale: il terminale del sistema pronto per nyctalus-cli (chat e file da riga di comando)."""
         for candidato in (RADICE / "avvia-terminale.sh", RADICE.parent / "strumenti" / "avvia-terminale.sh"):
@@ -1041,6 +1141,7 @@ class Launcher(Gtk.Window):
             menu.append(mi)
 
         voce("🦇 Nyctalus " + versione(), self._info_versione)            # la versione installata
+        voce("⬆ " + _t("lau.agg") + "…", self._aggiorna)                     # dalla release su GitHub
         menu.append(Gtk.SeparatorMenuItem())
         voce("🏠 " + _t("lau.miarete") + "…", self._mia_rete)              # accendere la PROPRIA rete, a spunte
         voce("🔗 " + _t("lau.collegati") + "…", self._collegati_rete)   # incolla il codice di rete (NYCT1:…)
