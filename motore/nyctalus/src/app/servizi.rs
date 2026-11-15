@@ -240,7 +240,11 @@ fn avvia_davvero(app: &Arc<App>) -> Result<(), String> {
             st.dettaglio = "elenco dei nodi".into();
         }
         let url = if url_elenco.is_empty() { s("directory_url") } else { url_elenco };
-        let corpo = rete::scarica(&url).map_err(|e| e.to_string())?;
+        let corpo = rete::scarica(&url).map_err(|e| {
+            let nome = s("nome_rete");
+            format!("la rete «{}» non risponde: l'elenco dei nodi non si scarica da {url} ({e}). È spenta, oppure da qui non \
+                     si raggiunge: riaccendila, oppure scegli un'altra rete o la rete di prova", if nome.is_empty() { "condivisa".into() } else { nome })
+        })?;
         std::fs::write(&dirf, corpo).map_err(|e| e.to_string())?;
         autorita = s("authority");
         let mut a = vec![b.clone(), "start".into(), "--directory".into(), dirf.to_string_lossy().into(), "--authority".into(), autorita.clone(),

@@ -118,12 +118,17 @@ public class MainActivity extends Activity {
             String[] galleria = Build.VERSION.SDK_INT >= 33
                     ? new String[]{"android.permission.READ_MEDIA_IMAGES", "android.permission.READ_MEDIA_VIDEO"}
                     : new String[]{"android.permission.READ_EXTERNAL_STORAGE"};
+            java.util.List<String> chiedi = new java.util.ArrayList<>();
             if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(galleria[0]) != PackageManager.PERMISSION_GRANTED
                     && !getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("galleria_chiesta", false)) {
                 getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("galleria_chiesta", true).apply();
-                requestPermissions(galleria, RICHIESTA_GALLERIA);
+                java.util.Collections.addAll(chiedi, galleria);
             }
-            new Thread(this::avvia).start();
+            // con Termux sul telefono: il permesso di comandarlo (spegnere il vecchio servizio, trasloco)
+            if (Build.VERSION.SDK_INT >= 23 && termuxInstallato() && checkSelfPermission(PERMESSO_TERMUX) != PackageManager.PERMISSION_GRANTED)
+                chiedi.add(PERMESSO_TERMUX);
+            if (!chiedi.isEmpty()) requestPermissions(chiedi.toArray(new String[0]), RICHIESTA_PERMESSO);   // poi avvia()
+            else new Thread(this::avvia).start();
         } else if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(PERMESSO_TERMUX) != PackageManager.PERMISSION_GRANTED
                 && termuxInstallato()) {
             requestPermissions(new String[]{PERMESSO_TERMUX}, RICHIESTA_PERMESSO);   // poi avvia()
@@ -673,7 +678,16 @@ public class MainActivity extends Activity {
                 // APK con tutto dentro: niente Termux. Il motore parte nella cartella privata dell'app.
                 imposta("avvio di Nyctalus…");
                 // un vecchio Nyctalus in Termux occuperebbe le stesse porte: lo si spegne (i suoi dati restano)
-                if (termuxInstallato()) { eseguiInTermuxSilenzioso(this, "nyctalus-mobile --ferma >/dev/null 2>&1; true"); dormi(1500); }
+                if (termuxInstallato() && MotoreNativo.chiRisponde(segreto) == MotoreNativo.ALTRO) {
+                    eseguiInTermuxSilenzioso(this, "nyctalus-mobile --ferma >/dev/null 2>&1; true");
+                    for (int k = 0; k < 10 && MotoreNativo.chiRisponde(segreto) == MotoreNativo.ALTRO; k++) dormi(700);
+                    if (MotoreNativo.chiRisponde(segreto) == MotoreNativo.ALTRO) {
+                        imposta("Il vecchio Nyctalus in Termux è ancora acceso e occupa le porte.\n"
+                                + "Apri Termux e scrivi:  nyctalus-mobile --ferma   poi riapri quest'app.\n"
+                                + "(Oppure consenti a quest'app di comandare Termux: lo spegne da sola.)");
+                        return;
+                    }
+                }
                 // primo avvio su un telefono che ha Nyctalus in Termux: prima di accendere la chat (che
                 // creerebbe un'identità nuova) si chiede se portare qui identità, contatti e messaggi
                 boolean decidere = termuxInstallato() && !getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("trasloco_deciso", false)

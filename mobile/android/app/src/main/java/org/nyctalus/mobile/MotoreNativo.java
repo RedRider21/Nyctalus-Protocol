@@ -62,6 +62,8 @@ final class MotoreNativo {
             dati.mkdirs();
             scriviPrivato(new File(dati, "token"), segreto);
             if (vivo()) return;                       // già acceso: rilegge il segreto da solo
+            // chiusa e riaperta l'app, il motore di prima può essere ancora acceso: lo si riusa
+            if (chiRisponde(segreto) == NOSTRO) return;
             File webapp = preparaWebapp(c);
             File lib = libreria(c);
             ProcessBuilder pb = new ProcessBuilder(lib.getAbsolutePath(), "app", "--webapp", webapp.getAbsolutePath());
@@ -90,6 +92,35 @@ final class MotoreNativo {
                 o.write(("errore avvio: " + e + "\n").getBytes("UTF-8"));
                 o.close();
             } catch (Exception ignorata) { }
+        }
+    }
+
+    static final int NESSUNO = 0, NOSTRO = 1, ALTRO = 2;
+
+    /** Chi risponde sulla porta dell'app: nessuno, il nostro motore, oppure un altro programma
+     *  (tipicamente il vecchio Nyctalus in Termux rimasto acceso). */
+    static int chiRisponde(String segreto) {
+        java.net.HttpURLConnection c = null;
+        try {
+            c = (java.net.HttpURLConnection) new java.net.URL(MainActivity.URL_BASE + "/api/stato").openConnection();
+            c.setConnectTimeout(800);
+            c.setReadTimeout(1500);
+            c.setRequestProperty("Cookie", "nyct=" + segreto);
+            c.setInstanceFollowRedirects(false);
+            if (c.getResponseCode() != 200) return ALTRO;
+            try (InputStream in = c.getInputStream()) {
+                java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = in.read(buf)) > 0) b.write(buf, 0, n);
+                return new org.json.JSONObject(b.toString("UTF-8")).optBoolean("nativo") ? NOSTRO : ALTRO;
+            }
+        } catch (java.net.ConnectException e) {
+            return NESSUNO;
+        } catch (Exception e) {
+            return ALTRO;
+        } finally {
+            if (c != null) c.disconnect();
         }
     }
 
