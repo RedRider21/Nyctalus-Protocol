@@ -66,7 +66,7 @@ public class MainActivity extends Activity {
     private static final String PERMESSO_TERMUX = "com.termux.permission.RUN_COMMAND";
     static final String PREFS = "nyctalus";
     private static final int RICHIESTA_PERMESSO = 1, RICHIESTA_FILE = 2, RICHIESTA_NOTIFICHE = 3, RICHIESTA_MICROFONO = 4, RICHIESTA_SCATTO = 6,
-            RICHIESTA_PREPARA = 7;
+            RICHIESTA_PREPARA = 7, RICHIESTA_GALLERIA = 8;
     /** La pagina della chat chiede il microfono (chiamata): si concede dopo il permesso di Android. */
     private android.webkit.PermissionRequest attesaMicrofono;
     /** Scatto con la fotocamera di sistema in attesa del permesso CAMERA (dichiarato per le videochiamate). */
@@ -112,7 +112,19 @@ public class MainActivity extends Activity {
         segreto = segreto();
         pulisciScattiVecchi();
         setContentView(costruisciAvvio());
-        if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(PERMESSO_TERMUX) != PackageManager.PERMISSION_GRANTED
+        if (MotoreNativo.disponibile(this)) {
+            // app «con tutto»: niente Termux; si chiede solo di poter mostrare foto e video recenti
+            // nella galleria degli allegati (si può dire di no: si sceglie dal selettore di Android)
+            String[] galleria = Build.VERSION.SDK_INT >= 33
+                    ? new String[]{"android.permission.READ_MEDIA_IMAGES", "android.permission.READ_MEDIA_VIDEO"}
+                    : new String[]{"android.permission.READ_EXTERNAL_STORAGE"};
+            if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(galleria[0]) != PackageManager.PERMISSION_GRANTED
+                    && !getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("galleria_chiesta", false)) {
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("galleria_chiesta", true).apply();
+                requestPermissions(galleria, RICHIESTA_GALLERIA);
+            }
+            new Thread(this::avvia).start();
+        } else if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(PERMESSO_TERMUX) != PackageManager.PERMISSION_GRANTED
                 && termuxInstallato()) {
             requestPermissions(new String[]{PERMESSO_TERMUX}, RICHIESTA_PERMESSO);   // poi avvia()
         } else {
