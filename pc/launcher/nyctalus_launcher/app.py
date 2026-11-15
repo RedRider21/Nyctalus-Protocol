@@ -864,6 +864,32 @@ class Launcher(Gtk.Window):
         riga = Gtk.Box(spacing=8)
         riga.pack_start(da_internet, False, False, 0)
         riga.pack_start(nome, True, True, 0)
+        trova = Gtk.Button(label="🔍 " + _t("lau.miarete.trova"))
+        trova.set_tooltip_text(_t("lau.miarete.trova_suggerimento"))
+        riga.pack_start(trova, False, False, 0)
+
+        def trovato(esito):
+            codice, testo = esito
+            trova.set_sensitive(True)
+            if codice == 0 and testo:
+                nome.set_text(testo)
+                da_internet.set_active(True)
+            else:
+                scrivi(_t("lau.miarete.trova_no") + ("\n\n" + testo if testo else ""))
+            return False
+
+        def premi_trova(_b):
+            trova.set_sensitive(False)
+
+            def gira():
+                try:
+                    r = subprocess.run([sys.executable, str(rete), "ip", "--per-rete"], capture_output=True, text=True, timeout=30)
+                    esito = (r.returncode, (r.stdout.strip() if r.returncode == 0 else ""))
+                except (OSError, subprocess.SubprocessError) as e:
+                    esito = (1, str(e))
+                GLib.idle_add(trovato, esito)
+            threading.Thread(target=gira, daemon=True).start()
+        trova.connect("clicked", premi_trova)
         box.add(solo_casa)
         box.add(riga)
         senza = Gtk.CheckButton(label=_t("lau.miarete.senza_uscita"))
@@ -879,6 +905,48 @@ class Launcher(Gtk.Window):
             sp.set_value(int(sc[k]))
             griglia.attach(sp, 1, i, 1, 1)
             numeri[k] = sp
+        # DuckDNS (facoltativo): un nome fisso che segue l'IP di casa
+        griglia.attach(Gtk.Label(label="DuckDNS", xalign=0, margin_top=8), 0, 3, 2, 1)
+        dk_dominio, dk_token = Gtk.Entry(), Gtk.Entry(visibility=False)
+        dk_dominio.set_placeholder_text(_t("lau.miarete.duck_dominio"))
+        dk_token.set_placeholder_text(_t("lau.miarete.duck_token"))
+        griglia.attach(dk_dominio, 0, 4, 1, 1)
+        griglia.attach(dk_token, 1, 4, 1, 1)
+        dk_salva = Gtk.Button(label=_t("lau.miarete.duck_salva"))
+        griglia.attach(dk_salva, 2, 4, 1, 1)
+        dk_spiega = Gtk.Label(label=_t("lau.miarete.duck_spiega"), xalign=0)
+        dk_spiega.set_line_wrap(True)
+        dk_spiega.set_max_width_chars(70)
+        dk_spiega.get_style_context().add_class("dim-label")
+        griglia.attach(dk_spiega, 0, 5, 3, 1)
+        try:
+            dk = json.loads((DATI_RETE / "duckdns.json").read_text())
+            dk_dominio.set_text(dk.get("dominio", ""))
+        except (OSError, ValueError):
+            pass
+
+        def duck_fatto(esito):
+            codice, testo = esito
+            dk_salva.set_sensitive(True)
+            scrivi(testo)
+            if codice == 0:
+                nome.set_text(dk_dominio.get_text().strip().lower().removesuffix(".duckdns.org") + ".duckdns.org")
+                da_internet.set_active(True)
+            return False
+
+        def premi_duck(_b):
+            dk_salva.set_sensitive(False)
+            argomenti = ["duckdns", "--dominio", dk_dominio.get_text().strip(), "--token", dk_token.get_text().strip()]
+
+            def gira():
+                try:
+                    r = subprocess.run([sys.executable, str(rete)] + argomenti, capture_output=True, text=True, timeout=40)
+                    esito = (r.returncode, (r.stdout + r.stderr).strip())
+                except (OSError, subprocess.SubprocessError) as e:
+                    esito = (1, str(e))
+                GLib.idle_add(duck_fatto, esito)
+            threading.Thread(target=gira, daemon=True).start()
+        dk_salva.connect("clicked", premi_duck)
         avanzate.add(griglia)
         box.add(avanzate)
         etichetta(_t("lau.miarete.comando"), dim=True)

@@ -85,6 +85,9 @@ da lì. Guida: `MANUALE-GESTORE-RETE.md`.
 | `importa CODICE\|FILE` | collega questo PC alla rete del codice `NYCT1:…` |
 | `importa --prova` | torna alla rete di prova locale |
 | `reti` · `usa N` · `stato` | le reti salvate (● in uso) · passa alla N · a quale rete sei collegato |
+| `ip [--per-rete]` | il tuo IP pubblico chiesto al **router** (UPnP/NAT-PMP), avviso CGNAT, IPv6: nessun sito esterno; `--per-rete`: l'indirizzo che userebbe `casa --internet auto` (nome DuckDNS o IP del router) |
+| `porte [--nodi 4 --porta-base 4701 --porta 18800]` | chiede al router di aprire da solo le porte della rete (UPnP/NAT-PMP) |
+| `duckdns --dominio NOME --token TOKEN` · `duckdns` · `duckdns --togli` | nome fisso `NOME.duckdns.org` che segue il tuo IP (la rete accesa lo aggiorna ogni 5 minuti) |
 | `vicini [--url]` | se la rete in uso è ospitata in questa casa (o su questo PC): la regola «IP pubblico=IP interno» che chat, browser e collaudo usano da soli (router senza NAT loopback), o l'elenco da scaricare |
 | `aiuta si --indirizzo NOME\|IP [--porta 4800] [--tetto 10]` · `aiuta no` · `aiuta stato` | «🦇 Aiuta la rete»: il PC fa anche da nodo solo intermedio, con un tetto di banda (Mbit/s) |
 | `ponte aggiungi RIGA…` · `ponte togli IP:PORTA\|tutti` · `ponte elenco` | ponti nascosti: si entra sempre da lì |

@@ -114,6 +114,10 @@ equivalente** (`nyctalus-rete casa …`, utilizzabile anche nel terminale), poi 
 esegue e mostra codice di rete e passi (il codice compare in un campo a parte con **📋 Copia
 il codice**: si incolla così com'è in un messaggio agli amici); **■ Spegni** ferma la rete (in entrambi i modi);
 **🔓 Apri il firewall** apre le porte con `ufw` (chiede la password). Le scelte si ricordano.
+Dalla 0.3.25: **🔍 Trova** scrive da solo il tuo indirizzo (il nome DuckDNS se l'hai impostato,
+altrimenti l'IP chiesto al router, senza siti esterni); in «Avanzate» c'è **DuckDNS** (nome e
+token, «Salva e prova»); accendendo la rete il router apre da solo le porte, se lo permette
+(UPnP/NAT-PMP); il tuo PC si collega da solo alla propria rete, anche quando è «sempre accesa».
 Senza «Sempre accesa» la rete resta accesa anche chiudendo il mini menu, fino a «Spegni» o allo
 spegnimento del PC.
 

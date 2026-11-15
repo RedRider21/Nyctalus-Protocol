@@ -41,7 +41,10 @@ Senza IP pubblico, gli altri non possono raggiungere il tuo PC e nessuna imposta
 del router può rimediare.
 
 1. Nella pagina del router guarda l'**IP WAN** (o «IP pubblico», «Indirizzo Internet»).
-2. Apri un sito come `https://ifconfig.me` e confronta.
+   Dalla 0.3.25 lo chiede al router anche `nyctalus-rete ip` (o **🔍 Trova** nella finestra
+   «🏠 La mia rete»), **senza siti esterni**, se il router ha UPnP o NAT-PMP; avvisa da solo
+   se l'indirizzo è condiviso (CGNAT).
+2. Oppure apri un sito come `https://ifconfig.me` e confronta.
 3. **Uguali** → va bene, prosegui. **Diversi**, oppure l'IP WAN inizia con `100.64`–`100.127`,
    `10.`, `192.168.` → sei dietro **CGNAT**. Chiedi all'operatore un IP pubblico (spesso è
    gratuito), oppure fai ospitare la rete al tuo amico.
@@ -51,7 +54,13 @@ caso del nome No-IP. Le offerte via radio (FWA/5G) di solito no.
 
 ## Passo 2 · Il nome No-IP sempre aggiornato (5 minuti)
 
-Il nome deve puntare sempre al tuo IP attuale:
+**Il modo più semplice (dalla 0.3.25): DuckDNS dentro Nyctalus.** Crea gratis un nome su
+duckdns.org (si entra con un account Google o GitHub), poi nella finestra «🏠 La mia rete» →
+«Avanzate» → DuckDNS scrivi nome e token e tocca **Salva e prova** (da terminale:
+`nyctalus-rete duckdns --dominio miacasa --token TOKEN`). Con la rete accesa, Nyctalus aggiorna
+il nome da solo ogni 5 minuti; `casa --internet auto` lo usa da sé.
+
+Con No-IP (o altri), il nome deve puntare sempre al tuo IP attuale:
 
 - **meglio nel router**: cerca la sezione **DNS dinamico** (DDNS), scegli No-IP e inserisci
   nome, utente e password;
@@ -67,6 +76,12 @@ Nel router, sezione **DHCP** (o «Dispositivi»), **riserva** l'indirizzo attual
 Il comando del passo 5 ti ricorda quale indirizzo ha il PC.
 
 ## Passo 4 · Inoltra le porte sul router (5 minuti)
+
+**Prima prova se il router lo fa da solo (dalla 0.3.25):** quando accendi la rete raggiungibile
+da Internet, Nyctalus chiede al router di aprire le porte (UPnP o NAT-PMP) e le tiene aperte
+finché la rete è accesa; lo dice con «il router ha aperto da solo N porte». Se invece dice che
+vanno inoltrate a mano (UPnP spento, come sui TIM Hub di serie), segui questo passo. Da
+terminale: `nyctalus-rete porte`.
 
 Sezione **Port forwarding** / **Inoltro porte** / **Virtual server** / **Port mapping**
 (sul TIM Hub di solito sta fra le impostazioni avanzate). Crea due regole verso

@@ -54,6 +54,14 @@ Per i CLIENT (chi usa la rete):
   nyctalus-rete importa CODICE|FILE      collega questo PC alla rete del codice
   nyctalus-rete importa --prova          torna alla rete di prova locale
   nyctalus-rete reti                     le reti salvate (● quella in uso)
+  nyctalus-rete ip [--per-rete]          il tuo IP pubblico chiesto al ROUTER (UPnP/NAT-PMP) e l'IPv6:
+                                         nessun sito esterno (--per-rete: l'indirizzo che userebbe
+                                         «casa --internet auto»: il nome DuckDNS o l'IP del router)
+  nyctalus-rete porte [--nodi 4 --porta-base 4701 --porta 18800]
+                                         chiede al router di aprire da solo le porte (UPnP/NAT-PMP)
+  nyctalus-rete duckdns --dominio NOME --token TOKEN · duckdns · duckdns --togli
+                                         nome fisso NOME.duckdns.org che segue il tuo IP (la rete
+                                         di casa lo aggiorna ogni 5 minuti); casa --internet auto lo usa
   nyctalus-rete vicini [--url]           se la rete in uso è ospitata in questa casa: la regola
                                          «IP pubblico=IP interno» per il motore (o l'elenco da usare)
   nyctalus-rete aiuta si --indirizzo NOME|IP [--porta 4800] [--tetto 10] · aiuta no · aiuta stato
@@ -935,17 +943,237 @@ def aspetta_ctrl_c():
 
 
 # --- rete di casa: tutto su questo PC ---------------------------------------------------
+# --- il router: IP pubblico e porte, senza servizi esterni ------------------------------------
+# Si chiede al ROUTER di casa con i due modi standard (NAT-PMP, UPnP IGD); se la linea ha IPv6 il
+# proprio indirizzo pubblico si legge dalla scheda di rete. Nessun sito «che IP ho?».
+# NYCTALUS_GATEWAY (ip[:porta] del NAT-PMP) e NYCTALUS_UPNP_URL (descrizione IGD): solo per le prove.
+
+def gateway():
+    v = os.environ.get("NYCTALUS_GATEWAY")
+    if v:
+        return v
+    try:
+        for riga in Path("/proc/net/route").read_text().splitlines()[1:]:
+            c = riga.split()
+            if len(c) > 2 and c[1] == "00000000":
+                return socket.inet_ntoa(bytes.fromhex(c[2])[::-1])
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def _natpmp(richiesta, attesa=1.5):
+    gw = gateway()
+    if not gw:
+        return None
+    host, _, porta = gw.partition(":")
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(attesa)
+    try:
+        s.sendto(richiesta, (host, int(porta or 5351)))
+        return s.recvfrom(64)[0]
+    except OSError:
+        return None
+    finally:
+        s.close()
+
+
+def natpmp_ip():
+    r = _natpmp(b"\x00\x00")
+    if r and len(r) >= 12 and r[1] == 128 and r[2:4] == b"\x00\x00":
+        return socket.inet_ntoa(r[8:12])
+    return None
+
+
+def natpmp_mappa(porta, proto, durata=3600):
+    """Chiede al router di inoltrare `porta` (stessa fuori e dentro). → porta esterna o None."""
+    op = 1 if proto == "udp" else 2
+    r = _natpmp(bytes([0, op, 0, 0]) + porta.to_bytes(2, "big") * 2 + durata.to_bytes(4, "big"))
+    if r and len(r) >= 16 and r[1] == 128 + op and r[2:4] == b"\x00\x00":
+        return int.from_bytes(r[10:12], "big")
+    return None
+
+
+def _upnp_controllo():
+    """L'indirizzo di controllo del servizio WANIPConnection/WANPPPConnection del router, o None."""
+    from urllib.parse import urljoin
+    import urllib.request
+    import xml.etree.ElementTree as ET
+    luogo = os.environ.get("NYCTALUS_UPNP_URL")
+    if not luogo:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(2.5)
+        try:
+            s.sendto(b'M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: "ssdp:discover"\r\nMX: 2\r\n'
+                     b'ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1\r\n\r\n', ("239.255.255.250", 1900))
+            while not luogo:
+                dati = s.recvfrom(4096)[0].decode("latin-1")
+                m = re.search(r"(?im)^location:\s*(\S+)", dati)
+                luogo = m.group(1) if m else None
+        except OSError:
+            return None
+        finally:
+            s.close()
+    try:
+        xml = urllib.request.urlopen(luogo, timeout=4).read(512 * 1024)
+        radice = ET.fromstring(xml)
+    except Exception:          # noqa: BLE001
+        return None
+    for serv in radice.iter():
+        if not serv.tag.endswith("service"):
+            continue
+        campi = {c.tag.split("}")[-1]: (c.text or "").strip() for c in serv}
+        tipo = campi.get("serviceType", "")
+        if "WANIPConnection" in tipo or "WANPPPConnection" in tipo:
+            return urljoin(luogo, campi.get("controlURL", "")), tipo
+    return None
+
+
+def _upnp_chiama(azione, argomenti):
+    import urllib.request
+    trovato = _upnp_controllo()
+    if not trovato:
+        return None
+    url, tipo = trovato
+    corpo = "".join("<%s>%s</%s>" % (k, v, k) for k, v in argomenti)
+    busta = ('<?xml version="1.0"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" '
+             's:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><u:%s xmlns:u="%s">%s</u:%s>'
+             '</s:Body></s:Envelope>' % (azione, tipo, corpo, azione))
+    req = urllib.request.Request(url, data=busta.encode(), headers={
+        "Content-Type": 'text/xml; charset="utf-8"', "SOAPAction": '"%s#%s"' % (tipo, azione)})
+    try:
+        return urllib.request.urlopen(req, timeout=5).read(64 * 1024).decode("utf-8", "replace")
+    except Exception:          # noqa: BLE001
+        return None
+
+
+def upnp_ip():
+    r = _upnp_chiama("GetExternalIPAddress", [])
+    m = re.search(r"<NewExternalIPAddress>([0-9.]+)</NewExternalIPAddress>", r or "")
+    return m.group(1) if m else None
+
+
+def upnp_mappa(porta, proto, lan, durata=0):
+    r = _upnp_chiama("AddPortMapping", [
+        ("NewRemoteHost", ""), ("NewExternalPort", porta), ("NewProtocol", proto.upper()),
+        ("NewInternalPort", porta), ("NewInternalClient", lan), ("NewEnabled", 1),
+        ("NewPortMappingDescription", "Nyctalus"), ("NewLeaseDuration", durata)])
+    return porta if r is not None and "Fault" not in r else None
+
+
+def ipv6_pubblico():
+    """Un indirizzo IPv6 globale di questo computer (letto dalla scheda di rete), o None."""
+    try:
+        for riga in Path("/proc/net/if_inet6").read_text().splitlines():
+            c = riga.split()
+            if len(c) >= 6 and c[3] == "00" and c[5] != "lo":          # scope globale
+                h = c[0]
+                ip = ":".join(h[i:i + 4] for i in range(0, 32, 4))
+                import ipaddress
+                a = ipaddress.ip_address(ip)
+                if a.is_global and not (int(c[4], 16) & 0x01):           # non temporaneo
+                    return str(a)
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def ip_dal_router():
+    """→ (ip pubblico IPv4 o None, «come», ipv6 o None). CGNAT: il router ha un IP 100.64/10."""
+    for come, f in (("NAT-PMP", natpmp_ip), ("UPnP", upnp_ip)):
+        ip = f()
+        if ip:
+            return ip, come, ipv6_pubblico()
+    return None, "", ipv6_pubblico()
+
+
+def apri_porte_router(porte_nodi, porta_web, lan):
+    """Chiede al router di inoltrare le porte (NAT-PMP, poi UPnP). → (modo, porte aperte)."""
+    voci = [(p, "udp") for p in porte_nodi] + [(p, "tcp") for p in porte_nodi] + [(porta_web, "tcp")]
+    for modo, f in (("NAT-PMP", lambda p, pr: natpmp_mappa(p, pr)), ("UPnP", lambda p, pr: upnp_mappa(p, pr, lan))):
+        aperte = [(p, pr) for p, pr in voci if f(p, pr) == p]
+        if aperte:
+            return modo, aperte
+    return "", []
+
+
+def indirizzo_per_rete():
+    """L'indirizzo con cui la rete di casa si fa trovare da Internet: il nome DuckDNS (fisso), se
+    configurato; altrimenti l'IP pubblico detto dal router. None se non si sa."""
+    d = duckdns_leggi()
+    return (d["dominio"] + ".duckdns.org") if d else ip_dal_router()[0]
+
+
+def cgnat(ip):
+    import ipaddress
+    try:
+        return ipaddress.ip_address(ip) in ipaddress.ip_network("100.64.0.0/10")
+    except ValueError:
+        return False
+
+
+# --- DuckDNS (facoltativo): un nome fisso che segue l'IP di casa ------------------------------
+F_DUCKDNS = DATI / "duckdns.json"
+
+
+def duckdns_leggi():
+    try:
+        d = json.loads(F_DUCKDNS.read_text())
+        if re.fullmatch(r"[a-z0-9-]{1,63}", d.get("dominio", "")) and re.fullmatch(r"[0-9a-f-]{36}", d.get("token", "")):
+            return d
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def duckdns_aggiorna(ip=None):
+    """Aggiorna il nome DuckDNS (senza ip: DuckDNS usa l'indirizzo da cui arriva la richiesta).
+    → (riuscito, testo)."""
+    import urllib.request
+    from urllib.parse import urlencode
+    d = duckdns_leggi()
+    if not d:
+        return False, "DuckDNS non configurato (nyctalus-rete duckdns --dominio NOME --token TOKEN)"
+    base = os.environ.get("NYCTALUS_DUCKDNS_URL") or "https://www.duckdns.org/update"
+    url = base + "?" + urlencode({"domains": d["dominio"], "token": d["token"], "ip": ip or ""})
+    try:
+        r = urllib.request.urlopen(url, timeout=15).read(64).decode().strip()
+    except Exception as e:     # noqa: BLE001
+        return False, "DuckDNS non raggiungibile: %s" % e
+    return r.startswith("OK"), ("%s.duckdns.org aggiornato%s" % (d["dominio"], " (%s)" % ip if ip else "")) if r.startswith("OK") else "DuckDNS ha risposto «%s» (dominio o token sbagliati?)" % r
+
+
+def duckdns_in_sottofondo(ogni=300):
+    """Durante la rete di casa: aggiorna il nome ogni 5 minuti (solo se configurato)."""
+    if not duckdns_leggi():
+        return
+    import threading
+
+    def giro():
+        while True:
+            riuscito, testo = duckdns_aggiorna()
+            if not riuscito:
+                print("! " + testo, flush=True)
+            time.sleep(ogni)
+    threading.Thread(target=giro, daemon=True).start()
+
+
 def apri_firewall_internet(porta_web, porte_nodi, cartella):
     """Rete raggiungibile da Internet: le porte vanno aperte a tutti (il router poi le inoltra)."""
     fw = firewall_chiuso()
     if not fw:
         return
     if fw == "ufw":
-        comandi = [["ufw", "allow", "%d/tcp" % porta_web], ["ufw", "allow", "%d:%d/udp" % (porte_nodi[0], porte_nodi[-1])]]
+        comandi = [["ufw", "allow", "%d/tcp" % porta_web], ["ufw", "allow", "%d:%d/udp" % (porte_nodi[0], porte_nodi[-1])],
+                   ["ufw", "allow", "%d:%d/tcp" % (porte_nodi[0], porte_nodi[-1])]]       # TCP: la riserva dei nodi
+        gw = gateway()
+        if gw and re.fullmatch(r"[0-9.]+", gw):      # le risposte UPnP del router (porta 1900)
+            comandi.append(["ufw", "allow", "proto", "udp", "from", gw, "port", "1900"])
     else:
-        comandi = [["firewall-cmd", "--add-port=%d/tcp" % porta_web, "--add-port=%d-%d/udp" % (porte_nodi[0], porte_nodi[-1])]]
+        comandi = [["firewall-cmd", "--add-port=%d/tcp" % porta_web, "--add-port=%d-%d/udp" % (porte_nodi[0], porte_nodi[-1]),
+                    "--add-port=%d-%d/tcp" % (porte_nodi[0], porte_nodi[-1])]]
     segno = cartella / "firewall-aperto"
-    firma = "%s internet %d %d-%d" % (fw, porta_web, porte_nodi[0], porte_nodi[-1])
+    firma = "%s internet2 %d %d-%d" % (fw, porta_web, porte_nodi[0], porte_nodi[-1])
     if segno.exists() and segno.read_text().strip() == firma:
         return
     print("\n⚠️  Il firewall del PC (%s) bloccherebbe chi arriva da Internet." % fw)
@@ -961,6 +1189,25 @@ def apri_firewall_internet(porta_web, porte_nodi, cartella):
     print("   Aprile tu, una volta sola:")
     for c in comandi:
         print("     sudo " + " ".join(c))
+
+
+def porte_router(r, porte_nodi, porta_web, lan):
+    """Chiede al router di aprire le porte da solo (NAT-PMP/UPnP) e le tiene aperte (rinnovo ogni
+    30 minuti finché la rete è accesa). Se il router non lo permette: lo dice, vanno inoltrate a mano."""
+    modo, aperte = apri_porte_router(porte_nodi, porta_web, lan)
+    if aperte:
+        ok("il router ha aperto da solo %d porte verso questo PC (%s): niente inoltri a mano" % (len(aperte), modo))
+        (r.dir / "porte-router").write_text("%s %s\n" % (modo, " ".join("%d/%s" % a for a in aperte)))
+        import threading
+
+        def rinnova():
+            while True:
+                time.sleep(1800)
+                apri_porte_router(porte_nodi, porta_web, lan)
+        threading.Thread(target=rinnova, daemon=True).start()
+    else:
+        (r.dir / "porte-router").unlink(missing_ok=True)
+        print("» il router non apre le porte da solo (UPnP/NAT-PMP spenti o assenti): vanno inoltrate a mano")
 
 
 def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None, uscita=None):
@@ -1037,6 +1284,8 @@ def casa(nodi, porta_base, porta_web, ip, importa_qui, internet=None, uscita=Non
         scrivi_privato(r.dir / "servizio-codice.txt", "%s\nimpronta %s\npagina %s\n" % (cod, imp, url.rsplit("/", 1)[0] + "/"))
         if internet:
             apri_firewall_internet(porta_web, [porta_base + i for i in range(nodi)], r.dir)
+            porte_router(r, [porta_base + i for i in range(nodi)], porta_web, lan)
+            duckdns_in_sottofondo()
         else:
             apri_firewall(porta_web, [porta_base + i for i in range(nodi)], ip, r.dir)
         if importa_qui:
@@ -1426,6 +1675,12 @@ def principale(args):
                       "--togli" in args, "--stampa" in args)
     elif cmd == "casa":
         internet = opzione(args, "--internet")
+        if internet == "auto":           # il nome DuckDNS, se c'è; altrimenti l'IP chiesto al router
+            internet = indirizzo_per_rete()
+            if not internet:
+                esci("--internet auto: il router non dice l'IP pubblico (UPnP/NAT-PMP spenti) e DuckDNS non è "
+                     "configurato. Indica il nome o l'IP (--internet NOME), oppure: nyctalus-rete duckdns --dominio … --token …")
+            print("» indirizzo pubblico: %s" % internet)
         if internet is not None and not re.fullmatch(r"[A-Za-z0-9.-]{3,253}", internet):
             esci("--internet: indica il nome pubblico (es. miacasa.ddns.net) o l'IP pubblico")
         casa(int(opzione(args, "--nodi", "4")), int(opzione(args, "--porta-base", "4701")),
@@ -1571,6 +1826,47 @@ def principale(args):
         aiuta(args)
     elif cmd == "reti":
         elenca_reti()
+    elif cmd == "ip" and "--per-rete" in args:     # quello che userebbe «casa --internet auto»
+        x = indirizzo_per_rete()
+        if not x:
+            esci("non so: il router non dice l'IP pubblico e DuckDNS non è configurato")
+        print(x)
+    elif cmd == "ip":
+        ip, come, v6 = ip_dal_router()
+        if ip:
+            print("IP pubblico (IPv4): %s   (detto dal router con %s)" % (ip, come))
+            if cgnat(ip):
+                print("! è un indirizzo CONDIVISO dell'operatore (CGNAT, 100.64…): da Internet non si arriva a casa tua;"
+                      " serve un IP pubblico dall'operatore o un nodo fuori casa")
+        else:
+            print("IPv4: il router non lo dice (UPnP e NAT-PMP spenti o assenti). Lo vedi nella pagina del router"
+                  " («IP WAN»), oppure con DuckDNS non serve saperlo.")
+        print("IPv6 pubblico: %s" % (v6 or "nessuno (la linea o il PC non hanno IPv6)"))
+    elif cmd == "porte":
+        nodi_n, base = int(opzione(args, "--nodi", "4")), int(opzione(args, "--porta-base", "4701"))
+        web = int(opzione(args, "--porta", "18800"))
+        modo, aperte = apri_porte_router([base + i for i in range(nodi_n)], web, ip_locale())
+        if aperte:
+            ok("il router ha aperto %d porte verso questo PC con %s: %s" % (len(aperte), modo, " ".join("%d/%s" % a for a in aperte)))
+        else:
+            esci("il router non apre le porte da solo (UPnP/NAT-PMP spenti o assenti): inoltrale a mano verso %s" % ip_locale())
+    elif cmd == "duckdns":
+        if "--togli" in args:
+            F_DUCKDNS.unlink(missing_ok=True)
+            return ok("DuckDNS tolto da questo PC")
+        dominio, token = opzione(args, "--dominio"), opzione(args, "--token")
+        if dominio or token:
+            dominio = (dominio or "").lower().removesuffix(".duckdns.org")
+            if not re.fullmatch(r"[a-z0-9-]{1,63}", dominio) or not re.fullmatch(r"[0-9a-f-]{36}", (token or "").lower()):
+                esci("--dominio NOME (la parte prima di .duckdns.org) e --token (36 caratteri, dalla pagina di DuckDNS)")
+            privata(DATI)
+            scrivi_privato(F_DUCKDNS, json.dumps({"dominio": dominio, "token": token.lower()}) + "\n")
+        if not duckdns_leggi():
+            esci("DuckDNS non configurato: nyctalus-rete duckdns --dominio NOME --token TOKEN")
+        riuscito, testo = duckdns_aggiorna()
+        (ok if riuscito else esci)(testo)
+        if riuscito:
+            print("  Usalo per la rete: nyctalus-rete casa --internet %s.duckdns.org   (o --internet auto)" % duckdns_leggi()["dominio"])
     elif cmd == "vicini":
         regola, url = vicini_client()
         print(url if "--url" in args else regola)
