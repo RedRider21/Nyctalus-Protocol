@@ -1349,13 +1349,15 @@ function impostazioni(solo) {
   const rete = [el("p", "", "Rete Nyctalus"), statoRete, servizi, el("p", "", "Rete condivisa"), quale, condivisa];
   const schede = [
     ["👤 Profilo", profilo],
+    // «App» (notifiche ad app chiusa, avvio all'accensione) subito dopo il profilo: in fondo alla fila
+    // delle schede restava fuori dallo schermo del telefono e non si trovava
+    ...(app.length ? [["📱 App", app]] : []),
     ["🎨 Aspetto", aspetto],
     ["💬 Chat", chat],
     ["📞 Chiamate", chiamateTab],
     ["🌐 Rete", rete],
     ["⚡ Prestazioni", prestTab],
   ];
-  if (app.length) schede.push(["📱 App", app]);
   const pannelloTab = tabber(schede, 0);
   if (solo) {
     S.soloRubrica = true; document.body.classList.add("solo-rubrica"); if (HOST && HOST.rubrica) HOST.rubrica(true);

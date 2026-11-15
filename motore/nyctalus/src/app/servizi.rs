@@ -51,7 +51,16 @@ impl Processi {
 
     /// Spegne ogni programma con il suo gruppo (il processo e i suoi figli).
     pub fn termina(&self) {
-        let mut v = self.0.lock().unwrap();
+        self.termina_da(0);
+    }
+
+    /** Spegne i programmi lanciati dal numero `da` in poi (0: tutti). */
+    pub fn termina_da(&self, da: usize) {
+        let mut tutti = self.0.lock().unwrap();
+        if da >= tutti.len() {
+            return;
+        }
+        let mut v: Vec<Child> = tutti.drain(da..).collect();
         for c in v.iter_mut().rev() {
             let pid = c.id();
             #[cfg(unix)]
@@ -76,7 +85,6 @@ impl Processi {
             }
             let _ = c.wait();
         }
-        v.clear();
     }
 }
 
@@ -140,14 +148,23 @@ pub fn avvia(app: &Arc<App>) {
     }
     let app = app.clone();
     std::thread::spawn(move || {
+        // dopo un errore la chat può essere rimasta accesa: si riparte da capo
+        app.processi.termina();
         if let Err(e) = avvia_davvero(&app) {
-            {
+            let chat_viva = {
                 let mut s = app.servizi.lock().unwrap();
                 s.stato = "errore".into();
                 s.dettaglio = e.clone();
-            }
+                !s.indirizzo.is_empty() || s.chiusa
+            };
             log(&format!("errore avvio servizi: {e}"));
-            app.processi.termina();
+            if chat_viva {
+                // la rete non risponde ma il motore della chat è acceso: resta acceso (Contact ID,
+                // contatti, cronologia e impostazioni restano usabili); si ferma solo il resto
+                app.processi.termina_da(1);
+            } else {
+                app.processi.termina();
+            }
         }
     });
 }

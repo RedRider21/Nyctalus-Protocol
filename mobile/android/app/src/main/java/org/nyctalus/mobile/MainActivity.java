@@ -596,6 +596,13 @@ public class MainActivity extends Activity {
         griglia2.setWeightSum(6f);
         ((LinearLayout.LayoutParams) griglia2.getLayoutParams()).topMargin = dp(10);
         griglia2.addView(casella(R.drawable.ic_avvio_terminale, "Terminale", v -> {
+            if (MotoreNativo.disponibile(this)) {
+                // app con tutto: i comandi (nyctalus-cli…) stanno in Termux, facoltativo
+                if (termuxInstallato()) apriTermux();
+                else avviso("Il terminale (nyctalus-cli, collaudo, script) è un'aggiunta facoltativa: serve Termux. "
+                        + "Strumenti ▾ → Termux (facoltativo) → Installa Termux, poi «Installa i comandi in Termux».");
+                return;
+            }
             if (pronto) { apriTerminale = true; apriProgrammaFile = false; apriImpostazioni = false; apriRubrica = false; entra(); }
             else avviso("Nyctalus si sta avviando: il Terminale si apre appena è pronto (● verde).");
         }));
@@ -608,20 +615,42 @@ public class MainActivity extends Activity {
         strumenti.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
         LinearLayout riga1 = riga(), riga2 = riga(), riga3 = riga(), riga4 = riga();
-        riga1.addView(cella("⚡  Prepara tutto", v -> preparaTutto()));
-        riga1.addView(cella("⬇  Installa Termux", v -> installaTermux()));
-        riga1.addView(cella("↻  Aggiorna Termux", v -> aggiornaTermux()));
-        riga2.addView(cella("🦇  Installa / aggiorna Nyctalus in Termux", v -> installaNyctalus()));
-        if (MotoreNativo.disponibile(this))
-            riga2.addView(cella("📦  Porta qui i dati da Termux", v -> conferma("Porto qui i dati da Termux?",
-                    "Identità, contatti, messaggi, file ricevuti e rete di Nyctalus in Termux passano in quest'app. "
-                    + "Se qui c'è già un'identità non si sovrascrive nulla.", this::trasloco)));
-        riga3.addView(cella("⌨  Apri Termux", v -> apriTermux()));
-        riga3.addView(cella("📋  Comando di avvio", v -> copiaComando()));
-        riga4.addView(cella("☁  Aggiornamenti da GitHub", v -> aggiornamentiGithub()));
-        for (LinearLayout x : new LinearLayout[]{riga1, riga2, riga3, riga4}) {
-            ((LinearLayout.LayoutParams) x.getLayoutParams()).topMargin = dp(8);
-            strumenti.addView(x);
+        if (MotoreNativo.disponibile(this)) {
+            // app con tutto: Termux è un'aggiunta facoltativa, solo per chi vuole i comandi
+            riga1.addView(cella("☁  Aggiornamenti da GitHub", v -> aggiornamentiGithub()));
+            TextView gruppo = testo("Termux (facoltativo: solo per i comandi da terminale)", C_TENUE, 12);
+            gruppo.setGravity(Gravity.START);
+            gruppo.setPadding(dp(4), dp(14), dp(4), 0);
+            boolean c = termuxInstallato();
+            if (c) riga2.addView(cella("↻  Aggiorna Termux", v -> aggiornaTermux()));
+            else riga2.addView(cella("⬇  Installa Termux", v -> installaTermux()));
+            riga2.addView(cella("🦇  Installa i comandi in Termux", v -> installaNyctalus()));
+            if (c) {
+                riga3.addView(cella("⌨  Apri Termux", v -> apriTermux()));
+                riga3.addView(cella("📦  Porta qui i dati da Termux", v -> conferma("Porto qui i dati da Termux?",
+                        "Identità, contatti, messaggi, file ricevuti e rete di Nyctalus in Termux passano in quest'app. "
+                        + "Se qui c'è già un'identità non si sovrascrive nulla.", this::trasloco)));
+            }
+            ((LinearLayout.LayoutParams) riga1.getLayoutParams()).topMargin = dp(8);
+            strumenti.addView(riga1);
+            strumenti.addView(gruppo);
+            for (LinearLayout x : new LinearLayout[]{riga2, riga3}) {
+                if (x.getChildCount() == 0) continue;
+                ((LinearLayout.LayoutParams) x.getLayoutParams()).topMargin = dp(8);
+                strumenti.addView(x);
+            }
+        } else {
+            riga1.addView(cella("⚡  Prepara tutto", v -> preparaTutto()));
+            riga1.addView(cella("⬇  Installa Termux", v -> installaTermux()));
+            riga1.addView(cella("↻  Aggiorna Termux", v -> aggiornaTermux()));
+            riga2.addView(cella("🦇  Installa / aggiorna Nyctalus in Termux", v -> installaNyctalus()));
+            riga3.addView(cella("⌨  Apri Termux", v -> apriTermux()));
+            riga3.addView(cella("📋  Comando di avvio", v -> copiaComando()));
+            riga4.addView(cella("☁  Aggiornamenti da GitHub", v -> aggiornamentiGithub()));
+            for (LinearLayout x : new LinearLayout[]{riga1, riga2, riga3, riga4}) {
+                ((LinearLayout.LayoutParams) x.getLayoutParams()).topMargin = dp(8);
+                strumenti.addView(x);
+            }
         }
         boolean aperti = getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("strumenti", false);
         strumenti.setVisibility(aperti ? View.VISIBLE : View.GONE);
