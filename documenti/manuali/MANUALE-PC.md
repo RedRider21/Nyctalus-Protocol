@@ -30,6 +30,12 @@ Installato, è nel menu delle applicazioni come **«Nyctalus»** (o col comando 
 | ☰ | impostazioni (anche con il **tasto destro** sul pannello) |
 
 **Impostazioni (☰ o tasto destro):**
+- **🦇 Nyctalus 0.3.x** (la versione), **⬆ Aggiorna Nyctalus…**, **🧭 Che cosa vuoi fare?**,
+  **🏠 La mia rete…**, **🔗 Collegati a una rete…** (spiegati qui sotto);
+- **⚙ Impostazioni…** a schede (Rete, Prestazioni, Chiamate). Nella scheda **🌐 Rete**,
+  **Apri il gestore della rete** apre un terminale che resta aperto con lo stato della rete,
+  la sua protezione (forma del traffico, rumore di fondo) e i comandi di `nyctalus-rete` pronti
+  da scrivere (dalla 0.3.26; prima si chiudeva subito);
 - **Disposizione verticale / orizzontale** dei bottoni;
 - **Più grande / Più piccola / Normale**: dimensione dei bottoni;
 - **Sempre in primo piano**;
