@@ -54,7 +54,7 @@ Se Nyctalus non è ancora pronto si apre una finestra ridotta (tema, notifiche, 
 
 **Strumenti ▾** (dalla 0.4.0): **☁ Aggiornamenti da GitHub** (controlla l'ultima release, scarica e
 installa la nuova app), poi il gruppo **Termux (facoltativo: solo per i comandi)**: Installa o Aggiorna
-Termux, **🦇 Installa i comandi in Termux**, ⌨ Apri Termux, **📦 Porta qui i dati da Termux** (il
+Termux, **🦇 Installa i comandi in Termux**, ⌨ Apri Termux, **📦 Dati da Termux** (il
 trasloco, se non l'hai fatto al primo avvio). Fino alla 0.3.x: ⚡ Prepara tutto, Termux, Installa/aggiorna
 Nyctalus in Termux, comando di avvio, Aggiornamenti da GitHub.
 

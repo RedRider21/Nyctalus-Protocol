@@ -647,7 +647,7 @@ public class MainActivity extends Activity {
             riga2.addView(cella("🦇  Installa i comandi in Termux", v -> installaNyctalus()));
             if (c) {
                 riga3.addView(cella("⌨  Apri Termux", v -> apriTermux()));
-                riga3.addView(cella("📦  Porta qui i dati da Termux", v -> conferma("Porto qui i dati da Termux?",
+                riga3.addView(cella("📦  Dati da Termux", v -> conferma("Porto qui i dati da Termux?",
                         "Identità, contatti, messaggi, file ricevuti e rete di Nyctalus in Termux passano in quest'app. "
                         + "Se qui c'è già un'identità non si sovrascrive nulla.", this::trasloco)));
             }
@@ -847,7 +847,7 @@ public class MainActivity extends Activity {
                     }
                 } catch (Exception ignorata) { }
             }
-            imposta("Il passaggio non è arrivato. Strumenti ▾ → 📦 Porta qui i dati da Termux per riprovare.");
+            imposta("Il passaggio non è arrivato. Strumenti ▾ → 📦 Dati da Termux per riprovare.");
         }).start();
     }
 
@@ -2230,6 +2230,9 @@ public class MainActivity extends Activity {
     private LinearLayout riga() {
         LinearLayout r = new LinearLayout(this);
         r.setOrientation(LinearLayout.HORIZONTAL);
+        // niente allineamento sulla prima riga di testo: un bottone su due righe veniva spinto in basso
+        // e la sua seconda riga usciva dallo schermo
+        r.setBaselineAligned(false);
         r.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
         return r;
