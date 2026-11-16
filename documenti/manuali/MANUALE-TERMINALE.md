@@ -18,7 +18,7 @@ collaudo, motore…) sono tutti in `COMANDI.md`.
 | Dove | Come |
 |---|---|
 | PC Linux | pulsante **⌨ Terminale** del mini menu: si apre il terminale del sistema, già pronto. Oppure, in un terminale qualsiasi, il comando `nyctalus-cli` |
-| Telefono | icona **⌨ Terminale** nella **seconda fila** della schermata iniziale dell'app: un pannello dentro l'app. Oppure, aprendo Termux a mano, il comando `nyctalus-cli` |
+| Telefono | **dalla 0.4.0 con Termux (facoltativo)**: icona **Terminale** della schermata iniziale → apre Termux, dove c'è `nyctalus-cli` (i comandi si installano da Strumenti ▾ → Termux). Fino alla 0.3.x: un pannello dentro l'app |
 | Windows | pulsante **⌨️ Terminale** della finestra di Nyctalus: lo stesso pannello del telefono |
 | Server, SSH, Raspberry | `nyctalus-cli avvia` in un terminale (accende il motore senza finestre; Ctrl-C lo spegne), poi i comandi da un altro terminale |
 

@@ -229,6 +229,13 @@ Funziona come Termux-NexusSEC-OS: dentro TERMUX gira il motore con un piccolo
 servizio, l'interfaccia è una web-app in stile Telegram (nel browser del
 telefono o nell'app Nyctalus). Convive con gli altri progetti in Termux.
 
+DALLA 0.4.0 BASTA L'APP
+  Installa Nyctalus.apk e aprila: contiene il motore e tutto il resto, Termux NON serve.
+  Se sul telefono c'era Nyctalus in Termux, l'app propone «Porto qui i tuoi dati?» (stesso
+  Contact ID). Termux resta un'aggiunta facoltativa per chi vuole i comandi da terminale
+  (nyctalus-cli, collaudo, script): nell'app, Strumenti ▾ → Termux (facoltativo).
+
+FINO ALLA 0.3.x, O PER I COMANDI IN TERMUX
 COSA SCARICARE
   1. Termux — NON dal Play Store:  https://f-droid.org/packages/com.termux/
      oppure https://github.com/termux/termux-app/releases  (file …arm64-v8a.apk)

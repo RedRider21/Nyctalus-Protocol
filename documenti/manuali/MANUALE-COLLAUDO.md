@@ -27,7 +27,7 @@ nyctalus-collaudo --rapporto collaudo.txt     # salva anche il rapporto in un fi
 |---|---|
 | PC Linux (installato) | `nyctalus-collaudo` in un terminale |
 | Dalla cartella scaricata, senza installare | `cli/nyctalus-collaudo` |
-| Telefono | nel **⌨ Terminale** dell'app o in Termux: `nyctalus-collaudo` |
+| Telefono | in **Termux** (facoltativo dalla 0.4.0; i comandi si installano dall'app): `nyctalus-collaudo` |
 | Server / nodo via SSH | `nyctalus-collaudo --solo-rete` (vedi §3) |
 
 Conviene lanciarlo **da ogni dispositivo** che usa la rete (PC di casa, telefono sulla rete

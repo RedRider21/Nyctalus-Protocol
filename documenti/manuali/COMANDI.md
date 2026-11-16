@@ -18,7 +18,7 @@ Aggiornato alla 0.3.22; ogni comando stampa anche il suo aiuto (`--help`, o `aiu
 | [4. Siti .nyct](#4-siti-nyct-nyctalus-sito) | `nyctalus-sito` |
 | [5. Controlli](#5-controlli-collaudo-e-integrita) | `nyctalus-collaudo`, `nyctalus-integrita`, `nyctalus-aggiorna` |
 | [6. Server e nodi](#6-server-e-nodi) | `installa.sh` del server, `nyctalus-server` |
-| [7. Telefono (Termux)](#7-telefono-termux) | script unico, `nyctalus-mobile` |
+| [7. Telefono (Termux)](#7-telefono-termux) | script unico, `nyctalus-mobile` (Termux facoltativo dalla 0.4.0) |
 | [8. Installare e disinstallare](#8-installare-e-disinstallare) | `installa.sh`, `disinstalla.sh` |
 | [9. Il motore, per esperti](#9-il-motore-per-esperti-nyctalus) | `nyctalus …` |
 | [10. Variabili d'ambiente](#10-variabili-dambiente) | `NYCTALUS_…` |
@@ -217,7 +217,9 @@ Sul server si possono usare anche `nyctalus-rete rubrica …` (rubrica e casella
 
 ## 7. Telefono (Termux)
 
-Di solito fa tutto l'app (**Strumenti ▾**). A mano:
+**Dalla 0.4.0 l'app contiene tutto e Termux è facoltativo**: serve solo per i comandi qui sotto
+(l'app li installa da **Strumenti ▾ → Termux (facoltativo) → 🦇 Installa i comandi in Termux**).
+Dentro l'app il motore gira come `libnyctalus.so app` (l'orchestratore in Rust, `nyctalus app`). A mano:
 
 | Comando | Cosa fa |
 |---|---|

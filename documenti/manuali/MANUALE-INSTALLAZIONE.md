@@ -85,10 +85,29 @@ identità e chat.
 
 ## 2. Telefono Android
 
-Dentro **Termux** girano il motore (lo stesso del PC) e un piccolo servizio; l'**app Nyctalus**
-mostra la chat (stile Telegram), il browser e la rubrica.
+**Dalla 0.4.0 basta l'app.** `Nyctalus.apk` contiene già tutto: il motore (lo stesso del PC),
+la chat in stile Telegram, chiamate, file, browser e rubrica. **Termux non serve**: è un'aggiunta
+facoltativa per chi vuole usare Nyctalus anche scrivendo comandi (§2.3).
 
-### 2.1 Il modo semplice: con l'app
+### 2.0 Installare (dalla 0.4.0)
+1. Installa **`Nyctalus.apk`** (dalla release, o da `Nyctalus-Android.zip`) e aprila. Android
+   chiede di consentire «Installa app sconosciute» per il browser o per i file.
+2. Al primo avvio chiede, se vuoi, il permesso di mostrare **foto e video** recenti negli allegati
+   (puoi dire di no: si sceglie dal selettore di Android).
+3. **Se sul telefono c'era Nyctalus in Termux** (versioni fino alla 0.3.x), l'app propone
+   **«Porto qui i tuoi dati?»**: tocca **Porta i dati**. Termux si apre un momento, impacchetta
+   identità, contatti, messaggi, file ricevuti e la tua rete e li consegna all'app, sul telefono
+   stesso (niente esce dal telefono). Il **Contact ID resta lo stesso**: gli amici non devono rifare
+   nulla. I dati restano anche in Termux finché non li cancelli tu.
+4. Collegati a una rete: `MANUALE-TELEFONO.md` §1.
+
+Tutto sta nella cartella **privata** dell'app; una notifica fissa «Nyctalus attivo» tiene accesa la
+rete anche a schermo spento (le notifiche si spengono in Impostazioni → 📱 App). L'app pesa circa 6 MB
+e porta il motore per i telefoni ARM a 64 e a 32 bit.
+
+**Per aggiornare:** **Strumenti ▾ → ☁ Aggiornamenti da GitHub**, come prima.
+
+### 2.1 Fino alla 0.3.x: con l'app e Termux
 1. Installa **`Nyctalus.apk`** (dal pacchetto `Nyctalus-Android.zip` della release) e aprila.
    Android chiede di consentire «Installa app sconosciute» per il browser o per i file.
 2. Tocca **⚡ Prepara Nyctalus**: l'app fa tutto da sola, un passo alla volta, e ti chiede solo:
@@ -129,6 +148,23 @@ casuale; Termux lo scarica e ne **verifica l'impronta SHA-256** prima di install
 
 **Senza l'app, o per riparare:** in Termux incolla la stessa riga qui sopra: installa o aggiorna
 Nyctalus da sola (serve Internet).
+
+### 2.3 Termux, facoltativo: i comandi da terminale (dalla 0.4.0)
+Con l'app nuova Termux serve **solo** a chi vuole anche:
+
+| Con Termux puoi… | Esempio |
+|---|---|
+| usare Nyctalus scrivendo comandi | `nyctalus-cli`: `scrivi mario ciao`, `file invia foto.jpg mario` |
+| automatizzare | messaggi o file programmati con gli script di Termux |
+| far passare dalla rete altri programmi | `curl`, `git`, `ssh` attraverso il tunnel (come `torsocks`) |
+| pubblicare un sito `.nyct` dal telefono | `nyctalus-sito` |
+| collaudo e diagnosi | `nyctalus-collaudo`, `nyctalus-integrita` |
+| gestire le reti dal terminale | `nyctalus-rete` |
+
+Si installa dall'app: **Strumenti ▾ → Termux (facoltativo) → Installa Termux**, poi **🦇 Installa i
+comandi in Termux** (Termux scarica il pacchetto firmato dalla release e ne verifica la firma). Il
+pulsante **Terminale** della schermata iniziale apre Termux. Per altre app che vogliono passare
+dalla rete non serve Termux: l'app espone il proxy SOCKS `127.0.0.1:18080`.
 
 ### 2.2 A mano, senza l'app (facoltativo)
 Serve `nyctalus-termux.tar.gz` (nel pacchetto Android). Poi si apre la chat nel browser del

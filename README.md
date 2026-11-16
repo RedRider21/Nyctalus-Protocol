@@ -13,7 +13,7 @@
 
 Sito e manuale: **https://redrider21.github.io/Nyctalus-Protocol/** · manuali: **[Inizia qui](documenti/manuali/LEGGIMI.md)** · tutto in una pagina: **[Guida completa](documenti/manuali/GUIDA-COMPLETA.md)** (cosa scaricare, client/nodo/gestore, tutte le opzioni)
 
-**Scarica:** [anteprima per tester (pre-release)](https://github.com/RedRider21/Nyctalus-Protocol/releases) — `Nyctalus-PC-Linux.zip`, `Nyctalus-Android.zip` (app + pacchetto Termux), `Nyctalus-Server-Linux.zip` (`-arm64` per Raspberry Pi), `Nyctalus-Windows.zip` (anteprima) e il solo motore `nyctalus` per Linux, Android/Termux, Windows e macOS.
+**Scarica:** [anteprima per tester (pre-release)](https://github.com/RedRider21/Nyctalus-Protocol/releases) — `Nyctalus-PC-Linux.zip`, `Nyctalus-Android.zip` (l'app; dalla 0.4.0 **contiene tutto**, Termux solo facoltativo per i comandi), `Nyctalus-Server-Linux.zip` (`-arm64` per Raspberry Pi), `Nyctalus-Windows.zip` (anteprima) e il solo motore `nyctalus` per Linux, Android/Termux, Windows e macOS.
 
 ---
 
@@ -52,7 +52,7 @@ Sito e manuale: **https://redrider21.github.io/Nyctalus-Protocol/** · manuali: 
 <td align="center"><img src="documenti/immagini/tel-impostazioni.png" width="200" alt="Impostazioni"><br><sub>Temi, rete, codice di rete</sub></td>
 </tr></table>
 
-<sub>L'app Android (APK) avvia Nyctalus in Termux e apre Chat, Rubrica della rete, Browser (con modalità 🦇 Nyctalus) e manuali. Da dove partire: <a href="documenti/manuali/LEGGIMI.md">Inizia qui</a>.</sub>
+<sub>L'app Android (APK) — dalla 0.4.0 con il motore dentro, **senza Termux** — apre Chat, Rubrica della rete, Browser (con modalità 🦇 Nyctalus) e manuali. Da dove partire: <a href="documenti/manuali/LEGGIMI.md">Inizia qui</a>.</sub>
 
 ---
 
@@ -272,7 +272,7 @@ nyctalus protocol/
 ├── pc/              i programmi per il computer (Python+GTK3): browser/, chat/, launcher/, file/, cli/ (nyctalus-cli),
 │                    gestore-rete/ (nyctalus-rete: codice di rete, rete di casa, gestione)
 ├── server/          i nodi su un server: installatore (servizi systemd) e nyctalus-server
-├── mobile/          il telefono: orchestratore/ (Python in Termux), webapp/ (PWA),
+├── mobile/          il telefono: webapp/ (PWA), orchestratore/ (Python, versione con Termux; dalla 0.4.0 l'app usa `nyctalus app` del motore),
 │                    termux/ (installatore), android/ (APK)
 ├── strumenti/       script di sviluppo: demo, avvio della chat, creazione delle installazioni
 ├── test/            tutte le prove di funzionamento e di sicurezza: test/esegui-tutti.sh

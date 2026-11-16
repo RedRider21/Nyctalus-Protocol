@@ -5,18 +5,20 @@ Copyright (C) 2026 Daniele Deplano (RedRider21). Parte di Nyctalus Protocol.
 
 # Manuale d'uso — telefono (Android)
 
-Sul telefono Nyctalus è una **web-app in stile Telegram** che apri nel browser (o
-nell'app **Nyctalus**). Dietro, dentro **Termux**, girano il motore (lo stesso del PC) e
-un piccolo servizio, l'**orchestratore**, che avvia la rete, fa da ponte con il motore e
-gestisce gli allegati. Installazione: **`MANUALE-INSTALLAZIONE.md`**, capitolo 2.
+Sul telefono Nyctalus è l'**app Nyctalus**, in stile Telegram. **Dalla 0.4.0 contiene tutto**: il
+motore (lo stesso del PC) e il suo «orchestratore» (avvia la rete, fa da ponte con la chat, gestisce
+gli allegati) girano **dentro l'app**, nella sua cartella privata. **Termux non serve**: è un'aggiunta
+facoltativa per chi vuole anche i comandi da terminale (`MANUALE-INSTALLAZIONE.md` §2.3). Fino alla
+0.3.x motore e orchestratore giravano in Termux. Installazione: **`MANUALE-INSTALLAZIONE.md`**, capitolo 2.
 
 ---
 
 ## 1. Avvio
 
-Tocca l'icona **Nyctalus**: compare la schermata di benvenuto e l'app avvia Nyctalus in Termux.
-La prima volta (o se qualcosa non va) sotto la riga di stato compare **⚡ Prepara Nyctalus**: fa
-tutto da solo, Termux compreso (`MANUALE-INSTALLAZIONE.md` §2.1); sparisce appena Nyctalus è pronto.
+Tocca l'icona **Nyctalus**: compare la schermata di benvenuto e Nyctalus parte da solo (dalla 0.4.0
+dentro l'app; fino alla 0.3.x in Termux, con **⚡ Prepara Nyctalus** la prima volta). Se la rete
+scelta non risponde (per esempio il PC di casa è spento) l'app entra lo stesso: la chat, il tuo
+Contact ID e le impostazioni restano usabili e un messaggio dice quale rete non risponde.
 Sotto il logo, due file di pulsanti quadrati con la sola icona, come il mini menu del PC
 (tenendo premuto un pulsante compare il suo nome):
 
@@ -28,7 +30,7 @@ Sotto il logo, due file di pulsanti quadrati con la sola icona, come il mini men
 | cartella · **File** | il programma **File**: file grandi ai contatti, archivio dei ricevuti con spazio, elimina e condividi (`MANUALE-FILE.md`) |
 | i · **Info e manuali** | il sito con i manuali online |
 | cursori · **Impostazioni** | tutte le impostazioni (sotto) |
-| *(seconda fila)* riquadro con `>_` · **Terminale** | **nyctalus-cli** in un pannello: chat e file scrivendo comandi (`contatti`, `scrivi mario ciao`, `file -s`…), output in diretta, ⏹ per fermare (`MANUALE-TERMINALE.md`) |
+| *(seconda fila)* riquadro con `>_` · **Terminale** | dalla 0.4.0 apre **Termux** (facoltativo: se non c'è spiega come installarlo); fino alla 0.3.x **nyctalus-cli** in un pannello (`MANUALE-TERMINALE.md`) |
 
 **🔗 Rete** (sotto la scritta di stato): a quale rete sei collegato, con l'**impronta**. La rete è
 una sola per tutta l'app (chat, browser 🦇). Toccala per:
@@ -36,25 +38,36 @@ una sola per tutta l'app (chat, browser 🦇). Toccala per:
 - **passare** a un'altra rete salvata (● quella in uso), o tornare alla rete di prova;
 - togliere una rete dall'elenco.
 
-Ancora più comodo: dalla pagina della rete (per la rete di casa `http://IP-DEL-PC:18800/`, in
-Chrome) tocca **📲 Collega l'app Nyctalus** e conferma nome e impronta.
+- **🏠 Pagina della rete del PC di casa** (dalla 0.4.0): scrivi l'indirizzo del PC (es. `192.168.1.14`,
+  lo ricorda) e la pagina della rete si apre nel **browser dell'app**; lì **📲 Collega l'app
+  Nyctalus** porta il codice direttamente all'app, che chiede conferma di nome e impronta. La stessa
+  voce c'è in Impostazioni → 🌐 Rete.
+
+Dalla pagina della rete aperta in Chrome funziona allo stesso modo (📲 Collega l'app Nyctalus).
 
 **Impostazioni** (l'ultimo pulsante): **tutte** le impostazioni, a schermo intero — le stesse del
 ☰ della chat (§5: Contact ID, tema, sfondo, foto senza metadati, rete Nyctalus, rete condivisa)
-più la sezione **App**: 🔔 notifiche dei messaggi con l'app chiusa (§5-bis) e ⏻ ripartenza
-all'accensione del telefono. **←** (o il tasto indietro) torna alla schermata iniziale.
+più la scheda **📱 App** (la seconda, subito dopo Profilo): 🔔 notifiche dei messaggi e delle
+chiamate con l'app chiusa (§5-bis) e ⏻ ripartenza all'accensione del telefono. **←** (o il tasto indietro) torna alla schermata iniziale.
 Il **tema** vale per tutta l'app: schermata iniziale, chat, chiamate, anche al volo.
 Se Nyctalus non è ancora pronto si apre una finestra ridotta (tema, notifiche, accensione).
 
-**Strumenti ▾**: **⚡ Prepara tutto**, Termux (installa/aggiorna), **🦇 Installa/aggiorna Nyctalus
-in Termux** (dopo ogni APK nuova l'app lo propone da sola), comando di avvio, **☁ Aggiornamenti da
-GitHub** (controlla l'ultima release, scarica e installa la nuova app).
+**Strumenti ▾** (dalla 0.4.0): **☁ Aggiornamenti da GitHub** (controlla l'ultima release, scarica e
+installa la nuova app), poi il gruppo **Termux (facoltativo: solo per i comandi)**: Installa o Aggiorna
+Termux, **🦇 Installa i comandi in Termux**, ⌨ Apri Termux, **📦 Porta qui i dati da Termux** (il
+trasloco, se non l'hai fatto al primo avvio). Fino alla 0.3.x: ⚡ Prepara tutto, Termux, Installa/aggiorna
+Nyctalus in Termux, comando di avvio, Aggiornamenti da GitHub.
 
 Il **tasto indietro** riporta sempre indietro di un passo fino a questa schermata; la chat resta
-aperta dietro. Se Android ferma Nyctalus mentre sei in un'altra app, l'app lo riaccende da sola
-(se resta fermo: in Termux `nyctalus-mobile --sfondo`). La notifica fissa di Termux è normale.
+aperta dietro. Se Android ferma Nyctalus mentre sei in un'altra app, l'app lo riaccende da sola.
+La notifica fissa «Nyctalus attivo» è normale (fino alla 0.3.x era quella di Termux).
 
-Senza l'app: in Termux `nyctalus-mobile` e apri in Chrome l'indirizzo che stampa.
+**Chiamate:** aprendo la chat di un contatto l'app prepara subito la strada verso di lui, così 📞 e
+📹 squillano senza attesa; una chiamata in arrivo squilla anche se sei nel menu principale o nel
+browser dell'app (notifica con Rispondi / Rifiuta), e l'audio parte anche rispondendo dalla notifica.
+
+**Contatti senza nome** (aggiunti con il solo Contact ID): prendono da soli il nome con cui la
+persona è iscritta nella **rubrica della rete**; i nomi scelti da te non si toccano.
 
 ## 1-bis. Il browser (solo nell'app)
 

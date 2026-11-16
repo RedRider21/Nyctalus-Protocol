@@ -23,14 +23,15 @@ Usate **la stessa versione** su tutti gli apparecchi.
 | Apparecchio | File | Serve per |
 |---|---|---|
 | PC Linux | `Nyctalus-PC-Linux.zip` | client, gestore, e anche nodo |
-| Telefono Android | `Nyctalus-Android.zip` (dentro: l'app `Nyctalus.apk` e il pacchetto per Termux) | client |
+| Telefono Android | `Nyctalus-Android.zip` (dentro: l'app `Nyctalus.apk`, che dalla 0.4.0 contiene tutto, e il pacchetto facoltativo per Termux) | client |
 | Windows (anteprima) | `Nyctalus-Windows.zip` | client |
 | Server o VPS Linux (x86_64) | `Nyctalus-Server-Linux.zip` | nodo |
 | Raspberry Pi, server ARM | `Nyctalus-Server-Linux-arm64.zip` | nodo |
 | Solo il motore | `nyctalus-<sistema>` (Linux, Android, Windows, macOS) | uso da riga di comando, per esperti |
 
-Sul telefono serve anche **Termux**: non devi cercarlo, lo scarica l'app stessa con
-**⚡ Prepara Nyctalus** (`MANUALE-INSTALLAZIONE.md` §2).
+Sul telefono, **dalla 0.4.0, basta l'app**: Termux è facoltativo, solo per chi vuole i comandi da
+terminale (`MANUALE-INSTALLAZIONE.md` §2.3). Fino alla 0.3.x serviva Termux, che l'app scaricava da sé
+con **⚡ Prepara Nyctalus**.
 
 ---
 
@@ -62,8 +63,9 @@ Per **provare** basta un PC: fa da gestore, da nodi e da client insieme (rete di
 
 **Telefono Android**
 1. Installa `Nyctalus.apk` e aprila.
-2. Tocca **⚡ Prepara Nyctalus**: scarica e installa Termux, chiede «Consenti», e solo la prima
-   volta ti fa incollare in Termux un comando **già copiato** (tieni premuto → Incolla → Invio):
+2. Dalla 0.4.0 l'app parte da sola (se avevi Nyctalus in Termux, propone di portare qui i tuoi dati:
+   **Porta i dati**). Fino alla 0.3.x: tocca **⚡ Prepara Nyctalus**, che scarica e installa Termux, chiede
+   «Consenti», e solo la prima volta ti fa incollare in Termux un comando **già copiato**:
    `curl -fsSL https://github.com/RedRider21/Nyctalus-Protocol/releases/latest/download/installa-termux.sh | bash` — fa tutto da solo.
 3. Aggiornamenti: **Strumenti ▾ → ☁ Aggiornamenti da GitHub**.
 4. **🔗 Rete** → incolla il codice `NYCT1:…` (oppure apri nel browser l'indirizzo della rete
