@@ -37,6 +37,11 @@
 - ✅ **Release v0.3.26 PUBBLICATA** (15/11, APK 0.69; motore della 0.3.25; correzione «Apri il gestore della rete» → terminale del gestore che resta aperto; suite 887/887 compresa la prova dell'APK). Installata sul PC dell'utente con **⬆ Aggiorna** (`nyctalus-aggiorna --si`): prima prova vera riuscita (firma e impronta verificate da GitHub).
 ## ▶▶ RIPARTIRE DA QUI (fine sessione 16/11/2026)
 
+**16/11 sera, v0.4.1 (APK 0.71):** l'utente ha installato l'app senza Termux sul suo telefono e portato i dati (trasloco
+riuscito). Corretti: bottoni di Strumenti che uscivano dallo schermo (allineamento sulla prima riga di testo), «Esci»
+come casella della schermata iniziale con icona disegnata (il carattere ⏻ era un quadratino). Motore invariato: release
+fatta SENZA scaricare nulla (motori della 0.4.0 riusati).
+
 **Situazione:** **v0.4.0 PUBBLICATA** (16/11, APK 0.70): app Android SENZA Termux (motore + orchestratore Rust `nyctalus app`
 dentro l'APK, ~6 MB), trasloco da Termux, Termux facoltativo per i comandi, ⏻ chiudi/spegni, chiamate (PREPARA all'apertura
 della chat, audio senza tocco, squillo anche nel menu principale), 🔊 del PC, nomi dei contatti dalla rubrica, manuali con
