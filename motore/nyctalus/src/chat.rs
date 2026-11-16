@@ -1494,6 +1494,18 @@ impl Stato {
                 let _ = std::fs::remove_file(self.file_cronologia(&addr));
                 let _ = tx.send("OK\n".into());
             }
+            "PREPARA" => {
+                // PREPARA <addr>: apre in sottofondo la sessione verso un contatto (se non c'è già),
+                // senza mandare nulla: aprendo la sua chat, una chiamata o un messaggio partono subito
+                // invece di aspettare il circuito verso il suo punto d'incontro. Nessuna risposta.
+                let addr = con_suffisso(it.next().unwrap_or(""));
+                if indirizzo::in_chiave(&addr).is_ok() {
+                    let st = self.clone();
+                    tokio::spawn(async move {
+                        let _ = st.sessione(&addr).await;
+                    });
+                }
+            }
             "CALL" => {
                 // CALL <addr> [v]: invito a una chiamata (v = videochiamata; apre la sessione se
                 // serve) → CALLID <addr> <id>

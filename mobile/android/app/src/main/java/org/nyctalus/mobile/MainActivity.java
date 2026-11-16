@@ -1789,7 +1789,10 @@ public class MainActivity extends Activity {
             WebSettings s = web.getSettings();
             s.setJavaScriptEnabled(true);
             s.setDomStorageEnabled(true);           // localStorage e IndexedDB (cache della chat)
-            s.setMediaPlaybackRequiresUserGesture(true);
+            // l'audio di una chiamata accettata dalla NOTIFICA parte senza un tocco sulla pagina: con
+            // «serve un gesto» restava muto. La WebView mostra solo la nostra pagina locale
+            // (127.0.0.1: la navigazione altrove è bloccata), quindi nessun sito può approfittarne.
+            s.setMediaPlaybackRequiresUserGesture(false);
             s.setAllowFileAccess(false);
             s.setAllowContentAccess(true);          // per leggere gli scatti da FotoProvider
             web.addJavascriptInterface(new Ponte(), "NyctalusHost");

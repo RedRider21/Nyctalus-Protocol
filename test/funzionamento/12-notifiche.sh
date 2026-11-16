@@ -22,8 +22,9 @@ done < "$TMP/r.txt"
 M="$ROOT/mobile/android/app/src/main/AndroidManifest.xml"; J="$ROOT/mobile/android/app/src/main/java/org/nyctalus/mobile"
 grep -q 'POST_NOTIFICATIONS' "$M" && grep -q 'ServizioNotifiche' "$M" && grep -A3 'ServizioNotifiche' "$M" | grep -q 'exported="false"' \
   && pass "app: servizio delle notifiche dichiarato (non esportato) con il permesso di Android 13" || fail "manifest delle notifiche"
-grep -q 'FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING' "$J/ServizioNotifiche.java" && grep -q 'appInPrimoPiano) return' "$J/ServizioNotifiche.java" \
-  && pass "app: servizio di messaggistica; nessuna notifica mentre l'app è aperta" || fail "servizio delle notifiche"
+grep -q 'FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING' "$J/ServizioNotifiche.java" && [ "$(grep -c 'appInPrimoPiano && MainActivity.chatInVista()) return' "$J/ServizioNotifiche.java")" = 2 ] \
+  && grep -q 'static boolean chatInVista' "$J/MainActivity.java" \
+  && pass "app: servizio di messaggistica; nessuna notifica solo se la CHAT è sullo schermo (nel menu principale o nel browser dell'app la chiamata squilla con la notifica)" || fail "servizio delle notifiche"
 grep -q 'a.matches("\[a-z2-7\]{56}' "$J/MainActivity.java" && grep -q 'nyctApriChat' "$J/MainActivity.java" && grep -q 'window.nyctApriChat' "$ROOT/mobile/webapp/app.js" \
   && pass "toccando la notifica si apre quella conversazione (indirizzo controllato)" || fail "apertura dalla notifica"
 grep -q 'cambiaNotifiche' "$J/MainActivity.java" && pass "interruttore «Notifiche» in Strumenti" || fail "interruttore delle notifiche"

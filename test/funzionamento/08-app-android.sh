@@ -14,6 +14,10 @@ grep -q '"Torna a Nyctalus", v -> tornaANyctalus()' "$B8" && grep -q 'getBoolean
   && pass "browser: voce «Torna a Nyctalus» che riporta alla schermata iniziale dell'app (il 🏠 resta la pagina iniziale del browser)" || fail "manca «Torna a Nyctalus» nel browser"
 grep -q 'permission.CAMERA' "$M" && grep -q 'scattoInAttesa = i;' "$J8" \
   && pass "fotocamera: permesso solo per le videochiamate; le foto usano l'app del telefono (chiesto prima dello scatto)" || fail "permesso fotocamera"
+grep -q 'setMediaPlaybackRequiresUserGesture(false)' "$J" && grep -q 'sveglia(a.ctx)' "$ROOT/mobile/webapp/chiamate.js" \
+  && pass "chiamate: l'audio parte anche accettando dalla notifica (nessun tocco richiesto; contesto audio risvegliato)" || fail "audio della chiamata senza tocco"
+grep -q 'manda("PREPARA " + addr)' "$ROOT/mobile/webapp/app.js" && grep -q 'PREPARA %s' "$ROOT/pc/chat/nyctalus_chat/app.py" \
+  && pass "aprendo una chat la strada verso il contatto si prepara (telefono e PC): la chiamata squilla subito" || fail "PREPARA all'apertura della chat"
 grep -q 'allowBackup="false"' "$M" && pass "backup dell'app disattivato (il segreto non finisce nei backup)" || fail "allowBackup"
 grep -A3 'FotoProvider' "$M" | grep -q 'exported="false"' && pass "FotoProvider non esportato (scatti privati)" || fail "FotoProvider esportato"
 grep -q 'SecureRandom' "$J" && pass "segreto generato con SecureRandom" || fail "segreto non casuale"

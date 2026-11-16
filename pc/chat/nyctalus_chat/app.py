@@ -1543,6 +1543,7 @@ class Chat(Gtk.Window):
             self.conv.remove(figlio)
         self.trasferimenti = {}
         self.pila.set_visible_child_name("conv")
+        self._cmd("PREPARA %s" % self.attivo)   # la strada verso il contatto si apre ora (📞 subito)
         self._cmd("HIST %s" % self.attivo)
         self.ingresso.grab_focus()
         self._aggiorna_send()

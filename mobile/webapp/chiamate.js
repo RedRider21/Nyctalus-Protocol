@@ -8,6 +8,15 @@
 //   ←  CALLID · CALLIN addr id [v] · CALLOK · CALLNO · CALLEND addr id · AUD addr seq hex
 //      VID addr seq key hex · VIDKEY addr · VIDSTATO addr 0|1
 // Voce: microfono → blocchi da 20 ms (worklet) → Opus (WebCodecs) → AUD; AUD → Opus → altoparlante
+
+// Un AudioContext nato senza un tocco sulla pagina può restare «sospeso» (niente suono): lo si
+// riavvia subito e, se il sistema non lo permette ancora, al primo tocco sullo schermo.
+function sveglia(ctx) {
+  if (!ctx || ctx.state !== "suspended") return;
+  ctx.resume().catch(() => {});
+  const tocco = () => { ctx.resume().catch(() => {}); document.removeEventListener("pointerdown", tocco, true); };
+  document.addEventListener("pointerdown", tocco, true);
+}
 // con un piccolo margine; i pacchetti in ritardo si scartano (stesso formato della chat del PC).
 // Video: telecamera → 320×240 (o 240×320 in verticale) a 15 immagini/s → VP8 ~200 kbit/s → VID;
 // un'immagine completa ogni 2 s o quando l'altro la chiede (VIDKEY), così si riparte dopo un buco.
@@ -96,7 +105,7 @@ const Chiamate = (() => {
       else if (navigator.vibrate) navigator.vibrate([800, 600, 800, 600, 800]);
     } else if (quale === "uscita") {
       try {
-        const ctx = new AudioContext(), o = ctx.createOscillator(), g = ctx.createGain();
+        const ctx = new AudioContext(), o = ctx.createOscillator(), g = ctx.createGain(); sveglia(ctx);
         o.frequency.value = 425; g.gain.value = 0; o.connect(g); g.connect(ctx.destination); o.start();
         const t0 = ctx.currentTime + 0.1;
         for (let i = 0; i < 12; i++) { g.gain.setValueAtTime(0.12, t0 + i * 4); g.gain.setValueAtTime(0, t0 + i * 4 + 1); }
@@ -312,6 +321,9 @@ const Chiamate = (() => {
       if (HOST && HOST.chiamata) HOST.chiamata(true);            // l'app: audio da chiamata (auricolare)
       a = { seq: 0, ultimo: 0, ricevuti: 0, persi: 0, prossimo: 0, ts: 0 };
       a.ctx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" });
+      // senza un tocco sulla pagina (chiamata accettata dalla notifica) l'audio può nascere sospeso:
+      // si riavvia subito e, se serve, al primo tocco
+      sveglia(a.ctx);
       // limitatore: se si forma un anello (due apparecchi nella stessa stanza) il suono non sale
       // all'infinito, resta contenuto
       a.limite = a.ctx.createDynamicsCompressor();

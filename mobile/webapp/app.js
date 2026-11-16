@@ -472,6 +472,7 @@ function disegnaElenco() {
 // ---------- conversazione ------------------------------------------------------------
 function apriChat(addr, daStoria) {
   S.attivo = addr; S.ultimoGiorno = null; S.trasferimenti.clear();
+  manda("PREPARA " + addr);          // la strada verso il contatto si apre ora: 📞 e messaggi partono subito
   if (S.nonLetti[addr]) { delete S.nonLetti[addr]; salva("nonLetti", S.nonLetti); }
   ["testa-chat", "messaggi", "compositore"].forEach((id) => $(id).classList.remove("nascosto"));
   $("benvenuto").classList.add("nascosto");
