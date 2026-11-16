@@ -22,15 +22,17 @@
 <nav class="indice-manuali"><a href="index.html">Inizia qui</a><a href="GUIDA-COMPLETA.html">Guida completa: scaricare, configurare, opzioni</a><div class="gruppo">Guide passo passo</div><a href="MANUALE-INSTALLAZIONE.html">Manuale d&#x27;installazione</a><a href="GUIDA-RETE-DI-CASA.html">Guida rapida: chat fra PC e telefono a casa</a><a href="GUIDA-INTERNET.html">Guida: provare con un amico via Internet</a><div class="gruppo">Usare Nyctalus</div><a href="MANUALE-CHAT.html">Manuale della chat .nyct</a><a href="MANUALE-FILE.html">Manuale del programma File</a><a href="MANUALE-TERMINALE.html">Manuale del Terminale (nyctalus-cli)</a><a href="MANUALE-TELEFONO.html" class="qui">Manuale d&#x27;uso — telefono (Android)</a><a href="MANUALE-PC.html">Manuale d&#x27;uso — PC</a><a href="MANUALE-WINDOWS.html">Manuale Windows (anteprima)</a><a href="MANUALE-SITI.html">Manuale dei siti .nyct</a><a href="COMANDI.html">Tutti i comandi</a><div class="gruppo">Gestire una rete</div><a href="MANUALE-SERVER.html">Manuale del server (nodi della rete)</a><a href="MANUALE-GESTORE-RETE.html">Manuale del gestore della rete</a><a href="MANUALE-COLLAUDO.html">Manuale del collaudo (nyctalus-collaudo)</a><div class="gruppo">Approfondire</div><a href="PIANO-ANONIMATO.html">Piano verso una rete anonima</a><a href="SICUREZZA.html">Verificare sicurezza e anonimato</a><a href="MANUALE-PROVE.html">Manuale delle prove (funzionamento e sicurezza)</a><a href="DEPLOY.html">Guida al deploy e alla configurazione</a></nav>
 <article>
 <h1 id="manuale-duso-telefono-android">Manuale d'uso — telefono (Android)</h1><nav class="sommario"><b>In questa pagina</b><a href="#1-avvio">1. Avvio</a><a href="#1-bis-il-browser-solo-nellapp">1-bis. Il browser (solo nell'app)</a><a href="#2-le-chat-schermata-principale">2. Le chat (schermata principale)</a><a href="#3-la-conversazione">3. La conversazione</a><a href="#4-allegati-come-telegram">4. Allegati (come Telegram)</a><a href="#5-impostazioni">5. Impostazioni (☰)</a><a href="#5-bis-notifiche-dei-messaggi-anche-con-lapp-chiusa">5-bis. Notifiche dei messaggi (anche con l'app chiusa)</a><a href="#6-sicurezza-sul-telefono">6. Sicurezza sul telefono</a></nav>
-<p>Sul telefono Nyctalus è una <strong>web-app in stile Telegram</strong> che apri nel browser (o
-nell'app <strong>Nyctalus</strong>). Dietro, dentro <strong>Termux</strong>, girano il motore (lo stesso del PC) e
-un piccolo servizio, l'<strong>orchestratore</strong>, che avvia la rete, fa da ponte con il motore e
-gestisce gli allegati. Installazione: <strong><a href="MANUALE-INSTALLAZIONE.html"><code>MANUALE-INSTALLAZIONE.md</code></a></strong>, capitolo 2.</p>
+<p>Sul telefono Nyctalus è l'<strong>app Nyctalus</strong>, in stile Telegram. <strong>Dalla 0.4.0 contiene tutto</strong>: il
+motore (lo stesso del PC) e il suo «orchestratore» (avvia la rete, fa da ponte con la chat, gestisce
+gli allegati) girano <strong>dentro l'app</strong>, nella sua cartella privata. <strong>Termux non serve</strong>: è un'aggiunta
+facoltativa per chi vuole anche i comandi da terminale (<a href="MANUALE-INSTALLAZIONE.html"><code>MANUALE-INSTALLAZIONE.md</code></a> §2.3). Fino alla
+0.3.x motore e orchestratore giravano in Termux. Installazione: <strong><a href="MANUALE-INSTALLAZIONE.html"><code>MANUALE-INSTALLAZIONE.md</code></a></strong>, capitolo 2.</p>
 <hr />
 <h2 id="1-avvio">1. Avvio</h2>
-<p>Tocca l'icona <strong>Nyctalus</strong>: compare la schermata di benvenuto e l'app avvia Nyctalus in Termux.
-La prima volta (o se qualcosa non va) sotto la riga di stato compare <strong>⚡ Prepara Nyctalus</strong>: fa
-tutto da solo, Termux compreso (<a href="MANUALE-INSTALLAZIONE.html"><code>MANUALE-INSTALLAZIONE.md</code></a> §2.1); sparisce appena Nyctalus è pronto.
+<p>Tocca l'icona <strong>Nyctalus</strong>: compare la schermata di benvenuto e Nyctalus parte da solo (dalla 0.4.0
+dentro l'app; fino alla 0.3.x in Termux, con <strong>⚡ Prepara Nyctalus</strong> la prima volta). Se la rete
+scelta non risponde (per esempio il PC di casa è spento) l'app entra lo stesso: la chat, il tuo
+Contact ID e le impostazioni restano usabili e un messaggio dice quale rete non risponde.
 Sotto il logo, due file di pulsanti quadrati con la sola icona, come il mini menu del PC
 (tenendo premuto un pulsante compare il suo nome):</p>
 <table>
@@ -67,7 +69,7 @@ Sotto il logo, due file di pulsanti quadrati con la sola icona, come il mini men
 </tr>
 <tr>
 <td><em>(seconda fila)</em> riquadro con <code>&gt;_</code> · <strong>Terminale</strong></td>
-<td><strong>nyctalus-cli</strong> in un pannello: chat e file scrivendo comandi (<code>contatti</code>, <code>scrivi mario ciao</code>, <code>file -s</code>…), output in diretta, ⏹ per fermare (<a href="MANUALE-TERMINALE.html"><code>MANUALE-TERMINALE.md</code></a>)</td>
+<td>dalla 0.4.0 apre <strong>Termux</strong> (facoltativo: se non c'è spiega come installarlo); fino alla 0.3.x <strong>nyctalus-cli</strong> in un pannello (<a href="MANUALE-TERMINALE.html"><code>MANUALE-TERMINALE.md</code></a>)</td>
 </tr>
 </tbody>
 </table>
@@ -76,23 +78,36 @@ una sola per tutta l'app (chat, browser 🦇). Toccala per:</p>
 <ul>
 <li><strong>importare un codice di rete</strong> (<code>NYCT1:…</code>; se l'hai copiato, è già proposto);</li>
 <li><strong>passare</strong> a un'altra rete salvata (● quella in uso), o tornare alla rete di prova;</li>
-<li>togliere una rete dall'elenco.</li>
+<li>
+<p>togliere una rete dall'elenco.</p>
+</li>
+<li>
+<p><strong>🏠 Pagina della rete del PC di casa</strong> (dalla 0.4.0): scrivi l'indirizzo del PC (es. <code>192.168.1.14</code>,
+  lo ricorda) e la pagina della rete si apre nel <strong>browser dell'app</strong>; lì <strong>📲 Collega l'app
+  Nyctalus</strong> porta il codice direttamente all'app, che chiede conferma di nome e impronta. La stessa
+  voce c'è in Impostazioni → 🌐 Rete.</p>
+</li>
 </ul>
-<p>Ancora più comodo: dalla pagina della rete (per la rete di casa <code>http://IP-DEL-PC:18800/</code>, in
-Chrome) tocca <strong>📲 Collega l'app Nyctalus</strong> e conferma nome e impronta.</p>
+<p>Dalla pagina della rete aperta in Chrome funziona allo stesso modo (📲 Collega l'app Nyctalus).</p>
 <p><strong>Impostazioni</strong> (l'ultimo pulsante): <strong>tutte</strong> le impostazioni, a schermo intero — le stesse del
 ☰ della chat (§5: Contact ID, tema, sfondo, foto senza metadati, rete Nyctalus, rete condivisa)
-più la sezione <strong>App</strong>: 🔔 notifiche dei messaggi con l'app chiusa (§5-bis) e ⏻ ripartenza
-all'accensione del telefono. <strong>←</strong> (o il tasto indietro) torna alla schermata iniziale.
+più la scheda <strong>📱 App</strong> (la seconda, subito dopo Profilo): 🔔 notifiche dei messaggi e delle
+chiamate con l'app chiusa (§5-bis) e ⏻ ripartenza all'accensione del telefono. <strong>←</strong> (o il tasto indietro) torna alla schermata iniziale.
 Il <strong>tema</strong> vale per tutta l'app: schermata iniziale, chat, chiamate, anche al volo.
 Se Nyctalus non è ancora pronto si apre una finestra ridotta (tema, notifiche, accensione).</p>
-<p><strong>Strumenti ▾</strong>: <strong>⚡ Prepara tutto</strong>, Termux (installa/aggiorna), <strong>🦇 Installa/aggiorna Nyctalus
-in Termux</strong> (dopo ogni APK nuova l'app lo propone da sola), comando di avvio, <strong>☁ Aggiornamenti da
-GitHub</strong> (controlla l'ultima release, scarica e installa la nuova app).</p>
+<p><strong>Strumenti ▾</strong> (dalla 0.4.0): <strong>☁ Aggiornamenti da GitHub</strong> (controlla l'ultima release, scarica e
+installa la nuova app), poi il gruppo <strong>Termux (facoltativo: solo per i comandi)</strong>: Installa o Aggiorna
+Termux, <strong>🦇 Installa i comandi in Termux</strong>, ⌨ Apri Termux, <strong>📦 Porta qui i dati da Termux</strong> (il
+trasloco, se non l'hai fatto al primo avvio). Fino alla 0.3.x: ⚡ Prepara tutto, Termux, Installa/aggiorna
+Nyctalus in Termux, comando di avvio, Aggiornamenti da GitHub.</p>
 <p>Il <strong>tasto indietro</strong> riporta sempre indietro di un passo fino a questa schermata; la chat resta
-aperta dietro. Se Android ferma Nyctalus mentre sei in un'altra app, l'app lo riaccende da sola
-(se resta fermo: in Termux <code>nyctalus-mobile --sfondo</code>). La notifica fissa di Termux è normale.</p>
-<p>Senza l'app: in Termux <code>nyctalus-mobile</code> e apri in Chrome l'indirizzo che stampa.</p>
+aperta dietro. Se Android ferma Nyctalus mentre sei in un'altra app, l'app lo riaccende da sola.
+La notifica fissa «Nyctalus attivo» è normale (fino alla 0.3.x era quella di Termux).</p>
+<p><strong>Chiamate:</strong> aprendo la chat di un contatto l'app prepara subito la strada verso di lui, così 📞 e
+📹 squillano senza attesa; una chiamata in arrivo squilla anche se sei nel menu principale o nel
+browser dell'app (notifica con Rispondi / Rifiuta), e l'audio parte anche rispondendo dalla notifica.</p>
+<p><strong>Contatti senza nome</strong> (aggiunti con il solo Contact ID): prendono da soli il nome con cui la
+persona è iscritta nella <strong>rubrica della rete</strong>; i nomi scelti da te non si toccano.</p>
 <h2 id="1-bis-il-browser-solo-nellapp">1-bis. Il browser (solo nell'app)</h2>
 <p>È il browser di NovaOS in stile Chrome: schede, incognito, preferiti, cronologia, trova nella
 pagina, traduzione, modalità lettura, sito desktop, download. In più ha la <strong>modalità

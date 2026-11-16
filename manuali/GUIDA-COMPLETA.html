@@ -50,7 +50,7 @@ Usate <strong>la stessa versione</strong> su tutti gli apparecchi.</p>
 </tr>
 <tr>
 <td>Telefono Android</td>
-<td><code>Nyctalus-Android.zip</code> (dentro: l'app <code>Nyctalus.apk</code> e il pacchetto per Termux)</td>
+<td><code>Nyctalus-Android.zip</code> (dentro: l'app <code>Nyctalus.apk</code>, che dalla 0.4.0 contiene tutto, e il pacchetto facoltativo per Termux)</td>
 <td>client</td>
 </tr>
 <tr>
@@ -75,8 +75,9 @@ Usate <strong>la stessa versione</strong> su tutti gli apparecchi.</p>
 </tr>
 </tbody>
 </table>
-<p>Sul telefono serve anche <strong>Termux</strong>: non devi cercarlo, lo scarica l'app stessa con
-<strong>⚡ Prepara Nyctalus</strong> (<a href="MANUALE-INSTALLAZIONE.html"><code>MANUALE-INSTALLAZIONE.md</code></a> §2).</p>
+<p>Sul telefono, <strong>dalla 0.4.0, basta l'app</strong>: Termux è facoltativo, solo per chi vuole i comandi da
+terminale (<a href="MANUALE-INSTALLAZIONE.html"><code>MANUALE-INSTALLAZIONE.md</code></a> §2.3). Fino alla 0.3.x serviva Termux, che l'app scaricava da sé
+con <strong>⚡ Prepara Nyctalus</strong>.</p>
 <hr />
 <h2 id="parte-2-i-tre-ruoli-client-nodo-gestore">Parte 2 · I tre ruoli: client, nodo, gestore</h2>
 <pre><code class="language-text">   CLIENT (tu, i tuoi amici)  ──►  NODI (3 salti, su server o PC sempre accesi)  ──►  il contatto o il sito
@@ -103,8 +104,9 @@ Usate <strong>la stessa versione</strong> su tutti gli apparecchi.</p>
 <p><strong>Telefono Android</strong></p>
 <ol>
 <li>Installa <code>Nyctalus.apk</code> e aprila.</li>
-<li>Tocca <strong>⚡ Prepara Nyctalus</strong>: scarica e installa Termux, chiede «Consenti», e solo la prima
-   volta ti fa incollare in Termux un comando <strong>già copiato</strong> (tieni premuto → Incolla → Invio):
+<li>Dalla 0.4.0 l'app parte da sola (se avevi Nyctalus in Termux, propone di portare qui i tuoi dati:
+   <strong>Porta i dati</strong>). Fino alla 0.3.x: tocca <strong>⚡ Prepara Nyctalus</strong>, che scarica e installa Termux, chiede
+   «Consenti», e solo la prima volta ti fa incollare in Termux un comando <strong>già copiato</strong>:
    <code>curl -fsSL https://github.com/RedRider21/Nyctalus-Protocol/releases/latest/download/installa-termux.sh | bash</code> — fa tutto da solo.</li>
 <li>Aggiornamenti: <strong>Strumenti ▾ → ☁ Aggiornamenti da GitHub</strong>.</li>
 <li><strong>🔗 Rete</strong> → incolla il codice <code>NYCT1:…</code> (oppure apri nel browser l'indirizzo della rete

@@ -210,6 +210,10 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 <td><strong>il router senza siti esterni</strong> (finto router NAT-PMP + UPnP, finto DuckDNS, HOME finta): IP pubblico da NAT-PMP e da UPnP; porte aperte dal router (5); router muto → alternative indicate; CGNAT avvisato; DuckDNS salvato (0600), aggiornato, token sbagliato e valori non validi rifiutati; <code>ip --per-rete</code> (nome DuckDNS prima dell'IP); <code>casa --internet auto</code> con le 7 porte aperte dal router; DuckDNS aggiornato da solo con la rete accesa</td>
 </tr>
 <tr>
+<td><code>57-trasloco-app</code></td>
+<td><strong>trasloco da Termux all'app con tutto</strong> (<code>nyctalus app</code>, due HOME finte): senza il segreto dell'app nulla entra (403); l'app dice se ha già un'identità; identità, contatti e allegati arrivano identici, file 600 e cartelle 700; la rete passa, le porte restano quelle dell'app; il segreto di Termux e gli altri file della casa no; <strong>stesso Contact ID</strong> dopo il trasloco; nessuna sovrascrittura se c'è già un'identità (409); pacchetto cattivo (../, assoluto, collegamento, nessuna identità) rifiutato senza scrivere fuori</td>
+</tr>
+<tr>
 <td><code>51-guardie-di-riserva</code></td>
 <td><strong>guardie primarie</strong> su una rete di prova da 7 nodi: il client ricorda 3 entrate fisse ed entra dalla prima; spenta la prima, tunnel e scaricamento partono dalla SECONDA (mai da un nodo a caso) e le guardie ricordate non cambiano; un sito <code>.nyct</code> si pubblica e si visita lo stesso; riaccesa la prima, si rientra da lei; spenta di nuovo a tunnel acceso, il tunnel si ricostruisce da solo dalla seconda sulla stessa porta; spente tutte e tre, il client prova solo quelle e si ferma</td>
 </tr>
@@ -370,6 +374,11 @@ per prova e il totale. Il comando termina con errore se anche una sola verifica 
 </table>
 <p>Ogni processo avviato va aggiunto a <code>PIDS</code> (<code>… &amp; PIDS+=($!)</code>): la libreria lo chiude a
 fine prova.</p>
+<h3 id="orchestratore-del-telefono-python-termux-o-rust-app-con-tutto">Orchestratore del telefono: Python (Termux) o Rust (app con tutto)</h3>
+<p>Le prove dell'orchestratore (<code>02</code>, <code>03</code>, <code>05</code> sicurezza, <code>06</code> sicurezza, <code>12</code>, <code>32</code>, <code>46</code>, <code>49</code>) girano con il
+Python di Termux (di serie) oppure con <code>nyctalus app</code> del motore, quello dell'app senza Termux:
+<code>NYCTALUS_ORCHESTRATORE=rust bash test/funzionamento/03-webapp.sh</code>. Devono passare con tutti e due; le
+verifiche del ⌨ Terminale integrato risultano «saltate» con Rust (c'è solo nella versione con Termux).</p>
 </article>
 </main>
 <button class="torna-su" id="torna-su" type="button" title="Torna su" aria-label="Torna su">↑</button>
