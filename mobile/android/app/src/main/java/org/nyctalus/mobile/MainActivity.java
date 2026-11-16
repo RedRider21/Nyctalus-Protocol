@@ -712,7 +712,14 @@ public class MainActivity extends Activity {
             v.setAlpha(0f);
             v.animate().alpha(fine).translationY(0).setStartDelay(350).setDuration(700).start();
         }
-        return r;
+        // la schermata scorre: con «Strumenti ▾» aperti (e il gruppo di Termux) può essere più lunga
+        // dello schermo e le ultime righe finivano sotto il bordo. fillViewport: se tutto ci sta,
+        // gli spazi elastici la tengono identica a prima.
+        android.widget.ScrollView scorri = new android.widget.ScrollView(this);
+        scorri.setFillViewport(true);
+        scorri.setBackground(r.getBackground());
+        scorri.addView(r, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        return scorri;
     }
 
     /**
