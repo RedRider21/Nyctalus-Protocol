@@ -1299,7 +1299,7 @@ function impostazioni(solo) {
     };
     app.push(el("p", "", "App"),
       interr("🔔 Notifiche dei messaggi anche con l'app chiusa", HOST.notificheAttive(), (v) => HOST.impostaNotifiche(v)),
-      interr("⏻ Riparti da solo all'accensione del telefono", HOST.accensioneAttiva(), (v) => HOST.impostaAccensione(v)));
+      interr("🔌 Riparti da solo all'accensione del telefono", HOST.accensioneAttiva(), (v) => HOST.impostaAccensione(v)));
   }
   // modalità riservata (PIANO-ANONIMATO, Tappa 2-bis): vive nel motore
   const ris = S.riservata || { accesa: false, possibile: false };
@@ -1388,7 +1388,7 @@ function impostazioni(solo) {
     return;
   }
   dialogo("Impostazioni", [pannelloTab],
-    HOST ? [["⏻ Chiudi o spegni Nyctalus", () => (HOST.chiudiApp ? HOST.chiudiApp() : HOST.esci())], ["Chiudi", null, "primario"]] : [["Chiudi", null, "primario"]]);
+    HOST ? [["🔴 Chiudi o spegni Nyctalus", () => (HOST.chiudiApp ? HOST.chiudiApp() : HOST.esci())], ["Chiudi", null, "primario"]] : [["Chiudi", null, "primario"]]);
 }
 
 // tema scelto nelle ⚙️ Impostazioni generali dell'app (Android): vale anche qui, e cambia al volo

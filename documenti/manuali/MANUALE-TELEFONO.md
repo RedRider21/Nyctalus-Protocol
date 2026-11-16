@@ -31,6 +31,7 @@ Sotto il logo, due file di pulsanti quadrati con la sola icona, come il mini men
 | i · **Info e manuali** | il sito con i manuali online |
 | cursori · **Impostazioni** | tutte le impostazioni (sotto) |
 | *(seconda fila)* riquadro con `>_` · **Terminale** | dalla 0.4.0 apre **Termux** (facoltativo: se non c'è spiega come installarlo); fino alla 0.3.x **nyctalus-cli** in un pannello (`MANUALE-TERMINALE.md`) |
+| *(seconda fila)* simbolo di accensione · **Esci** | dalla 0.4.0: **Chiudi la finestra** (messaggi e chiamate continuano ad arrivare) oppure **🔴 Spegni Nyctalus** (rete, chat e notifiche ferme finché non riapri l'app). La stessa scelta c'è nel menu ☰ della chat |
 
 **🔗 Rete** (sotto la scritta di stato): a quale rete sei collegato, con l'**impronta**. La rete è
 una sola per tutta l'app (chat, browser 🦇). Toccala per:

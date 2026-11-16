@@ -406,7 +406,7 @@ public class MainActivity extends Activity {
     }
 
     private static String testoAccensione(boolean attivo) {
-        return attivo ? "⏻  Avvio all'accensione del telefono: sì" : "⏻  Avvio all'accensione del telefono: no";
+        return attivo ? "🔌  Avvio all'accensione del telefono: sì" : "🔌  Avvio all'accensione del telefono: no";
     }
 
     private static String testoNotifiche(boolean attive) {
@@ -527,15 +527,6 @@ public class MainActivity extends Activity {
                 new int[]{C_SCHEDA, C_SFONDO, C_SFONDO});
         r.setBackground(fondo);
         r.setPadding(dp(22), dp(22), dp(22), dp(16));
-        // ⏻ in alto a destra: chiudere la finestra o spegnere del tutto Nyctalus
-        LinearLayout alto = new LinearLayout(this);
-        alto.setGravity(Gravity.END);
-        TextView spegni = testo("⏻", C_TENUE, 22);
-        spegni.setPadding(dp(14), dp(4), dp(4), dp(4));
-        spegni.setContentDescription("Chiudi o spegni Nyctalus");
-        spegni.setOnClickListener(v -> chiudiNyctalus());
-        alto.addView(spegni);
-        r.addView(alto, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         r.addView(spazio());
 
         // alone luminoso dietro al logo
@@ -626,6 +617,8 @@ public class MainActivity extends Activity {
             if (pronto) { apriTerminale = true; apriProgrammaFile = false; apriImpostazioni = false; apriRubrica = false; entra(); }
             else avviso("Nyctalus si sta avviando: il Terminale si apre appena è pronto (● verde).");
         }));
+        // «Esci»: chiudere la finestra (si resta raggiungibili) o spegnere del tutto Nyctalus
+        griglia2.addView(casella(R.drawable.ic_spegni, "Esci", v -> chiudiNyctalus()));
         r.addView(griglia2);
         r.addView(spazio());
 
@@ -1958,7 +1951,7 @@ public class MainActivity extends Activity {
                 .setTitle("Chiudere Nyctalus?")
                 .setItems(new String[]{
                         "Chiudi la finestra\n(messaggi e chiamate continuano ad arrivare)",
-                        "⏻  Spegni Nyctalus\n(rete, chat e notifiche ferme finché non lo riapri)"}, (d, k) -> {
+                        "🔴  Spegni Nyctalus\n(rete, chat e notifiche ferme finché non lo riapri)"}, (d, k) -> {
                     if (k == 1) {
                         ServizioNotifiche.ferma(this);
                         if (MotoreNativo.disponibile(this)) new Thread(MotoreNativo::ferma).start();
