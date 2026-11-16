@@ -1388,7 +1388,7 @@ function impostazioni(solo) {
     return;
   }
   dialogo("Impostazioni", [pannelloTab],
-    HOST ? [["Esci dall'app", () => HOST.esci()], ["Chiudi", null, "primario"]] : [["Chiudi", null, "primario"]]);
+    HOST ? [["⏻ Chiudi o spegni Nyctalus", () => (HOST.chiudiApp ? HOST.chiudiApp() : HOST.esci())], ["Chiudi", null, "primario"]] : [["Chiudi", null, "primario"]]);
 }
 
 // tema scelto nelle ⚙️ Impostazioni generali dell'app (Android): vale anche qui, e cambia al volo

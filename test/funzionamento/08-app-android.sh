@@ -18,6 +18,8 @@ grep -q 'setMediaPlaybackRequiresUserGesture(false)' "$J" && grep -q 'sveglia(a.
   && pass "chiamate: l'audio parte anche accettando dalla notifica (nessun tocco richiesto; contesto audio risvegliato)" || fail "audio della chiamata senza tocco"
 grep -q 'manda("PREPARA " + addr)' "$ROOT/mobile/webapp/app.js" && grep -q 'PREPARA %s' "$ROOT/pc/chat/nyctalus_chat/app.py" \
   && pass "aprendo una chat la strada verso il contatto si prepara (telefono e PC): la chiamata squilla subito" || fail "PREPARA all'apertura della chat"
+grep -q 'void chiudiNyctalus' "$J" && grep -q 'MotoreNativo::ferma' "$J" && grep -q 'HOST.chiudiApp' "$ROOT/mobile/webapp/app.js" \
+  && pass "⏻ nella schermata iniziale e nel menu della chat: chiudere la finestra o spegnere del tutto (motore e notifiche)" || fail "bottone ⏻ di chiusura"
 grep -q 'allowBackup="false"' "$M" && pass "backup dell'app disattivato (il segreto non finisce nei backup)" || fail "allowBackup"
 grep -A3 'FotoProvider' "$M" | grep -q 'exported="false"' && pass "FotoProvider non esportato (scatti privati)" || fail "FotoProvider esportato"
 grep -q 'SecureRandom' "$J" && pass "segreto generato con SecureRandom" || fail "segreto non casuale"
